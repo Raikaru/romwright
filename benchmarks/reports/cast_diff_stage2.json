@@ -1,0 +1,242 @@
+{
+  "benchmark": "cast_diff",
+  "date": "2026-10-13",
+  "ghidra_opt": "/home/raikaru/runs/Stage2/bin6/ghidra_opt",
+  "decompiled": 1600,
+  "identical": 1588,
+  "images": [
+    {
+      "image": "gba-pokeemerald",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_cast_functions": 218,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "casts": 1327,
+        "unsigned_marked": 12
+      },
+      "one_arm_failed": [],
+      "differences": []
+    },
+    {
+      "image": "gc-animal-crossing",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 199,
+      "different": 1,
+      "worker_cast_functions": 260,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "casts": 4025,
+        "unsigned_marked": 68,
+        "casts_replaced": 4
+      },
+      "one_arm_failed": [],
+      "differences": [
+        {
+          "address": "800343a0",
+          "status": "different",
+          "line": 251,
+          "worker": "local_90 = (double)(longlong)iVar10;",
+          "decompiler": "local_90 = (double)(long long)iVar10;"
+        }
+      ]
+    },
+    {
+      "image": "nds-pokeheartgold-arm9",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_cast_functions": 214,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "casts": 1001,
+        "unsigned_marked": 5
+      },
+      "one_arm_failed": [],
+      "differences": []
+    },
+    {
+      "image": "ps2-capcom-fighting-evolution",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_cast_functions": 234,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "casts": 2555,
+        "unsigned_marked": 104,
+        "casts_replaced": 8,
+        "long_marked": 38
+      },
+      "one_arm_failed": [],
+      "differences": []
+    },
+    {
+      "image": "ps2-dungeon-game",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 196,
+      "different": 4,
+      "worker_cast_functions": 237,
+      "declined_functions": 4,
+      "decline_reasons": {
+        "cast:const-retype-string-or-code": 2,
+        "cast:const-retype-float": 1,
+        "cast:address-of": 1
+      },
+      "worker_did": {
+        "casts": 3204,
+        "long_marked": 23,
+        "unsigned_marked": 149,
+        "bare_constants": 2,
+        "constants_retyped": 2
+      },
+      "one_arm_failed": [],
+      "differences": [
+        {
+          "address": "001145d8",
+          "status": "different",
+          "line": 21,
+          "worker": "auStack_e0 = 0x0;",
+          "decompiler": "auStack_e0 = (unsigned char  [8])0x0;"
+        },
+        {
+          "address": "0011a510",
+          "status": "different",
+          "line": 174,
+          "worker": "*(ulong *)(iVar5 + 0x38) =",
+          "decompiler": "*(unsigned long long *)(iVar5 + 0x38) ="
+        },
+        {
+          "address": "0012a5b8",
+          "status": "different",
+          "line": 29,
+          "worker": "(((long)(int)uVar3 & 0x3fU) << 0x18) | ((unsigned long)uVar6 << 0x20);",
+          "decompiler": "(((long)(int)uVar3 & 0x3fU) << 0x18) | ((unsigned long long)uVar6 << 0x20);"
+        },
+        {
+          "address": "0012ca78",
+          "status": "different",
+          "line": 2,
+          "worker": "unsigned long long * FUN_0012ca78(unsigned long long *param_1,int param_2,unsigned long param_3,unsigned int *param_4)",
+          "decompiler": "unsigned long long * FUN_0012ca78(unsigned long long *param_1,int param_2,unsigned long long param_3,unsigned int *param_4)"
+        }
+      ]
+    },
+    {
+      "image": "psv-need-for-speed-most-wanted",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 195,
+      "different": 5,
+      "worker_cast_functions": 228,
+      "declined_functions": 11,
+      "decline_reasons": {
+        "cast:address-of": 11
+      },
+      "worker_did": {
+        "casts": 3984,
+        "bare_constants": 40,
+        "unsigned_marked": 47,
+        "constants_retyped": 5
+      },
+      "one_arm_failed": [],
+      "differences": [
+        {
+          "address": "810709a0",
+          "status": "different",
+          "line": 79,
+          "worker": "param_1[0x891] = *(int *)(0x0 + 0x4);",
+          "decompiler": "param_1[0x891] = *(int *)((unsigned char  [16])0x0 + (unsigned char  [16])0x4);"
+        },
+        {
+          "address": "8111ac3c",
+          "status": "different",
+          "line": 9,
+          "worker": "param_1[1] = *(unsigned int *)(0x0 + 0x4);",
+          "decompiler": "param_1[1] = *(unsigned int *)((unsigned char  [16])0x0 + (unsigned char  [16])0x4);"
+        },
+        {
+          "address": "811a3f42",
+          "status": "different",
+          "line": 1835,
+          "worker": "uVar2 = *(unsigned int *)(0x0 + 0x4);",
+          "decompiler": "uVar2 = *(unsigned int *)((unsigned char  [16])0x0 + (unsigned char  [16])0x4);"
+        },
+        {
+          "address": "813b075e",
+          "status": "different",
+          "line": 26,
+          "worker": "auVar1._8_8_ = SUB158(SUB1615(0x0,1),7);",
+          "decompiler": "auVar1._8_8_ = SUB158(SUB1615((unsigned char  [16])0x0,1),7);"
+        },
+        {
+          "address": "81453698",
+          "status": "different",
+          "line": 12,
+          "worker": "iVar3 = *(int *)(0x0 + 0x4);",
+          "decompiler": "iVar3 = *(int *)((unsigned char  [16])0x0 + (unsigned char  [16])0x4);"
+        }
+      ]
+    },
+    {
+      "image": "psx-darkstalkers-3",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_cast_functions": 264,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "casts": 3342,
+        "unsigned_marked": 503
+      },
+      "one_arm_failed": [],
+      "differences": []
+    },
+    {
+      "image": "x360-black-ops-2",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 198,
+      "different": 2,
+      "worker_cast_functions": 278,
+      "declined_functions": 2,
+      "decline_reasons": {
+        "cast:const-retype-float": 2
+      },
+      "worker_did": {
+        "casts": 2715,
+        "unsigned_marked": 59,
+        "casts_replaced": 6
+      },
+      "one_arm_failed": [],
+      "differences": [
+        {
+          "address": "8261c948",
+          "status": "different",
+          "line": 144,
+          "worker": "*(char *)(iVar11 + iVar8) = (char)lVar12;",
+          "decompiler": "*(unsigned char *)(iVar11 + iVar8) = (char)lVar12;"
+        },
+        {
+          "address": "8261ccd8",
+          "status": "different",
+          "line": 94,
+          "worker": "*(char *)(iVar6 + (int)puVar14) = (char)lVar11;",
+          "decompiler": "*(unsigned char *)(iVar6 + (int)puVar14) = (char)lVar11;"
+        }
+      ]
+    }
+  ]
+}

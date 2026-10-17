@@ -1,0 +1,766 @@
+{
+ "generated": "2026-10-13T08:34:46+00:00",
+ "tag": "compiler_rules_20261012",
+ "notes": {},
+ "m21": {
+  "status": "pass",
+  "failures": [],
+  "rows": {
+   "gba-pokeemerald": {
+    "recall": 0.9761,
+    "precision": 0.9972,
+    "size_exact": 15421,
+    "without_gp7003": null,
+    "earlier_tree": {
+     "recall": 0.9761,
+     "precision": 0.9972
+    },
+    "ps2precision": null
+   },
+   "nds-pokeheartgold-arm9": {
+    "recall": 0.9735,
+    "precision": 0.9984,
+    "size_exact": 9888,
+    "without_gp7003": null,
+    "earlier_tree": {
+     "recall": 0.9735,
+     "precision": 0.9984
+    },
+    "ps2precision": null
+   },
+   "ps2-capcom-fighting-evolution": {
+    "recall": 0.9741,
+    "precision": 0.9945,
+    "size_exact": 8548,
+    "without_gp7003": null,
+    "earlier_tree": {
+     "recall": 0.9652,
+     "precision": 0.9954
+    },
+    "ps2precision": [
+     0.9741,
+     0.9945
+    ]
+   },
+   "ps2-dungeon-game": {
+    "recall": 0.9872,
+    "precision": 0.9835,
+    "size_exact": 751,
+    "without_gp7003": null,
+    "earlier_tree": {
+     "recall": 0.9885,
+     "precision": 0.9835
+    },
+    "ps2precision": null
+   },
+   "psx-darkstalkers-3": {
+    "recall": 0.9878,
+    "precision": 0.3663,
+    "size_exact": 0,
+    "without_gp7003": null,
+    "earlier_tree": {
+     "recall": 0.9866,
+     "precision": 0.366
+    },
+    "ps2precision": null
+   },
+   "psv-need-for-speed-most-wanted": {
+    "recall": 0.9734,
+    "precision": 0.9719,
+    "size_exact": 16304,
+    "without_gp7003": null,
+    "earlier_tree": {
+     "recall": 0.9734,
+     "precision": 0.9719
+    },
+    "ps2precision": null
+   },
+   "x360-black-ops-2": {
+    "recall": 0.9833,
+    "precision": 0.9964,
+    "size_exact": 0,
+    "without_gp7003": null,
+    "earlier_tree": {
+     "recall": 0.9833,
+     "precision": 0.9964
+    },
+    "ps2precision": null
+   }
+  }
+ },
+ "m22": {
+  "MWCC seed 20261010": {
+   "frozen": {
+    "exact": 55,
+    "compiled": 192,
+    "mean_percent": 76.624,
+    "compile_failure_share": 0.04
+   },
+   "new": {
+    "exact": 55,
+    "compiled": 193,
+    "mean_percent": 76.976,
+    "compile_failure_share": 0.035
+   },
+   "better": [
+    [
+     "0038d9f0",
+     "func_0038d9f0",
+     0.0,
+     72.296875
+    ]
+   ],
+   "worse": [
+    [
+     "001e7080",
+     "func_001e7080",
+     96.603775,
+     94.62264
+    ]
+   ],
+   "same": 198,
+   "exact_gained": [],
+   "exact_lost": []
+  },
+  "MWCC seed 20261011": {
+   "frozen": {
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.321,
+    "compile_failure_share": 0.03
+   },
+   "new": {
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.321,
+    "compile_failure_share": 0.03
+   },
+   "better": [],
+   "worse": [],
+   "same": 200,
+   "exact_gained": [],
+   "exact_lost": []
+  },
+  "ee-gcc seed 20261010": {
+   "frozen": {
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.406,
+    "compile_failure_share": 0.015
+   },
+   "new": {
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.406,
+    "compile_failure_share": 0.015
+   },
+   "better": [],
+   "worse": [],
+   "same": 200,
+   "exact_gained": [],
+   "exact_lost": []
+  }
+ },
+ "ps2_success": {
+  "games": {
+   "ps2-dark-chronicle": {
+    "decompiled": 969,
+    "sampled": 969,
+    "failures": [],
+    "RustStructure (handoff default)": 969,
+    "Ps2CMatch (after)": 969
+   },
+   "ps2-dark-chronicle-symtab": {
+    "decompiled": 962,
+    "sampled": 962,
+    "failures": [],
+    "RustStructure (handoff default)": 962,
+    "Ps2CMatch (after)": 962
+   },
+   "ps2-dark-cloud": {
+    "decompiled": 936,
+    "sampled": 937,
+    "failures": [
+     {
+      "address": "01db08a0",
+      "success": false,
+      "seconds": 60.09,
+      "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+      "class": "native runtime: native runtime: execution deadline exceeded"
+     }
+    ],
+    "RustStructure (handoff default)": 936,
+    "Ps2CMatch (after)": 936
+   },
+   "ps2-dark-cloud-symtab": {
+    "decompiled": 940,
+    "sampled": 940,
+    "failures": [],
+    "RustStructure (handoff default)": 940,
+    "Ps2CMatch (after)": 940
+   },
+   "ps2-digital-devil-saga": {
+    "decompiled": 977,
+    "sampled": 977,
+    "failures": [],
+    "RustStructure (handoff default)": 977,
+    "Ps2CMatch (after)": 977
+   },
+   "ps2-fatal-frame": {
+    "decompiled": 942,
+    "sampled": 942,
+    "failures": [],
+    "RustStructure (handoff default)": 942,
+    "Ps2CMatch (after)": 942
+   },
+   "ps2-fatal-frame-symtab": {
+    "decompiled": 940,
+    "sampled": 940,
+    "failures": [],
+    "RustStructure (handoff default)": 940,
+    "Ps2CMatch (after)": 940
+   },
+   "ps2-god-hand": {
+    "decompiled": 980,
+    "sampled": 980,
+    "failures": [],
+    "RustStructure (handoff default)": 980,
+    "Ps2CMatch (after)": 980
+   },
+   "ps2-persona-4": {
+    "decompiled": 974,
+    "sampled": 975,
+    "failures": [
+     {
+      "address": "002be530",
+      "success": false,
+      "seconds": 60.08,
+      "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+      "class": "native runtime: native runtime: execution deadline exceeded"
+     }
+    ],
+    "RustStructure (handoff default)": 974,
+    "Ps2CMatch (after)": 974
+   },
+   "ps2-ratchet-clank": {
+    "decompiled": 861,
+    "sampled": 861,
+    "failures": [],
+    "RustStructure (handoff default)": 859,
+    "Ps2CMatch (after)": 860
+   },
+   "ps2-ratchet-clank-pal": {
+    "decompiled": 859,
+    "sampled": 859,
+    "failures": [],
+    "RustStructure (handoff default)": 858,
+    "Ps2CMatch (after)": 858
+   }
+  },
+  "bin": "/home/raikaru/runs/CompilerRules/finalbin",
+  "wave": "/home/raikaru/runs/CompilerRules/out/gates/console_research_wave_compiler_rules_20261012_ps2_combined.json",
+  "total": [
+   10340,
+   10342
+  ]
+ },
+ "ps2_wave": {
+  "tools": "d1f2cf0f0a648b08",
+  "frozen_tools": "8089735f6fb1f18e",
+  "images": {
+   "ps2-dark-chronicle": {
+    "summary": {
+     "sampled": 969,
+     "decompiled": 969,
+     "success_rate": 1.0,
+     "recall": 0.9987,
+     "precision": 0.9963,
+     "gotos": 49,
+     "labels": 27,
+     "native_warnings": 2497,
+     "wall_seconds": 161.7
+    },
+    "frozen": {
+     "sampled": 969,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9987,
+     "precision": 0.9963,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-dark-chronicle-symtab": {
+    "summary": {
+     "sampled": 962,
+     "decompiled": 962,
+     "success_rate": 1.0,
+     "recall": 1.0,
+     "precision": 0.9973,
+     "gotos": 84,
+     "labels": 41,
+     "native_warnings": 2281,
+     "wall_seconds": 164.7
+    },
+    "frozen": {
+     "sampled": 962,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 1.0,
+     "precision": 0.9973,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-dark-cloud": {
+    "summary": {
+     "sampled": 937,
+     "decompiled": 936,
+     "success_rate": 0.9989,
+     "recall": 0.9988,
+     "precision": 0.9907,
+     "gotos": 48,
+     "labels": 21,
+     "native_warnings": 2569,
+     "wall_seconds": 132.6
+    },
+    "frozen": {
+     "sampled": 937,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9988,
+     "precision": 0.9907,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-dark-cloud-symtab": {
+    "summary": {
+     "sampled": 940,
+     "decompiled": 940,
+     "success_rate": 1.0,
+     "recall": 0.9995,
+     "precision": 0.9448,
+     "gotos": 80,
+     "labels": 39,
+     "native_warnings": 2398,
+     "wall_seconds": 102.5
+    },
+    "frozen": {
+     "sampled": 940,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9995,
+     "precision": 0.9448,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-digital-devil-saga": {
+    "summary": {
+     "sampled": 977,
+     "decompiled": 977,
+     "success_rate": 1.0,
+     "recall": 0.9974,
+     "precision": 0.9987,
+     "gotos": 73,
+     "labels": 43,
+     "native_warnings": 2337,
+     "wall_seconds": 219.0
+    },
+    "frozen": {
+     "sampled": 977,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9974,
+     "precision": 0.9987,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-fatal-frame": {
+    "summary": {
+     "sampled": 942,
+     "decompiled": 942,
+     "success_rate": 1.0,
+     "recall": 0.9958,
+     "precision": 0.9993,
+     "gotos": 247,
+     "labels": 93,
+     "native_warnings": 2968,
+     "wall_seconds": 84.3
+    },
+    "frozen": {
+     "sampled": 942,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9958,
+     "precision": 0.9993,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-fatal-frame-symtab": {
+    "summary": {
+     "sampled": 940,
+     "decompiled": 940,
+     "success_rate": 1.0,
+     "recall": 1.0,
+     "precision": 0.9998,
+     "gotos": 263,
+     "labels": 105,
+     "native_warnings": 2412,
+     "wall_seconds": 116.3
+    },
+    "frozen": {
+     "sampled": 940,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 1.0,
+     "precision": 0.9998,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-god-hand": {
+    "summary": {
+     "sampled": 980,
+     "decompiled": 980,
+     "success_rate": 1.0,
+     "recall": 0.9976,
+     "precision": 0.9943,
+     "gotos": 186,
+     "labels": 95,
+     "native_warnings": 2063,
+     "wall_seconds": 343.8
+    },
+    "frozen": {
+     "sampled": 980,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9976,
+     "precision": 0.9943,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-persona-4": {
+    "summary": {
+     "sampled": 975,
+     "decompiled": 974,
+     "success_rate": 0.999,
+     "recall": 0.9992,
+     "precision": 0.9967,
+     "gotos": 101,
+     "labels": 80,
+     "native_warnings": 1841,
+     "wall_seconds": 252.1
+    },
+    "frozen": {
+     "sampled": 975,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9992,
+     "precision": 0.9967,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-ratchet-clank": {
+    "summary": {
+     "sampled": 861,
+     "decompiled": 861,
+     "success_rate": 1.0,
+     "recall": 0.9281,
+     "precision": 0.9965,
+     "gotos": 226,
+     "labels": 117,
+     "native_warnings": 3495,
+     "wall_seconds": 73.4
+    },
+    "frozen": {
+     "sampled": 861,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9281,
+     "precision": 0.9965,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-ratchet-clank-pal": {
+    "summary": {
+     "sampled": 859,
+     "decompiled": 859,
+     "success_rate": 1.0,
+     "recall": 0.9276,
+     "precision": 0.9947,
+     "gotos": 230,
+     "labels": 97,
+     "native_warnings": 3492,
+     "wall_seconds": 46.3
+    },
+    "frozen": {
+     "sampled": 859,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9276,
+     "precision": 0.9947,
+     "gotos": 0,
+     "labels": 0
+    }
+   }
+  }
+ },
+ "other_platforms": {
+  "tools": "2bcde8b0d87bc254",
+  "frozen_tools": "5d47c57fe192c622",
+  "images": {
+   "gba-kh-chain-of-memories": {
+    "summary": {
+     "sampled": 961,
+     "decompiled": 961,
+     "success_rate": 1.0,
+     "recall": 0.9582,
+     "precision": 0.964,
+     "gotos": 94,
+     "labels": 44,
+     "native_warnings": 3065,
+     "wall_seconds": 207.5
+    },
+    "frozen": {
+     "sampled": 961,
+     "decompiled": 961,
+     "success_rate": 1.0,
+     "recall": 0.9582,
+     "precision": 0.964,
+     "gotos": 68,
+     "labels": 36
+    }
+   },
+   "gc-pikmin-2": {
+    "summary": {
+     "sampled": 986,
+     "decompiled": 986,
+     "success_rate": 1.0,
+     "recall": 0.9998,
+     "precision": 0.9984,
+     "gotos": 59,
+     "labels": 31,
+     "native_warnings": 2628,
+     "wall_seconds": 222.5
+    },
+    "frozen": {
+     "sampled": 986,
+     "decompiled": 985,
+     "success_rate": 0.999,
+     "recall": 0.9998,
+     "precision": 0.9984,
+     "gotos": 39,
+     "labels": 18
+    }
+   },
+   "n64-super-mario-64": {
+    "summary": {
+     "sampled": 923,
+     "decompiled": 923,
+     "success_rate": 1.0,
+     "recall": 0.9974,
+     "precision": 0.9053,
+     "gotos": 15,
+     "labels": 4,
+     "native_warnings": 1754,
+     "wall_seconds": 129.8
+    },
+    "frozen": {
+     "sampled": 923,
+     "decompiled": 923,
+     "success_rate": 1.0,
+     "recall": 0.9974,
+     "precision": 0.9053,
+     "gotos": 15,
+     "labels": 4
+    }
+   },
+   "nds-kh-358-2-days": {
+    "summary": {
+     "sampled": 987,
+     "decompiled": 987,
+     "success_rate": 1.0,
+     "recall": 0.8863,
+     "precision": 0.9922,
+     "gotos": 55,
+     "labels": 19,
+     "native_warnings": 2590,
+     "wall_seconds": 458.2
+    },
+    "frozen": {
+     "sampled": 987,
+     "decompiled": 987,
+     "success_rate": 1.0,
+     "recall": 0.8863,
+     "precision": 0.9922,
+     "gotos": 24,
+     "labels": 10
+    }
+   },
+   "psp-hot-pixel": {
+    "summary": {
+     "sampled": 940,
+     "decompiled": 940,
+     "success_rate": 1.0,
+     "recall": 0.8884,
+     "precision": 0.9057,
+     "gotos": 614,
+     "labels": 312,
+     "native_warnings": 2580,
+     "wall_seconds": 362.7
+    },
+    "frozen": {
+     "sampled": 940,
+     "decompiled": 940,
+     "success_rate": 1.0,
+     "recall": 0.8883,
+     "precision": 0.8961,
+     "gotos": 585,
+     "labels": 294
+    }
+   },
+   "psp-melodie": {
+    "summary": {
+     "sampled": 851,
+     "decompiled": 851,
+     "success_rate": 1.0,
+     "recall": 0.9605,
+     "precision": 0.9477,
+     "gotos": 114,
+     "labels": 54,
+     "native_warnings": 2030,
+     "wall_seconds": 96.6
+    },
+    "frozen": {
+     "sampled": 851,
+     "decompiled": 851,
+     "success_rate": 1.0,
+     "recall": 0.9605,
+     "precision": 0.8982,
+     "gotos": 183,
+     "labels": 81
+    }
+   },
+   "psp-pac-man-rally": {
+    "summary": {
+     "sampled": 862,
+     "decompiled": 862,
+     "success_rate": 1.0,
+     "recall": 0.9074,
+     "precision": 0.928,
+     "gotos": 61,
+     "labels": 28,
+     "native_warnings": 1839,
+     "wall_seconds": 581.3
+    },
+    "frozen": {
+     "sampled": 862,
+     "decompiled": 862,
+     "success_rate": 1.0,
+     "recall": 0.9072,
+     "precision": 0.9035,
+     "gotos": 73,
+     "labels": 36
+    }
+   },
+   "psp-psp-camera-01": {
+    "summary": {
+     "sampled": 938,
+     "decompiled": 938,
+     "success_rate": 1.0,
+     "recall": 0.9597,
+     "precision": 0.9585,
+     "gotos": 48,
+     "labels": 22,
+     "native_warnings": 2049,
+     "wall_seconds": 252.4
+    },
+    "frozen": {
+     "sampled": 938,
+     "decompiled": 938,
+     "success_rate": 1.0,
+     "recall": 0.9457,
+     "precision": 0.96,
+     "gotos": 61,
+     "labels": 21
+    }
+   },
+   "psp-tetris": {
+    "summary": {
+     "sampled": 939,
+     "decompiled": 939,
+     "success_rate": 1.0,
+     "recall": 0.9876,
+     "precision": 0.9671,
+     "gotos": 105,
+     "labels": 65,
+     "native_warnings": 1467,
+     "wall_seconds": 190.5
+    },
+    "frozen": {
+     "sampled": 935,
+     "decompiled": 935,
+     "success_rate": 1.0,
+     "recall": 0.9385,
+     "precision": 0.971,
+     "gotos": 114,
+     "labels": 66
+    }
+   }
+  }
+ },
+ "psp_n200": {
+  "psp-hot-pixel": {
+   "recall": 0.8884,
+   "precision": 0.9057,
+   "ps2precision": [
+    0.8884,
+    0.9057
+   ],
+   "success_rate": 0.9974
+  },
+  "psp-melodie": {
+   "recall": 0.9605,
+   "precision": 0.9477,
+   "ps2precision": [
+    0.9605,
+    0.9477
+   ],
+   "success_rate": 1.0
+  },
+  "psp-pac-man-rally": {
+   "recall": 0.9074,
+   "precision": 0.928,
+   "ps2precision": [
+    0.9074,
+    0.928
+   ],
+   "success_rate": 1.0
+  },
+  "psp-psp-camera-01": {
+   "recall": 0.9597,
+   "precision": 0.9585,
+   "ps2precision": [
+    0.9597,
+    0.9585
+   ],
+   "success_rate": 1.0
+  },
+  "psp-tetris": {
+   "recall": 0.9876,
+   "precision": 0.9671,
+   "ps2precision": [
+    0.9876,
+    0.9671
+   ],
+   "success_rate": 1.0
+  }
+ }
+}

@@ -1,0 +1,31 @@
+{
+ "id": "m6-007",
+ "recorded_at": "2026-10-15T09:47:48.429324+00:00",
+ "status": "pass",
+ "platform": {
+  "system": "Linux",
+  "machine": "x86_64",
+  "adapter": "llvmpipe (LLVM 22.1.8, 256 bits) (Vulkan)"
+ },
+ "passed": true,
+ "summary": "packaged romwright-0.5.0-Linux-x86_64.tar.gz on Linux/x86_64 rendering on llvmpipe (LLVM 22.1.8, 256 bits) (Vulkan): Create project wrote 13 files in 1402 ms; Match on FUN_00405380 showed 7 variants, 7 compiled, best 1.763% against stock 1.599%",
+ "package": "romwright-0.5.0-Linux-x86_64.tar.gz",
+ "metrics": {
+  "ui.match.best_percent": 1.7634854771784232,
+  "ui.match.compiled_rows": 7,
+  "ui.match.compiles": 6,
+  "ui.match.decompiles": 7,
+  "ui.match.default_percent": 1.5991471215351811,
+  "ui.match.function": "FUN_00405380",
+  "ui.match.ms": 11267.22422,
+  "ui.match.rendered_rows": 7,
+  "ui.match.root_follows_project": true,
+  "ui.match.rows": 7,
+  "ui.new_project.config": true,
+  "ui.new_project.files": 13,
+  "ui.new_project.image": "project_image",
+  "ui.new_project.job_logged": true,
+  "ui.new_project.ms": 1402.4391389999998,
+  "ui.new_project.readme": true
+ }
+}

@@ -1,0 +1,74 @@
+{
+ "name": "pe-glquake-uponly",
+ "image": "/home/raikaru/ventris-corpus/extracted/pc-glquake-msvc42/glquake.exe",
+ "started": "2026-10-15T16:17:02Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 351.6,
+   "tail": [
+    "warning: no C for 0x445d92: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Cannot properly adjust input varnodes",
+    "warning: no C for 0x445dc3: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Cannot properly adjust input varnodes",
+    "warning: no C for 0x445e50: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Cannot properly adjust input varnodes",
+    "decompile: 1424 function(s) in 339.2s (14 refused by the decompiler)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-uponly: per-function PE project (1438 functions, 1424 sources, 1424 target objects with 5513 call and 12255 data relocations, 1424 objdiff units, 1620 symbols, 1388 prototypes (36 skipped)), compiler `msvc4.2` (msvc), detected `msvc-10`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-uponly && python3 configure.py && python3 build.py && python3 build.py report"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/pc-glquake-msvc42/glquake.exe /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-uponly --name glquake"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 3.7,
+   "tail": [
+    "download objdiff-cli v3.6.1 <- https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-linux-x86_64",
+    "/home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-uponly/build/tools/objdiff-cli",
+    "download wibo 1.2.0 <- https://github.com/decompals/wibo/releases/download/1.2.0/wibo-x86_64",
+    "/home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-uponly/build/tools/wibo",
+    "configured: msvc4.2 (msvc), flags /O2 /Gd /W0",
+    "next: python3 build.py && python3 build.py report"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 1046.6,
+   "tail": [
+    "  FAIL src/main/0040/FUN_00403e00.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-uponly\\src\\main\\0040\\FUN_00403e00.c(73) : error C2065: 'stack0x00004044' : undeclared identifier",
+    "  FAIL src/main/0040/FUN_00404850.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-uponly\\src\\main\\0040\\FUN_00404850.c(30) : error C2065: 'stack0x00000000' : undeclared identifier",
+    "  FAIL src/main/0040/FUN_00404e2c.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-uponly\\src\\main\\0040\\FUN_00404e2c.c(72) : error C2065: 'stack0x0000003d' : undeclared identifier",
+    "  FAIL src/main/0040/FUN_0040559c.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-uponly\\src\\main\\0040\\FUN_0040559c.c(40) : error C2065: 'stack0xfffffff8' : undeclared identifier",
+    "  FAIL src/main/0040/FUN_00407360.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-uponly\\src\\main\\0040\\FUN_00407360.c(14) : error C2065: 'stack0x00000008' : undeclared identifier",
+    "  ... 145 more in build/compile_report.json"
+   ],
+   "cmd": "python3 build.py -j 3"
+  },
+  "report": {
+   "rc": 0,
+   "secs": 0.2,
+   "tail": [
+    "1424 functions: 1269 compile, 243 match exactly, 114 at >= 90%, mean 60.142% (build/progress.json, build/progress.tsv)",
+    "matched, ready to drop their NON_MATCHING marker: FUN_004019d0, FUN_00402360, FUN_00402370, FUN_00402380, FUN_004023c0, FUN_004023d0, FUN_004023e0, FUN_004023f0, FUN_00402400, FUN_00402410, FUN_00402420, FUN_00402430, FUN_00402440, FUN_00402450, FUN_00402460, FUN_00402470, FUN_00402480, FUN_00402490, FUN_004024a0, FUN_004024b0, FUN_004024c0, FUN_00"
+   ],
+   "cmd": "python3 build.py report"
+  }
+ },
+ "build/progress.json": {
+  "summary_count": 8,
+  "functions_count": 1424
+ },
+ "build/compile_report.json": {
+  "compiler": "msvc4.2",
+  "family": "msvc",
+  "units": 1424,
+  "compiled": 1269,
+  "failed": 155,
+  "seconds": 1046.4,
+  "flags_count": 3,
+  "failures_count": 155
+ },
+ "build_rc": 0,
+ "match_functions": [],
+ "matches": [],
+ "result": "done",
+ "finished": "2026-10-15T16:40:24Z"
+}

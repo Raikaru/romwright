@@ -1,0 +1,1295 @@
+{
+ "schema": "pc-upgrade/1",
+ "generated": "2026-10-15",
+ "build": {},
+ "fixtures": {
+  "pc-glquake-msvc42": {
+   "cells": {
+    "off": {
+     "exact": 42,
+     "compiled": 190,
+     "mean_percent": 69.52,
+     "percent_ge_90": 68,
+     "functions": 200
+    },
+    "default": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 72.535,
+     "percent_ge_90": 73,
+     "functions": 200
+    },
+    "search": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 73.575,
+     "percent_ge_90": 74,
+     "functions": 200
+    },
+    "no_UNKNOWN_RETURN_VOID": {
+     "exact": 48,
+     "compiled": 191,
+     "mean_percent": 72.084,
+     "percent_ge_90": 72,
+     "functions": 200
+    },
+    "no_MERGE_CALL_SIGNATURES": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 72.557,
+     "percent_ge_90": 73,
+     "functions": 200
+    },
+    "no_STDCALL_IMPORTS": {
+     "exact": 47,
+     "compiled": 191,
+     "mean_percent": 72.1,
+     "percent_ge_90": 72,
+     "functions": 200
+    },
+    "no_FTOL": {
+     "exact": 47,
+     "compiled": 190,
+     "mean_percent": 71.189,
+     "percent_ge_90": 71,
+     "functions": 200
+    },
+    "no_FLOAT_STORES": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 72.447,
+     "percent_ge_90": 72,
+     "functions": 200
+    },
+    "no_COMPARE_ZERO": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 72.529,
+     "percent_ge_90": 73,
+     "functions": 200
+    },
+    "no_STRING_OPS": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 72.34,
+     "percent_ge_90": 73,
+     "functions": 200
+    },
+    "no_SQRT": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 72.515,
+     "percent_ge_90": 73,
+     "functions": 200
+    },
+    "no_X87_MATH": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 71.798,
+     "percent_ge_90": 73,
+     "functions": 200
+    },
+    "no_RECURSIVE_CALLEE": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 72.535,
+     "percent_ge_90": 73,
+     "functions": 200
+    },
+    "no_CALLEE_OVER_CODE_REF": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 72.535,
+     "percent_ge_90": 73,
+     "functions": 200
+    }
+   },
+   "default_vs_off": {
+    "better": 58,
+    "worse": 17,
+    "same": 125,
+    "p": 2.18e-06,
+    "exact_gained": 8,
+    "exact_lost": 0
+   },
+   "classes": {
+    "off": {
+     "bytes: length (candidate longer), mostly moves and arithmetic": 42,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 23,
+     "bytes: different instructions (same length)": 22,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 17,
+     "bytes: few instructions differ in count": 14,
+     "bytes: length (candidate shorter), mostly x87": 11,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 7,
+     "compile: conflicting / incompatible types": 6,
+     "bytes: register allocation": 4,
+     "bytes: length (candidate longer), mostly x87": 4,
+     "compile: other": 3,
+     "bytes: length (candidate shorter), mostly control flow and calls": 2,
+     "bytes: stack frame size": 1,
+     "not produced": 1,
+     "bytes: single instruction": 1
+    },
+    "default": {
+     "bytes: length (candidate longer), mostly moves and arithmetic": 46,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 25,
+     "bytes: different instructions (same length)": 21,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 14,
+     "bytes: length (candidate shorter), mostly x87": 10,
+     "bytes: length (candidate longer), mostly x87": 6,
+     "compile: conflicting / incompatible types": 6,
+     "bytes: register allocation": 5,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 5,
+     "bytes: few instructions differ in count": 4,
+     "bytes: single instruction": 2,
+     "compile: other": 2,
+     "bytes: register allocation + immediates": 1,
+     "bytes: stack frame size": 1,
+     "not produced": 1,
+     "bytes: length (candidate shorter), mostly control flow and calls": 1
+    }
+   },
+   "tags": {
+    "off": {
+     "x87": 67,
+     "argument cleanup (`add esp`) differs": 43,
+     "call count differs": 23,
+     "float-to-int helper (`__ftol`) argument lost": 18,
+     "mul/shift strength reduction": 16,
+     "rep string op": 15,
+     "security cookie": 7,
+     "switch table": 6
+    },
+    "default": {
+     "x87": 64,
+     "argument cleanup (`add esp`) differs": 36,
+     "call count differs": 19,
+     "mul/shift strength reduction": 16,
+     "rep string op": 12,
+     "security cookie": 8,
+     "switch table": 6,
+     "float-to-int helper (`__ftol`) argument lost": 2
+    }
+   },
+   "leave_one_out": {
+    "UNKNOWN_RETURN_VOID": {
+     "switch": "ROMWRIGHT_EXPORT_UNKNOWN_RETURN_VOID",
+     "cell": {
+      "exact": 48,
+      "compiled": 191,
+      "mean_percent": 72.084,
+      "percent_ge_90": 72,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 17,
+      "worse": 11,
+      "same": 172,
+      "p": 0.345,
+      "exact_gained": 2,
+      "exact_lost": 0
+     }
+    },
+    "MERGE_CALL_SIGNATURES": {
+     "switch": "ROMWRIGHT_EXPORT_MERGE_CALL_SIGNATURES",
+     "cell": {
+      "exact": 50,
+      "compiled": 191,
+      "mean_percent": 72.557,
+      "percent_ge_90": 73,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 1,
+      "worse": 5,
+      "same": 194,
+      "p": 0.219,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "STDCALL_IMPORTS": {
+     "switch": "ROMWRIGHT_EXPORT_STDCALL_IMPORTS",
+     "cell": {
+      "exact": 47,
+      "compiled": 191,
+      "mean_percent": 72.1,
+      "percent_ge_90": 72,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 16,
+      "worse": 2,
+      "same": 182,
+      "p": 0.00131,
+      "exact_gained": 3,
+      "exact_lost": 0
+     }
+    },
+    "FTOL": {
+     "switch": "ROMWRIGHT_PE_FTOL",
+     "cell": {
+      "exact": 47,
+      "compiled": 190,
+      "mean_percent": 71.189,
+      "percent_ge_90": 71,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 21,
+      "worse": 6,
+      "same": 173,
+      "p": 0.00592,
+      "exact_gained": 3,
+      "exact_lost": 0
+     }
+    },
+    "FLOAT_STORES": {
+     "switch": "ROMWRIGHT_EXPORT_FLOAT_STORES",
+     "cell": {
+      "exact": 50,
+      "compiled": 191,
+      "mean_percent": 72.447,
+      "percent_ge_90": 72,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 4,
+      "worse": 0,
+      "same": 196,
+      "p": 0.125,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "COMPARE_ZERO": {
+     "switch": "ROMWRIGHT_EXPORT_COMPARE_ZERO",
+     "cell": {
+      "exact": 50,
+      "compiled": 191,
+      "mean_percent": 72.529,
+      "percent_ge_90": 73,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 1,
+      "worse": 0,
+      "same": 199,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "STRING_OPS": {
+     "switch": "ROMWRIGHT_EXPORT_STRING_OPS",
+     "cell": {
+      "exact": 50,
+      "compiled": 191,
+      "mean_percent": 72.34,
+      "percent_ge_90": 73,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 3,
+      "worse": 1,
+      "same": 196,
+      "p": 0.625,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "SQRT": {
+     "switch": "ROMWRIGHT_EXPORT_SQRT",
+     "cell": {
+      "exact": 50,
+      "compiled": 191,
+      "mean_percent": 72.515,
+      "percent_ge_90": 73,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 3,
+      "worse": 0,
+      "same": 197,
+      "p": 0.25,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "X87_MATH": {
+     "switch": "ROMWRIGHT_EXPORT_X87_MATH",
+     "cell": {
+      "exact": 50,
+      "compiled": 191,
+      "mean_percent": 71.798,
+      "percent_ge_90": 73,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 7,
+      "worse": 0,
+      "same": 193,
+      "p": 0.0156,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "RECURSIVE_CALLEE": {
+     "switch": "ROMWRIGHT_EXPORT_RECURSIVE_CALLEE",
+     "cell": {
+      "exact": 50,
+      "compiled": 191,
+      "mean_percent": 72.535,
+      "percent_ge_90": 73,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 0,
+      "worse": 0,
+      "same": 200,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "CALLEE_OVER_CODE_REF": {
+     "switch": "ROMWRIGHT_EXPORT_CALLEE_OVER_CODE_REF",
+     "cell": {
+      "exact": 50,
+      "compiled": 191,
+      "mean_percent": 72.535,
+      "percent_ge_90": 73,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 0,
+      "worse": 0,
+      "same": 200,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    }
+   },
+   "search": {
+    "default_layer": {
+     "functions": 200,
+     "produced": 199,
+     "compiled": 191,
+     "exact": 50,
+     "mean_percent": 72.535,
+     "mean_percent_compiled": 75.953,
+     "percent_ge_90": 73
+    },
+    "best_of_search": {
+     "exact": 50,
+     "compiled": 191,
+     "mean_percent": 73.575,
+     "percent_ge_90": 74,
+     "functions": 200
+    },
+    "improved": 34,
+    "searched": 141
+   }
+  },
+  "pc-quake2-msvc8": {
+   "cells": {
+    "off": {
+     "exact": 30,
+     "compiled": 196,
+     "mean_percent": 65.791,
+     "percent_ge_90": 60,
+     "functions": 200
+    },
+    "default": {
+     "exact": 38,
+     "compiled": 196,
+     "mean_percent": 67.99,
+     "percent_ge_90": 65,
+     "functions": 200
+    },
+    "search": {
+     "exact": 39,
+     "compiled": 196,
+     "mean_percent": 68.954,
+     "percent_ge_90": 66,
+     "functions": 200
+    },
+    "no_UNKNOWN_RETURN_VOID": {
+     "exact": 34,
+     "compiled": 196,
+     "mean_percent": 67.089,
+     "percent_ge_90": 62,
+     "functions": 200
+    },
+    "no_MERGE_CALL_SIGNATURES": {
+     "exact": 38,
+     "compiled": 196,
+     "mean_percent": 68.088,
+     "percent_ge_90": 65,
+     "functions": 200
+    },
+    "no_STDCALL_IMPORTS": {
+     "exact": 36,
+     "compiled": 196,
+     "mean_percent": 67.851,
+     "percent_ge_90": 65,
+     "functions": 200
+    },
+    "no_FTOL": {
+     "exact": 38,
+     "compiled": 196,
+     "mean_percent": 68.207,
+     "percent_ge_90": 66,
+     "functions": 200
+    },
+    "no_FLOAT_STORES": {
+     "exact": 38,
+     "compiled": 196,
+     "mean_percent": 66.518,
+     "percent_ge_90": 64,
+     "functions": 200
+    },
+    "no_COMPARE_ZERO": {
+     "exact": 36,
+     "compiled": 196,
+     "mean_percent": 67.635,
+     "percent_ge_90": 63,
+     "functions": 200
+    },
+    "no_STRING_OPS": {
+     "exact": 38,
+     "compiled": 196,
+     "mean_percent": 67.971,
+     "percent_ge_90": 64,
+     "functions": 200
+    },
+    "no_SQRT": {
+     "exact": 38,
+     "compiled": 196,
+     "mean_percent": 67.99,
+     "percent_ge_90": 65,
+     "functions": 200
+    },
+    "no_X87_MATH": {
+     "exact": 38,
+     "compiled": 196,
+     "mean_percent": 67.99,
+     "percent_ge_90": 65,
+     "functions": 200
+    },
+    "no_RECURSIVE_CALLEE": {
+     "exact": 38,
+     "compiled": 195,
+     "mean_percent": 67.623,
+     "percent_ge_90": 65,
+     "functions": 200
+    },
+    "no_CALLEE_OVER_CODE_REF": {
+     "exact": 38,
+     "compiled": 196,
+     "mean_percent": 67.99,
+     "percent_ge_90": 65,
+     "functions": 200
+    }
+   },
+   "default_vs_off": {
+    "better": 30,
+    "worse": 8,
+    "same": 162,
+    "p": 0.000472,
+    "exact_gained": 8,
+    "exact_lost": 0
+   },
+   "classes": {
+    "off": {
+     "bytes: length (candidate longer), mostly moves and arithmetic": 39,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 36,
+     "bytes: different instructions (same length)": 19,
+     "bytes: length (candidate shorter), mostly x87": 17,
+     "bytes: few instructions differ in count": 12,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 12,
+     "bytes: length (candidate longer), mostly x87": 11,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 8,
+     "bytes: length (candidate shorter), mostly control flow and calls": 5,
+     "bytes: length (candidate longer), mostly control flow and calls": 3,
+     "not produced": 3,
+     "bytes: register allocation": 2,
+     "compile: other": 1,
+     "bytes: stack frame size": 1,
+     "bytes: single instruction": 1
+    },
+    "default": {
+     "bytes: length (candidate longer), mostly moves and arithmetic": 38,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 35,
+     "bytes: different instructions (same length)": 18,
+     "bytes: length (candidate shorter), mostly x87": 14,
+     "bytes: length (candidate longer), mostly x87": 11,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 11,
+     "bytes: few instructions differ in count": 10,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 9,
+     "bytes: length (candidate shorter), mostly control flow and calls": 5,
+     "bytes: length (candidate longer), mostly control flow and calls": 3,
+     "not produced": 3,
+     "bytes: register allocation": 2,
+     "compile: other": 1,
+     "bytes: stack frame size": 1,
+     "bytes: single instruction": 1
+    }
+   },
+   "tags": {
+    "off": {
+     "x87": 78,
+     "argument cleanup (`add esp`) differs": 63,
+     "call count differs": 37,
+     "mul/shift strength reduction": 15,
+     "security cookie": 15,
+     "float-to-int helper (`__ftol`) argument lost": 14,
+     "rep string op": 6,
+     "switch table": 4
+    },
+    "default": {
+     "x87": 74,
+     "argument cleanup (`add esp`) differs": 58,
+     "call count differs": 38,
+     "mul/shift strength reduction": 16,
+     "security cookie": 15,
+     "switch table": 4,
+     "rep string op": 4,
+     "float-to-int helper (`__ftol`) argument lost": 4
+    }
+   },
+   "leave_one_out": {
+    "UNKNOWN_RETURN_VOID": {
+     "switch": "ROMWRIGHT_EXPORT_UNKNOWN_RETURN_VOID",
+     "cell": {
+      "exact": 34,
+      "compiled": 196,
+      "mean_percent": 67.089,
+      "percent_ge_90": 62,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 9,
+      "worse": 3,
+      "same": 188,
+      "p": 0.146,
+      "exact_gained": 4,
+      "exact_lost": 0
+     }
+    },
+    "MERGE_CALL_SIGNATURES": {
+     "switch": "ROMWRIGHT_EXPORT_MERGE_CALL_SIGNATURES",
+     "cell": {
+      "exact": 38,
+      "compiled": 196,
+      "mean_percent": 68.088,
+      "percent_ge_90": 65,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 0,
+      "worse": 2,
+      "same": 198,
+      "p": 0.5,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "STDCALL_IMPORTS": {
+     "switch": "ROMWRIGHT_EXPORT_STDCALL_IMPORTS",
+     "cell": {
+      "exact": 36,
+      "compiled": 196,
+      "mean_percent": 67.851,
+      "percent_ge_90": 65,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 4,
+      "worse": 0,
+      "same": 196,
+      "p": 0.125,
+      "exact_gained": 2,
+      "exact_lost": 0
+     }
+    },
+    "FTOL": {
+     "switch": "ROMWRIGHT_PE_FTOL",
+     "cell": {
+      "exact": 38,
+      "compiled": 196,
+      "mean_percent": 68.207,
+      "percent_ge_90": 66,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 9,
+      "worse": 5,
+      "same": 186,
+      "p": 0.424,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "FLOAT_STORES": {
+     "switch": "ROMWRIGHT_EXPORT_FLOAT_STORES",
+     "cell": {
+      "exact": 38,
+      "compiled": 196,
+      "mean_percent": 66.518,
+      "percent_ge_90": 64,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 10,
+      "worse": 1,
+      "same": 189,
+      "p": 0.0117,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "COMPARE_ZERO": {
+     "switch": "ROMWRIGHT_EXPORT_COMPARE_ZERO",
+     "cell": {
+      "exact": 36,
+      "compiled": 196,
+      "mean_percent": 67.635,
+      "percent_ge_90": 63,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 2,
+      "worse": 0,
+      "same": 198,
+      "p": 0.5,
+      "exact_gained": 2,
+      "exact_lost": 0
+     }
+    },
+    "STRING_OPS": {
+     "switch": "ROMWRIGHT_EXPORT_STRING_OPS",
+     "cell": {
+      "exact": 38,
+      "compiled": 196,
+      "mean_percent": 67.971,
+      "percent_ge_90": 64,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 1,
+      "worse": 1,
+      "same": 198,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "SQRT": {
+     "switch": "ROMWRIGHT_EXPORT_SQRT",
+     "cell": {
+      "exact": 38,
+      "compiled": 196,
+      "mean_percent": 67.99,
+      "percent_ge_90": 65,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 0,
+      "worse": 0,
+      "same": 200,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "X87_MATH": {
+     "switch": "ROMWRIGHT_EXPORT_X87_MATH",
+     "cell": {
+      "exact": 38,
+      "compiled": 196,
+      "mean_percent": 67.99,
+      "percent_ge_90": 65,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 0,
+      "worse": 0,
+      "same": 200,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "RECURSIVE_CALLEE": {
+     "switch": "ROMWRIGHT_EXPORT_RECURSIVE_CALLEE",
+     "cell": {
+      "exact": 38,
+      "compiled": 195,
+      "mean_percent": 67.623,
+      "percent_ge_90": 65,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 1,
+      "worse": 1,
+      "same": 198,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "CALLEE_OVER_CODE_REF": {
+     "switch": "ROMWRIGHT_EXPORT_CALLEE_OVER_CODE_REF",
+     "cell": {
+      "exact": 38,
+      "compiled": 196,
+      "mean_percent": 67.99,
+      "percent_ge_90": 65,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 0,
+      "worse": 0,
+      "same": 200,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    }
+   },
+   "search": {
+    "default_layer": {
+     "functions": 200,
+     "produced": 197,
+     "compiled": 196,
+     "exact": 38,
+     "mean_percent": 67.99,
+     "mean_percent_compiled": 69.378,
+     "percent_ge_90": 65
+    },
+    "best_of_search": {
+     "exact": 39,
+     "compiled": 196,
+     "mean_percent": 68.954,
+     "percent_ge_90": 66,
+     "functions": 200
+    },
+    "improved": 28,
+    "searched": 158
+   }
+  },
+  "pc-ioq3-ded-mingw32": {
+   "cells": {
+    "off": {
+     "exact": 21,
+     "compiled": 181,
+     "mean_percent": 41.633,
+     "percent_ge_90": 29,
+     "functions": 200
+    },
+    "default": {
+     "exact": 22,
+     "compiled": 181,
+     "mean_percent": 41.968,
+     "percent_ge_90": 29,
+     "functions": 200
+    },
+    "search": {
+     "exact": 22,
+     "compiled": 181,
+     "mean_percent": 42.46,
+     "percent_ge_90": 29,
+     "functions": 200
+    },
+    "no_UNKNOWN_RETURN_VOID": {
+     "exact": 21,
+     "compiled": 181,
+     "mean_percent": 41.67,
+     "percent_ge_90": 28,
+     "functions": 200
+    },
+    "no_MERGE_CALL_SIGNATURES": {
+     "exact": 22,
+     "compiled": 181,
+     "mean_percent": 41.889,
+     "percent_ge_90": 29,
+     "functions": 200
+    },
+    "no_FLOAT_STORES": {
+     "exact": 22,
+     "compiled": 181,
+     "mean_percent": 41.968,
+     "percent_ge_90": 29,
+     "functions": 200
+    },
+    "no_RECURSIVE_CALLEE": {
+     "exact": 22,
+     "compiled": 181,
+     "mean_percent": 41.59,
+     "percent_ge_90": 29,
+     "functions": 200
+    },
+    "no_CALLEE_OVER_CODE_REF": {
+     "exact": 22,
+     "compiled": 181,
+     "mean_percent": 41.968,
+     "percent_ge_90": 29,
+     "functions": 200
+    }
+   },
+   "default_vs_off": {
+    "better": 14,
+    "worse": 7,
+    "same": 179,
+    "p": 0.189,
+    "exact_gained": 1,
+    "exact_lost": 0
+   },
+   "classes": {
+    "off": {
+     "bytes: length (candidate longer), mostly moves and arithmetic": 62,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 43,
+     "bytes: different instructions (same length)": 15,
+     "not produced": 9,
+     "compile: syntax: type or keyword": 9,
+     "bytes: few instructions differ in count": 9,
+     "bytes: length (candidate shorter), mostly x87": 8,
+     "bytes: length (candidate longer), mostly control flow and calls": 7,
+     "bytes: length (candidate longer), mostly x87": 6,
+     "bytes: length (candidate shorter), mostly control flow and calls": 5,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 1,
+     "bytes: scheduling / order": 1,
+     "compile: other": 1,
+     "bytes: stack frame size": 1,
+     "bytes: single instruction": 1,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 1
+    },
+    "default": {
+     "bytes: length (candidate longer), mostly moves and arithmetic": 58,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 43,
+     "bytes: different instructions (same length)": 19,
+     "not produced": 9,
+     "compile: syntax: type or keyword": 9,
+     "bytes: few instructions differ in count": 9,
+     "bytes: length (candidate longer), mostly control flow and calls": 8,
+     "bytes: length (candidate shorter), mostly x87": 8,
+     "bytes: length (candidate longer), mostly x87": 6,
+     "bytes: length (candidate shorter), mostly control flow and calls": 4,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 1,
+     "compile: other": 1,
+     "bytes: stack frame size": 1,
+     "bytes: single instruction": 1,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 1
+    }
+   },
+   "tags": {
+    "off": {
+     "argument cleanup (`add esp`) differs": 48,
+     "x87": 41,
+     "call count differs": 16,
+     "mul/shift strength reduction": 13,
+     "security cookie": 3,
+     "switch table": 3
+    },
+    "default": {
+     "argument cleanup (`add esp`) differs": 46,
+     "x87": 41,
+     "mul/shift strength reduction": 14,
+     "call count differs": 14,
+     "switch table": 3,
+     "security cookie": 2
+    }
+   },
+   "leave_one_out": {
+    "UNKNOWN_RETURN_VOID": {
+     "switch": "ROMWRIGHT_EXPORT_UNKNOWN_RETURN_VOID",
+     "cell": {
+      "exact": 21,
+      "compiled": 181,
+      "mean_percent": 41.67,
+      "percent_ge_90": 28,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 9,
+      "worse": 3,
+      "same": 188,
+      "p": 0.146,
+      "exact_gained": 1,
+      "exact_lost": 0
+     }
+    },
+    "MERGE_CALL_SIGNATURES": {
+     "switch": "ROMWRIGHT_EXPORT_MERGE_CALL_SIGNATURES",
+     "cell": {
+      "exact": 22,
+      "compiled": 181,
+      "mean_percent": 41.889,
+      "percent_ge_90": 29,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 3,
+      "worse": 1,
+      "same": 196,
+      "p": 0.625,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "FLOAT_STORES": {
+     "switch": "ROMWRIGHT_EXPORT_FLOAT_STORES",
+     "cell": {
+      "exact": 22,
+      "compiled": 181,
+      "mean_percent": 41.968,
+      "percent_ge_90": 29,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 0,
+      "worse": 0,
+      "same": 200,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "RECURSIVE_CALLEE": {
+     "switch": "ROMWRIGHT_EXPORT_RECURSIVE_CALLEE",
+     "cell": {
+      "exact": 22,
+      "compiled": 181,
+      "mean_percent": 41.59,
+      "percent_ge_90": 29,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 2,
+      "worse": 0,
+      "same": 198,
+      "p": 0.5,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    },
+    "CALLEE_OVER_CODE_REF": {
+     "switch": "ROMWRIGHT_EXPORT_CALLEE_OVER_CODE_REF",
+     "cell": {
+      "exact": 22,
+      "compiled": 181,
+      "mean_percent": 41.968,
+      "percent_ge_90": 29,
+      "functions": 200
+     },
+     "default_vs_arm": {
+      "better": 0,
+      "worse": 0,
+      "same": 200,
+      "p": 1.0,
+      "exact_gained": 0,
+      "exact_lost": 0
+     }
+    }
+   },
+   "search": {
+    "default_layer": {
+     "functions": 200,
+     "produced": 191,
+     "compiled": 181,
+     "exact": 22,
+     "mean_percent": 41.968,
+     "mean_percent_compiled": 46.373,
+     "percent_ge_90": 29
+    },
+    "best_of_search": {
+     "exact": 22,
+     "compiled": 181,
+     "mean_percent": 42.46,
+     "percent_ge_90": 29,
+     "functions": 200
+    },
+    "improved": 17,
+    "searched": 159
+   }
+  },
+  "pc-doomgeneric-mingw32": {
+   "cells": {
+    "off": {
+     "exact": 34,
+     "compiled": 176,
+     "mean_percent": 47.835,
+     "percent_ge_90": 43,
+     "functions": 200
+    },
+    "default": {
+     "exact": 35,
+     "compiled": 176,
+     "mean_percent": 47.829,
+     "percent_ge_90": 43,
+     "functions": 200
+    }
+   },
+   "default_vs_off": {
+    "better": 10,
+    "worse": 5,
+    "same": 185,
+    "p": 0.302,
+    "exact_gained": 1,
+    "exact_lost": 0
+   },
+   "classes": {
+    "off": {
+     "bytes: length (candidate longer), mostly moves and arithmetic": 57,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 42,
+     "bytes: different instructions (same length)": 18,
+     "compile: syntax: type or keyword": 15,
+     "bytes: few instructions differ in count": 10,
+     "not produced": 8,
+     "bytes: scheduling / order": 5,
+     "bytes: length (candidate longer), mostly control flow and calls": 3,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 2,
+     "bytes: register allocation": 2,
+     "bytes: single instruction": 1,
+     "bytes: length (candidate shorter), mostly control flow and calls": 1,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 1,
+     "compile: other": 1
+    },
+    "default": {
+     "bytes: length (candidate longer), mostly moves and arithmetic": 57,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 42,
+     "bytes: different instructions (same length)": 18,
+     "compile: syntax: type or keyword": 15,
+     "bytes: few instructions differ in count": 10,
+     "not produced": 8,
+     "bytes: scheduling / order": 5,
+     "bytes: length (candidate longer), mostly control flow and calls": 3,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 2,
+     "bytes: single instruction": 1,
+     "bytes: length (candidate shorter), mostly control flow and calls": 1,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 1,
+     "bytes: register allocation": 1,
+     "compile: other": 1
+    }
+   },
+   "tags": {
+    "off": {
+     "argument cleanup (`add esp`) differs": 29,
+     "mul/shift strength reduction": 26,
+     "call count differs": 14,
+     "security cookie": 5,
+     "switch table": 2,
+     "x87": 1
+    },
+    "default": {
+     "argument cleanup (`add esp`) differs": 29,
+     "mul/shift strength reduction": 26,
+     "call count differs": 14,
+     "security cookie": 5,
+     "switch table": 2,
+     "x87": 1
+    }
+   },
+   "leave_one_out": {}
+  },
+  "pc-quake2-game-msvc8": {
+   "cells": {
+    "off": {
+     "exact": 32,
+     "compiled": 195,
+     "mean_percent": 63.037,
+     "percent_ge_90": 41,
+     "functions": 200
+    },
+    "default": {
+     "exact": 35,
+     "compiled": 195,
+     "mean_percent": 63.132,
+     "percent_ge_90": 43,
+     "functions": 200
+    }
+   },
+   "default_vs_off": {
+    "better": 16,
+    "worse": 9,
+    "same": 175,
+    "p": 0.23,
+    "exact_gained": 3,
+    "exact_lost": 0
+   },
+   "classes": {
+    "off": {
+     "bytes: length (candidate shorter), mostly x87": 62,
+     "bytes: length (candidate longer), mostly moves and arithmetic": 24,
+     "bytes: different instructions (same length)": 21,
+     "bytes: length (candidate longer), mostly x87": 18,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 16,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 11,
+     "bytes: few instructions differ in count": 4,
+     "bytes: length (candidate longer), mostly control flow and calls": 4,
+     "not produced": 2,
+     "compile: conflicting / incompatible types": 2,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 2,
+     "compile: other": 1,
+     "bytes: length (candidate shorter), mostly control flow and calls": 1
+    },
+    "default": {
+     "bytes: length (candidate shorter), mostly x87": 58,
+     "bytes: length (candidate longer), mostly moves and arithmetic": 26,
+     "bytes: different instructions (same length)": 21,
+     "bytes: length (candidate longer), mostly x87": 19,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 15,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 10,
+     "bytes: few instructions differ in count": 4,
+     "bytes: length (candidate longer), mostly control flow and calls": 4,
+     "bytes: length (candidate longer), mostly stack and arithmetic": 2,
+     "not produced": 2,
+     "compile: conflicting / incompatible types": 2,
+     "compile: other": 1,
+     "bytes: length (candidate shorter), mostly control flow and calls": 1
+    }
+   },
+   "tags": {
+    "off": {
+     "x87": 143,
+     "argument cleanup (`add esp`) differs": 42,
+     "call count differs": 25,
+     "security cookie": 17,
+     "float-to-int helper (`__ftol`) argument lost": 16,
+     "rep string op": 12,
+     "mul/shift strength reduction": 7
+    },
+    "default": {
+     "x87": 141,
+     "argument cleanup (`add esp`) differs": 43,
+     "call count differs": 29,
+     "security cookie": 17,
+     "rep string op": 10,
+     "mul/shift strength reduction": 7,
+     "float-to-int helper (`__ftol`) argument lost": 6
+    }
+   },
+   "leave_one_out": {}
+  },
+  "pc-quake2-refgl-msvc8": {
+   "cells": {
+    "off": {
+     "exact": 92,
+     "compiled": 196,
+     "mean_percent": 73.009,
+     "percent_ge_90": 97,
+     "functions": 200
+    },
+    "default": {
+     "exact": 94,
+     "compiled": 197,
+     "mean_percent": 73.786,
+     "percent_ge_90": 100,
+     "functions": 200
+    }
+   },
+   "default_vs_off": {
+    "better": 14,
+    "worse": 1,
+    "same": 185,
+    "p": 0.000977,
+    "exact_gained": 2,
+    "exact_lost": 0
+   },
+   "classes": {
+    "off": {
+     "bytes: length (candidate longer), mostly stack and arithmetic": 21,
+     "bytes: different instructions (same length)": 19,
+     "bytes: length (candidate longer), mostly moves and arithmetic": 16,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 13,
+     "bytes: length (candidate shorter), mostly x87": 12,
+     "bytes: length (candidate longer), mostly x87": 9,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 6,
+     "bytes: few instructions differ in count": 5,
+     "bytes: single instruction": 2,
+     "not produced": 2,
+     "compile: conflicting / incompatible types": 1,
+     "bytes: length (candidate shorter), mostly control flow and calls": 1,
+     "compile: syntax: type or keyword": 1
+    },
+    "default": {
+     "bytes: length (candidate longer), mostly stack and arithmetic": 20,
+     "bytes: different instructions (same length)": 19,
+     "bytes: length (candidate longer), mostly moves and arithmetic": 15,
+     "bytes: length (candidate shorter), mostly x87": 12,
+     "bytes: length (candidate shorter), mostly moves and arithmetic": 12,
+     "bytes: length (candidate longer), mostly x87": 10,
+     "bytes: length (candidate shorter), mostly stack and arithmetic": 6,
+     "bytes: few instructions differ in count": 6,
+     "bytes: single instruction": 2,
+     "not produced": 2,
+     "bytes: length (candidate shorter), mostly control flow and calls": 1,
+     "compile: syntax: type or keyword": 1
+    }
+   },
+   "tags": {
+    "off": {
+     "x87": 72,
+     "argument cleanup (`add esp`) differs": 61,
+     "call count differs": 16,
+     "float-to-int helper (`__ftol`) argument lost": 9,
+     "security cookie": 8,
+     "mul/shift strength reduction": 6,
+     "rep string op": 4,
+     "switch table": 2
+    },
+    "default": {
+     "x87": 72,
+     "argument cleanup (`add esp`) differs": 56,
+     "call count differs": 16,
+     "security cookie": 8,
+     "mul/shift strength reduction": 7,
+     "float-to-int helper (`__ftol`) argument lost": 6,
+     "switch table": 2,
+     "rep string op": 2
+    }
+   },
+   "leave_one_out": {}
+  }
+ },
+ "gates": {
+  "m22-003 dds": {
+   "off": {
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.402
+   },
+   "default": {
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.402
+   }
+  },
+  "m22-003 dc": {
+   "off": {
+    "exact": 42,
+    "compiled": 197,
+    "mean_percent": 73.877
+   },
+   "default": {
+    "exact": 42,
+    "compiled": 197,
+    "mean_percent": 73.877
+   }
+  },
+  "m22-002 MWCC 20261010": {
+   "off": {
+    "exact": 56,
+    "compiled": 196,
+    "mean_percent": 78.031
+   },
+   "default": {
+    "exact": 56,
+    "compiled": 196,
+    "mean_percent": 78.031
+   }
+  }
+ }
+}

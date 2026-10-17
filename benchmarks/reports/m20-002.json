@@ -1,0 +1,14 @@
+{
+  "id": "m20-002",
+  "recorded_at": "2026-10-15T09:57:29.734472+00:00",
+  "thresholds": {
+    "named_recall": 0.95
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "818 functions, named recall 0.9976 over 818 map names in .text extents",
+  "metrics": {
+    "named_recall": 0.9975550122249389,
+    "map_names": 818
+  }
+}

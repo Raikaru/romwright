@@ -1,0 +1,52 @@
+{
+ "name": "nds-twewy",
+ "image": "/home/raikaru/ventris-corpus/extracted/nds-world-ends-with-you/twewy.nds",
+ "started": "2026-10-15T14:27:32Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 20.1,
+   "tail": [
+    "imported twewy.arm9 (2474 functions, ARM:LE:32:v5t; 50 program(s) in the store)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-nds-twewy: nds mwcc-arm (Medium), 50 modules, 2474 ARM9 + 10312 overlay + 838 ARM7 functions, 13624 symbols, 0 prototypes (0 skipped), compiler `mwccarm`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-nds-twewy && python3 -m pip install -r requirements.txt && python3 configure.py && ninja"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/nds-world-ends-with-you/twewy.nds /home/raikaru/runs/FinalGate2/smoke/proj-nds-twewy --name twewy"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 3.4,
+   "tail": [
+    "dsd rom extract",
+    "dsd init",
+    "merge romwright symbols",
+    "{\"renamed_functions\": 0, \"renamed_data\": 0, \"added_functions\": 1, \"skipped_mode_conflict\": 0, \"skipped_inside_dsd_function\": 7, \"skipped_not_code\": 0, \"skipped_conflict\": 3, \"dropped_ambiguous_relocations\": 5488, \"dsd_functions\": 14424, \"romwright_functions\": 12786, \"romwright_functions_dsd_also_has\": 12775, \"added\": [\"FUN_02055b30\"], \"candidates_not_added\": 0}",
+    "removed 1 romwright function(s) dsd cannot analyse: FUN_02055b30",
+    "configured: dsd config in config/dsd, 0 C unit(s); run `ninja`"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 2.9,
+   "tail": [
+    "[5/7] dsd rom build",
+    "[INFO ] Loading ROM from build/dsd/build/rom_config.yaml",
+    "[INFO ] Loading ROM assets",
+    "[6/7] header CRCs",
+    "[7/7] verify build/twewy.nds",
+    "OK  build/twewy.nds  sha1 23e87b1e72aab7f9b718f83e92fd1c3039f23675"
+   ],
+   "cmd": "ninja"
+  }
+ },
+ "build_ok_lines": [
+  "OK  build/twewy.nds  sha1 23e87b1e72aab7f9b718f83e92fd1c3039f23675"
+ ],
+ "sha1_built": "23e87b1e72aab7f9b718f83e92fd1c3039f23675",
+ "build_rc": 0,
+ "match_functions": [],
+ "matches": [],
+ "result": "done",
+ "finished": "2026-10-15T14:27:59Z"
+}

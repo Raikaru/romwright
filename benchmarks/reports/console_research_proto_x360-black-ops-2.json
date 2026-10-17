@@ -1,0 +1,913 @@
+{
+ "schema": "console-research/1",
+ "generated": "2026-10-08T16:29:54+00:00",
+ "tools": "08df1a6eff7987ed",
+ "cli": "/home/raikaru/ventris/target/release/romwright-cli",
+ "n": 200,
+ "seed": 20261006,
+ "thresholds": {
+  "rate": 0.005,
+  "count_relative": 0.01
+ },
+ "configs": {
+  "default": {
+   "name": "default",
+   "env": {},
+   "component": "all research (default vs baseline-off)",
+   "reference": "baseline-off",
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "baseline-off": {
+   "name": "baseline-off",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": "",
+    "ROMWRIGHT_NO_SWITCH_VSA": "1",
+    "ROMWRIGHT_NO_SWITCH_DECOMPILER": "1",
+    "ROMWRIGHT_RUST_STRUCTURING": "none"
+   },
+   "component": "reference",
+   "reference": null,
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "infer-prototypes": {
+   "name": "infer-prototypes",
+   "env": {},
+   "component": "persisted prototypes (infer_prototypes job)",
+   "reference": "default",
+   "sign": 1,
+   "infer_prototypes": true
+  },
+  "inferred-types-off": {
+   "name": "inferred-types-off",
+   "env": {
+    "ROMWRIGHT_INFERRED_TYPES": "0"
+   },
+   "component": "inferred types -> prototypes",
+   "reference": "infer-prototypes",
+   "sign": -1,
+   "infer_prototypes": true
+  }
+ },
+ "images": {
+  "x360-black-ops-2": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 14,
+      "labels": 7,
+      "irregular_functions": 166,
+      "native_warnings": 641,
+      "text_warnings": 18,
+      "lines": 10193,
+      "median_seconds": 1.241,
+      "max_seconds": 2.866,
+      "wall_seconds": 90.1,
+      "recall": 0.9833,
+      "precision": 0.9964,
+      "discovered": 27364
+     },
+     "import": {
+      "seconds": 76.6,
+      "switch_stats": {
+       "vsa_resolved": 196,
+       "vsa_refused": 275,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/.cache/romwright/research-proto/results/08df1a6eff7987ed/x360-black-ops-2/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9803,
+       "to": 0.9833,
+       "delta": 0.003,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9964,
+       "to": 0.9964,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 63,
+       "to": 14,
+       "delta": -49,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 31,
+       "to": 7,
+       "delta": -24,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 166,
+       "to": 166,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 641,
+       "to": 641,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 18,
+       "to": 18,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10139,
+       "to": 10193,
+       "delta": 54,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9803,
+       "to": 0.9833,
+       "delta": 0.003,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9964,
+       "to": 0.9964,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 63,
+       "to": 14,
+       "delta": -49,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 31,
+       "to": 7,
+       "delta": -24,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 166,
+       "to": 166,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 641,
+       "to": 641,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 18,
+       "to": 18,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10139,
+       "to": 10193,
+       "delta": 54,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 63,
+      "labels": 31,
+      "irregular_functions": 166,
+      "native_warnings": 641,
+      "text_warnings": 18,
+      "lines": 10139,
+      "median_seconds": 1.153,
+      "max_seconds": 1.318,
+      "wall_seconds": 75.8,
+      "recall": 0.9803,
+      "precision": 0.9964,
+      "discovered": 27281
+     },
+     "import": {
+      "seconds": 31.9,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/.cache/romwright/research-proto/results/08df1a6eff7987ed/x360-black-ops-2/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9833,
+       "to": 0.9803,
+       "delta": -0.003,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9964,
+       "to": 0.9964,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 14,
+       "to": 63,
+       "delta": 49,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 31,
+       "delta": 24,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 166,
+       "to": 166,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 641,
+       "to": 641,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 18,
+       "to": 18,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10193,
+       "to": 10139,
+       "delta": -54,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 12,
+      "labels": 6,
+      "irregular_functions": 61,
+      "native_warnings": 83,
+      "text_warnings": 10,
+      "lines": 10394,
+      "median_seconds": 0.945,
+      "max_seconds": 1.072,
+      "wall_seconds": 63.4
+     },
+     "import": {
+      "seconds": 76.6,
+      "switch_stats": {
+       "vsa_resolved": 196,
+       "vsa_refused": 275,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 1559.9,
+      "report": {
+       "analyzed": 65502,
+       "changed": 48998,
+       "decompiler_failures": 8,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 14
+      }
+     },
+     "results_file": "/home/raikaru/.cache/romwright/research-proto/results/08df1a6eff7987ed/x360-black-ops-2/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 14,
+       "to": 12,
+       "delta": -2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 6,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 166,
+       "to": 61,
+       "delta": -105,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 641,
+       "to": 83,
+       "delta": -558,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 18,
+       "to": 10,
+       "delta": -8,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10193,
+       "to": 10394,
+       "delta": 201,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 63,
+       "to": 12,
+       "delta": -51,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 31,
+       "to": 6,
+       "delta": -25,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 166,
+       "to": 61,
+       "delta": -105,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 641,
+       "to": 83,
+       "delta": -558,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 18,
+       "to": 10,
+       "delta": -8,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10139,
+       "to": 10394,
+       "delta": 255,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 14,
+       "to": 12,
+       "delta": -2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 6,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 166,
+       "to": 61,
+       "delta": -105,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 641,
+       "to": 83,
+       "delta": -558,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 18,
+       "to": 10,
+       "delta": -8,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10193,
+       "to": 10394,
+       "delta": 201,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 12,
+      "labels": 6,
+      "irregular_functions": 61,
+      "native_warnings": 83,
+      "text_warnings": 10,
+      "lines": 10385,
+      "median_seconds": 0.938,
+      "max_seconds": 1.066,
+      "wall_seconds": 63.1
+     },
+     "import": {
+      "seconds": 76.6,
+      "switch_stats": {
+       "vsa_resolved": 196,
+       "vsa_refused": 275,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 1358.2,
+      "report": {
+       "analyzed": 65466,
+       "changed": 49006,
+       "decompiler_failures": 8,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 14
+      }
+     },
+     "results_file": "/home/raikaru/.cache/romwright/research-proto/results/08df1a6eff7987ed/x360-black-ops-2/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 14,
+       "to": 12,
+       "delta": -2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 6,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 166,
+       "to": 61,
+       "delta": -105,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 641,
+       "to": 83,
+       "delta": -558,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 18,
+       "to": 10,
+       "delta": -8,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10193,
+       "to": 10385,
+       "delta": 192,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 63,
+       "to": 12,
+       "delta": -51,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 31,
+       "to": 6,
+       "delta": -25,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 166,
+       "to": 61,
+       "delta": -105,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 641,
+       "to": 83,
+       "delta": -558,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 18,
+       "to": 10,
+       "delta": -8,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10139,
+       "to": 10385,
+       "delta": 246,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 12,
+       "to": 12,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 6,
+       "to": 6,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 61,
+       "to": 61,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 83,
+       "to": 83,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 10,
+       "to": 10,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 10394,
+       "to": 10385,
+       "delta": -9,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "verdict": "neutral"
+    }
+   },
+   "status": "ran",
+   "program": "x360.xex",
+   "sample": [
+    "821464b0",
+    "82151c48",
+    "82175968",
+    "82182800",
+    "82184ef0",
+    "82185ce8",
+    "8218ab60",
+    "8218cb60",
+    "821a5c78",
+    "821ae468",
+    "821afe90",
+    "821c0ed8",
+    "821dacb0",
+    "821e32a8",
+    "821f28e8",
+    "822013e8",
+    "822117e8",
+    "8222fbc8",
+    "82232d38",
+    "8223ff68",
+    "82244038",
+    "8225a060",
+    "82268620",
+    "8226a2e0",
+    "8226ba78",
+    "822767f0",
+    "822773d8",
+    "82277a38",
+    "82277d20",
+    "82280cc8",
+    "822853c0",
+    "82288638",
+    "82289d88",
+    "8228b8a8",
+    "8228cc78",
+    "82295b68",
+    "8229e310",
+    "822a9260",
+    "822a9738",
+    "822a9b90",
+    "822abc18",
+    "822ac538",
+    "822b1568",
+    "822cce08",
+    "822cf570",
+    "822dfbf0",
+    "822fb128",
+    "82300018",
+    "8231f8c8",
+    "823303b0",
+    "823341f8",
+    "8234c680",
+    "823570c8",
+    "82367b50",
+    "82372480",
+    "82381348",
+    "82386398",
+    "8238e1d8",
+    "8239f780",
+    "823a2870",
+    "823a5d08",
+    "823ae088",
+    "823baf60",
+    "823beb30",
+    "823c1bd8",
+    "823cf380",
+    "823e4298",
+    "823e74b0",
+    "823eea78",
+    "823f8b88",
+    "8240a070",
+    "82422010",
+    "8242a668",
+    "8242cb78",
+    "824470e8",
+    "8244cb28",
+    "82453668",
+    "82455890",
+    "8245bc30",
+    "8245d3e8",
+    "8245dec0",
+    "8246f820",
+    "824774b0",
+    "8247c848",
+    "8247d8a8",
+    "82491e68",
+    "8249ffd0",
+    "824a12d8",
+    "824a2108",
+    "824ae030",
+    "824b0a68",
+    "824b6aa8",
+    "824cf738",
+    "824e87e8",
+    "824f43c0",
+    "82506de8",
+    "82507bd0",
+    "8250ed38",
+    "82518490",
+    "82524130",
+    "8253e770",
+    "8254a258",
+    "8254c088",
+    "8254fa88",
+    "82550ae8",
+    "82554a60",
+    "82558608",
+    "8255aae0",
+    "8255b578",
+    "82560b18",
+    "82579488",
+    "8257f228",
+    "82582358",
+    "82584178",
+    "82585660",
+    "82589050",
+    "8258d150",
+    "82592a68",
+    "825af148",
+    "825bc188",
+    "825c8708",
+    "825ca2e8",
+    "825d2548",
+    "825da3c0",
+    "8261c948",
+    "8261ccd8",
+    "8261ef58",
+    "8262cbd8",
+    "8262cd98",
+    "82639f08",
+    "82646700",
+    "8264bb68",
+    "826584c0",
+    "8265cba0",
+    "82666ef0",
+    "8267e218",
+    "8268fa30",
+    "82691e08",
+    "826928a0",
+    "82694168",
+    "8269aac0",
+    "8269dc40",
+    "8269ef70",
+    "826ac740",
+    "826af4d8",
+    "826b7b50",
+    "826bcb08",
+    "826d4540",
+    "826dcde0",
+    "826dd2f8",
+    "826e3f78",
+    "82707ea0",
+    "8270c208",
+    "82710068",
+    "827145d8",
+    "82715820",
+    "8271d380",
+    "8273db28",
+    "8273f9e0",
+    "827441c0",
+    "82749bc0",
+    "82757358",
+    "827600f0",
+    "8276a728",
+    "8277f870",
+    "82783678",
+    "82796ce8",
+    "827a76f8",
+    "827aa7e0",
+    "827b04f4",
+    "827b5908",
+    "827b5938",
+    "827ba1b0",
+    "827bb0a4",
+    "827bbe10",
+    "827bc7f8",
+    "827bed40",
+    "827bf2e8",
+    "827c1890",
+    "827c5258",
+    "827c756c",
+    "827cbf88",
+    "827ce7e0",
+    "827d4220",
+    "827d86f8",
+    "827d94c8",
+    "827fa530",
+    "8284b210",
+    "82857ad8",
+    "8286bb20",
+    "82875b98",
+    "82879558",
+    "8287a380",
+    "8287c5d0",
+    "8287dfc0",
+    "8287ea7c",
+    "8287eaec",
+    "8287f40c",
+    "828888e0",
+    "828964e8"
+   ],
+   "sample_in_dwarf": 0
+  }
+ }
+}

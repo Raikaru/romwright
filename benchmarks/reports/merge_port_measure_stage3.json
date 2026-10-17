@@ -1,0 +1,195 @@
+{
+  "benchmark": "merge_port_measure",
+  "date": "2026-10-14",
+  "ghidra_opt": "/home/raikaru/runs/Stage3/bin-f1/ghidra_opt",
+  "totals": {
+    "functions": 1600,
+    "worker": 1600,
+    "decompiler": 0,
+    "merges": 109767,
+    "speculative": 5560,
+    "explicit": 123545,
+    "implied": 54441,
+    "new_ops": 2492,
+    "entries": 310769,
+    "named": 9034
+  },
+  "images": [
+    {
+      "image": "gba-pokeemerald",
+      "functions_logged": 200,
+      "merge_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "decided_by_worker": 201,
+      "declined": {},
+      "worker_did": {
+        "merges": 4170,
+        "speculative": 193,
+        "explicit": 5078,
+        "implied": 3342,
+        "new_ops": 47,
+        "entries": 13335
+      },
+      "variables_named_by_worker": 595,
+      "worker_decide_microseconds": 24476,
+      "decompile_wall_seconds": 8.9,
+      "decide_share_of_wall": 0.0027
+    },
+    {
+      "image": "gc-animal-crossing",
+      "functions_logged": 200,
+      "merge_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "decided_by_worker": 206,
+      "declined": {},
+      "worker_did": {
+        "merges": 11751,
+        "speculative": 601,
+        "explicit": 13257,
+        "implied": 7999,
+        "new_ops": 394,
+        "entries": 36456
+      },
+      "variables_named_by_worker": 1004,
+      "worker_decide_microseconds": 64019,
+      "decompile_wall_seconds": 4.8,
+      "decide_share_of_wall": 0.0134
+    },
+    {
+      "image": "nds-pokeheartgold-arm9",
+      "functions_logged": 200,
+      "merge_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "decided_by_worker": 200,
+      "declined": {},
+      "worker_did": {
+        "merges": 3282,
+        "speculative": 150,
+        "explicit": 4279,
+        "implied": 2974,
+        "new_ops": 87,
+        "entries": 11558
+      },
+      "variables_named_by_worker": 784,
+      "worker_decide_microseconds": 22683,
+      "decompile_wall_seconds": 7.1,
+      "decide_share_of_wall": 0.0032
+    },
+    {
+      "image": "ps2-capcom-fighting-evolution",
+      "functions_logged": 200,
+      "merge_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "decided_by_worker": 202,
+      "declined": {},
+      "worker_did": {
+        "merges": 2895,
+        "speculative": 265,
+        "explicit": 3962,
+        "implied": 5164,
+        "new_ops": 120,
+        "entries": 13133
+      },
+      "variables_named_by_worker": 852,
+      "worker_decide_microseconds": 23400,
+      "decompile_wall_seconds": 4.2,
+      "decide_share_of_wall": 0.0056
+    },
+    {
+      "image": "ps2-dungeon-game",
+      "functions_logged": 200,
+      "merge_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "decided_by_worker": 207,
+      "declined": {},
+      "worker_did": {
+        "merges": 41576,
+        "speculative": 1120,
+        "explicit": 43556,
+        "implied": 9785,
+        "new_ops": 463,
+        "entries": 98950
+      },
+      "variables_named_by_worker": 1586,
+      "worker_decide_microseconds": 175071,
+      "decompile_wall_seconds": 9.5,
+      "decide_share_of_wall": 0.0185
+    },
+    {
+      "image": "psv-need-for-speed-most-wanted",
+      "functions_logged": 200,
+      "merge_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "decided_by_worker": 220,
+      "declined": {},
+      "worker_did": {
+        "merges": 29539,
+        "speculative": 2281,
+        "explicit": 33738,
+        "implied": 12018,
+        "new_ops": 758,
+        "entries": 82277
+      },
+      "variables_named_by_worker": 2170,
+      "worker_decide_microseconds": 157692,
+      "decompile_wall_seconds": 17.4,
+      "decide_share_of_wall": 0.009
+    },
+    {
+      "image": "psx-darkstalkers-3",
+      "functions_logged": 200,
+      "merge_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "decided_by_worker": 204,
+      "declined": {},
+      "worker_did": {
+        "merges": 8644,
+        "speculative": 458,
+        "explicit": 9794,
+        "implied": 6288,
+        "new_ops": 205,
+        "entries": 26807
+      },
+      "variables_named_by_worker": 669,
+      "worker_decide_microseconds": 42705,
+      "decompile_wall_seconds": 2.8,
+      "decide_share_of_wall": 0.0151
+    },
+    {
+      "image": "x360-black-ops-2",
+      "functions_logged": 200,
+      "merge_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "decided_by_worker": 207,
+      "declined": {},
+      "worker_did": {
+        "merges": 7910,
+        "speculative": 492,
+        "explicit": 9881,
+        "implied": 6871,
+        "new_ops": 418,
+        "entries": 28253
+      },
+      "variables_named_by_worker": 1374,
+      "worker_decide_microseconds": 52044,
+      "decompile_wall_seconds": 15.3,
+      "decide_share_of_wall": 0.0034
+    }
+  ]
+}

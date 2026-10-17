@@ -1,0 +1,5815 @@
+{
+ "schema": "m22-003-functions/1",
+ "lane": "gh",
+ "game": "ps2-god-hand",
+ "tag": "s1-def",
+ "env": {},
+ "layers": [
+  "romwright"
+ ],
+ "seed": 20261012,
+ "n": 200,
+ "matched_count": 7367,
+ "functions": {
+  "00102de8": {
+   "name": "func_00102DE8",
+   "address": "0x102de8",
+   "size": 244,
+   "file": "src/cod/00102de8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.803276
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.27869
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.803276
+     }
+    }
+   }
+  },
+  "00102ee0": {
+   "name": "ForwardAndSyncPosition_102EE0",
+   "address": "0x102ee0",
+   "size": 264,
+   "file": "src/cod/00102ee0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.333336
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.621216
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.333336
+     }
+    }
+   }
+  },
+  "00115f60": {
+   "name": "func_00115F60",
+   "address": "0x115f60",
+   "size": 316,
+   "file": "src/cod/00115f60.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.86076
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.873417
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.86076
+     }
+    }
+   }
+  },
+  "0012bf50": {
+   "name": "pl00_ckAtkActBtnEnable",
+   "address": "0x12bf50",
+   "size": 100,
+   "file": "src/cod/0012bf50.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.48
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.48
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.48
+     }
+    }
+   }
+  },
+  "001337e0": {
+   "name": "InitVtableField5C_1337E0",
+   "address": "0x1337e0",
+   "size": 48,
+   "file": "src/cod/001337e0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00133ba0": {
+   "name": "InitVtableField30Ptr_133BA0",
+   "address": "0x133ba0",
+   "size": 40,
+   "file": "src/cod/00133ba0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     }
+    }
+   }
+  },
+  "00134458": {
+   "name": "NodeList_deletingDtor",
+   "address": "0x134458",
+   "size": 68,
+   "file": "src/cod/00134458.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00138528": {
+   "name": "cCamera_resetVib",
+   "address": "0x138528",
+   "size": 44,
+   "file": "src/cod/camera/cCamera.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.545456
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.545456
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.545456
+     }
+    }
+   }
+  },
+  "0013cfb0": {
+   "name": "SetField80AndForward_13CFB0",
+   "address": "0x13cfb0",
+   "size": 48,
+   "file": "src/cod/0013cfb0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0013f118": {
+   "name": "func_0013F118",
+   "address": "0x13f118",
+   "size": 52,
+   "file": "src/cod/001342b8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00140c58": {
+   "name": "FindFreeSlotIndex_140C58",
+   "address": "0x140c58",
+   "size": 48,
+   "file": "src/cod/00102ee0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 53.333332
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 53.333332
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 53.333332
+     }
+    }
+   }
+  },
+  "00146190": {
+   "name": "func_00146190",
+   "address": "0x146190",
+   "size": 408,
+   "file": "src/cod/00146190.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 2.1862745
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 2.1862745
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 2.1862745
+     }
+    }
+   }
+  },
+  "00146ea0": {
+   "name": "func_00146EA0",
+   "address": "0x146ea0",
+   "size": 80,
+   "file": "src/cod/0013bbd8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "001471a8": {
+   "name": "cCockTutorial_TutorialON",
+   "address": "0x1471a8",
+   "size": 68,
+   "file": "src/cod/00146748.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001492c8": {
+   "name": "Forward149378_1492C8",
+   "address": "0x1492c8",
+   "size": 32,
+   "file": "src/cod/00147460.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.0
+     }
+    }
+   }
+  },
+  "0014a398": {
+   "name": "cModel_setLayerDisplay",
+   "address": "0x14a398",
+   "size": 76,
+   "file": "src/cod/00146748.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.47369
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.47369
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.47369
+     }
+    }
+   }
+  },
+  "0014c5a0": {
+   "name": "func_0014C5A0",
+   "address": "0x14c5a0",
+   "size": 276,
+   "file": "src/cod/0012cc70.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.91304
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.91304
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.91304
+     }
+    }
+   }
+  },
+  "0014e930": {
+   "name": "cObj_setSuspend",
+   "address": "0x14e930",
+   "size": 48,
+   "file": "src/cod/0014e930.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 44.166668
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 44.166668
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 44.166668
+     }
+    }
+   }
+  },
+  "0014ff00": {
+   "name": "func_0014FF00",
+   "address": "0x14ff00",
+   "size": 88,
+   "file": "src/cod/0014ff00.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.772728
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.772728
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.772728
+     }
+    }
+   }
+  },
+  "0015a878": {
+   "name": "Quaternion_SetVectorRotation",
+   "address": "0x15a878",
+   "size": 296,
+   "file": "src/cod/0015a878.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 20.54054
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 20.54054
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 20.54054
+     }
+    }
+   }
+  },
+  "00161590": {
+   "name": "func_00161590",
+   "address": "0x161590",
+   "size": 60,
+   "file": "src/cod/00126770.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 33.333332
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 33.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 33.333332
+     }
+    }
+   }
+  },
+  "00170200": {
+   "name": "GetOrInitSingleton7857D8_170200",
+   "address": "0x170200",
+   "size": 80,
+   "file": "src/cod/0016fc30.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "001704e8": {
+   "name": "GetOrInitSingleton7857E8_1704E8",
+   "address": "0x1704e8",
+   "size": 80,
+   "file": "src/cod/00170250.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "00171b48": {
+   "name": "func_00171B48",
+   "address": "0x171b48",
+   "size": 40,
+   "file": "src/cod/00171b48.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     }
+    }
+   }
+  },
+  "00173e60": {
+   "name": "func_00173E60",
+   "address": "0x173e60",
+   "size": 96,
+   "file": "src/cod/00173e60.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     }
+    }
+   }
+  },
+  "00178db8": {
+   "name": "func_00178DB8",
+   "address": "0x178db8",
+   "size": 96,
+   "file": "src/cod/001769e0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0017c4e0": {
+   "name": "func_0017C4E0",
+   "address": "0x17c4e0",
+   "size": 40,
+   "file": "src/cod/00179358.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     }
+    }
+   }
+  },
+  "0018a680": {
+   "name": "SpawnCylinderDamageAndFlagPartsA",
+   "address": "0x18a680",
+   "size": 492,
+   "file": "src/cod/0018a680.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.788616
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.512196
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.512196
+     }
+    }
+   }
+  },
+  "0018c4a8": {
+   "name": "func_0018C4A8",
+   "address": "0x18c4a8",
+   "size": 116,
+   "file": "src/cod/0018b6a0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.172413
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.172413
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.172413
+     }
+    }
+   }
+  },
+  "0018dc08": {
+   "name": "func_0018DC08",
+   "address": "0x18dc08",
+   "size": 80,
+   "file": "src/cod/001739a0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "00192028": {
+   "name": "func_00192028",
+   "address": "0x192028",
+   "size": 40,
+   "file": "src/cod/0018e8b8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     }
+    }
+   }
+  },
+  "00196978": {
+   "name": "func_00196978",
+   "address": "0x196978",
+   "size": 96,
+   "file": "src/cod/00173e60.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     }
+    }
+   }
+  },
+  "00199440": {
+   "name": "func_00199440",
+   "address": "0x199440",
+   "size": 96,
+   "file": "src/cod/00173e60.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.791668
+     }
+    }
+   }
+  },
+  "00199f80": {
+   "name": "func_00199F80",
+   "address": "0x199f80",
+   "size": 80,
+   "file": "src/cod/001739a0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "0019d640": {
+   "name": "SpawnDamageTakeVolumeF",
+   "address": "0x19d640",
+   "size": 256,
+   "file": "src/cod/00150138.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 53.171875
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 53.171875
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 53.171875
+     }
+    }
+   }
+  },
+  "0019ede0": {
+   "name": "GetObjClassDesc_19EDE0",
+   "address": "0x19ede0",
+   "size": 80,
+   "file": "src/cod/0019ec40.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "0019eeb8": {
+   "name": "ResetObjVtableAndFree_19EEB8",
+   "address": "0x19eeb8",
+   "size": 96,
+   "file": "src/cod/0019ec40.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001a0690": {
+   "name": "FreeActorResourcesE_1A0690",
+   "address": "0x1a0690",
+   "size": 96,
+   "file": "src/cod/001a05b8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001a0aa0": {
+   "name": "GetTypeDescriptorF_1A0AA0",
+   "address": "0x1a0aa0",
+   "size": 80,
+   "file": "src/cod/001a05b8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "001a1690": {
+   "name": "func_001A1690",
+   "address": "0x1a1690",
+   "size": 216,
+   "file": "src/cod/0019d3c8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.22222
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.22222
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.22222
+     }
+    }
+   }
+  },
+  "001aac90": {
+   "name": "cOmBase_switchOff",
+   "address": "0x1aac90",
+   "size": 248,
+   "file": "src/cod/00138648.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.90323
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.258064
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.90323
+     }
+    }
+   }
+  },
+  "001adb30": {
+   "name": "func_001ADB30",
+   "address": "0x1adb30",
+   "size": 80,
+   "file": "src/cod/00133888.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "001adb88": {
+   "name": "func_001ADB88",
+   "address": "0x1adb88",
+   "size": 56,
+   "file": "src/cod/001adb88.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001b1f00": {
+   "name": "cOm71_SetMotionWait",
+   "address": "0x1b1f00",
+   "size": 84,
+   "file": "src/cod/object/cOm71.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.47619
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001b66c0": {
+   "name": "func_001B66C0",
+   "address": "0x1b66c0",
+   "size": 80,
+   "file": "src/cod/00133888.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "001bbb48": {
+   "name": "func_001BBB48",
+   "address": "0x1bbb48",
+   "size": 188,
+   "file": "src/cod/001bbb48.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.21277
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.21277
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.21277
+     }
+    }
+   }
+  },
+  "001bbf00": {
+   "name": "ResetActorState_1BBF00",
+   "address": "0x1bbf00",
+   "size": 104,
+   "file": "src/cod/0014d700.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001bfac8": {
+   "name": "func_001BFAC8",
+   "address": "0x1bfac8",
+   "size": 52,
+   "file": "src/cod/001bfac8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001c2378": {
+   "name": "func_001C2378",
+   "address": "0x1c2378",
+   "size": 140,
+   "file": "src/cod/00155138.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.114285
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.114285
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.114285
+     }
+    }
+   }
+  },
+  "001c2790": {
+   "name": "func_001C2790",
+   "address": "0x1c2790",
+   "size": 80,
+   "file": "src/cod/00133888.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "001c6b68": {
+   "name": "cOmSub_initMove3_y",
+   "address": "0x1c6b68",
+   "size": 200,
+   "file": "src/cod/001c6968.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 65.8
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 65.8
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 65.8
+     }
+    }
+   }
+  },
+  "001d4258": {
+   "name": "BlackJack_UpdateClearTable",
+   "address": "0x1d4258",
+   "size": 552,
+   "file": "src/cod/001d4258.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.07971
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.934784
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.07971
+     }
+    }
+   }
+  },
+  "001d6c28": {
+   "name": "func_001D6C28",
+   "address": "0x1d6c28",
+   "size": 72,
+   "file": "src/cod/001d69a0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001d8120": {
+   "name": "UpdateBetAdjustScreenB",
+   "address": "0x1d8120",
+   "size": 864,
+   "file": "src/cod/001d8120.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.796295
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.546295
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.796295
+     }
+    }
+   }
+  },
+  "001dd0d8": {
+   "name": "func_001DD0D8",
+   "address": "0x1dd0d8",
+   "size": 168,
+   "file": "src/cod/001793d0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.28571
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.809525
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.28571
+     }
+    }
+   }
+  },
+  "001f05f8": {
+   "name": "ColiseumBattle_spawnWave",
+   "address": "0x1f05f8",
+   "size": 172,
+   "file": "src/cod/001731b8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.88372
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.953487
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.88372
+     }
+    }
+   }
+  },
+  "001f6d38": {
+   "name": "CasinoWork_ResetWarmUpRoom",
+   "address": "0x1f6d38",
+   "size": 224,
+   "file": "src/cod/casino/CasinoWork.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.71429
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.83929
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.83929
+     }
+    }
+   }
+  },
+  "001fa838": {
+   "name": "cCoreSave_getAddGold",
+   "address": "0x1fa838",
+   "size": 32,
+   "file": "src/cod/001ee768.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.25
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.25
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.25
+     }
+    }
+   }
+  },
+  "001fac00": {
+   "name": "cCoreSave_useGodItem",
+   "address": "0x1fac00",
+   "size": 88,
+   "file": "src/cod/001fac00.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.545456
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.545456
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.545456
+     }
+    }
+   }
+  },
+  "001facf8": {
+   "name": "cCoreSave_addStock",
+   "address": "0x1facf8",
+   "size": 56,
+   "file": "src/cod/00148f28.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.07143
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.07143
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.07143
+     }
+    }
+   }
+  },
+  "001fb830": {
+   "name": "cCoreSave_getComboMax",
+   "address": "0x1fb830",
+   "size": 52,
+   "file": "src/cod/001f83e8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.23077
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.23077
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.23077
+     }
+    }
+   }
+  },
+  "001fc630": {
+   "name": "cCoreSave_addAllStageTime",
+   "address": "0x1fc630",
+   "size": 32,
+   "file": "src/cod/system/cCoreSave.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001fd718": {
+   "name": "cDamageUnit_SetDamageCollFlashActive",
+   "address": "0x1fd718",
+   "size": 88,
+   "file": "src/cod/00151630.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001feaa0": {
+   "name": "cDataManager_loadSeWait",
+   "address": "0x1feaa0",
+   "size": 476,
+   "file": "src/cod/001feaa0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.42857
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.344536
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.42857
+     }
+    }
+   }
+  },
+  "001ffbf0": {
+   "name": "LoadAndWaitReady_1FFBF0",
+   "address": "0x1ffbf0",
+   "size": 112,
+   "file": "src/cod/001ffbf0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.28571
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.28571
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.28571
+     }
+    }
+   }
+  },
+  "00201098": {
+   "name": "cDvd_Check",
+   "address": "0x201098",
+   "size": 108,
+   "file": "src/cod/00201098.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 26.148148
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 26.148148
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 26.148148
+     }
+    }
+   }
+  },
+  "00201a50": {
+   "name": "func_00201A50",
+   "address": "0x201a50",
+   "size": 36,
+   "file": "src/cod/00201a50.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00202058": {
+   "name": "func_00202058",
+   "address": "0x202058",
+   "size": 628,
+   "file": "src/cod/00202058.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.88535
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.9172
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.9172
+     }
+    }
+   }
+  },
+  "002311a8": {
+   "name": "func_002311A8",
+   "address": "0x2311a8",
+   "size": 340,
+   "file": "src/cod/002311a8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.21176
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 22.62353
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.21176
+     }
+    }
+   }
+  },
+  "00247320": {
+   "name": "func_00247320",
+   "address": "0x247320",
+   "size": 616,
+   "file": "src/cod/00247320.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.545456
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.31169
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.545456
+     }
+    }
+   }
+  },
+  "00271298": {
+   "name": "func_00271298",
+   "address": "0x271298",
+   "size": 376,
+   "file": "src/cod/0017aeb0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.17021
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.23404
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.17021
+     }
+    }
+   }
+  },
+  "00274238": {
+   "name": "func_00274238",
+   "address": "0x274238",
+   "size": 636,
+   "file": "src/cod/00274238.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.19497
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 47.74843
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.19497
+     }
+    }
+   }
+  },
+  "00276790": {
+   "name": "GetSingleton7861C8_276790",
+   "address": "0x276790",
+   "size": 80,
+   "file": "src/cod/merged_orphans_a.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "00277a48": {
+   "name": "func_00277A48",
+   "address": "0x277a48",
+   "size": 208,
+   "file": "src/cod/00277a48.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.94231
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.19231
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.94231
+     }
+    }
+   }
+  },
+  "00281d10": {
+   "name": "func_00281D10",
+   "address": "0x281d10",
+   "size": 136,
+   "file": "src/cod/00281d10.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.32353
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.76471
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.76471
+     }
+    }
+   }
+  },
+  "002821f0": {
+   "name": "func_002821F0",
+   "address": "0x2821f0",
+   "size": 408,
+   "file": "src/cod/002821f0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.656864
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.2549
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.656864
+     }
+    }
+   }
+  },
+  "002880c8": {
+   "name": "func_002880C8",
+   "address": "0x2880c8",
+   "size": 176,
+   "file": "src/cod/002880c8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.40909
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.25
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.40909
+     }
+    }
+   }
+  },
+  "00288a58": {
+   "name": "func_00288A58",
+   "address": "0x288a58",
+   "size": 284,
+   "file": "src/cod/00102938.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.521126
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.0
+     }
+    }
+   }
+  },
+  "0028ed28": {
+   "name": "func_0028ED28",
+   "address": "0x28ed28",
+   "size": 76,
+   "file": "src/cod/0015fd18.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.789474
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.789474
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.789474
+     }
+    }
+   }
+  },
+  "00290000": {
+   "name": "cEmManage_constructSlot",
+   "address": "0x290000",
+   "size": 32,
+   "file": "src/cod/00290000.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00294898": {
+   "name": "func_00294898",
+   "address": "0x294898",
+   "size": 48,
+   "file": "src/cod/00276090.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00296070": {
+   "name": "cEmWrap_SetKeepPos",
+   "address": "0x296070",
+   "size": 92,
+   "file": "src/cod/enemy/cEmWrap.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00297c20": {
+   "name": "cEvent__isPlaying",
+   "address": "0x297c20",
+   "size": 48,
+   "file": "src/cod/merged_orphans_e.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": false,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": false,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": false,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00297cb0": {
+   "name": "func_00297CB0",
+   "address": "0x297cb0",
+   "size": 56,
+   "file": "src/cod/0028abf0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00297e18": {
+   "name": "func_00297E18",
+   "address": "0x297e18",
+   "size": 56,
+   "file": "src/cod/00297d40.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002a5930": {
+   "name": "BuildGifPacket_2A5930",
+   "address": "0x2a5930",
+   "size": 104,
+   "file": "src/cod/00284a90.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.03846
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.03846
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.03846
+     }
+    }
+   }
+  },
+  "002a6c50": {
+   "name": "cGame_isReleaseActiveHeap",
+   "address": "0x2a6c50",
+   "size": 36,
+   "file": "src/cod/00148f28.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.88889
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.88889
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.88889
+     }
+    }
+   }
+  },
+  "002ad1b0": {
+   "name": "func_002AD1B0",
+   "address": "0x2ad1b0",
+   "size": 104,
+   "file": "src/cod/002ad1b0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.76923
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.76923
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.76923
+     }
+    }
+   }
+  },
+  "002b2400": {
+   "name": "func_002B2400",
+   "address": "0x2b2400",
+   "size": 56,
+   "file": "src/cod/002919c0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.5
+     }
+    }
+   }
+  },
+  "002b8508": {
+   "name": "cObjSimple_SetPendulum",
+   "address": "0x2b8508",
+   "size": 100,
+   "file": "src/cod/cObjSimple.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002ba8e0": {
+   "name": "func_002BA8E0",
+   "address": "0x2ba8e0",
+   "size": 80,
+   "file": "src/cod/00133888.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "002bf858": {
+   "name": "func_002BF858",
+   "address": "0x2bf858",
+   "size": 32,
+   "file": "src/cod/00150078.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002c28b0": {
+   "name": "cSceAtManager_AtExecuteById",
+   "address": "0x2c28b0",
+   "size": 68,
+   "file": "src/cod/event/cSceAtManager.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002c2a48": {
+   "name": "cSceAtManager_getCenterPos",
+   "address": "0x2c2a48",
+   "size": 68,
+   "file": "src/cod/event/cSceAtManager.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002c5bd8": {
+   "name": "cScrSpriteDraw_drawTex",
+   "address": "0x2c5bd8",
+   "size": 716,
+   "file": "src/cod/002c5bd8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.39106
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.921787
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.39106
+     }
+    }
+   }
+  },
+  "002c8ad8": {
+   "name": "SeEmitter_update",
+   "address": "0x2c8ad8",
+   "size": 140,
+   "file": "src/cod/0019b4d0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.25714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.25714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.25714
+     }
+    }
+   }
+  },
+  "002c9008": {
+   "name": "func_002C9008",
+   "address": "0x2c9008",
+   "size": 88,
+   "file": "src/cod/002c9008.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.954544
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.954544
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.954544
+     }
+    }
+   }
+  },
+  "002cbf48": {
+   "name": "cSnd_FindVoiceByHandle",
+   "address": "0x2cbf48",
+   "size": 48,
+   "file": "src/cod/002cbf48.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.333332
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.333332
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.333332
+     }
+    }
+   }
+  },
+  "002ccb10": {
+   "name": "cSndBgmNode_Release",
+   "address": "0x2ccb10",
+   "size": 68,
+   "file": "src/cod/002cc578.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002cd930": {
+   "name": "cSndMemHeap_FindUnusedBlk",
+   "address": "0x2cd930",
+   "size": 56,
+   "file": "src/cod/001fe1e0.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.0
+     }
+    }
+   }
+  },
+  "002cfb60": {
+   "name": "cSeData_RegisterBank",
+   "address": "0x2cfb60",
+   "size": 92,
+   "file": "src/cod/002cf258.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002d0780": {
+   "name": "cSnd_SetBgmDefAttr",
+   "address": "0x2d0780",
+   "size": 36,
+   "file": "src/cod/002cf258.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002d2ee8": {
+   "name": "BankTable_isKeyFree",
+   "address": "0x2d2ee8",
+   "size": 140,
+   "file": "src/cod/001def48.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.228573
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.228573
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.228573
+     }
+    }
+   }
+  },
+  "002d3278": {
+   "name": "StreamBuf_startRead",
+   "address": "0x2d3278",
+   "size": 268,
+   "file": "src/cod/001e3858.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 65.656715
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 65.656715
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 65.656715
+     }
+    }
+   }
+  },
+  "002d6490": {
+   "name": "CustomIDWork_SetDisp",
+   "address": "0x2d6490",
+   "size": 64,
+   "file": "src/cod/id/CustomIDWork.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.5
+     }
+    }
+   }
+  },
+  "002d6898": {
+   "name": "CustomIDWork_SetColorAnimNormal_2D6898",
+   "address": "0x2d6898",
+   "size": 60,
+   "file": "src/cod/00148f28.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002d9be0": {
+   "name": "func_002D9BE0",
+   "address": "0x2d9be0",
+   "size": 44,
+   "file": "src/cod/00150048.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002dbe08": {
+   "name": "func_002DBE08",
+   "address": "0x2dbe08",
+   "size": 140,
+   "file": "src/cod/002dba88.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.42857
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.42857
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.42857
+     }
+    }
+   }
+  },
+  "002f2fa0": {
+   "name": "func_002F2FA0",
+   "address": "0x2f2fa0",
+   "size": 80,
+   "file": "src/cod/00133888.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.9
+     }
+    }
+   }
+  },
+  "002f3e40": {
+   "name": "func_002F3E40",
+   "address": "0x2f3e40",
+   "size": 40,
+   "file": "src/cod/002e3458.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.5
+     }
+    }
+   }
+  },
+  "002ffed0": {
+   "name": "InitObjectSetVtable_4F270_2FFED0",
+   "address": "0x2ffed0",
+   "size": 60,
+   "file": "src/cod/00133900.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00304ed0": {
+   "name": "func_00304ED0",
+   "address": "0x304ed0",
+   "size": 136,
+   "file": "src/cod/00304ed0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.882355
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.882355
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.882355
+     }
+    }
+   }
+  },
+  "00313510": {
+   "name": "AllocAndInitObjVtable_313510",
+   "address": "0x313510",
+   "size": 112,
+   "file": "src/cod/00313510.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "00314400": {
+   "name": "ForwardInitBuffer_314400",
+   "address": "0x314400",
+   "size": 112,
+   "file": "src/cod/00314390.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "00314710": {
+   "name": "ForwardInitBuffer_314710",
+   "address": "0x314710",
+   "size": 112,
+   "file": "src/cod/00314390.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "00314780": {
+   "name": "ForwardInitBuffer_314780",
+   "address": "0x314780",
+   "size": 112,
+   "file": "src/cod/00314390.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "003154a0": {
+   "name": "AllocZeroedAndInitObjSlots_3154A0",
+   "address": "0x3154a0",
+   "size": 112,
+   "file": "src/cod/003150b0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "00316620": {
+   "name": "ForwardInitObject_316620",
+   "address": "0x316620",
+   "size": 112,
+   "file": "src/cod/00316230.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "00316930": {
+   "name": "ForwardInitObject_316930",
+   "address": "0x316930",
+   "size": 112,
+   "file": "src/cod/00316690.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "003169a0": {
+   "name": "ForwardInitObject_3169A0",
+   "address": "0x3169a0",
+   "size": 112,
+   "file": "src/cod/00316690.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "003178f0": {
+   "name": "AllocInitObj17F4E0_3178F0",
+   "address": "0x3178f0",
+   "size": 112,
+   "file": "src/cod/00317810.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "00317ab0": {
+   "name": "AllocInitObj181838_317AB0",
+   "address": "0x317ab0",
+   "size": 112,
+   "file": "src/cod/00317810.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.85714
+     }
+    }
+   }
+  },
+  "00317f70": {
+   "name": "CreateObjectWithVtableC",
+   "address": "0x317f70",
+   "size": 124,
+   "file": "src/cod/001030c8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.29032
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.935486
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.935486
+     }
+    }
+   }
+  },
+  "0031af40": {
+   "name": "func_0031AF40",
+   "address": "0x31af40",
+   "size": 48,
+   "file": "src/cod/0031a0b8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.25
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.25
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.25
+     }
+    }
+   }
+  },
+  "0031ca58": {
+   "name": "func_0031CA58",
+   "address": "0x31ca58",
+   "size": 44,
+   "file": "src/cod/0015b0c0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00320338": {
+   "name": "func_00320338",
+   "address": "0x320338",
+   "size": 36,
+   "file": "src/cod/0031eda0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "003229d0": {
+   "name": "func_003229D0",
+   "address": "0x3229d0",
+   "size": 104,
+   "file": "src/cod/003229d0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00322ad0": {
+   "name": "Forward322BD8_322AD0",
+   "address": "0x322ad0",
+   "size": 40,
+   "file": "src/cod/00138528.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.4
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.4
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.4
+     }
+    }
+   }
+  },
+  "00323960": {
+   "name": "func_00323960",
+   "address": "0x323960",
+   "size": 160,
+   "file": "src/cod/00323660.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.5
+     }
+    }
+   }
+  },
+  "003243c8": {
+   "name": "func_003243C8",
+   "address": "0x3243c8",
+   "size": 56,
+   "file": "src/cod/00320388.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00324500": {
+   "name": "func_00324500",
+   "address": "0x324500",
+   "size": 48,
+   "file": "src/cod/0031eee8.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "003262d8": {
+   "name": "Obj3260_TrampChain_D2D8",
+   "address": "0x3262d8",
+   "size": 56,
+   "file": "src/cod/003260.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00327370": {
+   "name": "func_00327370",
+   "address": "0x327370",
+   "size": 164,
+   "file": "src/cod/003272c0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00328140": {
+   "name": "func_00328140",
+   "address": "0x328140",
+   "size": 56,
+   "file": "src/cod/00320388.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "003288e0": {
+   "name": "func_003288E0",
+   "address": "0x3288e0",
+   "size": 680,
+   "file": "src/cod/003288e0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.617645
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.617645
+     }
+    }
+   }
+  },
+  "0032a530": {
+   "name": "func_0032A530",
+   "address": "0x32a530",
+   "size": 56,
+   "file": "src/cod/002b62f8.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0032a5f0": {
+   "name": "func_0032A5F0",
+   "address": "0x32a5f0",
+   "size": 76,
+   "file": "src/cod/00327a00.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.89474
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.89474
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.89474
+     }
+    }
+   }
+  },
+  "0032a838": {
+   "name": "func_0032A838",
+   "address": "0x32a838",
+   "size": 72,
+   "file": "src/cod/00323618.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0032c2a8": {
+   "name": "func_0032C2A8",
+   "address": "0x32c2a8",
+   "size": 104,
+   "file": "src/cod/00328300.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0032cfc8": {
+   "name": "func_0032CFC8",
+   "address": "0x32cfc8",
+   "size": 44,
+   "file": "src/cod/00322f58.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0032de38": {
+   "name": "func_0032DE38",
+   "address": "0x32de38",
+   "size": 68,
+   "file": "src/cod/0032de38.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00331ce0": {
+   "name": "func_00331CE0",
+   "address": "0x331ce0",
+   "size": 84,
+   "file": "src/cod/00331ce0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.809525
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.809525
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.809525
+     }
+    }
+   }
+  },
+  "00332090": {
+   "name": "dtx_destroy_rmt",
+   "address": "0x332090",
+   "size": 76,
+   "file": "src/cod/003320.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "003320f8": {
+   "name": "func_003320F8",
+   "address": "0x3320f8",
+   "size": 112,
+   "file": "src/cod/00325360.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00332838": {
+   "name": "func_00332838",
+   "address": "0x332838",
+   "size": 88,
+   "file": "src/cod/002c54e8.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.545456
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00332dd0": {
+   "name": "dvCiSeek",
+   "address": "0x332dd0",
+   "size": 148,
+   "file": "src/cod/00332dd0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.91892
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.91892
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.91892
+     }
+    }
+   }
+  },
+  "00333b00": {
+   "name": "func_00333B00",
+   "address": "0x333b00",
+   "size": 60,
+   "file": "src/cod/00333b00.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.666664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.666664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.666664
+     }
+    }
+   }
+  },
+  "00335b40": {
+   "name": "func_00335B40",
+   "address": "0x335b40",
+   "size": 48,
+   "file": "src/cod/00318418.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00337b30": {
+   "name": "func_00337B30",
+   "address": "0x337b30",
+   "size": 76,
+   "file": "src/cod/002b4f98.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.42105
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.42105
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.42105
+     }
+    }
+   }
+  },
+  "003381b0": {
+   "name": "func_003381B0",
+   "address": "0x3381b0",
+   "size": 232,
+   "file": "src/cod/003381b0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00338818": {
+   "name": "func_00338818",
+   "address": "0x338818",
+   "size": 44,
+   "file": "src/cod/003302b0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00338ca0": {
+   "name": "func_00338CA0",
+   "address": "0x338ca0",
+   "size": 44,
+   "file": "src/cod/00322f58.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0033a3c0": {
+   "name": "func_0033A3C0",
+   "address": "0x33a3c0",
+   "size": 84,
+   "file": "src/cod/002afc08.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.85714
+     }
+    }
+   }
+  },
+  "0033c088": {
+   "name": "func_0033C088",
+   "address": "0x33c088",
+   "size": 412,
+   "file": "src/cod/0033c088.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.85437
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.85437
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.85437
+     }
+    }
+   }
+  },
+  "0033d958": {
+   "name": "Obj0000_Call_FnFC_Field_100_94_90_Scaled",
+   "address": "0x33d958",
+   "size": 100,
+   "file": "src/cod/000000.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.32
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.32
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.32
+     }
+    }
+   }
+  },
+  "0033e8a0": {
+   "name": "func_0033E8A0",
+   "address": "0x33e8a0",
+   "size": 256,
+   "file": "src/cod/0033e8a0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 6.796875
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 6.796875
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 6.796875
+     }
+    }
+   }
+  },
+  "00340450": {
+   "name": "func_00340450",
+   "address": "0x340450",
+   "size": 48,
+   "file": "src/cod/00320388.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00340a20": {
+   "name": "func_00340A20",
+   "address": "0x340a20",
+   "size": 60,
+   "file": "src/cod/0032d9b8.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00348550": {
+   "name": "func_00348550",
+   "address": "0x348550",
+   "size": 92,
+   "file": "src/cod/00347310.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.434784
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.434784
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.434784
+     }
+    }
+   }
+  },
+  "00349a68": {
+   "name": "Obj0000_Call_00328C80_If_NonNull",
+   "address": "0x349a68",
+   "size": 36,
+   "file": "src/cod/000000.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0034b2c8": {
+   "name": "func_0034B2C8",
+   "address": "0x34b2c8",
+   "size": 36,
+   "file": "src/cod/0031f4e0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0034b988": {
+   "name": "SFAOAP_Pause",
+   "address": "0x34b988",
+   "size": 84,
+   "file": "src/cod/0034b738.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.09524
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0034c680": {
+   "name": "Obj0000_Call_Vtbl6_Vtbl8_Field_1_0034C680",
+   "address": "0x34c680",
+   "size": 88,
+   "file": "src/cod/000000.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 16.772728
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 16.772728
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 16.772728
+     }
+    }
+   }
+  },
+  "0034c6d8": {
+   "name": "func_0034C6D8",
+   "address": "0x34c6d8",
+   "size": 112,
+   "file": "src/cod/00325360.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 11.642858
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 11.642858
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 11.642858
+     }
+    }
+   }
+  },
+  "0034ca00": {
+   "name": "func_0034CA00",
+   "address": "0x34ca00",
+   "size": 44,
+   "file": "src/cod/00344bc0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.09091
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.09091
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.09091
+     }
+    }
+   }
+  },
+  "0034cdb0": {
+   "name": "SFCON_IsVideoEndcodeSkip",
+   "address": "0x34cdb0",
+   "size": 72,
+   "file": "src/cod/0034cd68.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.55556
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.55556
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.55556
+     }
+    }
+   }
+  },
+  "00353500": {
+   "name": "func_00353500",
+   "address": "0x353500",
+   "size": 80,
+   "file": "src/cod/00353500.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.4
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.4
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.4
+     }
+    }
+   }
+  },
+  "00355818": {
+   "name": "setD3_CHCR",
+   "address": "0x355818",
+   "size": 100,
+   "file": "src/cod/00355818.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.92
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.92
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.92
+     }
+    }
+   }
+  },
+  "003588b0": {
+   "name": "func_003588B0",
+   "address": "0x3588b0",
+   "size": 128,
+   "file": "src/cod/00348158.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 60.625
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 60.625
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 60.625
+     }
+    }
+   }
+  },
+  "003597d0": {
+   "name": "func_003597D0",
+   "address": "0x3597d0",
+   "size": 44,
+   "file": "src/cod/003597d0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0035ac58": {
+   "name": "sftim_GetTimeNone",
+   "address": "0x35ac58",
+   "size": 72,
+   "file": "src/cod/003571f8.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.22222
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.22222
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.22222
+     }
+    }
+   }
+  },
+  "0035c200": {
+   "name": "func_0035C200",
+   "address": "0x35c200",
+   "size": 52,
+   "file": "src/cod/0035c0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.69231
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.69231
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.69231
+     }
+    }
+   }
+  },
+  "0035d800": {
+   "name": "func_0035D800",
+   "address": "0x35d800",
+   "size": 40,
+   "file": "src/cod/0035d800.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 35.3
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 35.3
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 35.3
+     }
+    }
+   }
+  },
+  "0035d918": {
+   "name": "SFH_IsExistStmId",
+   "address": "0x35d918",
+   "size": 108,
+   "file": "src/cod/0035d918.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.51852
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.51852
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.51852
+     }
+    }
+   }
+  },
+  "0035f578": {
+   "name": "func_0035F578",
+   "address": "0x35f578",
+   "size": 120,
+   "file": "src/cod/00347868.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.333336
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0035fd20": {
+   "name": "func_0035FD20",
+   "address": "0x35fd20",
+   "size": 48,
+   "file": "src/cod/0034bfa8.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.416664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.416664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.416664
+     }
+    }
+   }
+  },
+  "00366e18": {
+   "name": "func_00366E18",
+   "address": "0x366e18",
+   "size": 168,
+   "file": "src/cod/0032d3a8.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.45238
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.45238
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.45238
+     }
+    }
+   }
+  },
+  "0036bf60": {
+   "name": "func_0036BF60",
+   "address": "0x36bf60",
+   "size": 76,
+   "file": "src/cod/00323618.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0036d7f8": {
+   "name": "M2V_SetErrFunc",
+   "address": "0x36d7f8",
+   "size": 112,
+   "file": "src/cod/0036d7f8.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.46429
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.46429
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.46429
+     }
+    }
+   }
+  },
+  "00375748": {
+   "name": "func_00375748",
+   "address": "0x375748",
+   "size": 88,
+   "file": "src/cod/002cbdc0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.22727
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.22727
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.22727
+     }
+    }
+   }
+  },
+  "0037c6a0": {
+   "name": "func_0037C6A0",
+   "address": "0x37c6a0",
+   "size": 124,
+   "file": "src/cod/001f6af8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.70968
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.70968
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.70968
+     }
+    }
+   }
+  },
+  "0037cee0": {
+   "name": "func_0037CEE0",
+   "address": "0x37cee0",
+   "size": 32,
+   "file": "src/cod/0037cee0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.5
+     }
+    }
+   }
+  },
+  "0037e128": {
+   "name": "func_0037E128",
+   "address": "0x37e128",
+   "size": 212,
+   "file": "src/cod/0037e128.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.962265
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.962265
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 99.962265
+     }
+    }
+   }
+  },
+  "00381150": {
+   "name": "AdjustRowScrollPosition",
+   "address": "0x381150",
+   "size": 348,
+   "file": "src/cod/0018f488.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00387430": {
+   "name": "func_00387430",
+   "address": "0x387430",
+   "size": 136,
+   "file": "src/cod/00387430.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.82353
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.82353
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.82353
+     }
+    }
+   }
+  },
+  "0038c7f0": {
+   "name": "func_0038C7F0",
+   "address": "0x38c7f0",
+   "size": 112,
+   "file": "src/cod/0038c7f0.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.85714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.85714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.85714
+     }
+    }
+   }
+  },
+  "0038cfc0": {
+   "name": "_IO_init_marker",
+   "address": "0x38cfc0",
+   "size": 120,
+   "file": "src/cod/0038cfc0.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.26667
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.26667
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.26667
+     }
+    }
+   }
+  },
+  "0038f570": {
+   "name": "Bcopy",
+   "address": "0x38f570",
+   "size": 68,
+   "file": "src/cod/0038f5.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.64706
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.64706
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.64706
+     }
+    }
+   }
+  },
+  "0038f8c0": {
+   "name": "lo0bits",
+   "address": "0x38f8c0",
+   "size": 192,
+   "file": "src/cod/0038f8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00392a30": {
+   "name": "_IO_file_setbuf",
+   "address": "0x392a30",
+   "size": 80,
+   "file": "src/cod/00392a30.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.95
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.95
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.95
+     }
+    }
+   }
+  },
+  "00398468": {
+   "name": "scePadGetModVersion",
+   "address": "0x398468",
+   "size": 100,
+   "file": "src/cod/00398468.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.04
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.04
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.04
+     }
+    }
+   }
+  },
+  "003a6aa8": {
+   "name": "__srefill",
+   "address": "0x3a6aa8",
+   "size": 360,
+   "file": "src/cod/003a6aa8.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.066666
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.066666
+     }
+    }
+   }
+  },
+  "003a7c48": {
+   "name": "func_003A7C48",
+   "address": "0x3a7c48",
+   "size": 40,
+   "file": "src/cod/0031f4e0.c",
+   "compiler": "ee-gcc2.96",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "003adf50": {
+   "name": "func_003ADF50",
+   "address": "0x3adf50",
+   "size": 88,
+   "file": "src/cod/0039ade0.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "003b2e38": {
+   "name": "func_003B2E38",
+   "address": "0x3b2e38",
+   "size": 64,
+   "file": "src/cod/003b2cd0.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "003b5c48": {
+   "name": "_sceSifLoadModuleBuffer",
+   "address": "0x3b5c48",
+   "size": 520,
+   "file": "src/cod/003b5c48.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "003b7c18": {
+   "name": "func_003B7C18",
+   "address": "0x3b7c18",
+   "size": 64,
+   "file": "src/cod/003b7c18.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "003baa68": {
+   "name": "sceIpuStopDMA",
+   "address": "0x3baa68",
+   "size": 228,
+   "file": "src/cod/003968e8.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.61404
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.649124
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.61404
+     }
+    }
+   }
+  },
+  "003baca0": {
+   "name": "func_003BACA0",
+   "address": "0x3baca0",
+   "size": 104,
+   "file": "src/cod/003baca0.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 1.3461539
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 1.3461539
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 1.3461539
+     }
+    }
+   }
+  },
+  "003bad80": {
+   "name": "func_003BAD80",
+   "address": "0x3bad80",
+   "size": 568,
+   "file": "src/cod/003bad80.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 10.732394
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 10.661972
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 10.732394
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,1074 @@
+{
+ "games": [
+  "ps2-dungeon-game",
+  "ps2-fatal-frame",
+  "ps2-ratchet-clank"
+ ],
+ "shipped_gate": "fields >= 3, not a run of one width",
+ "per_game": {
+  "ps2-dungeon-game": {
+   "any struct (no gate)": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 80.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 8,
+    "passed_false": 0
+   },
+   "fields >= 2": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 80.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 8,
+    "passed_false": 0
+   },
+   "fields >= 3": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 80.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 8,
+    "passed_false": 0
+   },
+   "fields >= 4": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 50.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 5,
+    "passed_false": 0
+   },
+   "fields >= 2, not a dense scalar array": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 70.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 7,
+    "passed_false": 0
+   },
+   "fields >= 3, not a dense scalar array": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 70.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 7,
+    "passed_false": 0
+   },
+   "fields >= 2, two widths or typed": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 70.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 7,
+    "passed_false": 0
+   },
+   "fields >= 3, two widths or typed": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 70.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 7,
+    "passed_false": 0
+   },
+   "fields >= 4, two widths or typed": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 40.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 4,
+    "passed_false": 0
+   },
+   "fields >= 3, not dense, span >= 16": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 70.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 7,
+    "passed_false": 0
+   },
+   "fields >= 2, not a dense array of any type": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 50.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 5,
+    "passed_false": 0
+   },
+   "fields >= 3, not a dense array of any type": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 50.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 5,
+    "passed_false": 0
+   },
+   "fields >= 4, not a dense array of any type": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 40.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 4,
+    "passed_false": 0
+   },
+   "fields >= 3, not a run of one width": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 50.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 5,
+    "passed_false": 0
+   },
+   "fields >= 3, not a run of one width, no 8-byte integer": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 0.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": null,
+    "offset_precision": null,
+    "passed_struct_ptr": 0,
+    "passed_false": 0
+   },
+   "fields >= 4, not a run of one width": {
+    "truth_struct_ptr": 10,
+    "struct_recall": 40.0,
+    "truth_non_struct_ptr": 0,
+    "false_struct_rate": null,
+    "false_by_kind": {},
+    "non_pointer_params": 11,
+    "non_pointer_rate": 0.0,
+    "precision": 100.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 4,
+    "passed_false": 0
+   }
+  },
+  "ps2-fatal-frame": {
+   "any struct (no gate)": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 79.17,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 25.95,
+    "false_by_kind": {
+     "scalar_ptr": 25.05,
+     "void_ptr": 43.96,
+     "ptr_ptr": 8.33,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.28,
+    "precision": 69.3,
+    "offset_precision": 93.8,
+    "passed_struct_ptr": 650,
+    "passed_false": 288
+   },
+   "fields >= 2": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 67.24,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 20.54,
+    "false_by_kind": {
+     "scalar_ptr": 20.76,
+     "void_ptr": 24.18,
+     "ptr_ptr": 8.33,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.28,
+    "precision": 70.77,
+    "offset_precision": 93.86,
+    "passed_struct_ptr": 552,
+    "passed_false": 228
+   },
+   "fields >= 3": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 55.91,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 13.87,
+    "false_by_kind": {
+     "scalar_ptr": 14.72,
+     "void_ptr": 9.89,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.17,
+    "precision": 74.88,
+    "offset_precision": 94.06,
+    "passed_struct_ptr": 459,
+    "passed_false": 154
+   },
+   "fields >= 4": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 41.41,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 7.12,
+    "false_by_kind": {
+     "scalar_ptr": 7.46,
+     "void_ptr": 5.49,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.17,
+    "precision": 81.15,
+    "offset_precision": 93.89,
+    "passed_struct_ptr": 340,
+    "passed_false": 79
+   },
+   "fields >= 2, not a dense scalar array": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 62.48,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 13.51,
+    "false_by_kind": {
+     "scalar_ptr": 13.19,
+     "void_ptr": 19.78,
+     "ptr_ptr": 8.33,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.21,
+    "precision": 77.38,
+    "offset_precision": 93.48,
+    "passed_struct_ptr": 513,
+    "passed_false": 150
+   },
+   "fields >= 3, not a dense scalar array": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 52.13,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 8.74,
+    "false_by_kind": {
+     "scalar_ptr": 8.9,
+     "void_ptr": 9.89,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 81.52,
+    "offset_precision": 93.7,
+    "passed_struct_ptr": 428,
+    "passed_false": 97
+   },
+   "fields >= 2, two widths or typed": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 45.55,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 7.57,
+    "false_by_kind": {
+     "scalar_ptr": 7.77,
+     "void_ptr": 8.79,
+     "ptr_ptr": 0.0,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 81.66,
+    "offset_precision": 94.31,
+    "passed_struct_ptr": 374,
+    "passed_false": 84
+   },
+   "fields >= 3, two widths or typed": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 41.17,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 5.77,
+    "false_by_kind": {
+     "scalar_ptr": 5.83,
+     "void_ptr": 7.69,
+     "ptr_ptr": 0.0,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 84.08,
+    "offset_precision": 94.67,
+    "passed_struct_ptr": 338,
+    "passed_false": 64
+   },
+   "fields >= 4, two widths or typed": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 31.67,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 2.25,
+    "false_by_kind": {
+     "scalar_ptr": 2.04,
+     "void_ptr": 5.49,
+     "ptr_ptr": 0.0,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 91.23,
+    "offset_precision": 94.54,
+    "passed_struct_ptr": 260,
+    "passed_false": 25
+   },
+   "fields >= 3, not dense, span >= 16": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 46.89,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 5.95,
+    "false_by_kind": {
+     "scalar_ptr": 5.83,
+     "void_ptr": 8.79,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 85.37,
+    "offset_precision": 93.21,
+    "passed_struct_ptr": 385,
+    "passed_false": 66
+   },
+   "fields >= 2, not a dense array of any type": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 61.14,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 10.72,
+    "false_by_kind": {
+     "scalar_ptr": 10.02,
+     "void_ptr": 19.78,
+     "ptr_ptr": 8.33,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.21,
+    "precision": 80.84,
+    "offset_precision": 93.32,
+    "passed_struct_ptr": 502,
+    "passed_false": 119
+   },
+   "fields >= 3, not a dense array of any type": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 51.04,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 5.95,
+    "false_by_kind": {
+     "scalar_ptr": 5.73,
+     "void_ptr": 9.89,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 86.39,
+    "offset_precision": 93.54,
+    "passed_struct_ptr": 419,
+    "passed_false": 66
+   },
+   "fields >= 4, not a dense array of any type": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 37.64,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 4.23,
+    "false_by_kind": {
+     "scalar_ptr": 4.19,
+     "void_ptr": 5.49,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 86.8,
+    "offset_precision": 93.35,
+    "passed_struct_ptr": 309,
+    "passed_false": 47
+   },
+   "fields >= 3, not a run of one width": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 47.14,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 5.77,
+    "false_by_kind": {
+     "scalar_ptr": 5.62,
+     "void_ptr": 8.79,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 85.81,
+    "offset_precision": 93.62,
+    "passed_struct_ptr": 387,
+    "passed_false": 64
+   },
+   "fields >= 3, not a run of one width, no 8-byte integer": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 37.39,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 5.77,
+    "false_by_kind": {
+     "scalar_ptr": 5.62,
+     "void_ptr": 8.79,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 82.75,
+    "offset_precision": 93.25,
+    "passed_struct_ptr": 307,
+    "passed_false": 64
+   },
+   "fields >= 4, not a run of one width": {
+    "truth_struct_ptr": 821,
+    "struct_recall": 35.93,
+    "truth_non_struct_ptr": 1110,
+    "false_struct_rate": 4.14,
+    "false_by_kind": {
+     "scalar_ptr": 4.09,
+     "void_ptr": 5.49,
+     "ptr_ptr": 2.78,
+     "code_ptr": 0.0
+    },
+    "non_pointer_params": 2860,
+    "non_pointer_rate": 0.1,
+    "precision": 86.51,
+    "offset_precision": 93.46,
+    "passed_struct_ptr": 295,
+    "passed_false": 46
+   }
+  },
+  "ps2-ratchet-clank": {
+   "any struct (no gate)": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 78.44,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 17.99,
+    "false_by_kind": {
+     "scalar_ptr": 13.51,
+     "void_ptr": 23.53,
+     "ptr_ptr": 30.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 1.44,
+    "precision": 79.39,
+    "offset_precision": 97.65,
+    "passed_struct_ptr": 131,
+    "passed_false": 34
+   },
+   "fields >= 2": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 64.67,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 11.64,
+    "false_by_kind": {
+     "scalar_ptr": 6.31,
+     "void_ptr": 17.65,
+     "ptr_ptr": 30.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 1.23,
+    "precision": 83.08,
+    "offset_precision": 97.91,
+    "passed_struct_ptr": 108,
+    "passed_false": 22
+   },
+   "fields >= 3": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 52.69,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 8.47,
+    "false_by_kind": {
+     "scalar_ptr": 2.7,
+     "void_ptr": 14.71,
+     "ptr_ptr": 30.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.82,
+    "precision": 84.62,
+    "offset_precision": 98.13,
+    "passed_struct_ptr": 88,
+    "passed_false": 16
+   },
+   "fields >= 4": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 40.72,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 5.82,
+    "false_by_kind": {
+     "scalar_ptr": 2.7,
+     "void_ptr": 7.35,
+     "ptr_ptr": 30.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.82,
+    "precision": 86.08,
+    "offset_precision": 97.89,
+    "passed_struct_ptr": 68,
+    "passed_false": 11
+   },
+   "fields >= 2, not a dense scalar array": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 56.89,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 7.94,
+    "false_by_kind": {
+     "scalar_ptr": 2.7,
+     "void_ptr": 17.65,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 1.23,
+    "precision": 86.36,
+    "offset_precision": 97.69,
+    "passed_struct_ptr": 95,
+    "passed_false": 15
+   },
+   "fields >= 3, not a dense scalar array": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 46.71,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 6.35,
+    "false_by_kind": {
+     "scalar_ptr": 1.8,
+     "void_ptr": 14.71,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.82,
+    "precision": 86.67,
+    "offset_precision": 97.94,
+    "passed_struct_ptr": 78,
+    "passed_false": 12
+   },
+   "fields >= 2, two widths or typed": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 14.37,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 3.7,
+    "false_by_kind": {
+     "scalar_ptr": 0.0,
+     "void_ptr": 10.29,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.62,
+    "precision": 77.42,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 24,
+    "passed_false": 7
+   },
+   "fields >= 3, two widths or typed": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 13.77,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 3.17,
+    "false_by_kind": {
+     "scalar_ptr": 0.0,
+     "void_ptr": 8.82,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.41,
+    "precision": 79.31,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 23,
+    "passed_false": 6
+   },
+   "fields >= 4, two widths or typed": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 13.17,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 1.59,
+    "false_by_kind": {
+     "scalar_ptr": 0.0,
+     "void_ptr": 4.41,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.41,
+    "precision": 88.0,
+    "offset_precision": 100.0,
+    "passed_struct_ptr": 22,
+    "passed_false": 3
+   },
+   "fields >= 3, not dense, span >= 16": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 45.51,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 5.82,
+    "false_by_kind": {
+     "scalar_ptr": 1.8,
+     "void_ptr": 13.24,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.62,
+    "precision": 87.36,
+    "offset_precision": 98.73,
+    "passed_struct_ptr": 76,
+    "passed_false": 11
+   },
+   "fields >= 2, not a dense array of any type": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 54.49,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 7.41,
+    "false_by_kind": {
+     "scalar_ptr": 2.7,
+     "void_ptr": 16.18,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 1.23,
+    "precision": 86.67,
+    "offset_precision": 97.52,
+    "passed_struct_ptr": 91,
+    "passed_false": 14
+   },
+   "fields >= 3, not a dense array of any type": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 44.31,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 5.82,
+    "false_by_kind": {
+     "scalar_ptr": 1.8,
+     "void_ptr": 13.24,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.82,
+    "precision": 87.06,
+    "offset_precision": 97.77,
+    "passed_struct_ptr": 74,
+    "passed_false": 11
+   },
+   "fields >= 4, not a dense array of any type": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 34.73,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 3.7,
+    "false_by_kind": {
+     "scalar_ptr": 1.8,
+     "void_ptr": 7.35,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.82,
+    "precision": 89.23,
+    "offset_precision": 97.51,
+    "passed_struct_ptr": 58,
+    "passed_false": 7
+   },
+   "fields >= 3, not a run of one width": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 41.32,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 5.82,
+    "false_by_kind": {
+     "scalar_ptr": 1.8,
+     "void_ptr": 13.24,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.82,
+    "precision": 86.25,
+    "offset_precision": 97.67,
+    "passed_struct_ptr": 69,
+    "passed_false": 11
+   },
+   "fields >= 3, not a run of one width, no 8-byte integer": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 35.33,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 5.29,
+    "false_by_kind": {
+     "scalar_ptr": 1.8,
+     "void_ptr": 11.76,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.82,
+    "precision": 85.51,
+    "offset_precision": 97.19,
+    "passed_struct_ptr": 59,
+    "passed_false": 10
+   },
+   "fields >= 4, not a run of one width": {
+    "truth_struct_ptr": 167,
+    "struct_recall": 32.93,
+    "truth_non_struct_ptr": 189,
+    "false_struct_rate": 3.7,
+    "false_by_kind": {
+     "scalar_ptr": 1.8,
+     "void_ptr": 7.35,
+     "ptr_ptr": 0.0
+    },
+    "non_pointer_params": 487,
+    "non_pointer_rate": 0.82,
+    "precision": 88.71,
+    "offset_precision": 97.42,
+    "passed_struct_ptr": 55,
+    "passed_false": 7
+   }
+  }
+ },
+ "pooled": {
+  "any struct (no gate)": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 79.06,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 24.79,
+   "false_by_kind": {
+    "scalar_ptr": 23.88,
+    "void_ptr": 35.22,
+    "ptr_ptr": 13.04,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.45,
+   "precision": 71.02,
+   "offset_precision": 94.46,
+   "passed_struct_ptr": 789,
+   "passed_false": 322
+  },
+  "fields >= 2": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 66.93,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 19.25,
+   "false_by_kind": {
+    "scalar_ptr": 19.28,
+    "void_ptr": 21.38,
+    "ptr_ptr": 13.04,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.42,
+   "precision": 72.77,
+   "offset_precision": 94.56,
+   "passed_struct_ptr": 668,
+   "passed_false": 250
+  },
+  "fields >= 3": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 55.61,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 13.09,
+   "false_by_kind": {
+    "scalar_ptr": 13.5,
+    "void_ptr": 11.95,
+    "ptr_ptr": 8.7,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.27,
+   "precision": 76.55,
+   "offset_precision": 94.75,
+   "passed_struct_ptr": 555,
+   "passed_false": 170
+  },
+  "fields >= 4": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 41.38,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 6.93,
+   "false_by_kind": {
+    "scalar_ptr": 6.98,
+    "void_ptr": 6.29,
+    "ptr_ptr": 8.7,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.27,
+   "precision": 82.11,
+   "offset_precision": 94.57,
+   "passed_struct_ptr": 413,
+   "passed_false": 90
+  },
+  "fields >= 2, not a dense scalar array": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 61.62,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 12.7,
+   "false_by_kind": {
+    "scalar_ptr": 12.12,
+    "void_ptr": 18.87,
+    "ptr_ptr": 6.52,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.36,
+   "precision": 78.85,
+   "offset_precision": 94.18,
+   "passed_struct_ptr": 615,
+   "passed_false": 165
+  },
+  "fields >= 3, not a dense scalar array": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 51.4,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 8.39,
+   "false_by_kind": {
+    "scalar_ptr": 8.17,
+    "void_ptr": 11.95,
+    "ptr_ptr": 2.17,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.21,
+   "precision": 82.48,
+   "offset_precision": 94.4,
+   "passed_struct_ptr": 513,
+   "passed_false": 109
+  },
+  "fields >= 2, two widths or typed": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 40.58,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 7.01,
+   "false_by_kind": {
+    "scalar_ptr": 6.98,
+    "void_ptr": 9.43,
+    "ptr_ptr": 0.0,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.18,
+   "precision": 81.65,
+   "offset_precision": 94.77,
+   "passed_struct_ptr": 405,
+   "passed_false": 91
+  },
+  "fields >= 3, two widths or typed": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 36.87,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 5.39,
+   "false_by_kind": {
+    "scalar_ptr": 5.23,
+    "void_ptr": 8.18,
+    "ptr_ptr": 0.0,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.15,
+   "precision": 84.02,
+   "offset_precision": 95.12,
+   "passed_struct_ptr": 368,
+   "passed_false": 70
+  },
+  "fields >= 4, two widths or typed": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 28.66,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 2.16,
+   "false_by_kind": {
+    "scalar_ptr": 1.84,
+    "void_ptr": 5.03,
+    "ptr_ptr": 0.0,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.15,
+   "precision": 91.08,
+   "offset_precision": 95.02,
+   "passed_struct_ptr": 286,
+   "passed_false": 28
+  },
+  "fields >= 3, not dense, span >= 16": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 46.89,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 5.93,
+   "false_by_kind": {
+    "scalar_ptr": 5.42,
+    "void_ptr": 10.69,
+    "ptr_ptr": 2.17,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.18,
+   "precision": 85.87,
+   "offset_precision": 94.15,
+   "passed_struct_ptr": 468,
+   "passed_false": 77
+  },
+  "fields >= 2, not a dense array of any type": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 59.92,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 10.24,
+   "false_by_kind": {
+    "scalar_ptr": 9.27,
+    "void_ptr": 18.24,
+    "ptr_ptr": 6.52,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.36,
+   "precision": 81.81,
+   "offset_precision": 93.98,
+   "passed_struct_ptr": 598,
+   "passed_false": 133
+  },
+  "fields >= 3, not a dense array of any type": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 49.9,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 5.93,
+   "false_by_kind": {
+    "scalar_ptr": 5.33,
+    "void_ptr": 11.32,
+    "ptr_ptr": 2.17,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.21,
+   "precision": 86.61,
+   "offset_precision": 94.2,
+   "passed_struct_ptr": 498,
+   "passed_false": 77
+  },
+  "fields >= 4, not a dense array of any type": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 37.17,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 4.16,
+   "false_by_kind": {
+    "scalar_ptr": 3.95,
+    "void_ptr": 6.29,
+    "ptr_ptr": 2.17,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.21,
+   "precision": 87.29,
+   "offset_precision": 94.01,
+   "passed_struct_ptr": 371,
+   "passed_false": 54
+  },
+  "fields >= 3, not a run of one width": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 46.19,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 5.77,
+   "false_by_kind": {
+    "scalar_ptr": 5.23,
+    "void_ptr": 10.69,
+    "ptr_ptr": 2.17,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.21,
+   "precision": 86.01,
+   "offset_precision": 94.26,
+   "passed_struct_ptr": 461,
+   "passed_false": 75
+  },
+  "fields >= 3, not a run of one width, no 8-byte integer": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 36.67,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 5.7,
+   "false_by_kind": {
+    "scalar_ptr": 5.23,
+    "void_ptr": 10.06,
+    "ptr_ptr": 2.17,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.21,
+   "precision": 83.18,
+   "offset_precision": 93.87,
+   "passed_struct_ptr": 366,
+   "passed_false": 74
+  },
+  "fields >= 4, not a run of one width": {
+   "truth_struct_ptr": 998,
+   "struct_recall": 35.47,
+   "truth_non_struct_ptr": 1299,
+   "false_struct_rate": 4.08,
+   "false_by_kind": {
+    "scalar_ptr": 3.86,
+    "void_ptr": 6.29,
+    "ptr_ptr": 2.17,
+    "code_ptr": 0.0
+   },
+   "non_pointer_params": 3358,
+   "non_pointer_rate": 0.21,
+   "precision": 86.98,
+   "offset_precision": 94.09,
+   "passed_struct_ptr": 354,
+   "passed_false": 53
+  }
+ }
+}

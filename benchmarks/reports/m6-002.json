@@ -1,11 +1,11 @@
 {
  "id": "m6-002",
- "recorded_at": "2026-09-07T09:23:35.916818+00:00",
+ "recorded_at": "2026-10-15T09:47:35.177241+00:00",
  "status": "pass",
  "passed": true,
- "summary": "10 documented API exchanges driven through romwright-api, 0 block(s) skipped",
+ "summary": "14 documented API exchanges driven through romwright-api, 0 block(s) skipped",
  "metrics": {
-  "exchanges": 10,
+  "exchanges": 14,
   "skipped_blocks": 0
  },
  "skipped": []

@@ -1,0 +1,1055 @@
+[
+ {
+  "slug": "super-mario-64",
+  "before": {
+   "slug": "super-mario-64",
+   "programs": 1,
+   "functions_total": 5023,
+   "segments_in_import": 1,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 2,
+    "found": 1,
+    "size_exact": 0,
+    "wrong_vram": 0,
+    "truth_resident": 2,
+    "found_resident": 1,
+    "truth_overlay": 0,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 3529,
+     "found": 3520,
+     "recall": 0.9974
+    },
+    "overlay": {
+     "truth": 284,
+     "found": 0,
+     "recall": 0.0
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 5023,
+     "true": 3520,
+     "precision": 0.7008
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "after": {
+   "slug": "super-mario-64",
+   "programs": 1,
+   "functions_total": 5008,
+   "segments_in_import": 3,
+   "extra_functions": 799,
+   "layout": {
+    "truth": 2,
+    "found": 2,
+    "size_exact": 2,
+    "wrong_vram": 0,
+    "truth_resident": 2,
+    "found_resident": 2,
+    "truth_overlay": 0,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 1,
+    "extra_sample": [
+     "ovl_21f4c0@0x8016f000"
+    ]
+   },
+   "recall": {
+    "main": {
+     "truth": 3529,
+     "found": 3520,
+     "recall": 0.9974
+    },
+    "overlay": {
+     "truth": 284,
+     "found": 277,
+     "recall": 0.9754
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 4209,
+     "true": 3520,
+     "precision": 0.8363
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "timing_before": {
+   "wall_s": 6.42,
+   "load_before": 3.3,
+   "load_after": 3.2,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 5.96,
+   "load_before": 3.2,
+   "load_after": 3.1,
+   "degraded": false
+  }
+ },
+ {
+  "slug": "dr-mario-64",
+  "before": {
+   "slug": "dr-mario-64",
+   "programs": 1,
+   "functions_total": 254,
+   "segments_in_import": 1,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 3,
+    "found": 2,
+    "size_exact": 0,
+    "wrong_vram": 0,
+    "truth_resident": 3,
+    "found_resident": 2,
+    "truth_overlay": 0,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 1406,
+     "found": 245,
+     "recall": 0.1743
+    },
+    "overlay": {
+     "truth": 0,
+     "found": 0,
+     "recall": null
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 254,
+     "true": 245,
+     "precision": 0.9646
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "after": {
+   "slug": "dr-mario-64",
+   "programs": 1,
+   "functions_total": 1333,
+   "segments_in_import": 2,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 3,
+    "found": 3,
+    "size_exact": 1,
+    "wrong_vram": 0,
+    "truth_resident": 3,
+    "found_resident": 3,
+    "truth_overlay": 0,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 1406,
+     "found": 1318,
+     "recall": 0.9374
+    },
+    "overlay": {
+     "truth": 0,
+     "found": 0,
+     "recall": null
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 1333,
+     "true": 1318,
+     "precision": 0.9887
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "timing_before": {
+   "wall_s": 1.05,
+   "load_before": 3.1,
+   "load_after": 3.1,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 2.64,
+   "load_before": 3.1,
+   "load_after": 3.1,
+   "degraded": false
+  }
+ },
+ {
+  "slug": "star-fox-64",
+  "before": {
+   "slug": "star-fox-64",
+   "programs": 1,
+   "functions_total": 1763,
+   "segments_in_import": 1,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 11,
+    "found": 2,
+    "size_exact": 0,
+    "wrong_vram": 0,
+    "truth_resident": 2,
+    "found_resident": 2,
+    "truth_overlay": 9,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 1564,
+     "found": 1532,
+     "recall": 0.9795
+    },
+    "overlay": {
+     "truth": 1242,
+     "found": 0,
+     "recall": 0.0
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 1763,
+     "true": 1532,
+     "precision": 0.869
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "after": {
+   "slug": "star-fox-64",
+   "programs": 9,
+   "functions_total": 2821,
+   "segments_in_import": 9,
+   "extra_functions": 1228,
+   "layout": {
+    "truth": 11,
+    "found": 2,
+    "size_exact": 0,
+    "wrong_vram": 8,
+    "truth_resident": 2,
+    "found_resident": 2,
+    "truth_overlay": 9,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [
+     "ovl_ending: 0x8017d390 (truth 0x80187520)",
+     "ovl_i1: 0x8017d390 (truth 0x80187520)",
+     "ovl_i2: 0x8017d390 (truth 0x80187520)",
+     "ovl_i3: 0x8017d390 (truth 0x80187520)",
+     "ovl_i4: 0x8017d390 (truth 0x80187520)",
+     "ovl_i5: 0x8017d390 (truth 0x80187520)",
+     "ovl_i6: 0x8017d390 (truth 0x80187520)",
+     "ovl_menu: 0x8017d390 (truth 0x80187520)"
+    ],
+    "extra_segments": 8,
+    "extra_sample": [
+     "ovl_b48150@0x8017d390",
+     "ovl_b54860@0x8017d390",
+     "ovl_b5d3e0@0x8017d390",
+     "ovl_b82c10@0x8017d390",
+     "ovl_b93190@0x8017d390",
+     "ovl_bb25e0@0x8017d390"
+    ]
+   },
+   "recall": {
+    "main": {
+     "truth": 1564,
+     "found": 1521,
+     "recall": 0.9725
+    },
+    "overlay": {
+     "truth": 1242,
+     "found": 0,
+     "recall": 0.0
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 1593,
+     "true": 1521,
+     "precision": 0.9548
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": {
+    "segments": 8,
+    "offsets": [
+     "-0xa190"
+    ],
+    "recall": {
+     "truth": 1241,
+     "found": 1226,
+     "recall": 0.9879
+    },
+    "precision": {
+     "total": 1228,
+     "true": 1226,
+     "precision": 0.9984
+    }
+   }
+  },
+  "timing_before": {
+   "wall_s": 14.59,
+   "load_before": 3.1,
+   "load_after": 3.6,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 61.46,
+   "load_before": 3.6,
+   "load_after": 7.8,
+   "degraded": false
+  }
+ },
+ {
+  "slug": "banjo-kazooie",
+  "before": {
+   "slug": "banjo-kazooie",
+   "programs": 1,
+   "functions_total": 57,
+   "segments_in_import": 1,
+   "extra_functions": 57,
+   "layout": {
+    "truth": 18,
+    "found": 0,
+    "size_exact": 0,
+    "wrong_vram": 1,
+    "truth_resident": 4,
+    "found_resident": 0,
+    "truth_overlay": 14,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [
+     "entry: 0x80100400 (truth 0x80000400)"
+    ],
+    "extra_segments": 1,
+    "extra_sample": [
+     "n64:code@0x80100400"
+    ]
+   },
+   "recall": {
+    "main": {
+     "truth": 6864,
+     "found": 0,
+     "recall": 0.0
+    },
+    "overlay": {
+     "truth": 1636,
+     "found": 0,
+     "recall": 0.0
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": {
+    "segments": 1,
+    "offsets": [
+     "+0x100000"
+    ],
+    "recall": {
+     "truth": 0,
+     "found": 0,
+     "recall": null
+    },
+    "precision": {
+     "total": 57,
+     "true": 0,
+     "precision": 0.0
+    }
+   }
+  },
+  "after": {
+   "slug": "banjo-kazooie",
+   "programs": 14,
+   "functions_total": 8414,
+   "segments_in_import": 16,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 18,
+    "found": 17,
+    "size_exact": 15,
+    "wrong_vram": 0,
+    "truth_resident": 4,
+    "found_resident": 4,
+    "truth_overlay": 14,
+    "found_overlay": 13,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 6864,
+     "found": 6779,
+     "recall": 0.9876
+    },
+    "overlay": {
+     "truth": 1636,
+     "found": 1620,
+     "recall": 0.9902
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 6794,
+     "true": 6779,
+     "precision": 0.9978
+    },
+    "overlay": {
+     "total": 1620,
+     "true": 1620,
+     "precision": 1.0
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "timing_before": {
+   "wall_s": 1.78,
+   "load_before": 7.8,
+   "load_after": 7.8,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 19.7,
+   "load_before": 7.8,
+   "load_after": 7.9,
+   "degraded": false
+  }
+ },
+ {
+  "slug": "super-smash-bros",
+  "before": {
+   "slug": "super-smash-bros",
+   "programs": 1,
+   "functions_total": 9349,
+   "segments_in_import": 1,
+   "extra_functions": 9349,
+   "layout": {
+    "truth": 69,
+    "found": 0,
+    "size_exact": 0,
+    "wrong_vram": 1,
+    "truth_resident": 2,
+    "found_resident": 0,
+    "truth_overlay": 67,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [
+     "entry: 0x80100400 (truth 0x80000400)"
+    ],
+    "extra_segments": 1,
+    "extra_sample": [
+     "n64:code@0x80100400"
+    ]
+   },
+   "recall": {
+    "main": {
+     "truth": 914,
+     "found": 0,
+     "recall": 0.0
+    },
+    "overlay": {
+     "truth": 6291,
+     "found": 0,
+     "recall": 0.0
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": {
+    "segments": 1,
+    "offsets": [
+     "+0x100000"
+    ],
+    "recall": {
+     "truth": 0,
+     "found": 0,
+     "recall": null
+    },
+    "precision": {
+     "total": 9349,
+     "true": 0,
+     "precision": 0.0
+    }
+   }
+  },
+  "after": {
+   "slug": "super-smash-bros",
+   "programs": 41,
+   "functions_total": 7080,
+   "segments_in_import": 66,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 69,
+    "found": 67,
+    "size_exact": 65,
+    "wrong_vram": 0,
+    "truth_resident": 2,
+    "found_resident": 2,
+    "truth_overlay": 67,
+    "found_overlay": 65,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 914,
+     "found": 873,
+     "recall": 0.9551
+    },
+    "overlay": {
+     "truth": 6291,
+     "found": 6157,
+     "recall": 0.9787
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 882,
+     "true": 873,
+     "precision": 0.9898
+    },
+    "overlay": {
+     "total": 6198,
+     "true": 6157,
+     "precision": 0.9934
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "timing_before": {
+   "wall_s": 16.92,
+   "load_before": 7.9,
+   "load_after": 9.1,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 48.81,
+   "load_before": 9.1,
+   "load_after": 12.1,
+   "degraded": false
+  }
+ },
+ {
+  "slug": "ocarina-of-time",
+  "before": {
+   "slug": "ocarina-of-time",
+   "programs": 1,
+   "functions_total": 143,
+   "segments_in_import": 1,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 472,
+    "found": 2,
+    "size_exact": 0,
+    "wrong_vram": 0,
+    "truth_resident": 3,
+    "found_resident": 2,
+    "truth_overlay": 469,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 3095,
+     "found": 138,
+     "recall": 0.0446
+    },
+    "overlay": {
+     "truth": 10252,
+     "found": 0,
+     "recall": 0.0
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 143,
+     "true": 138,
+     "precision": 0.965
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "after": {
+   "slug": "ocarina-of-time",
+   "programs": 1,
+   "functions_total": 12787,
+   "segments_in_import": 420,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 472,
+    "found": 421,
+    "size_exact": 419,
+    "wrong_vram": 0,
+    "truth_resident": 3,
+    "found_resident": 3,
+    "truth_overlay": 469,
+    "found_overlay": 418,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 3095,
+     "found": 3046,
+     "recall": 0.9842
+    },
+    "overlay": {
+     "truth": 10252,
+     "found": 9716,
+     "recall": 0.9477
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 3055,
+     "true": 3046,
+     "precision": 0.9971
+    },
+    "overlay": {
+     "total": 9732,
+     "true": 9716,
+     "precision": 0.9984
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "timing_before": {
+   "wall_s": 5.38,
+   "load_before": 12.1,
+   "load_after": 12.1,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 73.38,
+   "load_before": 12.1,
+   "load_after": 15.1,
+   "degraded": false
+  }
+ },
+ {
+  "slug": "majoras-mask",
+  "before": {
+   "slug": "majoras-mask",
+   "programs": 1,
+   "functions_total": 429,
+   "segments_in_import": 1,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 620,
+    "found": 2,
+    "size_exact": 0,
+    "wrong_vram": 0,
+    "truth_resident": 3,
+    "found_resident": 2,
+    "truth_overlay": 617,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 4085,
+     "found": 425,
+     "recall": 0.104
+    },
+    "overlay": {
+     "truth": 13062,
+     "found": 0,
+     "recall": 0.0
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 429,
+     "true": 425,
+     "precision": 0.9907
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "after": {
+   "slug": "majoras-mask",
+   "programs": 1,
+   "functions_total": 16419,
+   "segments_in_import": 563,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 620,
+    "found": 563,
+    "size_exact": 562,
+    "wrong_vram": 0,
+    "truth_resident": 3,
+    "found_resident": 2,
+    "truth_overlay": 617,
+    "found_overlay": 561,
+    "partial_linear": 1,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 4085,
+     "found": 3996,
+     "recall": 0.9782
+    },
+    "overlay": {
+     "truth": 13062,
+     "found": 12406,
+     "recall": 0.9498
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 4004,
+     "true": 3996,
+     "precision": 0.998
+    },
+    "overlay": {
+     "total": 12415,
+     "true": 12406,
+     "precision": 0.9993
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "timing_before": {
+   "wall_s": 7.84,
+   "load_before": 15.1,
+   "load_after": 14.5,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 60.04,
+   "load_before": 14.5,
+   "load_after": 14.2,
+   "degraded": false
+  }
+ },
+ {
+  "slug": "paper-mario",
+  "before": {
+   "slug": "paper-mario",
+   "programs": 1,
+   "functions_total": 5093,
+   "segments_in_import": 1,
+   "extra_functions": 5093,
+   "layout": {
+    "truth": 733,
+    "found": 0,
+    "size_exact": 0,
+    "wrong_vram": 1,
+    "truth_resident": 7,
+    "found_resident": 0,
+    "truth_overlay": 726,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [
+     "main: 0x80125c00 (truth 0x80025c00)"
+    ],
+    "extra_segments": 1,
+    "extra_sample": [
+     "n64:code@0x80125c00"
+    ]
+   },
+   "recall": {
+    "main": {
+     "truth": 2813,
+     "found": 0,
+     "recall": 0.0
+    },
+    "overlay": {
+     "truth": 9823,
+     "found": 0,
+     "recall": 0.0
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": {
+    "segments": 1,
+    "offsets": [
+     "+0x100000"
+    ],
+    "recall": {
+     "truth": 2813,
+     "found": 976,
+     "recall": 0.347
+    },
+    "precision": {
+     "total": 5093,
+     "true": 976,
+     "precision": 0.1916
+    }
+   }
+  },
+  "after": {
+   "slug": "paper-mario",
+   "programs": 313,
+   "functions_total": 10983,
+   "segments_in_import": 435,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 733,
+    "found": 435,
+    "size_exact": 435,
+    "wrong_vram": 0,
+    "truth_resident": 7,
+    "found_resident": 6,
+    "truth_overlay": 726,
+    "found_overlay": 429,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 2813,
+     "found": 2729,
+     "recall": 0.9701
+    },
+    "overlay": {
+     "truth": 9823,
+     "found": 8223,
+     "recall": 0.8371
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 2739,
+     "true": 2729,
+     "precision": 0.9963
+    },
+    "overlay": {
+     "total": 8244,
+     "true": 8223,
+     "precision": 0.9975
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "timing_before": {
+   "wall_s": 35.46,
+   "load_before": 14.2,
+   "load_after": 16.9,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 286.94,
+   "load_before": 16.9,
+   "load_after": 15.1,
+   "degraded": false
+  }
+ },
+ {
+  "slug": "perfect-dark",
+  "before": {
+   "slug": "perfect-dark",
+   "programs": 1,
+   "functions_total": 5491,
+   "segments_in_import": 5,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 6,
+    "found": 5,
+    "size_exact": 5,
+    "wrong_vram": 0,
+    "truth_resident": 6,
+    "found_resident": 5,
+    "truth_overlay": 0,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 5658,
+     "found": 5389,
+     "recall": 0.9525
+    },
+    "overlay": {
+     "truth": 0,
+     "found": 0,
+     "recall": null
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 5491,
+     "true": 5389,
+     "precision": 0.9814
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "after": {
+   "slug": "perfect-dark",
+   "programs": 1,
+   "functions_total": 5491,
+   "segments_in_import": 5,
+   "extra_functions": 0,
+   "layout": {
+    "truth": 6,
+    "found": 5,
+    "size_exact": 5,
+    "wrong_vram": 0,
+    "truth_resident": 6,
+    "found_resident": 5,
+    "truth_overlay": 0,
+    "found_overlay": 0,
+    "partial_linear": 0,
+    "wrong_list": [],
+    "extra_segments": 0,
+    "extra_sample": []
+   },
+   "recall": {
+    "main": {
+     "truth": 5658,
+     "found": 5389,
+     "recall": 0.9525
+    },
+    "overlay": {
+     "truth": 0,
+     "found": 0,
+     "recall": null
+    }
+   },
+   "precision": {
+    "main": {
+     "total": 5491,
+     "true": 5389,
+     "precision": 0.9814
+    },
+    "overlay": {
+     "total": 0,
+     "true": 0,
+     "precision": null
+    }
+   },
+   "rebased_wrong_vram": null
+  },
+  "timing_before": {
+   "wall_s": 27.67,
+   "load_before": 15.1,
+   "load_after": 15.3,
+   "degraded": false
+  },
+  "timing_after": {
+   "wall_s": 23.99,
+   "load_before": 15.3,
+   "load_after": 13.6,
+   "degraded": false
+  }
+ }
+]

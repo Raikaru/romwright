@@ -1,0 +1,103 @@
+{
+ "name": "pe-glquake-pcproj",
+ "image": "/home/raikaru/ventris-corpus/extracted/pc-glquake-msvc42/glquake.exe",
+ "started": "2026-10-15T16:03:05Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 333.4,
+   "tail": [
+    "compiler: msvc4.2 (the importer's verdict `msvc-10`)",
+    "warning: batch decompile failed (native runtime: missing decompilation for FUN_00445dc3); retrying function by function",
+    "warning: no C for 0x445dc3: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Cannot properly adjust input varnodes",
+    "decompile: 1283 function(s) in 322.8s (1 refused by the decompiler)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-pcproj: per-function PE project (1284 functions, 1283 sources, 1283 target objects with 5472 call and 12227 data relocations, 1283 objdiff units, 1466 symbols, 1275 prototypes (8 skipped)), compiler `msvc4.2` (msvc), detected `msvc-10`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-pcproj && python3 configure.py && python3 build.py && python3 build.py report"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin-pcproj/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/pc-glquake-msvc42/glquake.exe /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-pcproj --name glquake"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 5.8,
+   "tail": [
+    "download objdiff-cli v3.6.1 <- https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-linux-x86_64",
+    "/home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-pcproj/build/tools/objdiff-cli",
+    "download wibo 1.2.0 <- https://github.com/decompals/wibo/releases/download/1.2.0/wibo-x86_64",
+    "/home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-pcproj/build/tools/wibo",
+    "configured: msvc4.2 (msvc), flags /O2 /Gd /W0",
+    "next: python3 build.py && python3 build.py report"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 380.3,
+   "tail": [
+    "  FAIL src/main/0040/FUN_00404850.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-pcproj\\src\\main\\0040\\FUN_00404850.c(31) : error C2065: 'stack0x00000000' : undeclared identifier",
+    "  FAIL src/main/0040/FUN_00405650.c: FUN_00405650.c",
+    "  FAIL src/main/0040/FUN_00407360.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-pcproj\\src\\main\\0040\\FUN_00407360.c(15) : error C2065: 'stack0x00000008' : undeclared identifier",
+    "  FAIL src/main/0040/FUN_004074a0.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-pcproj\\src\\main\\0040\\FUN_004074a0.c(27) : error C2065: 'stack0x00000000' : undeclared identifier",
+    "  FAIL src/main/0040/FUN_00407ae0.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-pcproj\\src\\main\\0040\\FUN_00407ae0.c(66) : error C2065: 'stack0x00000020' : undeclared identifier",
+    "  ... 94 more in build/compile_report.json"
+   ],
+   "cmd": "python3 build.py -j 3"
+  },
+  "report": {
+   "rc": 0,
+   "secs": 0.2,
+   "tail": [
+    "1283 functions: 1179 compile, 232 match exactly, 98 at >= 90%, mean 64.501% (build/progress.json, build/progress.tsv)",
+    "matched, ready to drop their NON_MATCHING marker: FUN_004019d0, FUN_00402360, FUN_00402370, FUN_00402380, FUN_004023c0, FUN_004023d0, FUN_004023e0, FUN_004023f0, FUN_00402400, FUN_00402410, FUN_00402420, FUN_00402430, FUN_00402440, FUN_00402450, FUN_00402460, FUN_00402470, FUN_00402480, FUN_00402490, FUN_004024a0, FUN_004024b0, FUN_004024c0, FUN_00"
+   ],
+   "cmd": "python3 build.py report"
+  }
+ },
+ "build/progress.json": {
+  "summary_count": 8,
+  "functions_count": 1283
+ },
+ "build/compile_report.json": {
+  "compiler": "msvc4.2",
+  "family": "msvc",
+  "units": 1283,
+  "compiled": 1179,
+  "failed": 104,
+  "seconds": 380.2,
+  "flags_count": 3,
+  "failures_count": 104
+ },
+ "build_rc": 0,
+ "match_functions": [
+  "0x425320",
+  "0x4393d0",
+  "0x42f840"
+ ],
+ "matches": [
+  {
+   "function": "0x425320",
+   "rc": 0,
+   "secs": 2.7,
+   "head": "FUN_00425320 0x425320 (61 bytes)  compiler msvc4.2 /O2 /Gd /W0  metric: objdiff match %",
+   "best": "best: default  99.667%  (default 99.667%)  7 decompiles, 2 compiles, 2.7s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x4393d0",
+   "rc": 0,
+   "secs": 1.9,
+   "head": "FUN_004393d0 0x4393d0 (49 bytes)  compiler msvc4.2 /O2 /Gd /W0  metric: objdiff match %",
+   "best": "best: default  99.643%  (default 99.643%)  7 decompiles, 1 compiles, 1.8s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x42f840",
+   "rc": 0,
+   "secs": 1.9,
+   "head": "FUN_0042f840 0x42f840 (46 bytes)  compiler msvc4.2 /O2 /Gd /W0  metric: objdiff match %",
+   "best": "best: default  83.214%  (default 83.214%)  7 decompiles, 1 compiles, 1.8s; stopped at the variant budget",
+   "tail": []
+  }
+ ],
+ "result": "done",
+ "finished": "2026-10-15T16:15:11Z"
+}

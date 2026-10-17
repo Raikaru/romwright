@@ -1,0 +1,188 @@
+{
+  "generated": "2026-10-15 07:58 UTC",
+  "cli_sha256": "a677503efac0ca1e3c4370151211ce446e1a96d03ce408e1d95d8c5430e733af",
+  "note": "",
+  "games": [
+    {
+      "game": "pc-doomgeneric-mingw32",
+      "platform": "pc",
+      "image": "pc-doomgeneric-mingw32/doomgeneric.exe",
+      "truth": "mingw-gcc-16",
+      "truth_text": "GCC 16.2.1 MinGW-w64 13.0.0 (Fedora 44 mingw32-gcc 16.2.1-1.fc44), i686-w64-mingw32, GNU ld 2.46",
+      "source": "truth/meta.json",
+      "status": "ran",
+      "detected": "mingw-gcc-16",
+      "language": "x86:LE:32:default",
+      "evidence": "compiler mingw-gcc-16 (detected, Medium confidence): GCC stamp in the image: `GCC: (GNU) 16.2.1 20260819 (Fedora MinGW 16.2.1-1.fc44)` (the commonest one)",
+      "verdict": "exact",
+      "seconds": 0.3,
+      "programs": [
+        "mingw-gcc-16"
+      ]
+    },
+    {
+      "game": "pc-glquake-msvc42",
+      "platform": "pc",
+      "image": "pc-glquake-msvc42/glquake.exe",
+      "truth": "msvc-10",
+      "truth_text": "MSVC 10.20 (Visual C++ 4.2, itsmattkc/msvc420@df2c13aad74c094988c6c7e784234c2e778a0e91: cl.exe/link.exe 4.20 under wine 11.0), static CRT libc.lib 4.2",
+      "source": "truth/meta.json",
+      "status": "ran",
+      "detected": "msvc-10",
+      "language": "x86:LE:32:default",
+      "evidence": "compiler msvc-10 (detected, Medium confidence): PE optional header linker version 4.20 (cl 10.x)",
+      "verdict": "exact",
+      "seconds": 0.4,
+      "programs": [
+        "msvc-10"
+      ]
+    },
+    {
+      "game": "pc-ioq3-ded-mingw32",
+      "platform": "pc",
+      "image": "pc-ioq3-ded-mingw32/ioq3ded.exe",
+      "truth": "mingw-gcc-16",
+      "truth_text": "GCC 16.2.1 MinGW-w64 13.0.0 (Fedora 44 mingw32-gcc 16.2.1-1.fc44), i686-w64-mingw32, GNU ld 2.46",
+      "source": "truth/meta.json",
+      "status": "ran",
+      "detected": "mingw-gcc-16",
+      "language": "x86:LE:32:default",
+      "evidence": "compiler mingw-gcc-16 (detected, Medium confidence): GCC stamp in the image: `GCC: (GNU) 16.2.1 20260819 (Fedora MinGW 16.2.1-1.fc44)` (the commonest one)",
+      "verdict": "exact",
+      "seconds": 0.3,
+      "programs": [
+        "mingw-gcc-16"
+      ]
+    },
+    {
+      "game": "pc-ioq3-ded-mingw64",
+      "platform": "pc",
+      "image": "pc-ioq3-ded-mingw64/ioq3ded.exe",
+      "truth": "mingw-gcc-16",
+      "truth_text": "GCC 16.2.1 MinGW-w64 13.0.0 (Fedora 44 mingw64-gcc 16.2.1-1.fc44), x86_64-w64-mingw32, GNU ld 2.46",
+      "source": "truth/meta.json",
+      "status": "ran",
+      "detected": "mingw-gcc-16",
+      "language": "x86:LE:64:default",
+      "evidence": "compiler mingw-gcc-16 (detected, Medium confidence): GCC stamp in the image: `GCC: (GNU) 16.2.1 20260819 (Fedora MinGW 16.2.1-1.fc44)` (the commonest one)",
+      "verdict": "exact",
+      "seconds": 0.1,
+      "programs": [
+        "mingw-gcc-16"
+      ]
+    },
+    {
+      "game": "pc-quake2-game-msvc8",
+      "platform": "pc",
+      "image": "pc-quake2-game-msvc8/gamex86.dll",
+      "truth": "msvc-14",
+      "truth_text": "MSVC 14.00.50727.42 (Visual C++ 2005, widberg/msvc8.0@936f93b9e9e92943ed5c9398d24712a32c2e9fe4: cl.exe 14.00.50727.42 + link.exe 8.00.50727.42 under wine 11.0 / Fedora wine-core 11.0-3.fc44), static CRT libcmt.lib 8.0",
+      "source": "truth/meta.json",
+      "status": "ran",
+      "detected": "msvc-14",
+      "language": "x86:LE:32:default",
+      "evidence": "compiler msvc-14 (detected, High confidence): PE optional header linker version 8.0 (cl 14.x)",
+      "verdict": "exact",
+      "seconds": 0.3,
+      "programs": [
+        "msvc-14"
+      ]
+    },
+    {
+      "game": "pc-quake2-game-msvc8-debug",
+      "platform": "pc",
+      "image": "pc-quake2-game-msvc8-debug/gamex86.dll",
+      "truth": "msvc-14",
+      "truth_text": "MSVC 14.00.50727.42 (Visual C++ 2005, widberg/msvc8.0@936f93b9e9e92943ed5c9398d24712a32c2e9fe4: cl.exe 14.00.50727.42 + link.exe 8.00.50727.42 under wine 11.0 / Fedora wine-core 11.0-3.fc44), static CRT libcmt.lib 8.0",
+      "source": "truth/meta.json",
+      "status": "ran",
+      "detected": "msvc-14",
+      "language": "x86:LE:32:default",
+      "evidence": "compiler msvc-14 (detected, High confidence): PE optional header linker version 8.0 (cl 14.x)",
+      "verdict": "exact",
+      "seconds": 0.3,
+      "programs": [
+        "msvc-14"
+      ]
+    },
+    {
+      "game": "pc-quake2-msvc8",
+      "platform": "pc",
+      "image": "pc-quake2-msvc8/quake2.exe",
+      "truth": "msvc-14",
+      "truth_text": "MSVC 14.00.50727.42 (Visual C++ 2005, widberg/msvc8.0@936f93b9e9e92943ed5c9398d24712a32c2e9fe4: cl.exe 14.00.50727.42 + link.exe 8.00.50727.42 under wine 11.0 / Fedora wine-core 11.0-3.fc44), static CRT libcmt.lib 8.0",
+      "source": "truth/meta.json",
+      "status": "ran",
+      "detected": "msvc-14",
+      "language": "x86:LE:32:default",
+      "evidence": "compiler msvc-14 (detected, High confidence): PE optional header linker version 8.0 (cl 14.x)",
+      "verdict": "exact",
+      "seconds": 0.3,
+      "programs": [
+        "msvc-14"
+      ]
+    },
+    {
+      "game": "pc-quake2-refgl-msvc8",
+      "platform": "pc",
+      "image": "pc-quake2-refgl-msvc8/ref_gl.dll",
+      "truth": "msvc-14",
+      "truth_text": "MSVC 14.00.50727.42 (Visual C++ 2005, widberg/msvc8.0@936f93b9e9e92943ed5c9398d24712a32c2e9fe4: cl.exe 14.00.50727.42 + link.exe 8.00.50727.42 under wine 11.0 / Fedora wine-core 11.0-3.fc44), static CRT libcmt.lib 8.0",
+      "source": "truth/meta.json",
+      "status": "ran",
+      "detected": "msvc-14",
+      "language": "x86:LE:32:default",
+      "evidence": "compiler msvc-14 (detected, High confidence): PE optional header linker version 8.0 (cl 14.x)",
+      "verdict": "exact",
+      "seconds": 0.2,
+      "programs": [
+        "msvc-14"
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "name": "kotor2",
+      "image": "/home/raikaru/Nihilus/KOTOR2_Clean_LegacyPC_2012/swkotor2.exe",
+      "truth": "msvc-13",
+      "status": "ran",
+      "detected": "msvc-13",
+      "evidence": "compiler msvc-13 (detected, Medium confidence): PE optional header linker version 7.0 (cl 13.x)",
+      "verdict": "exact"
+    },
+    {
+      "name": "vc6",
+      "image": "/home/raikaru/runs/PcImport/controls/ctl-vc6.exe",
+      "truth": "msvc-12",
+      "status": "ran",
+      "detected": "msvc-12",
+      "evidence": "compiler msvc-12 (detected, High confidence): PE optional header linker version 6.0 (cl 12.x)",
+      "verdict": "exact"
+    },
+    {
+      "name": "vc71",
+      "image": "/home/raikaru/runs/PcImport/controls/ctl-vc7.exe",
+      "truth": "msvc-13.1",
+      "status": "ran",
+      "detected": "msvc-13.1",
+      "evidence": "compiler msvc-13.1 (detected, High confidence): PE optional header linker version 7.10 (cl 13.1.x)",
+      "verdict": "exact"
+    }
+  ],
+  "by_platform": {
+    "pc": {
+      "games": 8,
+      "exact": 8,
+      "lineage": 0,
+      "abstained": 0,
+      "wrong": 0
+    }
+  },
+  "totals": {
+    "games": 8,
+    "exact": 8,
+    "lineage": 0,
+    "abstained": 0,
+    "wrong": 0
+  }
+}

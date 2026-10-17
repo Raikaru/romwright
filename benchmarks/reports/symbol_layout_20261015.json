@@ -1,0 +1,1714 @@
+{
+ "benchmark": "symbol_layout",
+ "date": "20261015",
+ "tag": "s3",
+ "gates": [
+  {
+   "gate": "m22-002 MWCC seed 20261010",
+   "off": {
+    "functions": 200,
+    "exact": 55,
+    "compiled": 195,
+    "mean_percent": 77.324
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 196,
+      "mean_percent": 77.638
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "001ee250"
+     ],
+     "better_addresses": [
+      "001ee250"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-002 MWCC seed 20261011",
+   "off": {
+    "functions": 200,
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.316
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 57,
+      "compiled": 195,
+      "mean_percent": 78.712
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "00274ed0"
+     ],
+     "better_addresses": [
+      "00274ed0"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-002 ee-gcc",
+   "off": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.622
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 106,
+      "compiled": 197,
+      "mean_percent": 86.622
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dds",
+   "off": {
+    "functions": 200,
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.224,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 61,
+      "compiled": 200,
+      "mean_percent": 77.402,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 4,
+     "worse": 0,
+     "same": 196,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "0017c220",
+      "00239e30",
+      "00284258",
+      "002848e0"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 rc",
+   "off": {
+    "functions": 200,
+    "exact": 26,
+    "compiled": 200,
+    "mean_percent": 68.158,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 26,
+      "compiled": 200,
+      "mean_percent": 68.327,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "00128d28"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 p4",
+   "off": {
+    "functions": 200,
+    "exact": 60,
+    "compiled": 198,
+    "mean_percent": 80.732,
+    "classes": {
+     "undeclared identifier": 1,
+     "type mismatch (assignment, operand, return, cast)": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 60,
+      "compiled": 199,
+      "mean_percent": 80.85,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 1
+      }
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0025fbb0"
+     ],
+     "better_addresses": [
+      "0025fbb0"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 gh (harness clone)",
+   "off": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 199,
+    "mean_percent": 82.119,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 78,
+      "compiled": 199,
+      "mean_percent": 82.119,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 ff",
+   "off": {
+    "functions": 200,
+    "exact": 21,
+    "compiled": 199,
+    "mean_percent": 62.913,
+    "classes": {
+     "type mismatch (assignment, operand, return, cast)": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 22,
+      "compiled": 199,
+      "mean_percent": 63.148,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 1
+      }
+     },
+     "paired": 200,
+     "better": 7,
+     "worse": 3,
+     "same": 190,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "0019cae0"
+     ],
+     "gained_compiled": [],
+     "better_addresses": [
+      "0012cc88",
+      "0019c190",
+      "0019cae0",
+      "001a81f0",
+      "001ae360",
+      "001ba900",
+      "001f9318"
+     ],
+     "worse_addresses": [
+      "001a2768",
+      "001b8308",
+      "00210ae8"
+     ]
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dc",
+   "off": {
+    "functions": 200,
+    "exact": 41,
+    "compiled": 197,
+    "mean_percent": 73.653,
+    "classes": {
+     "call does not match prototype": 1,
+     "unit post-processing rejected the candidate object": 1,
+     "type mismatch (assignment, operand, return, cast)": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 41,
+      "compiled": 197,
+      "mean_percent": 73.562,
+      "classes": {
+       "call does not match prototype": 1,
+       "unit post-processing rejected the candidate object": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      }
+     },
+     "paired": 200,
+     "better": 2,
+     "worse": 2,
+     "same": 196,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "0021c290",
+      "002def60"
+     ],
+     "worse_addresses": [
+      "002454e0",
+      "002e8ba0"
+     ]
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dk",
+   "off": {
+    "functions": 200,
+    "exact": 29,
+    "compiled": 197,
+    "mean_percent": 78.277,
+    "classes": {
+     "type mismatch (assignment, operand, return, cast)": 1,
+     "member access on a type the context lacks": 2
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 29,
+      "compiled": 197,
+      "mean_percent": 78.194,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 1,
+       "member access on a type the context lacks": 2
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 2,
+     "same": 198,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "0020a860",
+      "00233520"
+     ]
+    }
+   }
+  }
+ ],
+ "extra": {
+  "ps2_decompile_success": {
+   "off": {
+    "ps2-fatal-frame": {
+     "sampled": 942,
+     "decompiled": 942
+    },
+    "ps2-ratchet-clank-pal": {
+     "sampled": 859,
+     "decompiled": 858
+    },
+    "ps2-god-hand": {
+     "sampled": 980,
+     "decompiled": 980
+    },
+    "ps2-digital-devil-saga": {
+     "sampled": 977,
+     "decompiled": 977
+    },
+    "ps2-dark-chronicle": {
+     "sampled": 969,
+     "decompiled": 969
+    },
+    "ps2-ratchet-clank": {
+     "sampled": 861,
+     "decompiled": 860
+    },
+    "ps2-persona-4": {
+     "sampled": 975,
+     "decompiled": 974
+    },
+    "ps2-dark-cloud": {
+     "sampled": 937,
+     "decompiled": 888
+    }
+   },
+   "def": {
+    "ps2-fatal-frame": {
+     "sampled": 942,
+     "decompiled": 942
+    },
+    "ps2-ratchet-clank-pal": {
+     "sampled": 859,
+     "decompiled": 858
+    },
+    "ps2-god-hand": {
+     "sampled": 980,
+     "decompiled": 980
+    },
+    "ps2-digital-devil-saga": {
+     "sampled": 977,
+     "decompiled": 977
+    },
+    "ps2-dark-chronicle": {
+     "sampled": 969,
+     "decompiled": 969
+    },
+    "ps2-ratchet-clank": {
+     "sampled": 861,
+     "decompiled": 860
+    },
+    "ps2-persona-4": {
+     "sampled": 975,
+     "decompiled": 974
+    },
+    "ps2-dark-cloud": {
+     "sampled": 937,
+     "decompiled": 888
+    }
+   }
+  },
+  "ps2_decompile_success_total": {
+   "off [decompiled, sampled]": [
+    7448,
+    7500
+   ],
+   "def [decompiled, sampled]": [
+    7448,
+    7500
+   ],
+   "games that differ": []
+  },
+  "m21-001_off": {
+   "status": "pass",
+   "failures": [],
+   "rows": {
+    "gba-pokeemerald": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "size_exact": 15421
+    },
+    "nds-pokeheartgold-arm9": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "size_exact": 9888
+    },
+    "ps2-capcom-fighting-evolution": {
+     "truth": 8794,
+     "found": 8598,
+     "recall": 0.9724,
+     "precision": 0.9945,
+     "size_exact": 8534
+    },
+    "ps2-dungeon-game": {
+     "truth": 783,
+     "found": 785,
+     "recall": 0.9872,
+     "precision": 0.9847,
+     "size_exact": 752
+    },
+    "psx-darkstalkers-3": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "size_exact": 0
+    },
+    "psv-need-for-speed-most-wanted": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "size_exact": 16300
+    },
+    "x360-black-ops-2": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "size_exact": 0
+    }
+   }
+  },
+  "m21-001_def": {
+   "status": "pass",
+   "failures": [],
+   "rows": {
+    "gba-pokeemerald": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "size_exact": 15421
+    },
+    "nds-pokeheartgold-arm9": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "size_exact": 9888
+    },
+    "ps2-capcom-fighting-evolution": {
+     "truth": 8794,
+     "found": 8598,
+     "recall": 0.9724,
+     "precision": 0.9945,
+     "size_exact": 8534
+    },
+    "ps2-dungeon-game": {
+     "truth": 783,
+     "found": 785,
+     "recall": 0.9872,
+     "precision": 0.9847,
+     "size_exact": 752
+    },
+    "psx-darkstalkers-3": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "size_exact": 0
+    },
+    "psv-need-for-speed-most-wanted": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "size_exact": 16300
+    },
+    "x360-black-ops-2": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "size_exact": 0
+    }
+   }
+  },
+  "symbol_layout_wave": {
+   "off": {
+    "env": {
+     "ROMWRIGHT_NATIVE_LAYOUT": "1"
+    },
+    "functions": 7330,
+    "classes": {
+     "partial": 567,
+     "stack0x": 63,
+     "odd": 17,
+     "mismatch": 31
+    },
+    "partial_of": {
+     "global": 368,
+     "stack": 107,
+     "parameter": 2,
+     "register": 137
+    },
+    "functions_with_any": 624,
+    "images": {
+     "ps2-fatal-frame": {
+      "functions": 942,
+      "classes": {
+       "partial": 155,
+       "stack0x": 5,
+       "odd": 5,
+       "mismatch": 7
+      },
+      "any": 157,
+      "partial_of": {
+       "global": 130,
+       "stack": 31,
+       "parameter": 1,
+       "register": 16
+      }
+     },
+     "ps2-ratchet-clank-pal": {
+      "functions": 819,
+      "classes": {
+       "partial": 65,
+       "stack0x": 23,
+       "odd": 4,
+       "mismatch": 0
+      },
+      "any": 85,
+      "partial_of": {
+       "register": 45,
+       "stack": 14,
+       "parameter": 1,
+       "global": 8
+      }
+     },
+     "ps2-god-hand": {
+      "functions": 980,
+      "classes": {
+       "partial": 21,
+       "stack0x": 8,
+       "odd": 2,
+       "mismatch": 8
+      },
+      "any": 31,
+      "partial_of": {
+       "stack": 10,
+       "global": 7,
+       "register": 4
+      }
+     },
+     "ps2-digital-devil-saga": {
+      "functions": 977,
+      "classes": {
+       "partial": 43,
+       "stack0x": 4,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 46,
+      "partial_of": {
+       "global": 7,
+       "register": 26,
+       "stack": 10
+      }
+     },
+     "ps2-dark-chronicle": {
+      "functions": 969,
+      "classes": {
+       "partial": 92,
+       "stack0x": 0,
+       "odd": 1,
+       "mismatch": 4
+      },
+      "any": 93,
+      "partial_of": {
+       "register": 4,
+       "global": 87,
+       "stack": 11
+      }
+     },
+     "ps2-ratchet-clank": {
+      "functions": 820,
+      "classes": {
+       "partial": 54,
+       "stack0x": 20,
+       "odd": 1,
+       "mismatch": 1
+      },
+      "any": 71,
+      "partial_of": {
+       "register": 33,
+       "stack": 17,
+       "global": 7
+      }
+     },
+     "ps2-persona-4": {
+      "functions": 935,
+      "classes": {
+       "partial": 17,
+       "stack0x": 2,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 19,
+      "partial_of": {
+       "stack": 6,
+       "register": 8,
+       "global": 4
+      }
+     },
+     "ps2-dark-cloud": {
+      "functions": 888,
+      "classes": {
+       "partial": 120,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 7
+      },
+      "any": 122,
+      "partial_of": {
+       "register": 1,
+       "global": 118,
+       "stack": 8
+      }
+     }
+    }
+   },
+   "default": {
+    "env": {},
+    "functions": 7330,
+    "classes": {
+     "partial": 496,
+     "stack0x": 1,
+     "odd": 20,
+     "mismatch": 21
+    },
+    "partial_of": {
+     "global": 325,
+     "stack": 69,
+     "parameter": 2,
+     "register": 135
+    },
+    "functions_with_any": 503,
+    "images": {
+     "ps2-fatal-frame": {
+      "functions": 942,
+      "classes": {
+       "partial": 134,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 5
+      },
+      "any": 134,
+      "partial_of": {
+       "global": 118,
+       "stack": 12,
+       "parameter": 1,
+       "register": 16
+      }
+     },
+     "ps2-ratchet-clank-pal": {
+      "functions": 819,
+      "classes": {
+       "partial": 61,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 0
+      },
+      "any": 61,
+      "partial_of": {
+       "register": 44,
+       "parameter": 1,
+       "stack": 10,
+       "global": 8
+      }
+     },
+     "ps2-god-hand": {
+      "functions": 980,
+      "classes": {
+       "partial": 16,
+       "stack0x": 0,
+       "odd": 2,
+       "mismatch": 2
+      },
+      "any": 18,
+      "partial_of": {
+       "stack": 5,
+       "global": 7,
+       "register": 4
+      }
+     },
+     "ps2-digital-devil-saga": {
+      "functions": 977,
+      "classes": {
+       "partial": 37,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 0
+      },
+      "any": 37,
+      "partial_of": {
+       "global": 7,
+       "register": 26,
+       "stack": 4
+      }
+     },
+     "ps2-dark-chronicle": {
+      "functions": 969,
+      "classes": {
+       "partial": 71,
+       "stack0x": 0,
+       "odd": 1,
+       "mismatch": 4
+      },
+      "any": 72,
+      "partial_of": {
+       "register": 4,
+       "global": 66,
+       "stack": 10
+      }
+     },
+     "ps2-ratchet-clank": {
+      "functions": 820,
+      "classes": {
+       "partial": 50,
+       "stack0x": 0,
+       "odd": 3,
+       "mismatch": 1
+      },
+      "any": 50,
+      "partial_of": {
+       "register": 32,
+       "stack": 13,
+       "global": 7
+      }
+     },
+     "ps2-persona-4": {
+      "functions": 935,
+      "classes": {
+       "partial": 17,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 17,
+      "partial_of": {
+       "stack": 6,
+       "register": 8,
+       "global": 4
+      }
+     },
+     "ps2-dark-cloud": {
+      "functions": 888,
+      "classes": {
+       "partial": 110,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 7
+      },
+      "any": 114,
+      "partial_of": {
+       "register": 1,
+       "global": 108,
+       "stack": 9
+      }
+     }
+    }
+   },
+   "no-elements": {
+    "env": {
+     "ROMWRIGHT_LAYOUT_ELEMENTS": "off"
+    },
+    "functions": 7330,
+    "classes": {
+     "partial": 554,
+     "stack0x": 1,
+     "odd": 20,
+     "mismatch": 21
+    },
+    "partial_of": {
+     "global": 383,
+     "stack": 69,
+     "parameter": 2,
+     "register": 135
+    },
+    "functions_with_any": 559,
+    "images": {
+     "ps2-fatal-frame": {
+      "functions": 942,
+      "classes": {
+       "partial": 149,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 5
+      },
+      "any": 149,
+      "partial_of": {
+       "global": 133,
+       "stack": 12,
+       "parameter": 1,
+       "register": 16
+      }
+     },
+     "ps2-ratchet-clank-pal": {
+      "functions": 819,
+      "classes": {
+       "partial": 61,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 0
+      },
+      "any": 61,
+      "partial_of": {
+       "register": 44,
+       "parameter": 1,
+       "stack": 10,
+       "global": 8
+      }
+     },
+     "ps2-god-hand": {
+      "functions": 980,
+      "classes": {
+       "partial": 16,
+       "stack0x": 0,
+       "odd": 2,
+       "mismatch": 2
+      },
+      "any": 18,
+      "partial_of": {
+       "stack": 5,
+       "global": 7,
+       "register": 4
+      }
+     },
+     "ps2-digital-devil-saga": {
+      "functions": 977,
+      "classes": {
+       "partial": 37,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 0
+      },
+      "any": 37,
+      "partial_of": {
+       "global": 7,
+       "register": 26,
+       "stack": 4
+      }
+     },
+     "ps2-dark-chronicle": {
+      "functions": 969,
+      "classes": {
+       "partial": 99,
+       "stack0x": 0,
+       "odd": 1,
+       "mismatch": 4
+      },
+      "any": 100,
+      "partial_of": {
+       "register": 4,
+       "global": 94,
+       "stack": 11
+      }
+     },
+     "ps2-ratchet-clank": {
+      "functions": 820,
+      "classes": {
+       "partial": 50,
+       "stack0x": 0,
+       "odd": 3,
+       "mismatch": 1
+      },
+      "any": 50,
+      "partial_of": {
+       "register": 32,
+       "stack": 13,
+       "global": 7
+      }
+     },
+     "ps2-persona-4": {
+      "functions": 935,
+      "classes": {
+       "partial": 17,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 17,
+      "partial_of": {
+       "stack": 6,
+       "register": 8,
+       "global": 4
+      }
+     },
+     "ps2-dark-cloud": {
+      "functions": 888,
+      "classes": {
+       "partial": 125,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 7
+      },
+      "any": 127,
+      "partial_of": {
+       "register": 1,
+       "global": 123,
+       "stack": 8
+      }
+     }
+    }
+   },
+   "no-contain": {
+    "env": {
+     "ROMWRIGHT_LAYOUT_CONTAIN": "off"
+    },
+    "functions": 7330,
+    "classes": {
+     "partial": 495,
+     "stack0x": 1,
+     "odd": 20,
+     "mismatch": 21
+    },
+    "partial_of": {
+     "global": 324,
+     "stack": 69,
+     "parameter": 2,
+     "register": 135
+    },
+    "functions_with_any": 502,
+    "images": {
+     "ps2-fatal-frame": {
+      "functions": 942,
+      "classes": {
+       "partial": 134,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 5
+      },
+      "any": 134,
+      "partial_of": {
+       "global": 118,
+       "stack": 12,
+       "parameter": 1,
+       "register": 16
+      }
+     },
+     "ps2-ratchet-clank-pal": {
+      "functions": 819,
+      "classes": {
+       "partial": 61,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 0
+      },
+      "any": 61,
+      "partial_of": {
+       "register": 44,
+       "parameter": 1,
+       "stack": 10,
+       "global": 8
+      }
+     },
+     "ps2-god-hand": {
+      "functions": 980,
+      "classes": {
+       "partial": 16,
+       "stack0x": 0,
+       "odd": 2,
+       "mismatch": 2
+      },
+      "any": 18,
+      "partial_of": {
+       "stack": 5,
+       "global": 7,
+       "register": 4
+      }
+     },
+     "ps2-digital-devil-saga": {
+      "functions": 977,
+      "classes": {
+       "partial": 37,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 0
+      },
+      "any": 37,
+      "partial_of": {
+       "global": 7,
+       "register": 26,
+       "stack": 4
+      }
+     },
+     "ps2-dark-chronicle": {
+      "functions": 969,
+      "classes": {
+       "partial": 71,
+       "stack0x": 0,
+       "odd": 1,
+       "mismatch": 4
+      },
+      "any": 72,
+      "partial_of": {
+       "register": 4,
+       "global": 66,
+       "stack": 10
+      }
+     },
+     "ps2-ratchet-clank": {
+      "functions": 820,
+      "classes": {
+       "partial": 50,
+       "stack0x": 0,
+       "odd": 3,
+       "mismatch": 1
+      },
+      "any": 50,
+      "partial_of": {
+       "register": 32,
+       "stack": 13,
+       "global": 7
+      }
+     },
+     "ps2-persona-4": {
+      "functions": 935,
+      "classes": {
+       "partial": 17,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 17,
+      "partial_of": {
+       "stack": 6,
+       "register": 8,
+       "global": 4
+      }
+     },
+     "ps2-dark-cloud": {
+      "functions": 888,
+      "classes": {
+       "partial": 109,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 7
+      },
+      "any": 113,
+      "partial_of": {
+       "register": 1,
+       "global": 107,
+       "stack": 9
+      }
+     }
+    }
+   },
+   "no-stack-align": {
+    "env": {
+     "ROMWRIGHT_LAYOUT_STACK_ALIGN": "off"
+    },
+    "functions": 7330,
+    "classes": {
+     "partial": 496,
+     "stack0x": 1,
+     "odd": 20,
+     "mismatch": 21
+    },
+    "partial_of": {
+     "global": 325,
+     "stack": 69,
+     "parameter": 2,
+     "register": 135
+    },
+    "functions_with_any": 503,
+    "images": {
+     "ps2-fatal-frame": {
+      "functions": 942,
+      "classes": {
+       "partial": 134,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 5
+      },
+      "any": 134,
+      "partial_of": {
+       "global": 118,
+       "stack": 12,
+       "parameter": 1,
+       "register": 16
+      }
+     },
+     "ps2-ratchet-clank-pal": {
+      "functions": 819,
+      "classes": {
+       "partial": 61,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 0
+      },
+      "any": 61,
+      "partial_of": {
+       "register": 44,
+       "parameter": 1,
+       "stack": 10,
+       "global": 8
+      }
+     },
+     "ps2-god-hand": {
+      "functions": 980,
+      "classes": {
+       "partial": 16,
+       "stack0x": 0,
+       "odd": 2,
+       "mismatch": 2
+      },
+      "any": 18,
+      "partial_of": {
+       "stack": 5,
+       "global": 7,
+       "register": 4
+      }
+     },
+     "ps2-digital-devil-saga": {
+      "functions": 977,
+      "classes": {
+       "partial": 37,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 0
+      },
+      "any": 37,
+      "partial_of": {
+       "global": 7,
+       "register": 26,
+       "stack": 4
+      }
+     },
+     "ps2-dark-chronicle": {
+      "functions": 969,
+      "classes": {
+       "partial": 71,
+       "stack0x": 0,
+       "odd": 1,
+       "mismatch": 4
+      },
+      "any": 72,
+      "partial_of": {
+       "register": 4,
+       "global": 66,
+       "stack": 10
+      }
+     },
+     "ps2-ratchet-clank": {
+      "functions": 820,
+      "classes": {
+       "partial": 50,
+       "stack0x": 0,
+       "odd": 3,
+       "mismatch": 1
+      },
+      "any": 50,
+      "partial_of": {
+       "register": 32,
+       "stack": 13,
+       "global": 7
+      }
+     },
+     "ps2-persona-4": {
+      "functions": 935,
+      "classes": {
+       "partial": 17,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 17,
+      "partial_of": {
+       "stack": 6,
+       "register": 8,
+       "global": 4
+      }
+     },
+     "ps2-dark-cloud": {
+      "functions": 888,
+      "classes": {
+       "partial": 110,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 7
+      },
+      "any": 114,
+      "partial_of": {
+       "register": 1,
+       "global": 108,
+       "stack": 9
+      }
+     }
+    }
+   },
+   "no-stack-fold": {
+    "env": {
+     "ROMWRIGHT_LAYOUT_STACK_FOLD": "off"
+    },
+    "functions": 7330,
+    "classes": {
+     "partial": 500,
+     "stack0x": 2,
+     "odd": 20,
+     "mismatch": 31
+    },
+    "partial_of": {
+     "global": 326,
+     "stack": 71,
+     "parameter": 2,
+     "register": 135
+    },
+    "functions_with_any": 517,
+    "images": {
+     "ps2-fatal-frame": {
+      "functions": 942,
+      "classes": {
+       "partial": 136,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 7
+      },
+      "any": 137,
+      "partial_of": {
+       "global": 119,
+       "stack": 12,
+       "parameter": 1,
+       "register": 16
+      }
+     },
+     "ps2-ratchet-clank-pal": {
+      "functions": 819,
+      "classes": {
+       "partial": 62,
+       "stack0x": 0,
+       "odd": 5,
+       "mismatch": 0
+      },
+      "any": 62,
+      "partial_of": {
+       "register": 44,
+       "stack": 11,
+       "parameter": 1,
+       "global": 8
+      }
+     },
+     "ps2-god-hand": {
+      "functions": 980,
+      "classes": {
+       "partial": 16,
+       "stack0x": 0,
+       "odd": 2,
+       "mismatch": 8
+      },
+      "any": 24,
+      "partial_of": {
+       "stack": 5,
+       "global": 7,
+       "register": 4
+      }
+     },
+     "ps2-digital-devil-saga": {
+      "functions": 977,
+      "classes": {
+       "partial": 39,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 41,
+      "partial_of": {
+       "global": 7,
+       "register": 26,
+       "stack": 6
+      }
+     },
+     "ps2-dark-chronicle": {
+      "functions": 969,
+      "classes": {
+       "partial": 71,
+       "stack0x": 0,
+       "odd": 1,
+       "mismatch": 4
+      },
+      "any": 72,
+      "partial_of": {
+       "register": 4,
+       "global": 66,
+       "stack": 10
+      }
+     },
+     "ps2-ratchet-clank": {
+      "functions": 820,
+      "classes": {
+       "partial": 49,
+       "stack0x": 1,
+       "odd": 3,
+       "mismatch": 1
+      },
+      "any": 50,
+      "partial_of": {
+       "register": 32,
+       "stack": 12,
+       "global": 7
+      }
+     },
+     "ps2-persona-4": {
+      "functions": 935,
+      "classes": {
+       "partial": 17,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 17,
+      "partial_of": {
+       "stack": 6,
+       "register": 8,
+       "global": 4
+      }
+     },
+     "ps2-dark-cloud": {
+      "functions": 888,
+      "classes": {
+       "partial": 110,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 7
+      },
+      "any": 114,
+      "partial_of": {
+       "register": 1,
+       "global": 108,
+       "stack": 9
+      }
+     }
+    }
+   },
+   "no-stack-refs": {
+    "env": {
+     "ROMWRIGHT_LAYOUT_STACK_REFS": "off"
+    },
+    "functions": 7330,
+    "classes": {
+     "partial": 496,
+     "stack0x": 50,
+     "odd": 20,
+     "mismatch": 21
+    },
+    "partial_of": {
+     "global": 325,
+     "stack": 69,
+     "parameter": 2,
+     "register": 135
+    },
+    "functions_with_any": 547,
+    "images": {
+     "ps2-fatal-frame": {
+      "functions": 942,
+      "classes": {
+       "partial": 134,
+       "stack0x": 3,
+       "odd": 5,
+       "mismatch": 5
+      },
+      "any": 136,
+      "partial_of": {
+       "global": 118,
+       "stack": 12,
+       "parameter": 1,
+       "register": 16
+      }
+     },
+     "ps2-ratchet-clank-pal": {
+      "functions": 819,
+      "classes": {
+       "partial": 61,
+       "stack0x": 22,
+       "odd": 5,
+       "mismatch": 0
+      },
+      "any": 81,
+      "partial_of": {
+       "register": 44,
+       "parameter": 1,
+       "stack": 10,
+       "global": 8
+      }
+     },
+     "ps2-god-hand": {
+      "functions": 980,
+      "classes": {
+       "partial": 16,
+       "stack0x": 3,
+       "odd": 2,
+       "mismatch": 2
+      },
+      "any": 21,
+      "partial_of": {
+       "stack": 5,
+       "global": 7,
+       "register": 4
+      }
+     },
+     "ps2-digital-devil-saga": {
+      "functions": 977,
+      "classes": {
+       "partial": 37,
+       "stack0x": 1,
+       "odd": 0,
+       "mismatch": 0
+      },
+      "any": 38,
+      "partial_of": {
+       "global": 7,
+       "register": 26,
+       "stack": 4
+      }
+     },
+     "ps2-dark-chronicle": {
+      "functions": 969,
+      "classes": {
+       "partial": 71,
+       "stack0x": 0,
+       "odd": 1,
+       "mismatch": 4
+      },
+      "any": 72,
+      "partial_of": {
+       "register": 4,
+       "global": 66,
+       "stack": 10
+      }
+     },
+     "ps2-ratchet-clank": {
+      "functions": 820,
+      "classes": {
+       "partial": 50,
+       "stack0x": 18,
+       "odd": 3,
+       "mismatch": 1
+      },
+      "any": 66,
+      "partial_of": {
+       "register": 32,
+       "stack": 13,
+       "global": 7
+      }
+     },
+     "ps2-persona-4": {
+      "functions": 935,
+      "classes": {
+       "partial": 17,
+       "stack0x": 2,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 19,
+      "partial_of": {
+       "stack": 6,
+       "register": 8,
+       "global": 4
+      }
+     },
+     "ps2-dark-cloud": {
+      "functions": 888,
+      "classes": {
+       "partial": 110,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 7
+      },
+      "any": 114,
+      "partial_of": {
+       "register": 1,
+       "global": 108,
+       "stack": 9
+      }
+     }
+    }
+   },
+   "no-stack-fold-no-stack-align": {
+    "env": {
+     "ROMWRIGHT_LAYOUT_STACK_FOLD": "off",
+     "ROMWRIGHT_LAYOUT_STACK_ALIGN": "off"
+    },
+    "functions": 7330,
+    "classes": {
+     "partial": 525,
+     "stack0x": 14,
+     "odd": 17,
+     "mismatch": 31
+    },
+    "partial_of": {
+     "global": 326,
+     "stack": 107,
+     "parameter": 2,
+     "register": 137
+    },
+    "functions_with_any": 540,
+    "images": {
+     "ps2-fatal-frame": {
+      "functions": 942,
+      "classes": {
+       "partial": 144,
+       "stack0x": 2,
+       "odd": 5,
+       "mismatch": 7
+      },
+      "any": 144,
+      "partial_of": {
+       "global": 119,
+       "stack": 31,
+       "parameter": 1,
+       "register": 16
+      }
+     },
+     "ps2-ratchet-clank-pal": {
+      "functions": 819,
+      "classes": {
+       "partial": 65,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 0
+      },
+      "any": 65,
+      "partial_of": {
+       "register": 45,
+       "stack": 14,
+       "parameter": 1,
+       "global": 8
+      }
+     },
+     "ps2-god-hand": {
+      "functions": 980,
+      "classes": {
+       "partial": 21,
+       "stack0x": 5,
+       "odd": 2,
+       "mismatch": 8
+      },
+      "any": 28,
+      "partial_of": {
+       "stack": 10,
+       "global": 7,
+       "register": 4
+      }
+     },
+     "ps2-digital-devil-saga": {
+      "functions": 977,
+      "classes": {
+       "partial": 43,
+       "stack0x": 3,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 45,
+      "partial_of": {
+       "global": 7,
+       "register": 26,
+       "stack": 10
+      }
+     },
+     "ps2-dark-chronicle": {
+      "functions": 969,
+      "classes": {
+       "partial": 71,
+       "stack0x": 0,
+       "odd": 1,
+       "mismatch": 4
+      },
+      "any": 72,
+      "partial_of": {
+       "register": 4,
+       "global": 66,
+       "stack": 10
+      }
+     },
+     "ps2-ratchet-clank": {
+      "functions": 820,
+      "classes": {
+       "partial": 54,
+       "stack0x": 2,
+       "odd": 1,
+       "mismatch": 1
+      },
+      "any": 55,
+      "partial_of": {
+       "register": 33,
+       "stack": 17,
+       "global": 7
+      }
+     },
+     "ps2-persona-4": {
+      "functions": 935,
+      "classes": {
+       "partial": 17,
+       "stack0x": 0,
+       "odd": 0,
+       "mismatch": 2
+      },
+      "any": 17,
+      "partial_of": {
+       "stack": 6,
+       "register": 8,
+       "global": 4
+      }
+     },
+     "ps2-dark-cloud": {
+      "functions": 888,
+      "classes": {
+       "partial": 110,
+       "stack0x": 1,
+       "odd": 4,
+       "mismatch": 7
+      },
+      "any": 114,
+      "partial_of": {
+       "register": 1,
+       "global": 108,
+       "stack": 9
+      }
+     }
+    }
+   }
+  }
+ }
+}

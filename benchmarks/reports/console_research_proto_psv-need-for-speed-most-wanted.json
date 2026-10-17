@@ -1,0 +1,913 @@
+{
+ "schema": "console-research/1",
+ "generated": "2026-10-08T16:29:54+00:00",
+ "tools": "08df1a6eff7987ed",
+ "cli": "/home/raikaru/ventris/target/release/romwright-cli",
+ "n": 200,
+ "seed": 20261006,
+ "thresholds": {
+  "rate": 0.005,
+  "count_relative": 0.01
+ },
+ "configs": {
+  "default": {
+   "name": "default",
+   "env": {},
+   "component": "all research (default vs baseline-off)",
+   "reference": "baseline-off",
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "baseline-off": {
+   "name": "baseline-off",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": "",
+    "ROMWRIGHT_NO_SWITCH_VSA": "1",
+    "ROMWRIGHT_NO_SWITCH_DECOMPILER": "1",
+    "ROMWRIGHT_RUST_STRUCTURING": "none"
+   },
+   "component": "reference",
+   "reference": null,
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "infer-prototypes": {
+   "name": "infer-prototypes",
+   "env": {},
+   "component": "persisted prototypes (infer_prototypes job)",
+   "reference": "default",
+   "sign": 1,
+   "infer_prototypes": true
+  },
+  "inferred-types-off": {
+   "name": "inferred-types-off",
+   "env": {
+    "ROMWRIGHT_INFERRED_TYPES": "0"
+   },
+   "component": "inferred types -> prototypes",
+   "reference": "infer-prototypes",
+   "sign": -1,
+   "infer_prototypes": true
+  }
+ },
+ "images": {
+  "psv-need-for-speed-most-wanted": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 36,
+      "labels": 21,
+      "irregular_functions": 112,
+      "native_warnings": 455,
+      "text_warnings": 17,
+      "lines": 12908,
+      "median_seconds": 1.062,
+      "max_seconds": 1.348,
+      "wall_seconds": 70.1,
+      "recall": 0.972,
+      "precision": 0.9712,
+      "discovered": 26517
+     },
+     "import": {
+      "seconds": 220.0,
+      "switch_stats": {
+       "vsa_resolved": 435,
+       "vsa_refused": 309,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/.cache/romwright/research-proto/results/08df1a6eff7987ed/psv-need-for-speed-most-wanted/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9686,
+       "to": 0.972,
+       "delta": 0.0034,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9711,
+       "to": 0.9712,
+       "delta": 0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.99,
+       "to": 1.0,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 51,
+       "to": 36,
+       "delta": -15,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 32,
+       "to": 21,
+       "delta": -11,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 113,
+       "to": 112,
+       "delta": -1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 455,
+       "to": 455,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12861,
+       "to": 12870,
+       "delta": 9,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 198
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9686,
+       "to": 0.972,
+       "delta": 0.0034,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9711,
+       "to": 0.9712,
+       "delta": 0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.99,
+       "to": 1.0,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 51,
+       "to": 36,
+       "delta": -15,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 32,
+       "to": 21,
+       "delta": -11,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 113,
+       "to": 112,
+       "delta": -1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 455,
+       "to": 455,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12861,
+       "to": 12870,
+       "delta": 9,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 198
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 198,
+      "success_rate": 0.99,
+      "gotos": 51,
+      "labels": 32,
+      "irregular_functions": 113,
+      "native_warnings": 455,
+      "text_warnings": 17,
+      "lines": 12861,
+      "median_seconds": 0.838,
+      "max_seconds": 1.07,
+      "wall_seconds": 55.9,
+      "recall": 0.9686,
+      "precision": 0.9711,
+      "discovered": 26427
+     },
+     "import": {
+      "seconds": 57.8,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/.cache/romwright/research-proto/results/08df1a6eff7987ed/psv-need-for-speed-most-wanted/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.972,
+       "to": 0.9686,
+       "delta": -0.0034,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9712,
+       "to": 0.9711,
+       "delta": -0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 0.99,
+       "delta": -0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 36,
+       "to": 51,
+       "delta": 15,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 21,
+       "to": 32,
+       "delta": 11,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 112,
+       "to": 113,
+       "delta": 1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 455,
+       "to": 455,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12870,
+       "to": 12861,
+       "delta": -9,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 198
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 36,
+      "labels": 21,
+      "irregular_functions": 69,
+      "native_warnings": 279,
+      "text_warnings": 17,
+      "lines": 13015,
+      "median_seconds": 0.833,
+      "max_seconds": 1.141,
+      "wall_seconds": 56.3
+     },
+     "import": {
+      "seconds": 220.0,
+      "switch_stats": {
+       "vsa_resolved": 435,
+       "vsa_refused": 309,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 5201.7,
+      "report": {
+       "analyzed": 49510,
+       "changed": 35596,
+       "decompiler_failures": 26,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 86
+      }
+     },
+     "results_file": "/home/raikaru/.cache/romwright/research-proto/results/08df1a6eff7987ed/psv-need-for-speed-most-wanted/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 36,
+       "to": 36,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 21,
+       "to": 21,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 112,
+       "to": 69,
+       "delta": -43,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 455,
+       "to": 279,
+       "delta": -176,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12908,
+       "to": 13015,
+       "delta": 107,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.99,
+       "to": 1.0,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 51,
+       "to": 36,
+       "delta": -15,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 32,
+       "to": 21,
+       "delta": -11,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 113,
+       "to": 69,
+       "delta": -44,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 455,
+       "to": 279,
+       "delta": -176,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12861,
+       "to": 12977,
+       "delta": 116,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 198
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 36,
+       "to": 36,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 21,
+       "to": 21,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 112,
+       "to": 69,
+       "delta": -43,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 455,
+       "to": 279,
+       "delta": -176,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12908,
+       "to": 13015,
+       "delta": 107,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 36,
+      "labels": 21,
+      "irregular_functions": 69,
+      "native_warnings": 279,
+      "text_warnings": 17,
+      "lines": 13005,
+      "median_seconds": 0.836,
+      "max_seconds": 1.076,
+      "wall_seconds": 56.3
+     },
+     "import": {
+      "seconds": 220.0,
+      "switch_stats": {
+       "vsa_resolved": 435,
+       "vsa_refused": 309,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 4605.3,
+      "report": {
+       "analyzed": 48958,
+       "changed": 34289,
+       "decompiler_failures": 26,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 84
+      }
+     },
+     "results_file": "/home/raikaru/.cache/romwright/research-proto/results/08df1a6eff7987ed/psv-need-for-speed-most-wanted/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 36,
+       "to": 36,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 21,
+       "to": 21,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 112,
+       "to": 69,
+       "delta": -43,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 455,
+       "to": 279,
+       "delta": -176,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12908,
+       "to": 13005,
+       "delta": 97,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.99,
+       "to": 1.0,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 51,
+       "to": 36,
+       "delta": -15,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 32,
+       "to": 21,
+       "delta": -11,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 113,
+       "to": 69,
+       "delta": -44,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 455,
+       "to": 279,
+       "delta": -176,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12861,
+       "to": 12967,
+       "delta": 106,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 198
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 36,
+       "to": 36,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 21,
+       "to": 21,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 69,
+       "to": 69,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 279,
+       "to": 279,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 17,
+       "to": 17,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13015,
+       "to": 13005,
+       "delta": -10,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "verdict": "neutral"
+    }
+   },
+   "status": "ran",
+   "program": "vita",
+   "sample": [
+    "810021d0",
+    "81004afe",
+    "810083ee",
+    "81008d80",
+    "8100bcba",
+    "8100f9d2",
+    "8102c04c",
+    "81035e7c",
+    "810423b2",
+    "8104a624",
+    "8105e5d6",
+    "8105e7d2",
+    "81069148",
+    "8106c9e6",
+    "810711b2",
+    "81084610",
+    "81092652",
+    "810d728e",
+    "810fbf52",
+    "8110ce52",
+    "8111580e",
+    "811272aa",
+    "81129df8",
+    "8112cd92",
+    "811347d4",
+    "811424a0",
+    "81154cf8",
+    "81169b62",
+    "8116bc8e",
+    "8116d22a",
+    "811723e2",
+    "8117d7a4",
+    "8117dabe",
+    "81181dd4",
+    "811866c2",
+    "8118f6c0",
+    "81191310",
+    "811a3ac0",
+    "811b2d2e",
+    "811b88a8",
+    "811c1bf6",
+    "811ca5f6",
+    "811d4f8e",
+    "811d8898",
+    "8120cc58",
+    "8122446a",
+    "81224a9e",
+    "8122e4a0",
+    "8123426a",
+    "81236298",
+    "8123b292",
+    "8123cf78",
+    "812437e6",
+    "81248b84",
+    "8126cae6",
+    "8126fb28",
+    "81276b8a",
+    "812865de",
+    "8129e820",
+    "812bb956",
+    "812bd880",
+    "812bedae",
+    "812c6616",
+    "812c747e",
+    "812c7e6e",
+    "812c845a",
+    "812d0b36",
+    "812d8c0c",
+    "812f3d7c",
+    "81306e36",
+    "81327734",
+    "8135333c",
+    "81353a28",
+    "8135a0c8",
+    "8136a0ac",
+    "8137b910",
+    "8137cfb4",
+    "813944a4",
+    "81398842",
+    "813a8382",
+    "813b6e04",
+    "813bfb92",
+    "813c0ac0",
+    "813ca1a8",
+    "813d0e78",
+    "813d7652",
+    "813e24f6",
+    "813e50ba",
+    "813ecdc6",
+    "814016c4",
+    "8140b308",
+    "8140c6a2",
+    "8141151a",
+    "81413216",
+    "8141372a",
+    "81413a08",
+    "8141cc18",
+    "814211c0",
+    "81421dc0",
+    "8142216a",
+    "8142a024",
+    "8143a3bc",
+    "8143e1ce",
+    "81448a6e",
+    "8144ca1e",
+    "8144da8e",
+    "81456caa",
+    "81457162",
+    "81457180",
+    "8145fbfc",
+    "8146612e",
+    "8146cc4e",
+    "81474b68",
+    "81484940",
+    "8148c9b6",
+    "8149755c",
+    "81498b9c",
+    "8149b52a",
+    "8149f468",
+    "814a00b8",
+    "814c0d74",
+    "814c6962",
+    "814c8aaa",
+    "814cbc12",
+    "814d7672",
+    "814d86e8",
+    "814dbfca",
+    "814e0320",
+    "814e4b22",
+    "814e786c",
+    "814e9550",
+    "814ece7a",
+    "814f0c1c",
+    "814f0c4e",
+    "81500f12",
+    "81502884",
+    "81504668",
+    "815075a4",
+    "8150c9ca",
+    "81518a8c",
+    "8152a0de",
+    "8153001c",
+    "815366fa",
+    "8154d986",
+    "8154eb64",
+    "8154ec42",
+    "8154edbc",
+    "81550f96",
+    "8155a098",
+    "81569c7e",
+    "8156effe",
+    "81572b8a",
+    "81575240",
+    "8157fd72",
+    "8159c108",
+    "8159fee0",
+    "815a6d30",
+    "815a95d4",
+    "815bb048",
+    "815bc068",
+    "815c1924",
+    "815c6128",
+    "815c75e8",
+    "815d0178",
+    "815d1420",
+    "815d3be8",
+    "815dba90",
+    "815deb30",
+    "815df540",
+    "815e17ec",
+    "815e2220",
+    "815e607c",
+    "815eb538",
+    "815ef374",
+    "815f9d50",
+    "815fa0b8",
+    "81625914",
+    "81627558",
+    "81636328",
+    "81636350",
+    "8163c90c",
+    "81641b84",
+    "81642cf0",
+    "81648cb8",
+    "81649e28",
+    "8164a914",
+    "8164b11c",
+    "8164ece0",
+    "8164f8c8",
+    "81651844",
+    "81652c18",
+    "8165318c",
+    "816599b4",
+    "8165cccc",
+    "81664564",
+    "81665dfc",
+    "81668194",
+    "8166ba50",
+    "8166c7c8",
+    "8166cc68"
+   ],
+   "sample_in_dwarf": 0
+  }
+ }
+}

@@ -1,26 +1,25 @@
 {
  "id": "m6-004",
- "recorded_at": "2026-09-07T09:46:38.021294+00:00",
+ "recorded_at": "2026-10-15T09:47:42.743434+00:00",
  "status": "pass",
  "platform": {
   "system": "Linux",
-  "machine": "x86_64",
-  "qt": "6.11.2"
+  "machine": "x86_64"
  },
  "passed": true,
- "summary": "9 documented release commands run on Linux/x86_64: 5 artifacts manifested and verified, tampering and truncation both rejected, SBOM covers 60 packages including every workspace crate",
+ "summary": "6 documented release commands run on Linux/x86_64: 5 artifacts manifested and verified, tampering and truncation both rejected, SBOM covers 466 packages including every workspace crate; the shipped CLI wrote a project from its embedded templates pinning 2 tools (clang-22.1.8, objdiff-cli)",
  "metrics": {
-  "commands": 9,
+  "commands": 6,
   "artifacts": 5,
-  "sbom_packages": 60,
-  "skipped_blocks": 0
+  "sbom_packages": 466,
+  "project_pinned_tools": 2,
+  "listed_platforms": 15
  },
  "artifacts": [
+  "romwright-0.5.0-Linux-x86_64.tar.gz",
   "romwright-api",
   "romwright-cli",
   "romwright-worker",
-  "romwright-0.5-Linux-x86_64.tar.gz",
   "romwright.spdx.json"
- ],
- "skipped": []
+ ]
 }

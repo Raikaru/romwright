@@ -1,0 +1,250 @@
+{
+  "generated": "2026-10-12 01:19 UTC",
+  "cli": "/home/raikaru/ventris-scratch/Ps2Bootstrap/bin/romwright-cli",
+  "detection": {
+    "scored": [
+      {
+        "game": "ps2-dark-cloud",
+        "meta_compiler": "MWCC PS2 2.3.3 (Metrowerks CodeWarrior for PS2; repo config compiler: MWCCPS2)",
+        "expected": {
+          "family": "mwcc-ps2",
+          "lineage": "mwcc",
+          "class": "mwcc-2.3"
+        },
+        "detected": {
+          "family": "mwcc-ps2",
+          "version": "MWCC PS2 2.3.x (linker stamp 2.3.1.01)",
+          "version_class": "mwcc-2.3",
+          "confidence": "high",
+          "splat_compiler": "MWCCPS2",
+          "suggested_tool": "mwcps2-2.3.3-000906"
+        },
+        "family_ok": true,
+        "lineage_ok": true,
+        "class_ok": true,
+        "tool_names_meta_version": true,
+        "evidence": [
+          ".comment: Metrowerks linker stamp `MW MIPS C Compiler (2.3.1.01)`",
+          ".mwcats section(s), sh_type 0xca2a82c2",
+          "section names `main` + `heap` (mwldps2 output layout)",
+          "`.relmain` relocation section (mwldps2 -rel output)",
+          "3 Metrowerks runtime symbol(s) (`__register_global_object`, ...)"
+        ]
+      },
+      {
+        "game": "ps2-dark-chronicle",
+        "meta_compiler": "MWCC PS2 3.0 (CodeWarrior for PS2, via Satans Fiddle/wibo; repo config compiler: MWCCPS2)",
+        "expected": {
+          "family": "mwcc-ps2",
+          "lineage": "mwcc",
+          "class": "mwcc-2.4"
+        },
+        "detected": {
+          "family": "mwcc-ps2",
+          "version": "MWCC PS2 2.4 - 3.0.x (linker stamp 2.4.1.01)",
+          "version_class": "mwcc-2.4",
+          "confidence": "high",
+          "splat_compiler": "MWCCPS2",
+          "suggested_tool": "mwcps2-3.0.1b210-060308"
+        },
+        "family_ok": true,
+        "lineage_ok": true,
+        "class_ok": true,
+        "tool_names_meta_version": true,
+        "evidence": [
+          ".comment: Metrowerks linker stamp `MW MIPS C Compiler (2.4.1.01)`",
+          ".mwcats section(s), sh_type 0xca2a82c2",
+          "section names `main` + `heap` (mwldps2 output layout)",
+          "`.relmain` relocation section (mwldps2 -rel output)",
+          "3 Metrowerks runtime symbol(s) (`__register_global_object`, ...)"
+        ]
+      },
+      {
+        "game": "ps2-persona-4",
+        "meta_compiler": "MWCC PS2 3.0.1 build 210 (-O2) for Atlus code; MWCC build 119 (-O4,p -inline auto) for RenderWare; EE GCC 2.96 (-O2 -G0) for configured CRI/other units",
+        "expected": {
+          "family": "mwcc-ps2",
+          "lineage": "mwcc",
+          "class": "mwcc-2.4"
+        },
+        "detected": {
+          "family": "mwcc-ps2",
+          "version": "MWCC PS2 2.4 - 3.0.x (linker stamp 2.4.1.01)",
+          "version_class": "mwcc-2.4",
+          "confidence": "high",
+          "splat_compiler": "MWCCPS2",
+          "suggested_tool": "mwcps2-3.0.1b210-060308"
+        },
+        "family_ok": true,
+        "lineage_ok": true,
+        "class_ok": true,
+        "tool_names_meta_version": true,
+        "evidence": [
+          ".comment: Metrowerks linker stamp `MW MIPS C Compiler (2.4.1.01)`",
+          "section names `main` + `heap` (mwldps2 output layout)",
+          "`.relmain` relocation section (mwldps2 -rel output)"
+        ]
+      },
+      {
+        "game": "ps2-digital-devil-saga",
+        "meta_compiler": "EE GCC 2.96 (ee-gcc; ee-as 2.9-ee; repo config compiler EEGCC)",
+        "expected": {
+          "family": "ee-gcc",
+          "lineage": "gcc",
+          "class": "gcc-2.95-2.96"
+        },
+        "detected": {
+          "family": "ee-gcc",
+          "version": "EE GCC 2.95 - 2.96 era (.mdebug.eabi64)",
+          "version_class": "gcc-2.95-2.96",
+          "confidence": "high",
+          "splat_compiler": "EEGCC",
+          "suggested_tool": "ee-gcc2.96"
+        },
+        "family_ok": true,
+        "lineage_ok": true,
+        "class_ok": true,
+        "tool_names_meta_version": false,
+        "evidence": [
+          "`.mdebug.eabi64` ECOFF debug section (GNU toolchain)",
+          "`.vutext`/`.DVP.*` sections (Sony ee-ld/dvp-as output)",
+          "`.lit*` literal-pool sections (GNU MIPS output)",
+          "`.ctors`/`.dtors`/`.gcc_except_table` (GNU C++ runtime sections)"
+        ]
+      },
+      {
+        "game": "ps2-fatal-frame",
+        "meta_compiler": "EE GCC 2.9-991111 (ee-gcc, repo config compiler EEGCC; platform ps2)",
+        "expected": {
+          "family": "ee-gcc",
+          "lineage": "gcc",
+          "class": "gcc-2.9-ee"
+        },
+        "detected": {
+          "family": "ee-gcc",
+          "version": "EE GCC 2.9-ee era (ECOFF .mdebug)",
+          "version_class": "gcc-2.9-ee",
+          "confidence": "high",
+          "splat_compiler": "EEGCC",
+          "suggested_tool": "ee-gcc2.9-991111"
+        },
+        "family_ok": true,
+        "lineage_ok": true,
+        "class_ok": true,
+        "tool_names_meta_version": true,
+        "evidence": [
+          "`.mdebug` ECOFF debug section (GNU toolchain)",
+          "`.vutext`/`.DVP.*` sections (Sony ee-ld/dvp-as output)",
+          "`.lit*` literal-pool sections (GNU MIPS output)",
+          "3 libgcc/crtstuff symbol(s) (`__do_global_ctors`, ...)"
+        ]
+      },
+      {
+        "game": "ps2-god-hand",
+        "meta_compiler": "SN ProDG ee-gcc 2.95.3 (matched TUs) + EE GCC 2.96 (dvp-as, ee-ld); SN small-data (.sndata)",
+        "expected": {
+          "family": "sn-prodg",
+          "lineage": "gcc",
+          "class": "sn-prodg"
+        },
+        "detected": {
+          "family": "sn-prodg",
+          "version": "SN ProDG (gcc 2.95-based)",
+          "version_class": "sn-prodg",
+          "confidence": "high",
+          "splat_compiler": "EEGCC",
+          "suggested_tool": "ee-gcc2.95.3-136"
+        },
+        "family_ok": true,
+        "lineage_ok": true,
+        "class_ok": true,
+        "tool_names_meta_version": true,
+        "evidence": [
+          "`.mdebug.eabi64` ECOFF debug section (GNU toolchain)",
+          "`.vutext`/`.DVP.*` sections (Sony ee-ld/dvp-as output)",
+          "`.sndata` section (SN Systems ProDG small data)",
+          "`.ctors`/`.dtors`/`.gcc_except_table` (GNU C++ runtime sections)"
+        ]
+      },
+      {
+        "game": "ps2-ratchet-clank",
+        "meta_compiler": "EE GCC 2.95.2 (ee-gcc, repo config compiler EEGCC; some units use an optional patched EE-GCC profile)",
+        "expected": {
+          "family": "ee-gcc",
+          "lineage": "gcc",
+          "class": "gcc-2.9x"
+        },
+        "detected": {
+          "family": "ee-gcc",
+          "version": "EE GCC 2.9x era (no debug section, no version string)",
+          "version_class": "gcc-2.9x",
+          "confidence": "medium",
+          "splat_compiler": "EEGCC",
+          "suggested_tool": "ee-gcc2.95.2-273a"
+        },
+        "family_ok": true,
+        "lineage_ok": true,
+        "class_ok": true,
+        "tool_names_meta_version": true,
+        "evidence": [
+          "`.vutext`/`.DVP.*` sections (Sony ee-ld/dvp-as output)",
+          "`.lit*` literal-pool sections (GNU MIPS output)"
+        ]
+      },
+      {
+        "game": "ps2-ratchet-clank-pal",
+        "meta_compiler": "SN ProDG 3.01 (ee-gcc 2.95-based) for game code; SCE SDK 2.4 objects (ee29) for SDK code",
+        "expected": {
+          "family": "sn-prodg",
+          "lineage": "gcc",
+          "class": "sn-prodg"
+        },
+        "detected": {
+          "family": "ee-gcc",
+          "version": "EE GCC 2.9x era (no debug section, no version string)",
+          "version_class": "gcc-2.9x",
+          "confidence": "medium",
+          "splat_compiler": "EEGCC",
+          "suggested_tool": "ee-gcc2.95.2-273a"
+        },
+        "family_ok": false,
+        "lineage_ok": true,
+        "class_ok": false,
+        "tool_names_meta_version": false,
+        "evidence": [
+          "`.vutext`/`.DVP.*` sections (Sony ee-ld/dvp-as output)",
+          "`.lit*` literal-pool sections (GNU MIPS output)"
+        ]
+      }
+    ],
+    "supplementary": [
+      {
+        "game": "ps2-capcom-fighting-evolution",
+        "truth_family": "mwcc-ps2",
+        "truth_source": "manifest: Metrowerks CodeWarrior DWARF 1 sections",
+        "detected_family": "mwcc-ps2",
+        "ok": true,
+        "version": "MWCC PS2 2.4 - 3.0.x (linker stamp 2.4.1.01)",
+        "confidence": "high"
+      },
+      {
+        "game": "ps2-dungeon-game",
+        "truth_family": "ee-gcc",
+        "truth_source": "DWARF producer `GNU C 3.2.2` in .debug_info",
+        "detected_family": "ee-gcc",
+        "ok": true,
+        "version": "GNU gcc 3.2.2 (EE)",
+        "confidence": "high"
+      }
+    ],
+    "summary": {
+      "games": 8,
+      "family_correct": 7,
+      "lineage_correct": 8,
+      "version_class_correct": 7,
+      "suggested_tool_matches_meta_version": 6,
+      "supplementary_correct": 2,
+      "supplementary_games": 2
+    }
+  }
+}

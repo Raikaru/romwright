@@ -1,0 +1,344 @@
+{
+ "gba-kh-chain-of-memories": {
+  "tables": {
+   "base": 368,
+   "master": 368
+  },
+  "edges": {
+   "base": 3327,
+   "master": 3327
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 2,
+    "vsa_refused": 86,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 2,
+    "vsa_refused": 86,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "gc-pikmin-2": {
+  "tables": {
+   "base": 161,
+   "master": 161
+  },
+  "edges": {
+   "base": 1890,
+   "master": 1890
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 6,
+    "vsa_refused": 5,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 6,
+    "vsa_refused": 5,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "n64-super-mario-64": {
+  "tables": {
+   "base": 145,
+   "master": 142
+  },
+  "edges": {
+   "base": 1202,
+   "master": 1179
+  },
+  "only_base": [
+   "80176518",
+   "8031c1d8",
+   "8031c1f8"
+  ],
+  "only_master": [],
+  "only_base_count": 3,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 0,
+    "vsa_refused": 6,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 0,
+    "vsa_refused": 6,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "nds-kh-358-2-days": {
+  "tables": {
+   "base": 988,
+   "master": 988
+  },
+  "edges": {
+   "base": 11335,
+   "master": 11335
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 3,
+    "vsa_refused": 327,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 3,
+    "vsa_refused": 327,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "ps2-dark-chronicle": {
+  "tables": {
+   "base": 127,
+   "master": 127
+  },
+  "edges": {
+   "base": 1057,
+   "master": 1057
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 6,
+    "vsa_refused": 40,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 6,
+    "vsa_refused": 40,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "ps2-dark-cloud": {
+  "tables": {
+   "base": 80,
+   "master": 80
+  },
+  "edges": {
+   "base": 626,
+   "master": 626
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 0,
+    "vsa_refused": 7,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 0,
+    "vsa_refused": 7,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "ps2-digital-devil-saga": {
+  "tables": {
+   "base": 315,
+   "master": 315
+  },
+  "edges": {
+   "base": 2168,
+   "master": 2168
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 0,
+    "vsa_refused": 50,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 0,
+    "vsa_refused": 50,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "ps2-fatal-frame": {
+  "tables": {
+   "base": 278,
+   "master": 278
+  },
+  "edges": {
+   "base": 2286,
+   "master": 2286
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 5,
+    "vsa_refused": 25,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 5,
+    "vsa_refused": 25,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "ps2-god-hand": {
+  "tables": {
+   "base": 992,
+   "master": 992
+  },
+  "edges": {
+   "base": 7902,
+   "master": 7901
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [
+   "00274828"
+  ],
+  "different_targets_count": 1,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 7,
+    "vsa_refused": 125,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 7,
+    "vsa_refused": 126,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "ps2-persona-4": {
+  "tables": {
+   "base": 346,
+   "master": 346
+  },
+  "edges": {
+   "base": 2809,
+   "master": 2809
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 4,
+    "vsa_refused": 48,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 4,
+    "vsa_refused": 48,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "ps2-ratchet-clank": {
+  "tables": {
+   "base": 41,
+   "master": 41
+  },
+  "edges": {
+   "base": 326,
+   "master": 326
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 0,
+    "vsa_refused": 16,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 0,
+    "vsa_refused": 16,
+    "decompiler_skipped": 0
+   }
+  }
+ },
+ "ps2-ratchet-clank-pal": {
+  "tables": {
+   "base": 41,
+   "master": 41
+  },
+  "edges": {
+   "base": 332,
+   "master": 332
+  },
+  "only_base": [],
+  "only_master": [],
+  "only_base_count": 0,
+  "only_master_count": 0,
+  "different_targets": [],
+  "different_targets_count": 0,
+  "switch_stats": {
+   "base": {
+    "vsa_resolved": 0,
+    "vsa_refused": 15,
+    "decompiler_skipped": 0
+   },
+   "master": {
+    "vsa_resolved": 0,
+    "vsa_refused": 15,
+    "decompiler_skipped": 0
+   }
+  }
+ }
+}

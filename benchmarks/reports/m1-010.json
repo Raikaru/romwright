@@ -1,0 +1,26 @@
+{
+  "id": "m1-010",
+  "passed": true,
+  "results": {
+    "synthetic": {
+      "outcome": "exact"
+    },
+    "empty32": {
+      "outcome": "refused"
+    },
+    "truncated": {
+      "outcome": "refused"
+    },
+    "kotor2sub": {
+      "outcome": "skipped",
+      "reason": "file absent"
+    },
+    "truncated_fat": {
+      "outcome": "refused"
+    },
+    "i386": {
+      "outcome": "skipped",
+      "reason": "file absent"
+    }
+  }
+}

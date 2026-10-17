@@ -1,0 +1,1661 @@
+{
+ "schema": "console-research/2",
+ "generated": "2026-10-15T01:57:42+00:00",
+ "tools": "de5bce17d6a06237",
+ "cli": "/home/raikaru/runs/ImportPrecision/target-dev/release/romwright-cli",
+ "n": 60,
+ "seed": 1,
+ "seeds": [
+  1
+ ],
+ "mode": "corpus-wave",
+ "thresholds": {
+  "rate": 0.005,
+  "count_relative": 0.01
+ },
+ "configs": {
+  "default": {
+   "name": "default",
+   "env": {},
+   "component": "all research (default vs baseline-off)",
+   "reference": "baseline-off",
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "baseline-off": {
+   "name": "baseline-off",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": "",
+    "ROMWRIGHT_NO_SWITCH_VSA": "1",
+    "ROMWRIGHT_NO_SWITCH_DECOMPILER": "1",
+    "ROMWRIGHT_RUST_STRUCTURING": "none"
+   },
+   "component": "reference",
+   "reference": null,
+   "sign": 1,
+   "infer_prototypes": false
+  }
+ },
+ "images": {
+  "psp-hot-pixel": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "gotos": 70,
+      "labels": 31,
+      "irregular_functions": 50,
+      "native_warnings": 153,
+      "text_warnings": 37,
+      "lines": 5054,
+      "median_seconds": 0.863,
+      "max_seconds": 1.867,
+      "wall_seconds": 18.9,
+      "recall": 0.8924,
+      "precision": 0.9965,
+      "discovered": 9149,
+      "recall_verified": 0.8899,
+      "precision_verified": 0.999,
+      "recall_main": 0.8924,
+      "precision_main": 0.9965,
+      "recall_verified_main": 0.8899,
+      "precision_verified_main": 0.999,
+      "verified_truth": 9983,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.9,
+      "type_slots": 182,
+      "type_exact": 69,
+      "type_partial": 1,
+      "type_wrong": 112,
+      "type_exact_rate": 0.3791
+     },
+     "import": {
+      "seconds": 24.3,
+      "switch_stats": {
+       "vsa_resolved": 14,
+       "vsa_refused": 20,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ImportPrecision/wave-cache/results/de5bce17d6a06237/psp-hot-pixel/default-60-1.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.8916,
+       "to": 0.8924,
+       "delta": 0.0008,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.968,
+       "to": 0.9965,
+       "delta": 0.0285,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 129,
+       "to": 70,
+       "delta": -59,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 65,
+       "to": 31,
+       "delta": -34,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 51,
+       "to": 50,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 153,
+       "to": 153,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 37,
+       "to": 37,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 4942,
+       "to": 5054,
+       "delta": 112,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.9,
+       "to": 0.9,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3791,
+       "to": 0.3791,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "recall_verified": {
+       "from": 0.8891,
+       "to": 0.8899,
+       "delta": 0.0008,
+       "material": false,
+       "direction": 0
+      },
+      "precision_verified": {
+       "from": 0.9696,
+       "to": 0.999,
+       "delta": 0.0294,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 60
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.8916,
+       "to": 0.8924,
+       "delta": 0.0008,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.968,
+       "to": 0.9965,
+       "delta": 0.0285,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 129,
+       "to": 70,
+       "delta": -59,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 65,
+       "to": 31,
+       "delta": -34,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 51,
+       "to": 50,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 153,
+       "to": 153,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 37,
+       "to": 37,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 4942,
+       "to": 5054,
+       "delta": 112,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.9,
+       "to": 0.9,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3791,
+       "to": 0.3791,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "recall_verified": {
+       "from": 0.8891,
+       "to": 0.8899,
+       "delta": 0.0008,
+       "material": false,
+       "direction": 0
+      },
+      "precision_verified": {
+       "from": 0.9696,
+       "to": 0.999,
+       "delta": 0.0294,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 60
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "gotos": 129,
+      "labels": 65,
+      "irregular_functions": 51,
+      "native_warnings": 153,
+      "text_warnings": 37,
+      "lines": 4942,
+      "median_seconds": 0.849,
+      "max_seconds": 1.624,
+      "wall_seconds": 18.3,
+      "recall": 0.8916,
+      "precision": 0.968,
+      "discovered": 9410,
+      "recall_verified": 0.8891,
+      "precision_verified": 0.9696,
+      "recall_main": 0.8916,
+      "precision_main": 0.968,
+      "recall_verified_main": 0.8891,
+      "precision_verified_main": 0.9696,
+      "verified_truth": 9983,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.9,
+      "type_slots": 182,
+      "type_exact": 69,
+      "type_partial": 1,
+      "type_wrong": 112,
+      "type_exact_rate": 0.3791
+     },
+     "import": {
+      "seconds": 12.0,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ImportPrecision/wave-cache/results/de5bce17d6a06237/psp-hot-pixel/baseline-off-60-1.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.8924,
+       "to": 0.8916,
+       "delta": -0.0008,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9965,
+       "to": 0.968,
+       "delta": -0.0285,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 70,
+       "to": 129,
+       "delta": 59,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 31,
+       "to": 65,
+       "delta": 34,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 50,
+       "to": 51,
+       "delta": 1,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 153,
+       "to": 153,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 37,
+       "to": 37,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5054,
+       "to": 4942,
+       "delta": -112,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.9,
+       "to": 0.9,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3791,
+       "to": 0.3791,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "recall_verified": {
+       "from": 0.8899,
+       "to": 0.8891,
+       "delta": -0.0008,
+       "material": false,
+       "direction": 0
+      },
+      "precision_verified": {
+       "from": 0.999,
+       "to": 0.9696,
+       "delta": -0.0294,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 60
+     }
+    }
+   },
+   "wave": {
+    "game": "Hot Pixel",
+    "platform": "psp",
+    "region_version": "unspecified (cognac_release.prx)",
+    "source_archive": "[PSP] Hot Pixel (DWARF).7z",
+    "sha1_expected": null,
+    "sha1_actual": "eb9c1370a5114baba980804d08b03634f40dc924",
+    "version_match": true,
+    "truth_kind": "dwarf",
+    "repo": null,
+    "commit": null,
+    "compiler": "GNU C/C++ 3.3.6+allegrex-2.2.2-psp-1.9.2 -g (372 C + 39 C++ CUs; 8 CUs psp-1.12.1.internal)",
+    "linked_percent": 100.0,
+    "notes": "Unencrypted relocatable PRX (e_type 0xffa0, linked at 0; .init at 0 and .text at 0x40). 9,983 FUNC symbols; DWARF 2 prototype truth 4,679 functions (4,659 of them in symtab; 20 DWARF subprograms have no symtab FUNC). No repo/DAT checksum exists for this debug-tagged build, so sha1_expected is null (not fabricated); identity is proven by the debug data itself (see notes). Imports: psp-hot-pixel-stripped: ok 60.7s, 9896 fns in exec regions (truth 9983 in exec regions), recall 0.8883, precision 0.8961 | psp-hot-pixel-symtab: ok 38.9s, 10922 fns in exec regions (truth 9983 in exec regions), recall 1.0, precision 0.914 (imports run on nih-vps-u with romwright-cli built from the tree at ~20:10 on 2026-10-09; stripped = llvm-strip --strip-all, symtab = llvm-strip --strip-debug) PSP TRUTH AUDIT 2026-10-14: added 233 import stubs of the image's `.sceStub.text*` sections as unverified 8-byte rows (jr ra + delay slot; the DWARF truth has no subprogram for them); old table kept as truth/functions.pre-pspaudit.tsv, rows and evidence in truth/pspaudit-changes.tsv.",
+    "program_hint": "psp",
+    "variant": null,
+    "truth_functions": 10216,
+    "verified_functions": 9983,
+    "nested_rows": 3,
+    "nested_size0_rows": 0,
+    "straddling_rows": 3,
+    "truth_by_module": {
+     "main": {
+      "functions": 10216,
+      "verified": 9983,
+      "nested": 3,
+      "nested_size0": 0,
+      "straddling": 3
+     }
+    },
+    "scored_modules": [
+     "main"
+    ],
+    "unresolved_modules": [],
+    "unplaced_functions": 0
+   },
+   "dwarf": {
+    "reader": "readelf",
+    "functions": 4679,
+    "source": "functions.json",
+    "conflicts_dropped": 0
+   },
+   "units": [
+    {
+     "module": "main",
+     "program": "psp",
+     "placement": "import program",
+     "warning": null,
+     "ranges": [
+      [
+       0,
+       36
+      ],
+      [
+       36,
+       64
+      ],
+      [
+       64,
+       2779552
+      ],
+      [
+       2779552,
+       2779580
+      ],
+      [
+       2779580,
+       2781444
+      ],
+      [
+       2781444,
+       2781456
+      ],
+      [
+       3008240,
+       3008256
+      ]
+     ]
+    }
+   ],
+   "stripped": true,
+   "status": "ran",
+   "program": "psp",
+   "sample": [
+    "00073504",
+    "0007cc64",
+    "000833bc",
+    "00086e9c",
+    "00086eb0",
+    "00086eec",
+    "00093420",
+    "00098910",
+    "00099be4",
+    "0009b4a8",
+    "000a91c4",
+    "000b075c",
+    "000b28dc",
+    "000b30c4",
+    "000b8bc4",
+    "000bb9dc",
+    "000c1874",
+    "000c9f34",
+    "000ca8e8",
+    "000cc974",
+    "000cd764",
+    "000ce00c",
+    "000ce59c",
+    "000e1c74",
+    "000e42ac",
+    "000e625c",
+    "000f850c",
+    "000f90a8",
+    "000faac8",
+    "000fb10c",
+    "00103044",
+    "00112f08",
+    "001215f4",
+    "0012a350",
+    "0012dd2c",
+    "00133dd8",
+    "0013ff40",
+    "00146024",
+    "0016187c",
+    "0016ac40",
+    "0016b31c",
+    "00177398",
+    "00180444",
+    "0018eee8",
+    "00196094",
+    "002565a4",
+    "002565e4",
+    "00264a78",
+    "00271ec4",
+    "00273b18",
+    "00277f8c",
+    "00278374",
+    "0027877c",
+    "0027c944",
+    "0027d7bc",
+    "00282324",
+    "002925bc",
+    "0029e74c",
+    "002a48ac",
+    "002a5678"
+   ],
+   "samples": {
+    "1": [
+     "00073504",
+     "0007cc64",
+     "000833bc",
+     "00086e9c",
+     "00086eb0",
+     "00086eec",
+     "00093420",
+     "00098910",
+     "00099be4",
+     "0009b4a8",
+     "000a91c4",
+     "000b075c",
+     "000b28dc",
+     "000b30c4",
+     "000b8bc4",
+     "000bb9dc",
+     "000c1874",
+     "000c9f34",
+     "000ca8e8",
+     "000cc974",
+     "000cd764",
+     "000ce00c",
+     "000ce59c",
+     "000e1c74",
+     "000e42ac",
+     "000e625c",
+     "000f850c",
+     "000f90a8",
+     "000faac8",
+     "000fb10c",
+     "00103044",
+     "00112f08",
+     "001215f4",
+     "0012a350",
+     "0012dd2c",
+     "00133dd8",
+     "0013ff40",
+     "00146024",
+     "0016187c",
+     "0016ac40",
+     "0016b31c",
+     "00177398",
+     "00180444",
+     "0018eee8",
+     "00196094",
+     "002565a4",
+     "002565e4",
+     "00264a78",
+     "00271ec4",
+     "00273b18",
+     "00277f8c",
+     "00278374",
+     "0027877c",
+     "0027c944",
+     "0027d7bc",
+     "00282324",
+     "002925bc",
+     "0029e74c",
+     "002a48ac",
+     "002a5678"
+    ]
+   },
+   "sample_in_dwarf": 60,
+   "degraded_imports": {},
+   "stock": {
+    "config": {
+     "language": "Allegrex:LE:32:default",
+     "loader": null,
+     "options": [],
+     "why": "STOCK_PLATFORM[psp] (console_research.py)",
+     "source": "console_research.STOCK_PLATFORM"
+    },
+    "ghidra_language": "Allegrex:LE:32:default",
+    "ghidra_compiler": "default",
+    "wall_seconds": 102.3,
+    "functions": 5973,
+    "scope": "main module only (the program stock's loader makes of the staged image)",
+    "combined": {
+     "summary": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "stock_functions_existing": 27,
+      "recall": 0.5839,
+      "precision": 0.9988,
+      "recall_verified": 0.5763,
+      "precision_verified": 1.0,
+      "discovered": 5972,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.9,
+      "type_slots": 182,
+      "type_exact": 64,
+      "type_partial": 8,
+      "type_wrong": 110,
+      "type_exact_rate": 0.3516
+     }
+    }
+   }
+  },
+  "psp-hot-pixel-symtab": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "gotos": 28,
+      "labels": 14,
+      "irregular_functions": 44,
+      "native_warnings": 160,
+      "text_warnings": 66,
+      "lines": 3484,
+      "median_seconds": 0.744,
+      "max_seconds": 1.275,
+      "wall_seconds": 16.1,
+      "recall": 1.0,
+      "precision": 0.9975,
+      "discovered": 10242,
+      "recall_verified": 1.0,
+      "precision_verified": 0.9999,
+      "recall_main": 1.0,
+      "precision_main": 0.9975,
+      "recall_verified_main": 1.0,
+      "precision_verified_main": 0.9999,
+      "verified_truth": 9983,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.8167,
+      "type_slots": 172,
+      "type_exact": 61,
+      "type_partial": 1,
+      "type_wrong": 110,
+      "type_exact_rate": 0.3547
+     },
+     "import": {
+      "seconds": 17.6,
+      "switch_stats": {
+       "vsa_resolved": 40,
+       "vsa_refused": 19,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ImportPrecision/wave-cache/results/de5bce17d6a06237/psp-hot-pixel-symtab/default-60-1.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9874,
+       "to": 0.9975,
+       "delta": 0.0101,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 54,
+       "to": 28,
+       "delta": -26,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 33,
+       "to": 14,
+       "delta": -19,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 45,
+       "to": 44,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 160,
+       "to": 160,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 66,
+       "to": 66,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 3440,
+       "to": 3484,
+       "delta": 44,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8167,
+       "to": 0.8167,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3547,
+       "to": 0.3547,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "recall_verified": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 0
+      },
+      "precision_verified": {
+       "from": 0.9896,
+       "to": 0.9999,
+       "delta": 0.0103,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 60
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9874,
+       "to": 0.9975,
+       "delta": 0.0101,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 54,
+       "to": 28,
+       "delta": -26,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 33,
+       "to": 14,
+       "delta": -19,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 45,
+       "to": 44,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 160,
+       "to": 160,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 66,
+       "to": 66,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 3440,
+       "to": 3484,
+       "delta": 44,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8167,
+       "to": 0.8167,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3547,
+       "to": 0.3547,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "recall_verified": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 0
+      },
+      "precision_verified": {
+       "from": 0.9896,
+       "to": 0.9999,
+       "delta": 0.0103,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 60
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "gotos": 54,
+      "labels": 33,
+      "irregular_functions": 45,
+      "native_warnings": 160,
+      "text_warnings": 66,
+      "lines": 3440,
+      "median_seconds": 0.736,
+      "max_seconds": 1.291,
+      "wall_seconds": 15.4,
+      "recall": 1.0,
+      "precision": 0.9874,
+      "discovered": 10346,
+      "recall_verified": 1.0,
+      "precision_verified": 0.9896,
+      "recall_main": 1.0,
+      "precision_main": 0.9874,
+      "recall_verified_main": 1.0,
+      "precision_verified_main": 0.9896,
+      "verified_truth": 9983,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.8167,
+      "type_slots": 172,
+      "type_exact": 61,
+      "type_partial": 1,
+      "type_wrong": 110,
+      "type_exact_rate": 0.3547
+     },
+     "import": {
+      "seconds": 10.3,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ImportPrecision/wave-cache/results/de5bce17d6a06237/psp-hot-pixel-symtab/baseline-off-60-1.json",
+     "vs_default": {
+      "recall": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9975,
+       "to": 0.9874,
+       "delta": -0.0101,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 28,
+       "to": 54,
+       "delta": 26,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 14,
+       "to": 33,
+       "delta": 19,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 44,
+       "to": 45,
+       "delta": 1,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 160,
+       "to": 160,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 66,
+       "to": 66,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 3484,
+       "to": 3440,
+       "delta": -44,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8167,
+       "to": 0.8167,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3547,
+       "to": 0.3547,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "recall_verified": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 0
+      },
+      "precision_verified": {
+       "from": 0.9999,
+       "to": 0.9896,
+       "delta": -0.0103,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 60
+     }
+    }
+   },
+   "wave": {
+    "game": "Hot Pixel",
+    "platform": "psp",
+    "region_version": "unspecified (cognac_release.prx)",
+    "source_archive": "[PSP] Hot Pixel (DWARF).7z",
+    "sha1_expected": null,
+    "sha1_actual": "eb9c1370a5114baba980804d08b03634f40dc924",
+    "version_match": true,
+    "truth_kind": "dwarf",
+    "repo": null,
+    "commit": null,
+    "compiler": "GNU C/C++ 3.3.6+allegrex-2.2.2-psp-1.9.2 -g (372 C + 39 C++ CUs; 8 CUs psp-1.12.1.internal)",
+    "linked_percent": 100.0,
+    "notes": "Unencrypted relocatable PRX (e_type 0xffa0, linked at 0; .init at 0 and .text at 0x40). 9,983 FUNC symbols; DWARF 2 prototype truth 4,679 functions (4,659 of them in symtab; 20 DWARF subprograms have no symtab FUNC). No repo/DAT checksum exists for this debug-tagged build, so sha1_expected is null (not fabricated); identity is proven by the debug data itself (see notes). Imports: psp-hot-pixel-stripped: ok 60.7s, 9896 fns in exec regions (truth 9983 in exec regions), recall 0.8883, precision 0.8961 | psp-hot-pixel-symtab: ok 38.9s, 10922 fns in exec regions (truth 9983 in exec regions), recall 1.0, precision 0.914 (imports run on nih-vps-u with romwright-cli built from the tree at ~20:10 on 2026-10-09; stripped = llvm-strip --strip-all, symtab = llvm-strip --strip-debug) PSP TRUTH AUDIT 2026-10-14: added 233 import stubs of the image's `.sceStub.text*` sections as unverified 8-byte rows (jr ra + delay slot; the DWARF truth has no subprogram for them); old table kept as truth/functions.pre-pspaudit.tsv, rows and evidence in truth/pspaudit-changes.tsv.",
+    "program_hint": "psp",
+    "variant": "symtab",
+    "truth_functions": 10216,
+    "verified_functions": 9983,
+    "nested_rows": 3,
+    "nested_size0_rows": 0,
+    "straddling_rows": 3,
+    "truth_by_module": {
+     "main": {
+      "functions": 10216,
+      "verified": 9983,
+      "nested": 3,
+      "nested_size0": 0,
+      "straddling": 3
+     }
+    },
+    "scored_modules": [
+     "main"
+    ],
+    "unresolved_modules": [],
+    "unplaced_functions": 0
+   },
+   "dwarf": {
+    "reader": "readelf",
+    "functions": 4679,
+    "source": "functions.json",
+    "conflicts_dropped": 0
+   },
+   "units": [
+    {
+     "module": "main",
+     "program": "psp",
+     "placement": "import program",
+     "warning": null,
+     "ranges": [
+      [
+       0,
+       36
+      ],
+      [
+       36,
+       64
+      ],
+      [
+       64,
+       2779552
+      ],
+      [
+       2779552,
+       2779580
+      ],
+      [
+       2779580,
+       2781444
+      ],
+      [
+       2781444,
+       2781456
+      ],
+      [
+       3008240,
+       3008256
+      ]
+     ]
+    }
+   ],
+   "stripped": "debug",
+   "status": "ran",
+   "program": "psp",
+   "sample": [
+    "000736b0",
+    "0007b62c",
+    "0007c1cc",
+    "000859c8",
+    "000a2528",
+    "000a3c38",
+    "000aeca0",
+    "000b3ce8",
+    "000c6be0",
+    "000cd5c0",
+    "000ced78",
+    "000e26dc",
+    "000f1888",
+    "000f7130",
+    "000fa5cc",
+    "000fd7ac",
+    "00101f14",
+    "001101f4",
+    "00115e90",
+    "0012a4c0",
+    "0012a7dc",
+    "0012b81c",
+    "0012e294",
+    "00133dd8",
+    "00133f78",
+    "001346bc",
+    "0013ae20",
+    "0013bb5c",
+    "0013bba4",
+    "0013c924",
+    "0014c17c",
+    "001613ec",
+    "0016ac40",
+    "0016d678",
+    "0017924c",
+    "00179830",
+    "0017b234",
+    "0017d4fc",
+    "0017d834",
+    "00186b6c",
+    "00187738",
+    "00187d68",
+    "0018edd0",
+    "0018f630",
+    "0019912c",
+    "002567cc",
+    "0025a100",
+    "0025be18",
+    "002634d0",
+    "0026cbc4",
+    "0026ec14",
+    "0027632c",
+    "00276790",
+    "00276d64",
+    "00277484",
+    "00278bc8",
+    "00283d30",
+    "00291bb0",
+    "00295058",
+    "00295418"
+   ],
+   "samples": {
+    "1": [
+     "000736b0",
+     "0007b62c",
+     "0007c1cc",
+     "000859c8",
+     "000a2528",
+     "000a3c38",
+     "000aeca0",
+     "000b3ce8",
+     "000c6be0",
+     "000cd5c0",
+     "000ced78",
+     "000e26dc",
+     "000f1888",
+     "000f7130",
+     "000fa5cc",
+     "000fd7ac",
+     "00101f14",
+     "001101f4",
+     "00115e90",
+     "0012a4c0",
+     "0012a7dc",
+     "0012b81c",
+     "0012e294",
+     "00133dd8",
+     "00133f78",
+     "001346bc",
+     "0013ae20",
+     "0013bb5c",
+     "0013bba4",
+     "0013c924",
+     "0014c17c",
+     "001613ec",
+     "0016ac40",
+     "0016d678",
+     "0017924c",
+     "00179830",
+     "0017b234",
+     "0017d4fc",
+     "0017d834",
+     "00186b6c",
+     "00187738",
+     "00187d68",
+     "0018edd0",
+     "0018f630",
+     "0019912c",
+     "002567cc",
+     "0025a100",
+     "0025be18",
+     "002634d0",
+     "0026cbc4",
+     "0026ec14",
+     "0027632c",
+     "00276790",
+     "00276d64",
+     "00277484",
+     "00278bc8",
+     "00283d30",
+     "00291bb0",
+     "00295058",
+     "00295418"
+    ]
+   },
+   "sample_in_dwarf": 60,
+   "degraded_imports": {},
+   "stock": {
+    "config": {
+     "language": "Allegrex:LE:32:default",
+     "loader": null,
+     "options": [],
+     "why": "STOCK_PLATFORM[psp] (console_research.py)",
+     "source": "console_research.STOCK_PLATFORM"
+    },
+    "ghidra_language": "Allegrex:LE:32:default",
+    "ghidra_compiler": "default",
+    "wall_seconds": 83.4,
+    "functions": 10225,
+    "scope": "main module only (the program stock's loader makes of the staged image)",
+    "combined": {
+     "summary": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "stock_functions_existing": 60,
+      "recall": 1.0,
+      "precision": 0.9991,
+      "recall_verified": 1.0,
+      "precision_verified": 1.0,
+      "discovered": 10225,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.8167,
+      "type_slots": 174,
+      "type_exact": 56,
+      "type_partial": 20,
+      "type_wrong": 98,
+      "type_exact_rate": 0.3218
+     }
+    }
+   }
+  }
+ },
+ "wave_skipped": [],
+ "sample_verified_only": false,
+ "rollup": {
+  "platforms": {
+   "psp": {
+    "games": {
+     "psp-hot-pixel": {
+      "game": "Hot Pixel",
+      "version_match": true,
+      "truth_kind": "dwarf",
+      "tools": {
+       "default": {
+        "sampled": 60,
+        "decompiled": 60,
+        "success_rate": 1.0,
+        "gotos": 70,
+        "labels": 31,
+        "irregular_functions": 50,
+        "native_warnings": 153,
+        "text_warnings": 37,
+        "lines": 5054,
+        "median_seconds": 0.863,
+        "max_seconds": 1.867,
+        "wall_seconds": 18.9,
+        "recall": 0.8924,
+        "precision": 0.9965,
+        "discovered": 9149,
+        "recall_verified": 0.8899,
+        "precision_verified": 0.999,
+        "recall_main": 0.8924,
+        "precision_main": 0.9965,
+        "recall_verified_main": 0.8899,
+        "precision_verified_main": 0.999,
+        "verified_truth": 9983,
+        "dwarf_functions": 60,
+        "arity_accuracy": 0.9,
+        "type_slots": 182,
+        "type_exact": 69,
+        "type_partial": 1,
+        "type_wrong": 112,
+        "type_exact_rate": 0.3791
+       },
+       "baseline-off": {
+        "sampled": 60,
+        "decompiled": 60,
+        "success_rate": 1.0,
+        "gotos": 129,
+        "labels": 65,
+        "irregular_functions": 51,
+        "native_warnings": 153,
+        "text_warnings": 37,
+        "lines": 4942,
+        "median_seconds": 0.849,
+        "max_seconds": 1.624,
+        "wall_seconds": 18.3,
+        "recall": 0.8916,
+        "precision": 0.968,
+        "discovered": 9410,
+        "recall_verified": 0.8891,
+        "precision_verified": 0.9696,
+        "recall_main": 0.8916,
+        "precision_main": 0.968,
+        "recall_verified_main": 0.8891,
+        "precision_verified_main": 0.9696,
+        "verified_truth": 9983,
+        "dwarf_functions": 60,
+        "arity_accuracy": 0.9,
+        "type_slots": 182,
+        "type_exact": 69,
+        "type_partial": 1,
+        "type_wrong": 112,
+        "type_exact_rate": 0.3791
+       },
+       "stock": {
+        "sampled": 60,
+        "decompiled": 60,
+        "success_rate": 1.0,
+        "stock_functions_existing": 27,
+        "recall": 0.5839,
+        "precision": 0.9988,
+        "recall_verified": 0.5763,
+        "precision_verified": 1.0,
+        "discovered": 5972,
+        "dwarf_functions": 60,
+        "arity_accuracy": 0.9,
+        "type_slots": 182,
+        "type_exact": 64,
+        "type_partial": 8,
+        "type_wrong": 110,
+        "type_exact_rate": 0.3516
+       }
+      }
+     }
+    },
+    "failures": {},
+    "tests": {
+     "recall vs baseline-off": {
+      "games": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "p_value": null
+     },
+     "precision vs baseline-off": {
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "ties": 0,
+      "p_value": 0.5
+     },
+     "success_rate vs baseline-off": {
+      "games": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "p_value": null
+     },
+     "arity_accuracy vs baseline-off": {
+      "games": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "p_value": null
+     },
+     "type_exact_rate vs baseline-off": {
+      "games": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "p_value": null
+     },
+     "recall_verified vs baseline-off": {
+      "games": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "p_value": null
+     },
+     "precision_verified vs baseline-off": {
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "ties": 0,
+      "p_value": 0.5
+     },
+     "recall vs stock": {
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "ties": 0,
+      "p_value": 0.5
+     },
+     "precision vs stock": {
+      "games": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "p_value": null
+     },
+     "arity_accuracy vs stock": {
+      "games": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "p_value": null
+     },
+     "type_exact_rate vs stock": {
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "ties": 0,
+      "p_value": 0.5
+     },
+     "recall_verified vs stock": {
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "ties": 0,
+      "p_value": 0.5
+     },
+     "precision_verified vs stock": {
+      "games": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "p_value": null
+     }
+    },
+    "stock_excluded": {}
+   }
+  },
+  "mismatch": {},
+  "variants": {
+   "psp-hot-pixel-symtab": {
+    "game": "Hot Pixel",
+    "version_match": true,
+    "truth_kind": "dwarf",
+    "tools": {
+     "default": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "gotos": 28,
+      "labels": 14,
+      "irregular_functions": 44,
+      "native_warnings": 160,
+      "text_warnings": 66,
+      "lines": 3484,
+      "median_seconds": 0.744,
+      "max_seconds": 1.275,
+      "wall_seconds": 16.1,
+      "recall": 1.0,
+      "precision": 0.9975,
+      "discovered": 10242,
+      "recall_verified": 1.0,
+      "precision_verified": 0.9999,
+      "recall_main": 1.0,
+      "precision_main": 0.9975,
+      "recall_verified_main": 1.0,
+      "precision_verified_main": 0.9999,
+      "verified_truth": 9983,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.8167,
+      "type_slots": 172,
+      "type_exact": 61,
+      "type_partial": 1,
+      "type_wrong": 110,
+      "type_exact_rate": 0.3547
+     },
+     "baseline-off": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "gotos": 54,
+      "labels": 33,
+      "irregular_functions": 45,
+      "native_warnings": 160,
+      "text_warnings": 66,
+      "lines": 3440,
+      "median_seconds": 0.736,
+      "max_seconds": 1.291,
+      "wall_seconds": 15.4,
+      "recall": 1.0,
+      "precision": 0.9874,
+      "discovered": 10346,
+      "recall_verified": 1.0,
+      "precision_verified": 0.9896,
+      "recall_main": 1.0,
+      "precision_main": 0.9874,
+      "recall_verified_main": 1.0,
+      "precision_verified_main": 0.9896,
+      "verified_truth": 9983,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.8167,
+      "type_slots": 172,
+      "type_exact": 61,
+      "type_partial": 1,
+      "type_wrong": 110,
+      "type_exact_rate": 0.3547
+     },
+     "stock": {
+      "sampled": 60,
+      "decompiled": 60,
+      "success_rate": 1.0,
+      "stock_functions_existing": 60,
+      "recall": 1.0,
+      "precision": 0.9991,
+      "recall_verified": 1.0,
+      "precision_verified": 1.0,
+      "discovered": 10225,
+      "dwarf_functions": 60,
+      "arity_accuracy": 0.8167,
+      "type_slots": 174,
+      "type_exact": 56,
+      "type_partial": 20,
+      "type_wrong": 98,
+      "type_exact_rate": 0.3218
+     }
+    }
+   }
+  },
+  "all": {
+   "games": [
+    "psp-hot-pixel"
+   ],
+   "tests": {
+    "recall vs baseline-off": {
+     "games": 1,
+     "wins": 0,
+     "losses": 0,
+     "ties": 1,
+     "p_value": null
+    },
+    "precision vs baseline-off": {
+     "games": 1,
+     "wins": 1,
+     "losses": 0,
+     "ties": 0,
+     "p_value": 0.5
+    },
+    "success_rate vs baseline-off": {
+     "games": 1,
+     "wins": 0,
+     "losses": 0,
+     "ties": 1,
+     "p_value": null
+    },
+    "arity_accuracy vs baseline-off": {
+     "games": 1,
+     "wins": 0,
+     "losses": 0,
+     "ties": 1,
+     "p_value": null
+    },
+    "type_exact_rate vs baseline-off": {
+     "games": 1,
+     "wins": 0,
+     "losses": 0,
+     "ties": 1,
+     "p_value": null
+    },
+    "recall_verified vs baseline-off": {
+     "games": 1,
+     "wins": 0,
+     "losses": 0,
+     "ties": 1,
+     "p_value": null
+    },
+    "precision_verified vs baseline-off": {
+     "games": 1,
+     "wins": 1,
+     "losses": 0,
+     "ties": 0,
+     "p_value": 0.5
+    },
+    "recall vs stock": {
+     "games": 1,
+     "wins": 1,
+     "losses": 0,
+     "ties": 0,
+     "p_value": 0.5
+    },
+    "precision vs stock": {
+     "games": 1,
+     "wins": 0,
+     "losses": 0,
+     "ties": 1,
+     "p_value": null
+    },
+    "arity_accuracy vs stock": {
+     "games": 1,
+     "wins": 0,
+     "losses": 0,
+     "ties": 1,
+     "p_value": null
+    },
+    "type_exact_rate vs stock": {
+     "games": 1,
+     "wins": 1,
+     "losses": 0,
+     "ties": 0,
+     "p_value": 0.5
+    },
+    "recall_verified vs stock": {
+     "games": 1,
+     "wins": 1,
+     "losses": 0,
+     "ties": 0,
+     "p_value": 0.5
+    },
+    "precision_verified vs stock": {
+     "games": 1,
+     "wins": 0,
+     "losses": 0,
+     "ties": 1,
+     "p_value": null
+    }
+   }
+  },
+  "sign_test": {
+   "rate_threshold": 0.005,
+   "include_version_mismatch": false
+  }
+ }
+}

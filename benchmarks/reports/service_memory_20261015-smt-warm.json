@@ -1,0 +1,940 @@
+{
+ "id": "service-memory",
+ "date": "20261015-smt-warm",
+ "recorded_at": "2026-10-15T16:00:07.332845+00:00",
+ "host": {
+  "uname": "Linux vmi1705759.contaboserver.net 7.0.0-10-generic #10-Ubuntu SMP PREEMPT_DYNAMIC Thu Mar 19 10:24:42 UTC 2026 x86_64",
+  "load": [
+   0.79638671875,
+   0.3857421875,
+   0.28369140625
+  ]
+ },
+ "before": {
+  "dir": "../before",
+  "romwright-api": "afcb97b98668"
+ },
+ "after": {
+  "dir": "../after",
+  "romwright-api": "008cdb1bf56e"
+ },
+ "repeats": 3,
+ "binaries_refaulted": false,
+ "headroom": 1.25,
+ "warmup_rounds": 4,
+ "rounds": 8,
+ "passed": true,
+ "metrics": {
+  "session.peak_kb.max.before": 95520,
+  "session.peak_kb.max.after": 79432,
+  "session.entries_over_limit.before": 5,
+  "session.entries_over_limit.after": 0,
+  "session.margin_kb.min.after": 569,
+  "service.peak_kb.median.before": 14450,
+  "service.peak_kb.median.after": 12492,
+  "documents.entries_equal": 16,
+  "documents.entries_tokens_equal": 20
+ },
+ "rows": [
+  {
+   "id": "x86_64_plain_o0",
+   "frozen_kb": 47568,
+   "limit_kb": 59460,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 17382,
+   "before": {
+    "tree_peak_kb": [
+     54552,
+     54368,
+     54136
+    ],
+    "median_kb": 54368,
+    "max_kb": 54552,
+    "service_peak_kb": 14312,
+    "decompiler_peak_kb": 40056,
+    "service_end_kb": {
+     "VmRSS": 14072,
+     "RssAnon": 2200,
+     "RssFile": 11840
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     52236,
+     52072,
+     52408
+    ],
+    "median_kb": 52236,
+    "max_kb": 52408,
+    "service_peak_kb": 12160,
+    "decompiler_peak_kb": 40040,
+    "service_end_kb": {
+     "VmRSS": 12380,
+     "RssAnon": 1904,
+     "RssFile": 10444
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "x86_64_plain_o2",
+   "frozen_kb": 47540,
+   "limit_kb": 59425,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 11296,
+   "before": {
+    "tree_peak_kb": [
+     54112,
+     54240,
+     54316
+    ],
+    "median_kb": 54240,
+    "max_kb": 54316,
+    "service_peak_kb": 14192,
+    "decompiler_peak_kb": 40068,
+    "service_end_kb": {
+     "VmRSS": 14244,
+     "RssAnon": 2196,
+     "RssFile": 12016
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     52696,
+     52192,
+     52236
+    ],
+    "median_kb": 52236,
+    "max_kb": 52696,
+    "service_peak_kb": 12156,
+    "decompiler_peak_kb": 40080,
+    "service_end_kb": {
+     "VmRSS": 12160,
+     "RssAnon": 1884,
+     "RssFile": 10244
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "x86_64_plain_pie",
+   "frozen_kb": 47452,
+   "limit_kb": 59315,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 11296,
+   "before": {
+    "tree_peak_kb": [
+     54524,
+     54444,
+     54040
+    ],
+    "median_kb": 54444,
+    "max_kb": 54524,
+    "service_peak_kb": 14384,
+    "decompiler_peak_kb": 40060,
+    "service_end_kb": {
+     "VmRSS": 14004,
+     "RssAnon": 2204,
+     "RssFile": 11768
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     52816,
+     52664,
+     52412
+    ],
+    "median_kb": 52664,
+    "max_kb": 52816,
+    "service_peak_kb": 12668,
+    "decompiler_peak_kb": 40000,
+    "service_end_kb": {
+     "VmRSS": 12344,
+     "RssAnon": 1888,
+     "RssFile": 10424
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "frozen_kb": 47816,
+   "limit_kb": 59770,
+   "documents_identical": true,
+   "documents_equal": false,
+   "decompiler_deterministic_here": false,
+   "tokens_equal": true,
+   "reply_bytes": 85023,
+   "before": {
+    "tree_peak_kb": [
+     55624,
+     55200,
+     55352
+    ],
+    "median_kb": 55352,
+    "max_kb": 55624,
+    "service_peak_kb": 15288,
+    "decompiler_peak_kb": 40064,
+    "service_end_kb": {
+     "VmRSS": 15296,
+     "RssAnon": 3080,
+     "RssFile": 12184
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     52536,
+     52492,
+     52680
+    ],
+    "median_kb": 52536,
+    "max_kb": 52680,
+    "service_peak_kb": 12512,
+    "decompiler_peak_kb": 40056,
+    "service_end_kb": {
+     "VmRSS": 12624,
+     "RssAnon": 2092,
+     "RssFile": 10500
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "x86_64_many_o2",
+   "frozen_kb": 79828,
+   "limit_kb": 99785,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 2113453,
+   "before": {
+    "tree_peak_kb": [
+     95432,
+     95288,
+     95520
+    ],
+    "median_kb": 95432,
+    "max_kb": 95520,
+    "service_peak_kb": 38072,
+    "decompiler_peak_kb": 57364,
+    "service_end_kb": {
+     "VmRSS": 18648,
+     "RssAnon": 6532,
+     "RssFile": 12084
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     79216,
+     78500,
+     79432
+    ],
+    "median_kb": 79216,
+    "max_kb": 79432,
+    "service_peak_kb": 21868,
+    "decompiler_peak_kb": 57312,
+    "service_end_kb": {
+     "VmRSS": 16760,
+     "RssAnon": 5972,
+     "RssFile": 10756
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "i386_plain_o0",
+   "frozen_kb": 40184,
+   "limit_kb": 50230,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 17374,
+   "before": {
+    "tree_peak_kb": [
+     46960,
+     47220,
+     47140
+    ],
+    "median_kb": 47140,
+    "max_kb": 47220,
+    "service_peak_kb": 14268,
+    "decompiler_peak_kb": 32896,
+    "service_end_kb": {
+     "VmRSS": 14268,
+     "RssAnon": 2216,
+     "RssFile": 12020
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     45012,
+     45152,
+     45516
+    ],
+    "median_kb": 45152,
+    "max_kb": 45516,
+    "service_peak_kb": 12372,
+    "decompiler_peak_kb": 32888,
+    "service_end_kb": {
+     "VmRSS": 12628,
+     "RssAnon": 1912,
+     "RssFile": 10684
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "i386_plain_o2",
+   "frozen_kb": 40496,
+   "limit_kb": 50620,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 11298,
+   "before": {
+    "tree_peak_kb": [
+     47148,
+     46992,
+     47232
+    ],
+    "median_kb": 47148,
+    "max_kb": 47232,
+    "service_peak_kb": 14256,
+    "decompiler_peak_kb": 32908,
+    "service_end_kb": {
+     "VmRSS": 14324,
+     "RssAnon": 2212,
+     "RssFile": 12080
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     45016,
+     45040,
+     44880
+    ],
+    "median_kb": 45016,
+    "max_kb": 45040,
+    "service_peak_kb": 12120,
+    "decompiler_peak_kb": 32896,
+    "service_end_kb": {
+     "VmRSS": 11996,
+     "RssAnon": 1900,
+     "RssFile": 10064
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "i386_plain_pie",
+   "frozen_kb": 40496,
+   "limit_kb": 50620,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 11295,
+   "before": {
+    "tree_peak_kb": [
+     47500,
+     47016,
+     47220
+    ],
+    "median_kb": 47220,
+    "max_kb": 47500,
+    "service_peak_kb": 14340,
+    "decompiler_peak_kb": 32916,
+    "service_end_kb": {
+     "VmRSS": 14340,
+     "RssAnon": 2208,
+     "RssFile": 12100
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     44996,
+     45536,
+     45088
+    ],
+    "median_kb": 45088,
+    "max_kb": 45536,
+    "service_peak_kb": 12196,
+    "decompiler_peak_kb": 32896,
+    "service_end_kb": {
+     "VmRSS": 12196,
+     "RssAnon": 1904,
+     "RssFile": 10260
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "i386_cpp_o2",
+   "frozen_kb": 40632,
+   "limit_kb": 50790,
+   "documents_identical": true,
+   "documents_equal": false,
+   "decompiler_deterministic_here": false,
+   "tokens_equal": true,
+   "reply_bytes": 85113,
+   "before": {
+    "tree_peak_kb": [
+     48360,
+     48188,
+     48488
+    ],
+    "median_kb": 48360,
+    "max_kb": 48488,
+    "service_peak_kb": 15424,
+    "decompiler_peak_kb": 32920,
+    "service_end_kb": {
+     "VmRSS": 15568,
+     "RssAnon": 3064,
+     "RssFile": 12472
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     45524,
+     45800,
+     45252
+    ],
+    "median_kb": 45524,
+    "max_kb": 45800,
+    "service_peak_kb": 12652,
+    "decompiler_peak_kb": 32896,
+    "service_end_kb": {
+     "VmRSS": 12280,
+     "RssAnon": 2024,
+     "RssFile": 10224
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "i386_many_o2",
+   "frozen_kb": 65308,
+   "limit_kb": 81635,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 2125478,
+   "before": {
+    "tree_peak_kb": [
+     80452,
+     80420,
+     79876
+    ],
+    "median_kb": 80420,
+    "max_kb": 80452,
+    "service_peak_kb": 38308,
+    "decompiler_peak_kb": 42108,
+    "service_end_kb": {
+     "VmRSS": 28812,
+     "RssAnon": 17012,
+     "RssFile": 11768
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     67532,
+     67448,
+     67336
+    ],
+    "median_kb": 67448,
+    "max_kb": 67532,
+    "service_peak_kb": 25336,
+    "decompiler_peak_kb": 42120,
+    "service_end_kb": {
+     "VmRSS": 21180,
+     "RssAnon": 10996,
+     "RssFile": 10152
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "frozen_kb": 43192,
+   "limit_kb": 53990,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 17393,
+   "before": {
+    "tree_peak_kb": [
+     49464,
+     49668,
+     49816
+    ],
+    "median_kb": 49668,
+    "max_kb": 49816,
+    "service_peak_kb": 14168,
+    "decompiler_peak_kb": 35552,
+    "service_end_kb": {
+     "VmRSS": 14224,
+     "RssAnon": 2108,
+     "RssFile": 12084
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     48008,
+     47740,
+     48048
+    ],
+    "median_kb": 48008,
+    "max_kb": 48048,
+    "service_peak_kb": 12472,
+    "decompiler_peak_kb": 35556,
+    "service_end_kb": {
+     "VmRSS": 12496,
+     "RssAnon": 1836,
+     "RssFile": 10628
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "aarch64_plain_o2",
+   "frozen_kb": 43004,
+   "limit_kb": 53755,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 11268,
+   "before": {
+    "tree_peak_kb": [
+     49824,
+     49604,
+     49680
+    ],
+    "median_kb": 49680,
+    "max_kb": 49824,
+    "service_peak_kb": 14108,
+    "decompiler_peak_kb": 35556,
+    "service_end_kb": {
+     "VmRSS": 14116,
+     "RssAnon": 2116,
+     "RssFile": 11968
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     48144,
+     47868,
+     47824
+    ],
+    "median_kb": 47868,
+    "max_kb": 48144,
+    "service_peak_kb": 12304,
+    "decompiler_peak_kb": 35580,
+    "service_end_kb": {
+     "VmRSS": 12244,
+     "RssAnon": 1840,
+     "RssFile": 10372
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "aarch64_plain_pie",
+   "frozen_kb": 43068,
+   "limit_kb": 53835,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 11268,
+   "before": {
+    "tree_peak_kb": [
+     50056,
+     50208,
+     49824
+    ],
+    "median_kb": 50056,
+    "max_kb": 50208,
+    "service_peak_kb": 14484,
+    "decompiler_peak_kb": 35572,
+    "service_end_kb": {
+     "VmRSS": 14264,
+     "RssAnon": 2108,
+     "RssFile": 12124
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     47792,
+     47796,
+     47664
+    ],
+    "median_kb": 47792,
+    "max_kb": 47796,
+    "service_peak_kb": 12228,
+    "decompiler_peak_kb": 35564,
+    "service_end_kb": {
+     "VmRSS": 12100,
+     "RssAnon": 1824,
+     "RssFile": 10244
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "aarch64_cpp_o2",
+   "frozen_kb": 43248,
+   "limit_kb": 54060,
+   "documents_identical": true,
+   "documents_equal": false,
+   "decompiler_deterministic_here": false,
+   "tokens_equal": true,
+   "reply_bytes": 85530,
+   "before": {
+    "tree_peak_kb": [
+     50676,
+     50568,
+     50572
+    ],
+    "median_kb": 50572,
+    "max_kb": 50676,
+    "service_peak_kb": 15024,
+    "decompiler_peak_kb": 35552,
+    "service_end_kb": {
+     "VmRSS": 15032,
+     "RssAnon": 2968,
+     "RssFile": 12032
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     48200,
+     48184,
+     48116
+    ],
+    "median_kb": 48184,
+    "max_kb": 48200,
+    "service_peak_kb": 12616,
+    "decompiler_peak_kb": 35564,
+    "service_end_kb": {
+     "VmRSS": 12572,
+     "RssAnon": 2032,
+     "RssFile": 10508
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "aarch64_many_o2",
+   "frozen_kb": 65220,
+   "limit_kb": 81525,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 2112873,
+   "before": {
+    "tree_peak_kb": [
+     81076,
+     81196,
+     81224
+    ],
+    "median_kb": 81196,
+    "max_kb": 81224,
+    "service_peak_kb": 38252,
+    "decompiler_peak_kb": 42944,
+    "service_end_kb": {
+     "VmRSS": 29748,
+     "RssAnon": 17632,
+     "RssFile": 12084
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     62612,
+     62844,
+     64172
+    ],
+    "median_kb": 62844,
+    "max_kb": 64172,
+    "service_peak_kb": 19888,
+    "decompiler_peak_kb": 42956,
+    "service_end_kb": {
+     "VmRSS": 16496,
+     "RssAnon": 5904,
+     "RssFile": 10560
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "frozen_kb": 23756,
+   "limit_kb": 29695,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 17436,
+   "before": {
+    "tree_peak_kb": [
+     30368,
+     30316,
+     30440
+    ],
+    "median_kb": 30368,
+    "max_kb": 30440,
+    "service_peak_kb": 14376,
+    "decompiler_peak_kb": 15996,
+    "service_end_kb": {
+     "VmRSS": 14444,
+     "RssAnon": 2416,
+     "RssFile": 11996
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     28444,
+     28308,
+     28292
+    ],
+    "median_kb": 28308,
+    "max_kb": 28444,
+    "service_peak_kb": 12332,
+    "decompiler_peak_kb": 15968,
+    "service_end_kb": {
+     "VmRSS": 12332,
+     "RssAnon": 2064,
+     "RssFile": 10236
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "powerpc_plain_o2",
+   "frozen_kb": 23508,
+   "limit_kb": 29385,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 11326,
+   "before": {
+    "tree_peak_kb": [
+     30332,
+     30396,
+     30604
+    ],
+    "median_kb": 30396,
+    "max_kb": 30604,
+    "service_peak_kb": 14416,
+    "decompiler_peak_kb": 15992,
+    "service_end_kb": {
+     "VmRSS": 14612,
+     "RssAnon": 2420,
+     "RssFile": 12160
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     28640,
+     28484,
+     28516
+    ],
+    "median_kb": 28516,
+    "max_kb": 28640,
+    "service_peak_kb": 12648,
+    "decompiler_peak_kb": 15956,
+    "service_end_kb": {
+     "VmRSS": 12516,
+     "RssAnon": 2052,
+     "RssFile": 10432
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "powerpc_plain_pie",
+   "frozen_kb": 23700,
+   "limit_kb": 29625,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 11689,
+   "before": {
+    "tree_peak_kb": [
+     30492,
+     30412,
+     30516
+    ],
+    "median_kb": 30492,
+    "max_kb": 30516,
+    "service_peak_kb": 14492,
+    "decompiler_peak_kb": 16000,
+    "service_end_kb": {
+     "VmRSS": 14516,
+     "RssAnon": 2436,
+     "RssFile": 12048
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     28504,
+     28184,
+     28288
+    ],
+    "median_kb": 28288,
+    "max_kb": 28504,
+    "service_peak_kb": 12336,
+    "decompiler_peak_kb": 15952,
+    "service_end_kb": {
+     "VmRSS": 12336,
+     "RssAnon": 2076,
+     "RssFile": 10228
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "frozen_kb": 23828,
+   "limit_kb": 29785,
+   "documents_identical": true,
+   "documents_equal": false,
+   "decompiler_deterministic_here": false,
+   "tokens_equal": true,
+   "reply_bytes": 97441,
+   "before": {
+    "tree_peak_kb": [
+     31840,
+     31764,
+     31360
+    ],
+    "median_kb": 31764,
+    "max_kb": 31840,
+    "service_peak_kb": 15708,
+    "decompiler_peak_kb": 16056,
+    "service_end_kb": {
+     "VmRSS": 15456,
+     "RssAnon": 3328,
+     "RssFile": 12096
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     28872,
+     29216,
+     28692
+    ],
+    "median_kb": 28872,
+    "max_kb": 29216,
+    "service_peak_kb": 12844,
+    "decompiler_peak_kb": 16056,
+    "service_end_kb": {
+     "VmRSS": 12636,
+     "RssAnon": 2252,
+     "RssFile": 10352
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  },
+  {
+   "id": "powerpc_many_o2",
+   "frozen_kb": 44220,
+   "limit_kb": 55275,
+   "documents_identical": true,
+   "documents_equal": true,
+   "decompiler_deterministic_here": true,
+   "tokens_equal": true,
+   "reply_bytes": 2108403,
+   "before": {
+    "tree_peak_kb": [
+     59948,
+     59968,
+     59924
+    ],
+    "median_kb": 59948,
+    "max_kb": 59968,
+    "service_peak_kb": 38324,
+    "decompiler_peak_kb": 21636,
+    "service_end_kb": {
+     "VmRSS": 29728,
+     "RssAnon": 17804,
+     "RssFile": 11892
+    },
+    "processes": 2
+   },
+   "after": {
+    "tree_peak_kb": [
+     43488,
+     43372,
+     41012
+    ],
+    "median_kb": 43372,
+    "max_kb": 43488,
+    "service_peak_kb": 21692,
+    "decompiler_peak_kb": 21680,
+    "service_end_kb": {
+     "VmRSS": 16492,
+     "RssAnon": 6080,
+     "RssFile": 10380
+    },
+    "processes": 2
+   },
+   "after_all_within_limit": true
+  }
+ ]
+}

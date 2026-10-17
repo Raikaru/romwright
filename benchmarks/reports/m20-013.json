@@ -1,0 +1,10 @@
+{
+  "gate": "m20-013",
+  "status": "pass",
+  "passed": true,
+  "summary": "VU 0/0, GTE 328/328",
+  "metrics": {
+    "vu": "0/0",
+    "gte": "328/328"
+  }
+}

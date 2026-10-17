@@ -1,0 +1,44 @@
+{
+  "id": "m5-004",
+  "recorded_at": "2026-10-09T04:54:43.711902+00:00",
+  "thresholds": {
+    "dwarf.fn.recall": 0.98
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "imported n64 natively (5 functions, MIPS:BE:64:64-32addr)",
+  "platform": {
+    "input": "Nintendo 64 ROM (`.z64`)",
+    "family": "console",
+    "test": "tests/m5-004_n64.py",
+    "programs": [
+      {
+        "name": "n64",
+        "language": "MIPS:BE:64:64-32addr",
+        "dwarf.fn.recall": 1.0,
+        "dwarf.functions": 5,
+        "recorded_deficits": []
+      }
+    ]
+  },
+  "metrics": {
+    "dwarf.fn.recall": 1.0,
+    "dwarf.functions": 5,
+    "functions": 5,
+    "unattributed": 0
+  },
+  "entry": "800004f0",
+  "boot": "80000400",
+  "regions": {
+    "n64:code": "80000400",
+    "n64:cartridge": "10000000",
+    "n64:rdram": "80000000",
+    "n64:sp-dmem": "a4000000",
+    "n64:sp-imem": "a4001000",
+    "n64:mmio": "a4300000"
+  },
+  "decompiled": {
+    "address": "80000400",
+    "text": "int n64_boot(int param_1)\n\n{\n  return param_1 * 9 + 7;\n}"
+  }
+}

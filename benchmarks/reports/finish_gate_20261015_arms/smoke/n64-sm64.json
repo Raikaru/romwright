@@ -1,0 +1,83 @@
+{
+ "name": "n64-sm64",
+ "image": "/home/raikaru/ventris-corpus/extracted/n64-super-mario-64/n64-super-mario-64.z64",
+ "started": "2026-10-15T14:22:44Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 10.4,
+   "tail": [
+    "imported sm64 (4525 functions, MIPS:BE:64:64-32addr; 1 program(s) in the store)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-n64-sm64: n64 ido (IDO (5.3 and 7.1 emit the same `move`; 5.3 is the default), Medium), 4525 functions as asm units, 41 binary units, 4525 symbols, 0 prototypes (0 skipped), splat `IDO`, compiler `ido5.3`",
+    "note: CIC-6102: the header CRC1/CRC2 (635a2bff 8b022326) reproduce from the ROM; `ninja` recomputes them after linking",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-n64-sm64 && python3 -m pip install -r requirements.txt && python3 configure.py && ninja"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/n64-super-mario-64/n64-super-mario-64.z64 /home/raikaru/runs/FinalGate2/smoke/proj-n64-sm64 --name sm64"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 15.6,
+   "tail": [
+    "              header:     64 B (0.00%) 1 split, 0 cached",
+    "             databin:     7 MB (83.48%) 3 split, 0 cached",
+    "                 asm:     1 MB (14.56%) 4525 split, 0 cached",
+    "             textbin:   163 KB (1.95%) 37 split, 0 cached",
+    "             unknown:      0 B (0.00%) from unknown bin files",
+    "configured: 4566 objects, 0 C unit(s); run `ninja`"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 39.5,
+   "tail": [
+    "[4566/4570] as asm/data/trailer.s",
+    "[4567/4570] link build/n64-super-mario-64.z64.elf",
+    "[4568/4570] image build/n64-super-mario-64.z64.raw",
+    "[4569/4570] n64 checksum build/n64-super-mario-64.z64",
+    "[4570/4570] verify build/n64-super-mario-64.z64",
+    "OK  build/n64-super-mario-64.z64  sha1 9bef1128717f958171a4afac3ed78ee2bb4e86ce"
+   ],
+   "cmd": "ninja"
+  }
+ },
+ "build_ok_lines": [
+  "OK  build/n64-super-mario-64.z64  sha1 9bef1128717f958171a4afac3ed78ee2bb4e86ce"
+ ],
+ "sha1_built": "9bef1128717f958171a4afac3ed78ee2bb4e86ce",
+ "build_rc": 0,
+ "pick_pool": 1063,
+ "match_functions": [
+  "0x80284cfc",
+  "0x802a10f0",
+  "0x802ee9cc"
+ ],
+ "matches": [
+  {
+   "function": "0x80284cfc",
+   "rc": 0,
+   "secs": 1.6,
+   "head": "FUN_80284cfc 0x80284cfc (60 bytes)  compiler ido5.3 -O2 -G 0 -mips2 -non_shared -Xcpluscomm -Wab,-r4300_mul -woff 649,838  metric: objdiff match %",
+   "best": "best: default  62.333%  (default 62.333%)  7 decompiles, 1 compiles, 1.6s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x802a10f0",
+   "rc": 0,
+   "secs": 1.6,
+   "head": "FUN_802a10f0 0x802a10f0 (76 bytes)  compiler ido5.3 -O2 -G 0 -mips2 -non_shared -Xcpluscomm -Wab,-r4300_mul -woff 649,838  metric: objdiff match %",
+   "best": "best: default  46.474%  (default 46.474%)  7 decompiles, 1 compiles, 1.6s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x802ee9cc",
+   "rc": 0,
+   "secs": 2.0,
+   "head": "FUN_802ee9cc 0x802ee9cc (88 bytes)  compiler ido5.3 -O2 -G 0 -mips2 -non_shared -Xcpluscomm -Wab,-r4300_mul -woff 649,838  metric: objdiff match %",
+   "best": "best: default  34.773%  (default 34.773%)  7 decompiles, 1 compiles, 1.9s; stopped at the variant budget",
+   "tail": []
+  }
+ ],
+ "result": "done",
+ "finished": "2026-10-15T14:23:55Z"
+}

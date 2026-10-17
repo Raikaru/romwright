@@ -1,0 +1,89 @@
+--- orig-native/romwright_printir.hh	2026-10-11 21:13:37.607580749 -0400
++++ trial-native/romwright_printir.hh	2026-10-11 20:44:00.295697908 -0400
+@@ -498,10 +498,9 @@
+   void partialLeaf(const Varnode *vn,const Symbol *sym,int4 off,int4 size,const HighVariable *high,bool isRead) {
+     bool bigend = false;
+     if (vn != (const Varnode *)0) {
+-      const SymbolEntry *whole = sym->getFirstWholeMap();
+-      const AddrSpace *spc = (const AddrSpace *)0;
+-      if (whole != (const SymbolEntry *)0) spc = whole->getAddr().getSpace();
+-      if (spc == (const AddrSpace *)0) spc = vn->getSpace();
++      // Master's PrintC::pushPartialSymbol takes the space of the name representative
++      // (12.1.3: the symbol's first whole map entry, else the Varnode's space).
++      const AddrSpace *spc = vn->getHigh()->getNameRepresentative()->getSpace();
+       bigend = spc->isBigEndian();
+     }
+     pw->u(PT_PARTIAL);
+@@ -1028,9 +1027,28 @@
+     out.flag(holdsLoopOp);
+   }
+ 
++  /// The wire kind of a block: the 12.1.3 FlowBlock::block_type numbering, which
++  /// crates/romwright-worker/src/printc/ir.rs `kind::` fixes. Upstream master splits t_if into
++  /// t_if/t_ifelse/t_ifnoexit/t_ifgoto and so shifts the loop and switch values. A t_ifnoexit
++  /// has no wire kind of its own: node() exports it as the list it prints as.
++  static uint4 wireKind(FlowBlock::block_type type) {
++    switch(type) {
++    case FlowBlock::t_ifnoexit:
++      return 6;		// t_ls
++    case FlowBlock::t_ifelse:
++    case FlowBlock::t_ifgoto:
++      return 8;
++    case FlowBlock::t_whiledo: return 9;
++    case FlowBlock::t_dowhile: return 10;
++    case FlowBlock::t_switch: return 11;
++    case FlowBlock::t_infloop: return 12;
++    default: return (uint4)type;
++    }
++  }
++
+   void node(const FlowBlock *bl) {
+     FlowBlock::block_type type = bl->getType();
+-    out.u(type);
++    out.u(wireKind(type));
+     out.s(bl->getIndex());
+     out.op(bl->lastOp());
+     // emitAnyLabelStatement, less the runtime only_branch test.
+@@ -1050,6 +1068,23 @@
+       return;
+     }
+     const BlockGraph *graph = (const BlockGraph *)bl;
++    if (type == FlowBlock::t_ifnoexit) {
++      // Upstream prints "if (c) { A }" followed by B, with no else (PrintC::emitBlockIf):
++      // a list of an if without else (condition, A) and B.
++      out.u(2);
++      out.u(8);
++      out.s(bl->getIndex());
++      out.op(graph->getBlock(1)->lastOp());
++      label((const FlowBlock *)0);
++      out.u(2);
++      node(graph->getBlock(0));
++      node(graph->getBlock(1));
++      out.u(0);
++      target((const FlowBlock *)0);
++      node(graph->getBlock(2));
++      out.flag(false);	// the if falls into B
++      return;
++    }
+     int4 size = graph->getSize();
+     out.u(size);
+     for(int4 i=0;i<size;++i)
+@@ -1069,8 +1104,16 @@
+     case FlowBlock::t_condition:
+       out.flag(((const BlockCondition *)bl)->getOpcode() == CPUI_BOOL_AND);
+       break;
+-    case FlowBlock::t_if: {
+-      const BlockIf *ifBlock = (const BlockIf *)bl;
++    case FlowBlock::t_if:
++    case FlowBlock::t_ifelse:
++    case FlowBlock::t_ifnoexit:
++      // No unstructured edge. (A t_ifnoexit prints upstream without an "else"; the wire has no
++      // such shape, so the worker prints it as the 3-component if it was in 12.1.3.)
++      out.u(0);
++      target((const FlowBlock *)0);
++      break;
++    case FlowBlock::t_ifgoto: {
++      const BlockIfGoto *ifBlock = (const BlockIfGoto *)bl;
+       out.u(ifBlock->getGotoType());
+       target(ifBlock->getGotoTarget());
+       break;

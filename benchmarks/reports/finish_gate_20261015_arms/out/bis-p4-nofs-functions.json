@@ -1,0 +1,73 @@
+{
+ "schema": "m22-003-functions/1",
+ "lane": "p4",
+ "game": "ps2-persona-4",
+ "tag": "bis-nofs",
+ "env": {},
+ "layers": [
+  "romwright"
+ ],
+ "seed": 20261010,
+ "n": 2,
+ "matched_count": 8483,
+ "functions": {
+  "002b6c30": {
+   "name": "func_002b6c30",
+   "address": "0x2b6c30",
+   "size": 292,
+   "file": "src/promoted/y_draw.c",
+   "compiler": "mwcps2-3.0.1b210-060308",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.712326
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.712326
+     }
+    }
+   }
+  },
+  "002b8200": {
+   "name": "func_002b8200",
+   "address": "0x2b8200",
+   "size": 108,
+   "file": "src/promoted/y_draw.c",
+   "compiler": "mwcps2-3.0.1b210-060308",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  }
+ }
+}

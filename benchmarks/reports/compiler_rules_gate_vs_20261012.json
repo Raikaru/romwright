@@ -1,0 +1,1307 @@
+{
+ "old": "combined_gate_20261012.json",
+ "new": "combined_gate_compiler_rules_20261012.json",
+ "counts": {
+  "better": 4,
+  "changed": 6,
+  "same": 206
+ },
+ "rows": [
+  {
+   "metric": "m21 gba-pokeemerald precision",
+   "old": 0.9972,
+   "new": 0.9972,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 gba-pokeemerald recall",
+   "old": 0.9761,
+   "new": 0.9761,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 gba-pokeemerald size_exact",
+   "old": 5748,
+   "new": 15421,
+   "verdict": "better"
+  },
+  {
+   "metric": "m21 nds-pokeheartgold-arm9 precision",
+   "old": 0.9984,
+   "new": 0.9984,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 nds-pokeheartgold-arm9 recall",
+   "old": 0.9735,
+   "new": 0.9735,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 nds-pokeheartgold-arm9 size_exact",
+   "old": 5156,
+   "new": 9888,
+   "verdict": "better"
+  },
+  {
+   "metric": "m21 ps2-capcom-fighting-evolution precision",
+   "old": 0.9945,
+   "new": 0.9945,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 ps2-capcom-fighting-evolution recall",
+   "old": 0.9741,
+   "new": 0.9741,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 ps2-capcom-fighting-evolution size_exact",
+   "old": 8548,
+   "new": 8548,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 ps2-dungeon-game precision",
+   "old": 0.9835,
+   "new": 0.9835,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 ps2-dungeon-game recall",
+   "old": 0.9872,
+   "new": 0.9872,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 ps2-dungeon-game size_exact",
+   "old": 751,
+   "new": 751,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 psv-need-for-speed-most-wanted precision",
+   "old": 0.9719,
+   "new": 0.9719,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 psv-need-for-speed-most-wanted recall",
+   "old": 0.9734,
+   "new": 0.9734,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 psv-need-for-speed-most-wanted size_exact",
+   "old": 16304,
+   "new": 16304,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 psx-darkstalkers-3 precision",
+   "old": 0.3663,
+   "new": 0.3663,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 psx-darkstalkers-3 recall",
+   "old": 0.9878,
+   "new": 0.9878,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 psx-darkstalkers-3 size_exact",
+   "old": 0,
+   "new": 0,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 x360-black-ops-2 precision",
+   "old": 0.9964,
+   "new": 0.9964,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 x360-black-ops-2 recall",
+   "old": 0.9833,
+   "new": 0.9833,
+   "verdict": "same"
+  },
+  {
+   "metric": "m21 x360-black-ops-2 size_exact",
+   "old": 0,
+   "new": 0,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 MWCC seed 20261010 compiled",
+   "old": 193,
+   "new": 193,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 MWCC seed 20261010 exact",
+   "old": 55,
+   "new": 55,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 MWCC seed 20261010 mean_percent",
+   "old": 76.976,
+   "new": 76.976,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 MWCC seed 20261011 compiled",
+   "old": 194,
+   "new": 194,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 MWCC seed 20261011 exact",
+   "old": 57,
+   "new": 57,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 MWCC seed 20261011 mean_percent",
+   "old": 78.321,
+   "new": 78.321,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 ee-gcc seed 20261010 compiled",
+   "old": 197,
+   "new": 197,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 ee-gcc seed 20261010 exact",
+   "old": 106,
+   "new": 106,
+   "verdict": "same"
+  },
+  {
+   "metric": "m22 ee-gcc seed 20261010 mean_percent",
+   "old": 86.406,
+   "new": 86.406,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-dark-chronicle decompiled",
+   "old": 969,
+   "new": 969,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-dark-chronicle-symtab decompiled",
+   "old": 962,
+   "new": 962,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-dark-cloud decompiled",
+   "old": 936,
+   "new": 936,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-dark-cloud-symtab decompiled",
+   "old": 940,
+   "new": 940,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-digital-devil-saga decompiled",
+   "old": 977,
+   "new": 977,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-fatal-frame decompiled",
+   "old": 942,
+   "new": 942,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-fatal-frame-symtab decompiled",
+   "old": 940,
+   "new": 940,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-god-hand decompiled",
+   "old": 980,
+   "new": 980,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-persona-4 decompiled",
+   "old": 974,
+   "new": 974,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 success ps2-ratchet-clank decompiled",
+   "old": 860,
+   "new": 861,
+   "verdict": "better"
+  },
+  {
+   "metric": "ps2 success ps2-ratchet-clank-pal decompiled",
+   "old": 858,
+   "new": 859,
+   "verdict": "better"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle decompiled",
+   "old": 969,
+   "new": 969,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle gotos",
+   "old": 49,
+   "new": 49,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle labels",
+   "old": 27,
+   "new": 27,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle native_warnings",
+   "old": 2497,
+   "new": 2497,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle precision",
+   "old": 0.9963,
+   "new": 0.9963,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle recall",
+   "old": 0.9987,
+   "new": 0.9987,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle sampled",
+   "old": 969,
+   "new": 969,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle-symtab decompiled",
+   "old": 962,
+   "new": 962,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle-symtab gotos",
+   "old": 84,
+   "new": 84,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle-symtab labels",
+   "old": 41,
+   "new": 41,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle-symtab native_warnings",
+   "old": 2281,
+   "new": 2281,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle-symtab precision",
+   "old": 0.9973,
+   "new": 0.9973,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle-symtab recall",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle-symtab sampled",
+   "old": 962,
+   "new": 962,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-chronicle-symtab success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud decompiled",
+   "old": 936,
+   "new": 936,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud gotos",
+   "old": 48,
+   "new": 48,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud labels",
+   "old": 21,
+   "new": 21,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud native_warnings",
+   "old": 2569,
+   "new": 2569,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud precision",
+   "old": 0.9907,
+   "new": 0.9907,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud recall",
+   "old": 0.9988,
+   "new": 0.9988,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud sampled",
+   "old": 937,
+   "new": 937,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud success_rate",
+   "old": 0.9989,
+   "new": 0.9989,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud-symtab decompiled",
+   "old": 940,
+   "new": 940,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud-symtab gotos",
+   "old": 80,
+   "new": 80,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud-symtab labels",
+   "old": 39,
+   "new": 39,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud-symtab native_warnings",
+   "old": 2398,
+   "new": 2398,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud-symtab precision",
+   "old": 0.9448,
+   "new": 0.9448,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud-symtab recall",
+   "old": 0.9995,
+   "new": 0.9995,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud-symtab sampled",
+   "old": 940,
+   "new": 940,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-dark-cloud-symtab success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-digital-devil-saga decompiled",
+   "old": 977,
+   "new": 977,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-digital-devil-saga gotos",
+   "old": 73,
+   "new": 73,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-digital-devil-saga labels",
+   "old": 43,
+   "new": 43,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-digital-devil-saga native_warnings",
+   "old": 2337,
+   "new": 2337,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-digital-devil-saga precision",
+   "old": 0.9987,
+   "new": 0.9987,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-digital-devil-saga recall",
+   "old": 0.9974,
+   "new": 0.9974,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-digital-devil-saga sampled",
+   "old": 977,
+   "new": 977,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-digital-devil-saga success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame decompiled",
+   "old": 942,
+   "new": 942,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame gotos",
+   "old": 247,
+   "new": 247,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame labels",
+   "old": 93,
+   "new": 93,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame native_warnings",
+   "old": 2968,
+   "new": 2968,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame precision",
+   "old": 0.9993,
+   "new": 0.9993,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame recall",
+   "old": 0.9958,
+   "new": 0.9958,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame sampled",
+   "old": 942,
+   "new": 942,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame-symtab decompiled",
+   "old": 940,
+   "new": 940,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame-symtab gotos",
+   "old": 263,
+   "new": 263,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame-symtab labels",
+   "old": 105,
+   "new": 105,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame-symtab native_warnings",
+   "old": 2412,
+   "new": 2412,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame-symtab precision",
+   "old": 0.9998,
+   "new": 0.9998,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame-symtab recall",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame-symtab sampled",
+   "old": 940,
+   "new": 940,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-fatal-frame-symtab success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-god-hand decompiled",
+   "old": 980,
+   "new": 980,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-god-hand gotos",
+   "old": 186,
+   "new": 186,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-god-hand labels",
+   "old": 95,
+   "new": 95,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-god-hand native_warnings",
+   "old": 2063,
+   "new": 2063,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-god-hand precision",
+   "old": 0.9943,
+   "new": 0.9943,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-god-hand recall",
+   "old": 0.9976,
+   "new": 0.9976,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-god-hand sampled",
+   "old": 980,
+   "new": 980,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-god-hand success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-persona-4 decompiled",
+   "old": 974,
+   "new": 974,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-persona-4 gotos",
+   "old": 101,
+   "new": 101,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-persona-4 labels",
+   "old": 80,
+   "new": 80,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-persona-4 native_warnings",
+   "old": 1841,
+   "new": 1841,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-persona-4 precision",
+   "old": 0.9967,
+   "new": 0.9967,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-persona-4 recall",
+   "old": 0.9992,
+   "new": 0.9992,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-persona-4 sampled",
+   "old": 975,
+   "new": 975,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-persona-4 success_rate",
+   "old": 0.999,
+   "new": 0.999,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank decompiled",
+   "old": 861,
+   "new": 861,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank gotos",
+   "old": 226,
+   "new": 226,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank labels",
+   "old": 117,
+   "new": 117,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank native_warnings",
+   "old": 3495,
+   "new": 3495,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank precision",
+   "old": 0.9965,
+   "new": 0.9965,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank recall",
+   "old": 0.9281,
+   "new": 0.9281,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank sampled",
+   "old": 861,
+   "new": 861,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank-pal decompiled",
+   "old": 859,
+   "new": 859,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank-pal gotos",
+   "old": 230,
+   "new": 230,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank-pal labels",
+   "old": 97,
+   "new": 97,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank-pal native_warnings",
+   "old": 3492,
+   "new": 3492,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank-pal precision",
+   "old": 0.9947,
+   "new": 0.9947,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank-pal recall",
+   "old": 0.9276,
+   "new": 0.9276,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank-pal sampled",
+   "old": 859,
+   "new": 859,
+   "verdict": "same"
+  },
+  {
+   "metric": "ps2 wave ps2-ratchet-clank-pal success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-hot-pixel precision",
+   "old": 0.9057,
+   "new": 0.9057,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-hot-pixel recall",
+   "old": 0.8884,
+   "new": 0.8884,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-hot-pixel success_rate",
+   "old": 0.9974,
+   "new": 0.9974,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-melodie precision",
+   "old": 0.9477,
+   "new": 0.9477,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-melodie recall",
+   "old": 0.9605,
+   "new": 0.9605,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-melodie success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-pac-man-rally precision",
+   "old": 0.928,
+   "new": 0.928,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-pac-man-rally recall",
+   "old": 0.9074,
+   "new": 0.9074,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-pac-man-rally success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-psp-camera-01 precision",
+   "old": 0.9585,
+   "new": 0.9585,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-psp-camera-01 recall",
+   "old": 0.9597,
+   "new": 0.9597,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-psp-camera-01 success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-tetris precision",
+   "old": 0.9671,
+   "new": 0.9671,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-tetris recall",
+   "old": 0.9876,
+   "new": 0.9876,
+   "verdict": "same"
+  },
+  {
+   "metric": "psp n=200 psp-tetris success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gba-kh-chain-of-memories decompiled",
+   "old": 961,
+   "new": 961,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gba-kh-chain-of-memories gotos",
+   "old": 68,
+   "new": 94,
+   "verdict": "changed"
+  },
+  {
+   "metric": "wave gba-kh-chain-of-memories labels",
+   "old": 36,
+   "new": 44,
+   "verdict": "changed"
+  },
+  {
+   "metric": "wave gba-kh-chain-of-memories native_warnings",
+   "old": 3124,
+   "new": 3065,
+   "verdict": "changed"
+  },
+  {
+   "metric": "wave gba-kh-chain-of-memories precision",
+   "old": 0.964,
+   "new": 0.964,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gba-kh-chain-of-memories recall",
+   "old": 0.9582,
+   "new": 0.9582,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gba-kh-chain-of-memories sampled",
+   "old": 961,
+   "new": 961,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gba-kh-chain-of-memories success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gc-pikmin-2 decompiled",
+   "old": 986,
+   "new": 986,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gc-pikmin-2 gotos",
+   "old": 59,
+   "new": 59,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gc-pikmin-2 labels",
+   "old": 31,
+   "new": 31,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gc-pikmin-2 native_warnings",
+   "old": 2628,
+   "new": 2628,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gc-pikmin-2 precision",
+   "old": 0.9984,
+   "new": 0.9984,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gc-pikmin-2 recall",
+   "old": 0.9998,
+   "new": 0.9998,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gc-pikmin-2 sampled",
+   "old": 986,
+   "new": 986,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave gc-pikmin-2 success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave n64-super-mario-64 decompiled",
+   "old": 923,
+   "new": 923,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave n64-super-mario-64 gotos",
+   "old": 15,
+   "new": 15,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave n64-super-mario-64 labels",
+   "old": 4,
+   "new": 4,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave n64-super-mario-64 native_warnings",
+   "old": 1754,
+   "new": 1754,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave n64-super-mario-64 precision",
+   "old": 0.9053,
+   "new": 0.9053,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave n64-super-mario-64 recall",
+   "old": 0.9974,
+   "new": 0.9974,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave n64-super-mario-64 sampled",
+   "old": 923,
+   "new": 923,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave n64-super-mario-64 success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave nds-kh-358-2-days decompiled",
+   "old": 987,
+   "new": 987,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave nds-kh-358-2-days gotos",
+   "old": 24,
+   "new": 55,
+   "verdict": "changed"
+  },
+  {
+   "metric": "wave nds-kh-358-2-days labels",
+   "old": 10,
+   "new": 19,
+   "verdict": "changed"
+  },
+  {
+   "metric": "wave nds-kh-358-2-days native_warnings",
+   "old": 2673,
+   "new": 2590,
+   "verdict": "changed"
+  },
+  {
+   "metric": "wave nds-kh-358-2-days precision",
+   "old": 0.9922,
+   "new": 0.9922,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave nds-kh-358-2-days recall",
+   "old": 0.8863,
+   "new": 0.8863,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave nds-kh-358-2-days sampled",
+   "old": 987,
+   "new": 987,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave nds-kh-358-2-days success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-hot-pixel decompiled",
+   "old": 940,
+   "new": 940,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-hot-pixel gotos",
+   "old": 614,
+   "new": 614,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-hot-pixel labels",
+   "old": 312,
+   "new": 312,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-hot-pixel native_warnings",
+   "old": 2580,
+   "new": 2580,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-hot-pixel precision",
+   "old": 0.9057,
+   "new": 0.9057,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-hot-pixel recall",
+   "old": 0.8884,
+   "new": 0.8884,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-hot-pixel sampled",
+   "old": 940,
+   "new": 940,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-hot-pixel success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-melodie decompiled",
+   "old": 851,
+   "new": 851,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-melodie gotos",
+   "old": 114,
+   "new": 114,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-melodie labels",
+   "old": 54,
+   "new": 54,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-melodie native_warnings",
+   "old": 2030,
+   "new": 2030,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-melodie precision",
+   "old": 0.9477,
+   "new": 0.9477,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-melodie recall",
+   "old": 0.9605,
+   "new": 0.9605,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-melodie sampled",
+   "old": 851,
+   "new": 851,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-melodie success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-pac-man-rally decompiled",
+   "old": 862,
+   "new": 862,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-pac-man-rally gotos",
+   "old": 61,
+   "new": 61,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-pac-man-rally labels",
+   "old": 28,
+   "new": 28,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-pac-man-rally native_warnings",
+   "old": 1839,
+   "new": 1839,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-pac-man-rally precision",
+   "old": 0.928,
+   "new": 0.928,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-pac-man-rally recall",
+   "old": 0.9074,
+   "new": 0.9074,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-pac-man-rally sampled",
+   "old": 862,
+   "new": 862,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-pac-man-rally success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-psp-camera-01 decompiled",
+   "old": 938,
+   "new": 938,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-psp-camera-01 gotos",
+   "old": 48,
+   "new": 48,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-psp-camera-01 labels",
+   "old": 22,
+   "new": 22,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-psp-camera-01 native_warnings",
+   "old": 2049,
+   "new": 2049,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-psp-camera-01 precision",
+   "old": 0.9585,
+   "new": 0.9585,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-psp-camera-01 recall",
+   "old": 0.9597,
+   "new": 0.9597,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-psp-camera-01 sampled",
+   "old": 938,
+   "new": 938,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-psp-camera-01 success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-tetris decompiled",
+   "old": 939,
+   "new": 939,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-tetris gotos",
+   "old": 105,
+   "new": 105,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-tetris labels",
+   "old": 65,
+   "new": 65,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-tetris native_warnings",
+   "old": 1467,
+   "new": 1467,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-tetris precision",
+   "old": 0.9671,
+   "new": 0.9671,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-tetris recall",
+   "old": 0.9876,
+   "new": 0.9876,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-tetris sampled",
+   "old": 939,
+   "new": 939,
+   "verdict": "same"
+  },
+  {
+   "metric": "wave psp-tetris success_rate",
+   "old": 1.0,
+   "new": 1.0,
+   "verdict": "same"
+  }
+ ]
+}

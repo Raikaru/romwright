@@ -1,0 +1,12 @@
+{
+  "id": "m20-005",
+  "recorded_at": "2026-10-15T09:57:30.983614+00:00",
+  "status": "pass",
+  "passed": true,
+  "summary": "8795 functions (8794 symtab FUNC), 5221 DWARF1 subroutines all agreeing, mdebug phase 0.060s",
+  "metrics": {
+    "functions": 8795,
+    "symtab_func": 8794,
+    "dwarf1_subroutines": 5221
+  }
+}

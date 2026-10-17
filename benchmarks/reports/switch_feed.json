@@ -1,0 +1,1145 @@
+{
+ "schema": "switch_feed/1",
+ "generated": "2026-10-09T01:31:45+00:00",
+ "tools": "f30f26e1b0e4219a",
+ "n": 200,
+ "seed": 20261006,
+ "images": {
+  "gba-pokeemerald": {
+   "status": "ran",
+   "program": "gba",
+   "import_seconds": 54.8,
+   "stored": {
+    "tables": 617,
+    "functions": 578,
+    "targets": 5031
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 9,
+    "by_class": {
+     "confirmed": 9
+    },
+    "supplied_by_stored": 9,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 769,
+    "decompiled": 769,
+    "printed_switches": 617,
+    "by_class": {
+     "confirmed": 617
+    },
+    "supplied_by_stored": 617,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 578,
+    "text_differs": [],
+    "off": {
+     "functions": 578,
+     "lines": 57271,
+     "gotos": 150,
+     "switches": 617
+    },
+    "apply": {
+     "functions": 578,
+     "lines": 57271,
+     "gotos": 150,
+     "switches": 617
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 5671,
+    "gotos": 4,
+    "switches": 9
+   },
+   "failures": {
+    "apply": [],
+    "off": [],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 578,
+    "printed_switches": 617,
+    "by_class": {
+     "confirmed": 617
+    },
+    "disagreements": [],
+    "stored_not_printed": []
+   }
+  },
+  "nds-pokeheartgold-arm9": {
+   "status": "ran",
+   "program": "nds.arm9",
+   "import_seconds": 110.1,
+   "stored": {
+    "tables": 408,
+    "functions": 377,
+    "targets": 3348
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 9,
+    "by_class": {
+     "confirmed": 9
+    },
+    "supplied_by_stored": 9,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 569,
+    "decompiled": 569,
+    "printed_switches": 406,
+    "by_class": {
+     "confirmed": 405,
+     "observed:stock-subset": 1
+    },
+    "supplied_by_stored": 405,
+    "supplied_share": 0.9975,
+    "disagreements": [
+     {
+      "function": "020a7448",
+      "branch": "020a7514",
+      "class": "observed:stock-subset",
+      "stored": 4,
+      "stock": 2,
+      "common": 2
+     }
+    ],
+    "printed_without_stored_table": [],
+    "stored_not_printed": [
+     {
+      "function": "02001720",
+      "branch": "02001764",
+      "stored": 2
+     },
+     {
+      "function": "02001778",
+      "branch": "02001794",
+      "stored": 2
+     }
+    ]
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 377,
+    "text_differs": [],
+    "off": {
+     "functions": 377,
+     "lines": 33862,
+     "gotos": 211,
+     "switches": 406
+    },
+    "apply": {
+     "functions": 377,
+     "lines": 33862,
+     "gotos": 211,
+     "switches": 406
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 5135,
+    "gotos": 0,
+    "switches": 9
+   },
+   "failures": {
+    "apply": [],
+    "off": [],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 377,
+    "printed_switches": 406,
+    "by_class": {
+     "confirmed": 405,
+     "observed:stock-subset": 1
+    },
+    "disagreements": [
+     {
+      "function": "020a7448",
+      "branch": "020a7514",
+      "class": "observed:stock-subset",
+      "stored": 4,
+      "stock": 2,
+      "common": 2
+     }
+    ],
+    "stored_not_printed": [
+     {
+      "function": "02001720",
+      "branch": "02001764",
+      "stored": 2,
+      "function_failed": false
+     },
+     {
+      "function": "02001778",
+      "branch": "02001794",
+      "stored": 2,
+      "function_failed": false
+     }
+    ]
+   }
+  },
+  "ps2-capcom-fighting-evolution": {
+   "status": "ran",
+   "program": "capcom",
+   "import_seconds": 42.9,
+   "stored": {
+    "tables": 468,
+    "functions": 408,
+    "targets": 3278
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 18,
+    "by_class": {
+     "confirmed": 18
+    },
+    "supplied_by_stored": 18,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 592,
+    "decompiled": 590,
+    "printed_switches": 617,
+    "by_class": {
+     "confirmed": 615,
+     "applied:stock-failed": 2
+    },
+    "supplied_by_stored": 617,
+    "supplied_share": 1.0,
+    "disagreements": [
+     {
+      "function": "001a2c40",
+      "branch": "001a2d6c",
+      "class": "applied:stock-failed",
+      "stored": 5,
+      "stock": null,
+      "common": 0
+     },
+     {
+      "function": "0020c960",
+      "branch": "0020c9b4",
+      "class": "applied:stock-failed",
+      "stored": 5,
+      "stock": null,
+      "common": 0
+     }
+    ],
+    "printed_without_stored_table": [],
+    "stored_not_printed": [
+     {
+      "function": "001aad20",
+      "branch": "001aad38",
+      "stored": 95
+     },
+     {
+      "function": "001ab430",
+      "branch": "001ab448",
+      "stored": 76
+     }
+    ]
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 408,
+    "text_differs": [
+     {
+      "function": "001a2c40",
+      "off_lines": 43,
+      "apply_lines": 79,
+      "off_gotos": 0,
+      "apply_gotos": 0,
+      "off_switches": 0,
+      "apply_switches": 1
+     },
+     {
+      "function": "0020c960",
+      "off_lines": 11,
+      "apply_lines": 62,
+      "off_gotos": 0,
+      "apply_gotos": 0,
+      "off_switches": 0,
+      "apply_switches": 1
+     }
+    ],
+    "off": {
+     "functions": 406,
+     "lines": 82169,
+     "gotos": 443,
+     "switches": 615
+    },
+    "apply": {
+     "functions": 406,
+     "lines": 82256,
+     "gotos": 443,
+     "switches": 617
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 9252,
+    "gotos": 4,
+    "switches": 18
+   },
+   "failures": {
+    "apply": [
+     "001aad20",
+     "001ab430"
+    ],
+    "off": [
+     "001aad20",
+     "001ab430"
+    ],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 408,
+    "printed_switches": 615,
+    "by_class": {
+     "confirmed": 615
+    },
+    "disagreements": [],
+    "stored_not_printed": [
+     {
+      "function": "001a2c40",
+      "branch": "001a2d6c",
+      "stored": 5,
+      "function_failed": false
+     },
+     {
+      "function": "001aad20",
+      "branch": "001aad38",
+      "stored": 95,
+      "function_failed": true
+     },
+     {
+      "function": "001ab430",
+      "branch": "001ab448",
+      "stored": 76,
+      "function_failed": true
+     },
+     {
+      "function": "0020c960",
+      "branch": "0020c9b4",
+      "stored": 5,
+      "function_failed": false
+     }
+    ]
+   }
+  },
+  "ps2-dungeon-game": {
+   "status": "ran",
+   "program": "dungeon",
+   "import_seconds": 2.5,
+   "stored": {
+    "tables": 13,
+    "functions": 8,
+    "targets": 98
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 1,
+    "by_class": {
+     "confirmed": 1
+    },
+    "supplied_by_stored": 1,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 207,
+    "decompiled": 207,
+    "printed_switches": 13,
+    "by_class": {
+     "confirmed": 12,
+     "applied:stock-failed": 1
+    },
+    "supplied_by_stored": 13,
+    "supplied_share": 1.0,
+    "disagreements": [
+     {
+      "function": "00129cb0",
+      "branch": "00129d10",
+      "class": "applied:stock-failed",
+      "stored": 5,
+      "stock": null,
+      "common": 0
+     }
+    ],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 8,
+    "text_differs": [
+     {
+      "function": "00129cb0",
+      "off_lines": 43,
+      "apply_lines": 63,
+      "off_gotos": 0,
+      "apply_gotos": 0,
+      "off_switches": 1,
+      "apply_switches": 2
+     }
+    ],
+    "off": {
+     "functions": 8,
+     "lines": 2403,
+     "gotos": 39,
+     "switches": 12
+    },
+    "apply": {
+     "functions": 8,
+     "lines": 2423,
+     "gotos": 39,
+     "switches": 13
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 12357,
+    "gotos": 42,
+    "switches": 1
+   },
+   "failures": {
+    "apply": [],
+    "off": [],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 8,
+    "printed_switches": 12,
+    "by_class": {
+     "confirmed": 12
+    },
+    "disagreements": [],
+    "stored_not_printed": [
+     {
+      "function": "00129cb0",
+      "branch": "00129d10",
+      "stored": 5,
+      "function_failed": false
+     }
+    ]
+   }
+  },
+  "psx-darkstalkers-3": {
+   "status": "ran",
+   "program": "psx",
+   "import_seconds": 2.8,
+   "stored": {
+    "tables": 21,
+    "functions": 19,
+    "targets": 136
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 2,
+    "by_class": {
+     "confirmed": 2
+    },
+    "supplied_by_stored": 2,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 217,
+    "decompiled": 216,
+    "printed_switches": 20,
+    "by_class": {
+     "confirmed": 20
+    },
+    "supplied_by_stored": 20,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": [
+     {
+      "function": "8018b570",
+      "branch": "8018b660",
+      "stored": 4
+     }
+    ]
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 19,
+    "text_differs": [],
+    "off": {
+     "functions": 18,
+     "lines": 2405,
+     "gotos": 16,
+     "switches": 20
+    },
+    "apply": {
+     "functions": 18,
+     "lines": 2405,
+     "gotos": 16,
+     "switches": 20
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 6693,
+    "gotos": 7,
+    "switches": 2
+   },
+   "failures": {
+    "apply": [
+     "8018b570"
+    ],
+    "off": [
+     "8018b570"
+    ],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 19,
+    "printed_switches": 20,
+    "by_class": {
+     "confirmed": 20
+    },
+    "disagreements": [],
+    "stored_not_printed": [
+     {
+      "function": "8018b570",
+      "branch": "8018b660",
+      "stored": 4,
+      "function_failed": true
+     }
+    ]
+   }
+  },
+  "psv-need-for-speed-most-wanted": {
+   "status": "ran",
+   "program": "vita",
+   "import_seconds": 184.1,
+   "stored": {
+    "tables": 607,
+    "functions": 484,
+    "targets": 5049
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 1,
+    "by_class": {
+     "confirmed": 1
+    },
+    "supplied_by_stored": 1,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 683,
+    "decompiled": 679,
+    "printed_switches": 599,
+    "by_class": {
+     "confirmed": 599
+    },
+    "supplied_by_stored": 599,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": [
+     {
+      "function": "811cd8be",
+      "branch": "811cdbca",
+      "stored": 6
+     },
+     {
+      "function": "811e99c0",
+      "branch": "811e9b70",
+      "stored": 49
+     },
+     {
+      "function": "811e99c0",
+      "branch": "811e9bd6",
+      "stored": 38
+     },
+     {
+      "function": "8130ffc0",
+      "branch": "813137bc",
+      "stored": 8
+     },
+     {
+      "function": "8130ffc0",
+      "branch": "813138b4",
+      "stored": 8
+     },
+     {
+      "function": "8140c5c2",
+      "branch": "8140c5d8",
+      "stored": 2
+     },
+     {
+      "function": "814e180a",
+      "branch": "814e1874",
+      "stored": 13
+     },
+     {
+      "function": "814e180a",
+      "branch": "814e197a",
+      "stored": 75
+     },
+     {
+      "function": "814e180a",
+      "branch": "814e1ab0",
+      "stored": 5
+     }
+    ]
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 484,
+    "text_differs": [],
+    "off": {
+     "functions": 481,
+     "lines": 127099,
+     "gotos": 1086,
+     "switches": 601
+    },
+    "apply": {
+     "functions": 480,
+     "lines": 124462,
+     "gotos": 1071,
+     "switches": 599
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 14053,
+    "gotos": 26,
+    "switches": 1
+   },
+   "failures": {
+    "apply": [
+     "811cd8be",
+     "811e99c0",
+     "8130ffc0",
+     "814e180a"
+    ],
+    "off": [
+     "811cd8be",
+     "811e99c0",
+     "814e180a"
+    ],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 484,
+    "printed_switches": 599,
+    "by_class": {
+     "confirmed": 599
+    },
+    "disagreements": [],
+    "stored_not_printed": [
+     {
+      "function": "811cd8be",
+      "branch": "811cdbca",
+      "stored": 6,
+      "function_failed": true
+     },
+     {
+      "function": "811e99c0",
+      "branch": "811e9b70",
+      "stored": 49,
+      "function_failed": true
+     },
+     {
+      "function": "811e99c0",
+      "branch": "811e9bd6",
+      "stored": 38,
+      "function_failed": true
+     },
+     {
+      "function": "8140c5c2",
+      "branch": "8140c5d8",
+      "stored": 2,
+      "function_failed": false
+     },
+     {
+      "function": "81428f64",
+      "branch": "81428fcc",
+      "stored": 4,
+      "function_failed": true
+     },
+     {
+      "function": "81428f64",
+      "branch": "81429010",
+      "stored": 35,
+      "function_failed": true
+     },
+     {
+      "function": "814e180a",
+      "branch": "814e1874",
+      "stored": 13,
+      "function_failed": true
+     },
+     {
+      "function": "814e180a",
+      "branch": "814e197a",
+      "stored": 75,
+      "function_failed": true
+     },
+     {
+      "function": "814e180a",
+      "branch": "814e1ab0",
+      "stored": 5,
+      "function_failed": true
+     }
+    ]
+   }
+  },
+  "x360-black-ops-2": {
+   "status": "ran",
+   "program": "x360.xex",
+   "import_seconds": 49.7,
+   "stored": {
+    "tables": 248,
+    "functions": 232,
+    "targets": 3325
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 1,
+    "by_class": {
+     "confirmed": 1
+    },
+    "supplied_by_stored": 1,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 431,
+    "decompiled": 431,
+    "printed_switches": 246,
+    "by_class": {
+     "confirmed": 244,
+     "applied:stock-subset": 2
+    },
+    "supplied_by_stored": 246,
+    "supplied_share": 1.0,
+    "disagreements": [
+     {
+      "function": "823bfeb8",
+      "branch": "823bff98",
+      "class": "applied:stock-subset",
+      "stored": 8,
+      "stock": 1,
+      "common": 1
+     },
+     {
+      "function": "827c8610",
+      "branch": "827c8864",
+      "class": "applied:stock-subset",
+      "stored": 8,
+      "stock": 1,
+      "common": 1
+     }
+    ],
+    "printed_without_stored_table": [],
+    "stored_not_printed": [
+     {
+      "function": "827abdb8",
+      "branch": "827abe88",
+      "stored": 25
+     },
+     {
+      "function": "827d72a0",
+      "branch": "827d7414",
+      "stored": 14
+     }
+    ]
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 232,
+    "text_differs": [
+     {
+      "function": "823bfeb8",
+      "off_lines": 72,
+      "apply_lines": 108,
+      "off_gotos": 0,
+      "apply_gotos": 0,
+      "off_switches": 2,
+      "apply_switches": 2
+     },
+     {
+      "function": "827c8610",
+      "off_lines": 107,
+      "apply_lines": 148,
+      "off_gotos": 0,
+      "apply_gotos": 0,
+      "off_switches": 0,
+      "apply_switches": 1
+     }
+    ],
+    "off": {
+     "functions": 232,
+     "lines": 55869,
+     "gotos": 1001,
+     "switches": 245
+    },
+    "apply": {
+     "functions": 232,
+     "lines": 55946,
+     "gotos": 1001,
+     "switches": 246
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 10214,
+    "gotos": 6,
+    "switches": 1
+   },
+   "failures": {
+    "apply": [],
+    "off": [],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 232,
+    "printed_switches": 245,
+    "by_class": {
+     "confirmed": 244,
+     "observed:stock-subset": 1
+    },
+    "disagreements": [
+     {
+      "function": "823bfeb8",
+      "branch": "823bff98",
+      "class": "observed:stock-subset",
+      "stored": 8,
+      "stock": 1,
+      "common": 1
+     }
+    ],
+    "stored_not_printed": [
+     {
+      "function": "827abdb8",
+      "branch": "827abe88",
+      "stored": 25,
+      "function_failed": false
+     },
+     {
+      "function": "827c8610",
+      "branch": "827c8864",
+      "stored": 8,
+      "function_failed": false
+     },
+     {
+      "function": "827d72a0",
+      "branch": "827d7414",
+      "stored": 14,
+      "function_failed": false
+     }
+    ]
+   }
+  },
+  "gc-animal-crossing": {
+   "status": "ran",
+   "program": "gc",
+   "import_seconds": 5.2,
+   "stored": {
+    "tables": 114,
+    "functions": 60,
+    "targets": 1147
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 14,
+    "by_class": {
+     "confirmed": 14
+    },
+    "supplied_by_stored": 14,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 254,
+    "decompiled": 254,
+    "printed_switches": 114,
+    "by_class": {
+     "confirmed": 114
+    },
+    "supplied_by_stored": 114,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 60,
+    "text_differs": [],
+    "off": {
+     "functions": 60,
+     "lines": 10840,
+     "gotos": 29,
+     "switches": 114
+    },
+    "apply": {
+     "functions": 60,
+     "lines": 10840,
+     "gotos": 29,
+     "switches": 114
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 10192,
+    "gotos": 12,
+    "switches": 14
+   },
+   "failures": {
+    "apply": [],
+    "off": [],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 60,
+    "printed_switches": 114,
+    "by_class": {
+     "confirmed": 114
+    },
+    "disagreements": [],
+    "stored_not_printed": []
+   }
+  },
+  "psp-puzzle-bobble-pocket": {
+   "status": "ran",
+   "program": "psp",
+   "import_seconds": 4.0,
+   "stored": {
+    "tables": 18,
+    "functions": 18,
+    "targets": 218
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 5,
+    "by_class": {
+     "confirmed": 5
+    },
+    "supplied_by_stored": 5,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 213,
+    "decompiled": 213,
+    "printed_switches": 17,
+    "by_class": {
+     "confirmed": 17
+    },
+    "supplied_by_stored": 17,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": [
+     {
+      "function": "000124d4",
+      "branch": "00012560",
+      "stored": 7
+     }
+    ]
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 18,
+    "text_differs": [],
+    "off": {
+     "functions": 18,
+     "lines": 6752,
+     "gotos": 159,
+     "switches": 17
+    },
+    "apply": {
+     "functions": 18,
+     "lines": 6752,
+     "gotos": 159,
+     "switches": 17
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 13302,
+    "gotos": 160,
+    "switches": 5
+   },
+   "failures": {
+    "apply": [],
+    "off": [],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 18,
+    "printed_switches": 17,
+    "by_class": {
+     "confirmed": 17
+    },
+    "disagreements": [],
+    "stored_not_printed": [
+     {
+      "function": "000124d4",
+      "branch": "00012560",
+      "stored": 7,
+      "function_failed": false
+     }
+    ]
+   }
+  },
+  "psp-puzzle-bobble-pocket-symtab": {
+   "status": "ran",
+   "program": "psp",
+   "import_seconds": 3.9,
+   "stored": {
+    "tables": 19,
+    "functions": 19,
+    "targets": 223
+   },
+   "sample": {
+    "functions": 200,
+    "decompiled": 200,
+    "printed_switches": 4,
+    "by_class": {
+     "confirmed": 4
+    },
+    "supplied_by_stored": 4,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": []
+   },
+   "extended": {
+    "functions": 215,
+    "decompiled": 215,
+    "printed_switches": 18,
+    "by_class": {
+     "confirmed": 18
+    },
+    "supplied_by_stored": 18,
+    "supplied_share": 1.0,
+    "disagreements": [],
+    "printed_without_stored_table": [],
+    "stored_not_printed": [
+     {
+      "function": "000124d4",
+      "branch": "00012560",
+      "stored": 7
+     }
+    ]
+   },
+   "off_vs_apply_on_holders": {
+    "functions": 19,
+    "text_differs": [],
+    "off": {
+     "functions": 19,
+     "lines": 6925,
+     "gotos": 160,
+     "switches": 18
+    },
+    "apply": {
+     "functions": 19,
+     "lines": 6925,
+     "gotos": 160,
+     "switches": 18
+    }
+   },
+   "observe_differs_from_off": [],
+   "sample_totals_apply": {
+    "functions": 200,
+    "lines": 12316,
+    "gotos": 137,
+    "switches": 4
+   },
+   "failures": {
+    "apply": [],
+    "off": [],
+    "observe": []
+   },
+   "before_cutover": {
+    "functions": 19,
+    "printed_switches": 18,
+    "by_class": {
+     "confirmed": 18
+    },
+    "disagreements": [],
+    "stored_not_printed": [
+     {
+      "function": "000124d4",
+      "branch": "00012560",
+      "stored": 7,
+      "function_failed": false
+     }
+    ]
+   }
+  }
+ },
+ "total_sample": {
+  "printed_switches": 64,
+  "supplied_by_stored": 64,
+  "supplied_share": 1.0,
+  "by_class": {
+   "confirmed": 64
+  }
+ },
+ "total_extended": {
+  "printed_switches": 2667,
+  "supplied_by_stored": 2666,
+  "supplied_share": 0.9996,
+  "by_class": {
+   "confirmed": 2661,
+   "observed:stock-subset": 1,
+   "applied:stock-failed": 3,
+   "applied:stock-subset": 2
+  }
+ },
+ "total_before_cutover": {
+  "printed_switches": 2663,
+  "by_class": {
+   "confirmed": 2661,
+   "observed:stock-subset": 2
+  }
+ }
+}

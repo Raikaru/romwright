@@ -1,0 +1,44 @@
+{
+ "schema": "m22-003-functions/1",
+ "lane": "gh",
+ "game": "ps2-god-hand",
+ "tag": "bis-no_EXPORT_CALLEE_CONVENTIONS",
+ "env": {},
+ "layers": [
+  "romwright"
+ ],
+ "seed": 20261012,
+ "n": 1,
+ "matched_count": 7367,
+ "functions": {
+  "0015a878": {
+   "name": "Quaternion_SetVectorRotation",
+   "address": "0x15a878",
+   "size": 296,
+   "file": "src/cod/0015a878.c",
+   "compiler": "ee-gcc2.95.3-136",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 22.391891
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 22.391891
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 22.391891
+     }
+    }
+   }
+  }
+ }
+}

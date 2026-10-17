@@ -1,0 +1,102 @@
+{
+ "schema": "m22-003-functions/1",
+ "lane": "dc",
+ "game": "ps2-dark-chronicle",
+ "tag": "bis-nofs",
+ "env": {},
+ "layers": [
+  "romwright"
+ ],
+ "seed": 20261012,
+ "n": 3,
+ "matched_count": 6627,
+ "functions": {
+  "00136df0": {
+   "name": "SetBSphere__8mgCFrameFPff",
+   "address": "0x136df0",
+   "size": 68,
+   "file": "ps2/src/mg_frame.cpp",
+   "compiler": "mwcps2-3.0-011126",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.70588
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.70588
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.70588
+     }
+    }
+   }
+  },
+  "001383c0": {
+   "name": "SetAttrParamObjAlpha__8mgCFrameFfi",
+   "address": "0x1383c0",
+   "size": 108,
+   "file": "ps2/src/mg_frame.cpp",
+   "compiler": "mwcps2-3.0-011126",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.0
+     }
+    }
+   }
+  },
+  "0016bc60": {
+   "name": "EntryDamage2__12CActionCharaFP8mgCFrameP8mgCFramePcfPcffPc",
+   "address": "0x16bc60",
+   "size": 352,
+   "file": "ps2/src/actionchara.cpp",
+   "compiler": "mwcps2-3.0-011126",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.295456
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.295456
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.295456
+     }
+    }
+   }
+  }
+ }
+}

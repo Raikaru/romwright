@@ -1,0 +1,6157 @@
+{
+ "schema": "console-research/1",
+ "generated": "2026-10-09T13:32:06+00:00",
+ "tools": "dd85b94735d35bf0",
+ "cli": "/home/raikaru/runs/ProtoWork/final2/target/release/romwright-cli",
+ "n": 200,
+ "seed": 20261006,
+ "thresholds": {
+  "rate": 0.005,
+  "count_relative": 0.01
+ },
+ "configs": {
+  "default": {
+   "name": "default",
+   "env": {},
+   "component": "all research (default vs baseline-off)",
+   "reference": "baseline-off",
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "baseline-off": {
+   "name": "baseline-off",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": "",
+    "ROMWRIGHT_NO_SWITCH_VSA": "1",
+    "ROMWRIGHT_NO_SWITCH_DECOMPILER": "1",
+    "ROMWRIGHT_RUST_STRUCTURING": "none"
+   },
+   "component": "reference",
+   "reference": null,
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "infer-prototypes": {
+   "name": "infer-prototypes",
+   "env": {},
+   "component": "persisted prototypes (infer_prototypes job)",
+   "reference": "default",
+   "sign": 1,
+   "infer_prototypes": true
+  },
+  "inferred-types-off": {
+   "name": "inferred-types-off",
+   "env": {
+    "ROMWRIGHT_INFERRED_TYPES": "0"
+   },
+   "component": "inferred types -> prototypes",
+   "reference": "infer-prototypes",
+   "sign": -1,
+   "infer_prototypes": true
+  }
+ },
+ "images": {
+  "gba-pokeemerald": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 4,
+      "labels": 2,
+      "irregular_functions": 189,
+      "native_warnings": 566,
+      "text_warnings": 190,
+      "lines": 5679,
+      "median_seconds": 0.483,
+      "max_seconds": 0.62,
+      "wall_seconds": 32.6,
+      "recall": 0.9737,
+      "precision": 0.9971,
+      "discovered": 15484,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.975,
+      "type_slots": 376,
+      "type_exact": 223,
+      "type_partial": 0,
+      "type_wrong": 153,
+      "type_exact_rate": 0.5931
+     },
+     "import": {
+      "seconds": 54.9,
+      "switch_stats": {
+       "vsa_resolved": 528,
+       "vsa_refused": 126,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/gba-pokeemerald/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9504,
+       "to": 0.9737,
+       "delta": 0.0233,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.997,
+       "to": 0.9971,
+       "delta": 0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.965,
+       "to": 1.0,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 56,
+       "to": 4,
+       "delta": -52,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 24,
+       "to": 2,
+       "delta": -22,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 541,
+       "to": 541,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5544,
+       "to": 5576,
+       "delta": 32,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.94,
+       "to": 0.975,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5771,
+       "to": 0.5931,
+       "delta": 0.016,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9504,
+       "to": 0.9737,
+       "delta": 0.0233,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.997,
+       "to": 0.9971,
+       "delta": 0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.965,
+       "to": 1.0,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 56,
+       "to": 4,
+       "delta": -52,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 24,
+       "to": 2,
+       "delta": -22,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 541,
+       "to": 541,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5544,
+       "to": 5576,
+       "delta": 32,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.94,
+       "to": 0.975,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5771,
+       "to": 0.5931,
+       "delta": 0.016,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 193,
+      "success_rate": 0.965,
+      "gotos": 56,
+      "labels": 24,
+      "irregular_functions": 183,
+      "native_warnings": 541,
+      "text_warnings": 184,
+      "lines": 5544,
+      "median_seconds": 0.448,
+      "max_seconds": 0.51,
+      "wall_seconds": 29.2,
+      "recall": 0.9504,
+      "precision": 0.997,
+      "discovered": 15116,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.94,
+      "type_slots": 376,
+      "type_exact": 217,
+      "type_partial": 0,
+      "type_wrong": 159,
+      "type_exact_rate": 0.5771
+     },
+     "import": {
+      "seconds": 48.4,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/gba-pokeemerald/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9737,
+       "to": 0.9504,
+       "delta": -0.0233,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9971,
+       "to": 0.997,
+       "delta": -0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 0.965,
+       "delta": -0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 56,
+       "delta": 52,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 2,
+       "to": 24,
+       "delta": 22,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 541,
+       "to": 541,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5576,
+       "to": 5544,
+       "delta": -32,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.975,
+       "to": 0.94,
+       "delta": -0.035,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5931,
+       "to": 0.5771,
+       "delta": -0.016,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 4,
+      "labels": 2,
+      "irregular_functions": 189,
+      "native_warnings": 199,
+      "text_warnings": 190,
+      "lines": 5641,
+      "median_seconds": 0.514,
+      "max_seconds": 0.614,
+      "wall_seconds": 34.6,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.98,
+      "type_slots": 376,
+      "type_exact": 260,
+      "type_partial": 0,
+      "type_wrong": 116,
+      "type_exact_rate": 0.6915
+     },
+     "import": {
+      "seconds": 54.9,
+      "switch_stats": {
+       "vsa_resolved": 528,
+       "vsa_refused": 126,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 262.5,
+      "report": {
+       "analyzed": 34764,
+       "changed": 20697,
+       "decompiler_failures": 3,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 3
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/gba-pokeemerald/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 2,
+       "to": 2,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 189,
+       "to": 189,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 566,
+       "to": 199,
+       "delta": -367,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 190,
+       "to": 190,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5679,
+       "to": 5641,
+       "delta": -38,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.975,
+       "to": 0.98,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5931,
+       "to": 0.6915,
+       "delta": 0.0984,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.965,
+       "to": 1.0,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 56,
+       "to": 4,
+       "delta": -52,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 24,
+       "to": 2,
+       "delta": -22,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 541,
+       "to": 193,
+       "delta": -348,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5544,
+       "to": 5538,
+       "delta": -6,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.94,
+       "to": 0.98,
+       "delta": 0.04,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5771,
+       "to": 0.6915,
+       "delta": 0.1144,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 2,
+       "to": 2,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 189,
+       "to": 189,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 566,
+       "to": 199,
+       "delta": -367,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 190,
+       "to": 190,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5679,
+       "to": 5641,
+       "delta": -38,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.975,
+       "to": 0.98,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5931,
+       "to": 0.6915,
+       "delta": 0.0984,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 4,
+      "labels": 2,
+      "irregular_functions": 189,
+      "native_warnings": 199,
+      "text_warnings": 190,
+      "lines": 5639,
+      "median_seconds": 0.507,
+      "max_seconds": 0.62,
+      "wall_seconds": 34.2,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.98,
+      "type_slots": 376,
+      "type_exact": 221,
+      "type_partial": 0,
+      "type_wrong": 155,
+      "type_exact_rate": 0.5878
+     },
+     "import": {
+      "seconds": 54.9,
+      "switch_stats": {
+       "vsa_resolved": 528,
+       "vsa_refused": 126,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 254.1,
+      "report": {
+       "analyzed": 34365,
+       "changed": 19532,
+       "decompiler_failures": 3,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 3
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/gba-pokeemerald/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 2,
+       "to": 2,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 189,
+       "to": 189,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 566,
+       "to": 199,
+       "delta": -367,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 190,
+       "to": 190,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5679,
+       "to": 5639,
+       "delta": -40,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.975,
+       "to": 0.98,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5931,
+       "to": 0.5878,
+       "delta": -0.0053,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.965,
+       "to": 1.0,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 56,
+       "to": 4,
+       "delta": -52,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 24,
+       "to": 2,
+       "delta": -22,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 541,
+       "to": 193,
+       "delta": -348,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5544,
+       "to": 5536,
+       "delta": -8,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.94,
+       "to": 0.98,
+       "delta": 0.04,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5771,
+       "to": 0.5878,
+       "delta": 0.0107,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 2,
+       "to": 2,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 189,
+       "to": 189,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 199,
+       "to": 199,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 190,
+       "to": 190,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5641,
+       "to": 5639,
+       "delta": -2,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.98,
+       "to": 0.98,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.6915,
+       "to": 0.5878,
+       "delta": -0.1037,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "pyelftools-tolerant",
+    "functions": 15678,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "gba",
+   "sample": [
+    "08000814",
+    "08001324",
+    "080023d4",
+    "080040a8",
+    "08006a58",
+    "08007a90",
+    "08007f80",
+    "0800883c",
+    "080099e0",
+    "0800a620",
+    "0800a6b0",
+    "0800b1a0",
+    "0800cf34",
+    "0800d158",
+    "0800e94c",
+    "080124e8",
+    "0801f18c",
+    "0801f7e0",
+    "08021608",
+    "0802385c",
+    "08024048",
+    "080259fc",
+    "080284cc",
+    "08028fcc",
+    "0802c7a0",
+    "0802f2b8",
+    "080315bc",
+    "08034530",
+    "08037adc",
+    "0803849c",
+    "0803d2e8",
+    "0803f3cc",
+    "080400c8",
+    "080423f4",
+    "08044498",
+    "0804643c",
+    "0804a154",
+    "080500e8",
+    "08056230",
+    "0805c710",
+    "0806268c",
+    "08062ba4",
+    "08064b04",
+    "080678c4",
+    "0806b960",
+    "0806ecec",
+    "08077100",
+    "0807b140",
+    "0807f19c",
+    "08080fd0",
+    "080849a8",
+    "08084e2c",
+    "080880e0",
+    "08089618",
+    "080897f8",
+    "0808a8ac",
+    "0808bd8c",
+    "0808c9b0",
+    "0808f7cc",
+    "08090648",
+    "0809115c",
+    "080936a0",
+    "0809390c",
+    "08093ce4",
+    "08094ea8",
+    "080950f4",
+    "08095228",
+    "08095fe8",
+    "08096140",
+    "08099770",
+    "0809aa38",
+    "0809b674",
+    "0809d908",
+    "080a0aa8",
+    "080a3ce4",
+    "080a791c",
+    "080ae3fc",
+    "080ae958",
+    "080b1234",
+    "080b236c",
+    "080b550c",
+    "080b5e10",
+    "080b72f4",
+    "080c0460",
+    "080c3548",
+    "080c3608",
+    "080c4904",
+    "080c9be8",
+    "080ca230",
+    "080cdba0",
+    "080d1080",
+    "080d140c",
+    "080d20d0",
+    "080d6f64",
+    "080db2bc",
+    "080dbd34",
+    "080e1ca4",
+    "080e756c",
+    "080ed718",
+    "080ee72c",
+    "080eff6c",
+    "080f0020",
+    "080f0e58",
+    "080f9160",
+    "080fe820",
+    "08104938",
+    "08108c94",
+    "08109afc",
+    "0811369c",
+    "081136e8",
+    "08118ac0",
+    "08119dbc",
+    "0811e64c",
+    "081221ac",
+    "081230c4",
+    "08126e44",
+    "0812764c",
+    "081277e8",
+    "0812dee4",
+    "081301ec",
+    "08131acc",
+    "08135e2c",
+    "08136edc",
+    "08137f90",
+    "081382a0",
+    "08139370",
+    "081429f0",
+    "08147688",
+    "0814a228",
+    "0814d2a0",
+    "08153ed4",
+    "0815661c",
+    "08157850",
+    "08158724",
+    "08159c20",
+    "0815c700",
+    "08161b34",
+    "08164040",
+    "08166edc",
+    "081693cc",
+    "0816acfc",
+    "0816baf8",
+    "0816f9d4",
+    "081701c4",
+    "081713d0",
+    "081738bc",
+    "08175a9c",
+    "08176d1c",
+    "08178250",
+    "08178974",
+    "08178fdc",
+    "0817c3a0",
+    "0818100c",
+    "081811e0",
+    "081821cc",
+    "081850dc",
+    "08185fd0",
+    "0818a514",
+    "0818c15c",
+    "08190ac4",
+    "08197310",
+    "0819bd70",
+    "081a0990",
+    "081a2ba0",
+    "081a6bf4",
+    "081adc70",
+    "081af724",
+    "081b04bc",
+    "081b22d8",
+    "081b2ac8",
+    "081b2b40",
+    "081b3e60",
+    "081b452c",
+    "081b4a08",
+    "081b64d0",
+    "081b6bec",
+    "081b9df8",
+    "081bd5c8",
+    "081bd760",
+    "081bdaa0",
+    "081bdabc",
+    "081c1efc",
+    "081c4d18",
+    "081c4f84",
+    "081c7e14",
+    "081cb02c",
+    "081cc158",
+    "081ccd70",
+    "081d1448",
+    "081d189c",
+    "081d1ec0",
+    "081d4a90",
+    "081d5b2c",
+    "081d6120",
+    "082e02b4",
+    "082e15a0",
+    "082e2c60",
+    "082e2f54",
+    "082e4210",
+    "082e4874"
+   ],
+   "sample_in_dwarf": 200
+  },
+  "nds-pokeheartgold-arm9": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 0,
+      "labels": 0,
+      "irregular_functions": 128,
+      "native_warnings": 342,
+      "text_warnings": 26,
+      "lines": 5150,
+      "median_seconds": 0.474,
+      "max_seconds": 0.565,
+      "wall_seconds": 31.9,
+      "recall": 0.9729,
+      "precision": 0.9984,
+      "discovered": 10795,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.73,
+      "type_slots": 544,
+      "type_exact": 226,
+      "type_partial": 0,
+      "type_wrong": 318,
+      "type_exact_rate": 0.4154
+     },
+     "import": {
+      "seconds": 109.8,
+      "switch_stats": {
+       "vsa_resolved": 341,
+       "vsa_refused": 2011,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/nds-pokeheartgold-arm9/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9504,
+       "to": 0.9729,
+       "delta": 0.0225,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.998,
+       "to": 0.9984,
+       "delta": 0.0004,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.975,
+       "to": 1.0,
+       "delta": 0.025,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 12,
+       "to": 0,
+       "delta": -12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 0,
+       "delta": -7,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 125,
+       "to": 124,
+       "delta": -1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 333,
+       "to": 333,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 4921,
+       "to": 4953,
+       "delta": 32,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.72,
+       "to": 0.73,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4062,
+       "to": 0.4154,
+       "delta": 0.0092,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 195
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9504,
+       "to": 0.9729,
+       "delta": 0.0225,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.998,
+       "to": 0.9984,
+       "delta": 0.0004,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.975,
+       "to": 1.0,
+       "delta": 0.025,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 12,
+       "to": 0,
+       "delta": -12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 0,
+       "delta": -7,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 125,
+       "to": 124,
+       "delta": -1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 333,
+       "to": 333,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 4921,
+       "to": 4953,
+       "delta": 32,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.72,
+       "to": 0.73,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4062,
+       "to": 0.4154,
+       "delta": 0.0092,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 195
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 195,
+      "success_rate": 0.975,
+      "gotos": 12,
+      "labels": 7,
+      "irregular_functions": 125,
+      "native_warnings": 333,
+      "text_warnings": 22,
+      "lines": 4921,
+      "median_seconds": 0.452,
+      "max_seconds": 0.529,
+      "wall_seconds": 29.6,
+      "recall": 0.9504,
+      "precision": 0.998,
+      "discovered": 10550,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.72,
+      "type_slots": 544,
+      "type_exact": 221,
+      "type_partial": 0,
+      "type_wrong": 323,
+      "type_exact_rate": 0.4062
+     },
+     "import": {
+      "seconds": 34.4,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/nds-pokeheartgold-arm9/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9729,
+       "to": 0.9504,
+       "delta": -0.0225,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9984,
+       "to": 0.998,
+       "delta": -0.0004,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 0.975,
+       "delta": -0.025,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 0,
+       "to": 12,
+       "delta": 12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 0,
+       "to": 7,
+       "delta": 7,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 124,
+       "to": 125,
+       "delta": 1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 333,
+       "to": 333,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 4953,
+       "to": 4921,
+       "delta": -32,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.73,
+       "to": 0.72,
+       "delta": -0.01,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4154,
+       "to": 0.4062,
+       "delta": -0.0092,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 195
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 0,
+      "labels": 0,
+      "irregular_functions": 22,
+      "native_warnings": 42,
+      "text_warnings": 26,
+      "lines": 5127,
+      "median_seconds": 0.5,
+      "max_seconds": 0.615,
+      "wall_seconds": 33.7,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.85,
+      "type_slots": 562,
+      "type_exact": 338,
+      "type_partial": 0,
+      "type_wrong": 224,
+      "type_exact_rate": 0.6014
+     },
+     "import": {
+      "seconds": 109.8,
+      "switch_stats": {
+       "vsa_resolved": 341,
+       "vsa_refused": 2011,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 101.9,
+      "report": {
+       "analyzed": 22706,
+       "changed": 17648,
+       "decompiler_failures": 0,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 2
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/nds-pokeheartgold-arm9/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 128,
+       "to": 22,
+       "delta": -106,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 342,
+       "to": 42,
+       "delta": -300,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 26,
+       "to": 26,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5150,
+       "to": 5127,
+       "delta": -23,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.73,
+       "to": 0.85,
+       "delta": 0.12,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4154,
+       "to": 0.6014,
+       "delta": 0.186,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.975,
+       "to": 1.0,
+       "delta": 0.025,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 12,
+       "to": 0,
+       "delta": -12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 0,
+       "delta": -7,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 125,
+       "to": 20,
+       "delta": -105,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 333,
+       "to": 38,
+       "delta": -295,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 4921,
+       "to": 4924,
+       "delta": 3,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.72,
+       "to": 0.85,
+       "delta": 0.13,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4062,
+       "to": 0.6014,
+       "delta": 0.1952,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 195
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 128,
+       "to": 22,
+       "delta": -106,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 342,
+       "to": 42,
+       "delta": -300,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 26,
+       "to": 26,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5150,
+       "to": 5127,
+       "delta": -23,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.73,
+       "to": 0.85,
+       "delta": 0.12,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4154,
+       "to": 0.6014,
+       "delta": 0.186,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 0,
+      "labels": 0,
+      "irregular_functions": 22,
+      "native_warnings": 42,
+      "text_warnings": 26,
+      "lines": 5103,
+      "median_seconds": 0.632,
+      "max_seconds": 0.779,
+      "wall_seconds": 42.2,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.85,
+      "type_slots": 562,
+      "type_exact": 277,
+      "type_partial": 0,
+      "type_wrong": 285,
+      "type_exact_rate": 0.4929
+     },
+     "import": {
+      "seconds": 109.8,
+      "switch_stats": {
+       "vsa_resolved": 341,
+       "vsa_refused": 2011,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 119.9,
+      "report": {
+       "analyzed": 22604,
+       "changed": 16882,
+       "decompiler_failures": 0,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 2
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/nds-pokeheartgold-arm9/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 128,
+       "to": 22,
+       "delta": -106,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 342,
+       "to": 42,
+       "delta": -300,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 26,
+       "to": 26,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5150,
+       "to": 5103,
+       "delta": -47,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.73,
+       "to": 0.85,
+       "delta": 0.12,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4154,
+       "to": 0.4929,
+       "delta": 0.0775,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.975,
+       "to": 1.0,
+       "delta": 0.025,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 12,
+       "to": 0,
+       "delta": -12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 0,
+       "delta": -7,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 125,
+       "to": 20,
+       "delta": -105,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 333,
+       "to": 38,
+       "delta": -295,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 4921,
+       "to": 4900,
+       "delta": -21,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.72,
+       "to": 0.85,
+       "delta": 0.13,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4062,
+       "to": 0.4929,
+       "delta": 0.0867,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 195
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 42,
+       "to": 42,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 26,
+       "to": 26,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5127,
+       "to": 5103,
+       "delta": -24,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.85,
+       "to": 0.85,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.6014,
+       "to": 0.4929,
+       "delta": -0.1085,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "readelf",
+    "functions": 9406,
+    "conflicts_dropped": 124
+   },
+   "status": "ran",
+   "program": "nds.arm9",
+   "sample": [
+    "02001f20",
+    "02002ba8",
+    "02002f30",
+    "020030b8",
+    "020035f0",
+    "020047c8",
+    "02007974",
+    "02007c60",
+    "02009138",
+    "0200a790",
+    "0200b9f8",
+    "0200bc4c",
+    "0200c3e8",
+    "0200c578",
+    "0200cad8",
+    "0200cf6c",
+    "0200d934",
+    "0200dc34",
+    "0200dd60",
+    "0200dd68",
+    "0200de00",
+    "020143e0",
+    "02014708",
+    "020149a4",
+    "02015834",
+    "020159e4",
+    "02015a5c",
+    "02015cc8",
+    "02016748",
+    "020169cc",
+    "02019014",
+    "0201a928",
+    "0201aa38",
+    "0201ab0c",
+    "0201ace8",
+    "0201ad0c",
+    "0201cc2c",
+    "0201eeb4",
+    "0201f5b8",
+    "0201f984",
+    "0201fd2c",
+    "02020020",
+    "02020aa0",
+    "020216f4",
+    "02021dd0",
+    "02022238",
+    "02022260",
+    "020223c4",
+    "02023214",
+    "020245fc",
+    "020248ac",
+    "02024a6c",
+    "02024b34",
+    "02025404",
+    "02025b40",
+    "020274e0",
+    "02027744",
+    "02027d6c",
+    "02028d30",
+    "02028dc4",
+    "020290c8",
+    "020296c8",
+    "0202984c",
+    "02029ef4",
+    "0202a57c",
+    "0202aed4",
+    "0202b3f0",
+    "0202cc5c",
+    "0202d9f4",
+    "0202debc",
+    "0202e0ac",
+    "0202e4b0",
+    "0202f720",
+    "0202f888",
+    "0202fa64",
+    "0202fab0",
+    "02031774",
+    "0203197c",
+    "020327ac",
+    "0203b014",
+    "0203b470",
+    "0203ca44",
+    "0203d264",
+    "0203d488",
+    "0203e344",
+    "0203e3d4",
+    "0203ea5c",
+    "0203f050",
+    "02040ff0",
+    "02041040",
+    "0204146c",
+    "02041fb8",
+    "0204236c",
+    "02044658",
+    "020447cc",
+    "02045394",
+    "0204592c",
+    "0204720c",
+    "0204749c",
+    "02047518",
+    "02047b6c",
+    "02049344",
+    "02049460",
+    "0204a424",
+    "0204a6a0",
+    "0204a824",
+    "0204babc",
+    "0204bc98",
+    "0204bfd0",
+    "0204c630",
+    "0204c63c",
+    "0204c658",
+    "0204c91c",
+    "0204cb7c",
+    "0204d248",
+    "0204dfe4",
+    "0204e4e0",
+    "0204e7dc",
+    "02050aac",
+    "02050d1c",
+    "02051114",
+    "02051660",
+    "02052544",
+    "02053e08",
+    "020541b0",
+    "020543f0",
+    "02055640",
+    "02055828",
+    "020560c4",
+    "0205b63c",
+    "0205b858",
+    "0205b8a0",
+    "0205ba00",
+    "0205c390",
+    "0205c6a0",
+    "0205c810",
+    "0205e2b4",
+    "0205e400",
+    "0205ee10",
+    "0205f340",
+    "0205f414",
+    "0205f498",
+    "0205f5f8",
+    "0205f690",
+    "0205f89c",
+    "0205f908",
+    "0205f954",
+    "0205fcb8",
+    "02064910",
+    "02064eb8",
+    "020650e8",
+    "0206536c",
+    "02065670",
+    "0206659c",
+    "020667a4",
+    "02066860",
+    "02066b60",
+    "02066d60",
+    "02067f4c",
+    "02068968",
+    "02068f00",
+    "0206a798",
+    "0206d8d0",
+    "0206db94",
+    "0206e5b8",
+    "0206fd30",
+    "0206ffc8",
+    "02070068",
+    "02070438",
+    "02070588",
+    "02070e34",
+    "02071bd0",
+    "0207280c",
+    "020733c0",
+    "02073f00",
+    "02073ff8",
+    "02074490",
+    "020778dc",
+    "02077924",
+    "02078724",
+    "0207997c",
+    "0207bb14",
+    "0207d1c8",
+    "02080040",
+    "0208421c",
+    "02084430",
+    "0208f550",
+    "02090dc0",
+    "02090e5c",
+    "02090f00",
+    "02091240",
+    "02093134",
+    "02097230",
+    "020972c4",
+    "020d0fec",
+    "020d1868",
+    "020d2444",
+    "020d3a38",
+    "020d3cfc",
+    "020e80f4"
+   ],
+   "sample_in_dwarf": 200
+  },
+  "ps2-capcom-fighting-evolution": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 4,
+      "labels": 1,
+      "irregular_functions": 163,
+      "native_warnings": 532,
+      "text_warnings": 58,
+      "lines": 9260,
+      "median_seconds": 0.281,
+      "max_seconds": 0.41,
+      "wall_seconds": 19.0,
+      "recall": 0.9412,
+      "precision": 0.9964,
+      "discovered": 8307,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.985,
+      "type_slots": 422,
+      "type_exact": 204,
+      "type_partial": 0,
+      "type_wrong": 218,
+      "type_exact_rate": 0.4834
+     },
+     "import": {
+      "seconds": 50.5,
+      "switch_stats": {
+       "vsa_resolved": 126,
+       "vsa_refused": 360,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/ps2-capcom-fighting-evolution/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9435,
+       "to": 0.9412,
+       "delta": -0.0023,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9867,
+       "to": 0.9964,
+       "delta": 0.0097,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 14,
+       "to": 4,
+       "delta": -10,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 1,
+       "delta": -6,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 163,
+       "to": 163,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 532,
+       "to": 532,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9153,
+       "to": 9260,
+       "delta": 107,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.985,
+       "to": 0.985,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4834,
+       "to": 0.4834,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9435,
+       "to": 0.9412,
+       "delta": -0.0023,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9867,
+       "to": 0.9964,
+       "delta": 0.0097,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 14,
+       "to": 4,
+       "delta": -10,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 1,
+       "delta": -6,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 163,
+       "to": 163,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 532,
+       "to": 532,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9153,
+       "to": 9260,
+       "delta": 107,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.985,
+       "to": 0.985,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4834,
+       "to": 0.4834,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 14,
+      "labels": 7,
+      "irregular_functions": 163,
+      "native_warnings": 532,
+      "text_warnings": 58,
+      "lines": 9153,
+      "median_seconds": 0.27,
+      "max_seconds": 0.4,
+      "wall_seconds": 18.1,
+      "recall": 0.9435,
+      "precision": 0.9867,
+      "discovered": 8409,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.985,
+      "type_slots": 422,
+      "type_exact": 204,
+      "type_partial": 0,
+      "type_wrong": 218,
+      "type_exact_rate": 0.4834
+     },
+     "import": {
+      "seconds": 8.9,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/ps2-capcom-fighting-evolution/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9412,
+       "to": 0.9435,
+       "delta": 0.0023,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9964,
+       "to": 0.9867,
+       "delta": -0.0097,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 14,
+       "delta": 10,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 1,
+       "to": 7,
+       "delta": 6,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 163,
+       "to": 163,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 532,
+       "to": 532,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9260,
+       "to": 9153,
+       "delta": -107,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.985,
+       "to": 0.985,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4834,
+       "to": 0.4834,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 4,
+      "labels": 1,
+      "irregular_functions": 33,
+      "native_warnings": 58,
+      "text_warnings": 58,
+      "lines": 8995,
+      "median_seconds": 0.209,
+      "max_seconds": 0.411,
+      "wall_seconds": 14.4,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.99,
+      "type_slots": 422,
+      "type_exact": 376,
+      "type_partial": 0,
+      "type_wrong": 46,
+      "type_exact_rate": 0.891
+     },
+     "import": {
+      "seconds": 50.5,
+      "switch_stats": {
+       "vsa_resolved": 126,
+       "vsa_refused": 360,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 398.9,
+      "report": {
+       "analyzed": 18343,
+       "changed": 12966,
+       "decompiler_failures": 15,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 17
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/ps2-capcom-fighting-evolution/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 1,
+       "to": 1,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 163,
+       "to": 33,
+       "delta": -130,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 532,
+       "to": 58,
+       "delta": -474,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9260,
+       "to": 8995,
+       "delta": -265,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.985,
+       "to": 0.99,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4834,
+       "to": 0.891,
+       "delta": 0.4076,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 14,
+       "to": 4,
+       "delta": -10,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 1,
+       "delta": -6,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 163,
+       "to": 33,
+       "delta": -130,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 532,
+       "to": 58,
+       "delta": -474,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9153,
+       "to": 8995,
+       "delta": -158,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.985,
+       "to": 0.99,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4834,
+       "to": 0.891,
+       "delta": 0.4076,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 1,
+       "to": 1,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 163,
+       "to": 33,
+       "delta": -130,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 532,
+       "to": 58,
+       "delta": -474,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9260,
+       "to": 8995,
+       "delta": -265,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.985,
+       "to": 0.99,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4834,
+       "to": 0.891,
+       "delta": 0.4076,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 4,
+      "labels": 1,
+      "irregular_functions": 33,
+      "native_warnings": 58,
+      "text_warnings": 58,
+      "lines": 9093,
+      "median_seconds": 0.207,
+      "max_seconds": 0.412,
+      "wall_seconds": 14.4,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.99,
+      "type_slots": 422,
+      "type_exact": 212,
+      "type_partial": 0,
+      "type_wrong": 210,
+      "type_exact_rate": 0.5024
+     },
+     "import": {
+      "seconds": 50.5,
+      "switch_stats": {
+       "vsa_resolved": 126,
+       "vsa_refused": 360,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 316.7,
+      "report": {
+       "analyzed": 17217,
+       "changed": 12516,
+       "decompiler_failures": 15,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 17
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/ps2-capcom-fighting-evolution/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 1,
+       "to": 1,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 163,
+       "to": 33,
+       "delta": -130,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 532,
+       "to": 58,
+       "delta": -474,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9260,
+       "to": 9093,
+       "delta": -167,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.985,
+       "to": 0.99,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4834,
+       "to": 0.5024,
+       "delta": 0.019,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 14,
+       "to": 4,
+       "delta": -10,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 7,
+       "to": 1,
+       "delta": -6,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 163,
+       "to": 33,
+       "delta": -130,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 532,
+       "to": 58,
+       "delta": -474,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9153,
+       "to": 9093,
+       "delta": -60,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.985,
+       "to": 0.99,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4834,
+       "to": 0.5024,
+       "delta": 0.019,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 1,
+       "to": 1,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 33,
+       "to": 33,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 8995,
+       "to": 9093,
+       "delta": 98,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.99,
+       "to": 0.99,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.891,
+       "to": 0.5024,
+       "delta": -0.3886,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "dwarf1-python",
+    "functions": 5221,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "capcom",
+   "sample": [
+    "00129a30",
+    "0012d560",
+    "0012e700",
+    "0012fa40",
+    "0012fd90",
+    "00130270",
+    "001311c0",
+    "00131ac0",
+    "00131db0",
+    "00133770",
+    "001343e0",
+    "00134c30",
+    "00135720",
+    "00136080",
+    "001376e0",
+    "0013ab30",
+    "0013abb0",
+    "0013b0d0",
+    "0013d980",
+    "0013ee40",
+    "001410a0",
+    "00141360",
+    "00141eb0",
+    "001437b0",
+    "00144240",
+    "00144790",
+    "001463d0",
+    "001475e0",
+    "00148910",
+    "00149f10",
+    "00149fd0",
+    "0014b050",
+    "0014d040",
+    "0014ec60",
+    "0014f690",
+    "001504e0",
+    "00151f10",
+    "00152420",
+    "00152bb0",
+    "00153660",
+    "001539f0",
+    "001543e0",
+    "00154840",
+    "00154b60",
+    "00156200",
+    "0015ab90",
+    "0015abf0",
+    "0015ad70",
+    "0015b440",
+    "0015c150",
+    "0015d860",
+    "0015d9b0",
+    "0015e1e0",
+    "0015edf0",
+    "0015f620",
+    "0015fd90",
+    "001604d0",
+    "00160c30",
+    "001613e0",
+    "001636d0",
+    "00165320",
+    "00166630",
+    "00166a60",
+    "00168810",
+    "0016b060",
+    "0016b260",
+    "0016b480",
+    "0016b4c0",
+    "0016e6a0",
+    "0016fc90",
+    "00170610",
+    "001713e0",
+    "00171e50",
+    "00173470",
+    "00174f10",
+    "001752f0",
+    "00177190",
+    "00178030",
+    "0017a590",
+    "0017a660",
+    "0017c760",
+    "0017cf80",
+    "00181df0",
+    "00182130",
+    "00185180",
+    "00188cb0",
+    "00188e30",
+    "00188fd0",
+    "0018a030",
+    "0018b770",
+    "0018f020",
+    "00190b60",
+    "00191c90",
+    "00192030",
+    "00195b80",
+    "00199530",
+    "00199f60",
+    "0019e330",
+    "001a0af0",
+    "001a19f0",
+    "001a7260",
+    "001a9530",
+    "001aa740",
+    "001ab0a0",
+    "001ad9e0",
+    "001af100",
+    "001b00f0",
+    "001b1130",
+    "001b1370",
+    "001b6110",
+    "001b7b40",
+    "001bb0c0",
+    "001bc8d0",
+    "001bcd90",
+    "001bd580",
+    "001bde00",
+    "001bdf60",
+    "001bf5e0",
+    "001bfb80",
+    "001c07f0",
+    "001c1a90",
+    "001c23d0",
+    "001c4b70",
+    "001c77e0",
+    "001c84a0",
+    "001c8ef0",
+    "001cc5b0",
+    "001ce710",
+    "001cf2c0",
+    "001cf880",
+    "001d0570",
+    "001d2160",
+    "001d2790",
+    "001d3080",
+    "001d3310",
+    "001d4910",
+    "001d6a70",
+    "001d6c10",
+    "001d88c0",
+    "001dc240",
+    "001de870",
+    "001dffc0",
+    "001e7360",
+    "001e8100",
+    "001e91a0",
+    "001ebdc0",
+    "001ebf60",
+    "001f0ea0",
+    "001f21c0",
+    "001f2410",
+    "001f4810",
+    "001f4c90",
+    "001fa210",
+    "001fa7a0",
+    "00203620",
+    "00204350",
+    "00205f40",
+    "002128e0",
+    "00213d10",
+    "00217890",
+    "002193f0",
+    "0021a150",
+    "0021b3d0",
+    "0021c860",
+    "00259700",
+    "00259900",
+    "0027d190",
+    "002805a0",
+    "002842b0",
+    "002844b0",
+    "002865f0",
+    "00288360",
+    "00289330",
+    "00289820",
+    "0028ee20",
+    "0028fdb0",
+    "00290b80",
+    "002925a0",
+    "00292900",
+    "00293a20",
+    "002944e0",
+    "00294af0",
+    "002963a0",
+    "00296c90",
+    "00298700",
+    "00298fc0",
+    "00299650",
+    "00299f90",
+    "0029b3e0",
+    "0029b950",
+    "0029c560",
+    "0029c9a0",
+    "0029d200",
+    "0029ea20",
+    "0029f7a0",
+    "002a25a0",
+    "002a5570",
+    "002a5af0",
+    "002a8f30",
+    "002a9210"
+   ],
+   "sample_in_dwarf": 200
+  },
+  "ps2-dungeon-game": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 42,
+      "labels": 22,
+      "irregular_functions": 123,
+      "native_warnings": 359,
+      "text_warnings": 23,
+      "lines": 11408,
+      "median_seconds": 0.059,
+      "max_seconds": 1.614,
+      "wall_seconds": 5.4,
+      "recall": 0.9438,
+      "precision": 0.988,
+      "discovered": 748,
+      "dwarf_functions": 20,
+      "arity_accuracy": 1.0,
+      "type_slots": 61,
+      "type_exact": 26,
+      "type_partial": 0,
+      "type_wrong": 35,
+      "type_exact_rate": 0.4262
+     },
+     "import": {
+      "seconds": 2.2,
+      "switch_stats": {
+       "vsa_resolved": 4,
+       "vsa_refused": 7,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/ps2-dungeon-game/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9438,
+       "to": 0.9438,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9192,
+       "to": 0.988,
+       "delta": 0.0688,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 142,
+       "to": 42,
+       "delta": -100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 91,
+       "to": 22,
+       "delta": -69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 129,
+       "to": 123,
+       "delta": -6,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 359,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11337,
+       "to": 11408,
+       "delta": 71,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4262,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9438,
+       "to": 0.9438,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9192,
+       "to": 0.988,
+       "delta": 0.0688,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 142,
+       "to": 42,
+       "delta": -100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 91,
+       "to": 22,
+       "delta": -69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 129,
+       "to": 123,
+       "delta": -6,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 359,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11337,
+       "to": 11408,
+       "delta": 71,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4262,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 142,
+      "labels": 91,
+      "irregular_functions": 129,
+      "native_warnings": 359,
+      "text_warnings": 23,
+      "lines": 11337,
+      "median_seconds": 0.059,
+      "max_seconds": 0.768,
+      "wall_seconds": 4.8,
+      "recall": 0.9438,
+      "precision": 0.9192,
+      "discovered": 804,
+      "dwarf_functions": 20,
+      "arity_accuracy": 1.0,
+      "type_slots": 61,
+      "type_exact": 26,
+      "type_partial": 0,
+      "type_wrong": 35,
+      "type_exact_rate": 0.4262
+     },
+     "import": {
+      "seconds": 1.7,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/ps2-dungeon-game/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9438,
+       "to": 0.9438,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.988,
+       "to": 0.9192,
+       "delta": -0.0688,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 42,
+       "to": 142,
+       "delta": 100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 22,
+       "to": 91,
+       "delta": 69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 123,
+       "to": 129,
+       "delta": 6,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 359,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11408,
+       "to": 11337,
+       "delta": -71,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4262,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 42,
+      "labels": 22,
+      "irregular_functions": 61,
+      "native_warnings": 157,
+      "text_warnings": 23,
+      "lines": 11444,
+      "median_seconds": 0.06,
+      "max_seconds": 2.294,
+      "wall_seconds": 6.0,
+      "dwarf_functions": 20,
+      "arity_accuracy": 1.0,
+      "type_slots": 61,
+      "type_exact": 27,
+      "type_partial": 0,
+      "type_wrong": 34,
+      "type_exact_rate": 0.4426
+     },
+     "import": {
+      "seconds": 2.2,
+      "switch_stats": {
+       "vsa_resolved": 4,
+       "vsa_refused": 7,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 26.6,
+      "report": {
+       "analyzed": 1398,
+       "changed": 948,
+       "decompiler_failures": 0,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 0
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/ps2-dungeon-game/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 42,
+       "to": 42,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 123,
+       "to": 61,
+       "delta": -62,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 157,
+       "delta": -202,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11408,
+       "to": 11444,
+       "delta": 36,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4426,
+       "delta": 0.0164,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 142,
+       "to": 42,
+       "delta": -100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 91,
+       "to": 22,
+       "delta": -69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 129,
+       "to": 61,
+       "delta": -68,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 157,
+       "delta": -202,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11337,
+       "to": 11444,
+       "delta": 107,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4426,
+       "delta": 0.0164,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 42,
+       "to": 42,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 123,
+       "to": 61,
+       "delta": -62,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 157,
+       "delta": -202,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11408,
+       "to": 11444,
+       "delta": 36,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4426,
+       "delta": 0.0164,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 42,
+      "labels": 22,
+      "irregular_functions": 61,
+      "native_warnings": 157,
+      "text_warnings": 23,
+      "lines": 11444,
+      "median_seconds": 0.06,
+      "max_seconds": 2.329,
+      "wall_seconds": 6.0,
+      "dwarf_functions": 20,
+      "arity_accuracy": 1.0,
+      "type_slots": 61,
+      "type_exact": 22,
+      "type_partial": 0,
+      "type_wrong": 39,
+      "type_exact_rate": 0.3607
+     },
+     "import": {
+      "seconds": 2.2,
+      "switch_stats": {
+       "vsa_resolved": 4,
+       "vsa_refused": 7,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 26.8,
+      "report": {
+       "analyzed": 1401,
+       "changed": 946,
+       "decompiler_failures": 0,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 0
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/ps2-dungeon-game/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 42,
+       "to": 42,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 123,
+       "to": 61,
+       "delta": -62,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 157,
+       "delta": -202,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11408,
+       "to": 11444,
+       "delta": 36,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.3607,
+       "delta": -0.0655,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 142,
+       "to": 42,
+       "delta": -100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 91,
+       "to": 22,
+       "delta": -69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 129,
+       "to": 61,
+       "delta": -68,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 157,
+       "delta": -202,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11337,
+       "to": 11444,
+       "delta": 107,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.3607,
+       "delta": -0.0655,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 42,
+       "to": 42,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 61,
+       "to": 61,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 157,
+       "to": 157,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11444,
+       "to": 11444,
+       "delta": 0,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4426,
+       "to": 0.3607,
+       "delta": -0.0819,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "readelf",
+    "functions": 20,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "dungeon",
+   "sample": [
+    "00100430",
+    "001007b0",
+    "00100a30",
+    "00101158",
+    "00101ad8",
+    "00101d58",
+    "001020a8",
+    "00102a58",
+    "00102cc0",
+    "00102cd0",
+    "00102dc0",
+    "00102ef8",
+    "00103060",
+    "00104548",
+    "00104828",
+    "00104d50",
+    "001063c0",
+    "00106a68",
+    "00106fe0",
+    "00107f18",
+    "00109d78",
+    "0010af70",
+    "0010b120",
+    "0010b558",
+    "0010ba58",
+    "0010c3f0",
+    "0010e698",
+    "0010e6b8",
+    "0010e8d8",
+    "0010e9d0",
+    "0010f000",
+    "0010f840",
+    "0010f888",
+    "0010f978",
+    "0010fc18",
+    "0010fc40",
+    "0010fc70",
+    "0010fcb0",
+    "0010fcd8",
+    "0010fe60",
+    "00111860",
+    "00112148",
+    "00112918",
+    "00113110",
+    "00113298",
+    "00113688",
+    "00113710",
+    "00113b30",
+    "001140b8",
+    "00114850",
+    "00114880",
+    "001148e0",
+    "00114b90",
+    "00114bf0",
+    "00114c70",
+    "001156d8",
+    "001157c0",
+    "00115848",
+    "00115860",
+    "00115a30",
+    "00115a58",
+    "00115aa8",
+    "00116a00",
+    "00117168",
+    "00117488",
+    "00117498",
+    "001174a0",
+    "001174b8",
+    "001174c0",
+    "00117530",
+    "00117c28",
+    "00117e98",
+    "00118270",
+    "00118318",
+    "001192a8",
+    "001195d0",
+    "0011a160",
+    "0011b2a8",
+    "0011b790",
+    "0011b850",
+    "0011bb88",
+    "0011bd20",
+    "0011d1e0",
+    "0011de20",
+    "0011e560",
+    "0011f190",
+    "0011f1b8",
+    "0011f2e0",
+    "0011f320",
+    "0011f368",
+    "0011f450",
+    "0011f490",
+    "0011f680",
+    "0011f778",
+    "001203d0",
+    "00120548",
+    "001205a0",
+    "00120780",
+    "001215c8",
+    "00121a40",
+    "001222c8",
+    "00124058",
+    "00125750",
+    "001264b8",
+    "001265b8",
+    "00126b80",
+    "00126c90",
+    "00126fe0",
+    "00127048",
+    "00127200",
+    "00127230",
+    "00128740",
+    "00128778",
+    "001288f8",
+    "00128ba0",
+    "00128bc0",
+    "00128c58",
+    "00128d58",
+    "00128de8",
+    "00129198",
+    "00129c38",
+    "00129c90",
+    "00129ca0",
+    "0012aac0",
+    "0012aaf8",
+    "0012b3e8",
+    "0012c468",
+    "0012c598",
+    "0012c890",
+    "0012ca78",
+    "0012d7a8",
+    "0012d7f0",
+    "0012d8e0",
+    "0012da20",
+    "0012de48",
+    "0012e038",
+    "0012e088",
+    "0012e200",
+    "0012e420",
+    "0012e448",
+    "0012e4a8",
+    "0012e508",
+    "0012e548",
+    "0012eb20",
+    "0012f510",
+    "0012f8f0",
+    "0012f930",
+    "0012f960",
+    "0012f9a0",
+    "0012fa20",
+    "0012fe90",
+    "001303b0",
+    "00130a68",
+    "00130d90",
+    "00130ec0",
+    "00131018",
+    "001311c8",
+    "001311f0",
+    "001313d0",
+    "00131508",
+    "00131700",
+    "00131710",
+    "00131730",
+    "00131780",
+    "001317b0",
+    "001318a0",
+    "00131948",
+    "00131a78",
+    "00131ff8",
+    "00132260",
+    "001322d8",
+    "001322f8",
+    "001329a0",
+    "001329c0",
+    "00133068",
+    "00133100",
+    "00133140",
+    "00133378",
+    "001333d8",
+    "00133448",
+    "001334a8",
+    "00133718",
+    "00133770",
+    "00133830",
+    "001338d0",
+    "00133900",
+    "001339e0",
+    "00133b70",
+    "00133c58",
+    "00133e90",
+    "00134a30",
+    "00134af0",
+    "00134bb8",
+    "00134c30",
+    "00134e08",
+    "00134e38",
+    "00134ec0",
+    "001357b8",
+    "00135ce0",
+    "00135dbc"
+   ],
+   "sample_in_dwarf": 20
+  },
+  "psp-puzzle-bobble-pocket": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 160,
+      "labels": 79,
+      "irregular_functions": 121,
+      "native_warnings": 324,
+      "text_warnings": 70,
+      "lines": 13311,
+      "median_seconds": 0.054,
+      "max_seconds": 2.867,
+      "wall_seconds": 5.9,
+      "recall": 0.9453,
+      "precision": 0.8559,
+      "discovered": 687,
+      "dwarf_functions": 144,
+      "arity_accuracy": 0.7153,
+      "type_slots": 438,
+      "type_exact": 180,
+      "type_partial": 1,
+      "type_wrong": 257,
+      "type_exact_rate": 0.411
+     },
+     "import": {
+      "seconds": 2.0,
+      "switch_stats": {
+       "vsa_resolved": 7,
+       "vsa_refused": 11,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/psp-puzzle-bobble-pocket/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9373,
+       "to": 0.9453,
+       "delta": 0.008,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.699,
+       "to": 0.8559,
+       "delta": 0.1569,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.985,
+       "to": 1.0,
+       "delta": 0.015,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 311,
+       "to": 160,
+       "delta": -151,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 160,
+       "to": 79,
+       "delta": -81,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 130,
+       "to": 120,
+       "delta": -10,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 323,
+       "to": 323,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 70,
+       "to": 70,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13063,
+       "to": 13289,
+       "delta": 226,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7083,
+       "to": 0.7153,
+       "delta": 0.007,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4064,
+       "to": 0.411,
+       "delta": 0.0046,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 197
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9373,
+       "to": 0.9453,
+       "delta": 0.008,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.699,
+       "to": 0.8559,
+       "delta": 0.1569,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.985,
+       "to": 1.0,
+       "delta": 0.015,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 311,
+       "to": 160,
+       "delta": -151,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 160,
+       "to": 79,
+       "delta": -81,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 130,
+       "to": 120,
+       "delta": -10,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 323,
+       "to": 323,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 70,
+       "to": 70,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13063,
+       "to": 13289,
+       "delta": 226,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7083,
+       "to": 0.7153,
+       "delta": 0.007,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4064,
+       "to": 0.411,
+       "delta": 0.0046,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 197
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 197,
+      "success_rate": 0.985,
+      "gotos": 311,
+      "labels": 160,
+      "irregular_functions": 130,
+      "native_warnings": 323,
+      "text_warnings": 70,
+      "lines": 13063,
+      "median_seconds": 0.054,
+      "max_seconds": 0.497,
+      "wall_seconds": 4.2,
+      "recall": 0.9373,
+      "precision": 0.699,
+      "discovered": 834,
+      "dwarf_functions": 144,
+      "arity_accuracy": 0.7083,
+      "type_slots": 438,
+      "type_exact": 178,
+      "type_partial": 1,
+      "type_wrong": 259,
+      "type_exact_rate": 0.4064
+     },
+     "import": {
+      "seconds": 0.6,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/psp-puzzle-bobble-pocket/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9453,
+       "to": 0.9373,
+       "delta": -0.008,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.8559,
+       "to": 0.699,
+       "delta": -0.1569,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 0.985,
+       "delta": -0.015,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 160,
+       "to": 311,
+       "delta": 151,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 79,
+       "to": 160,
+       "delta": 81,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 120,
+       "to": 130,
+       "delta": 10,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 323,
+       "to": 323,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 70,
+       "to": 70,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13289,
+       "to": 13063,
+       "delta": -226,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7153,
+       "to": 0.7083,
+       "delta": -0.007,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.411,
+       "to": 0.4064,
+       "delta": -0.0046,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 197
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 162,
+      "labels": 81,
+      "irregular_functions": 58,
+      "native_warnings": 160,
+      "text_warnings": 72,
+      "lines": 13230,
+      "median_seconds": 0.055,
+      "max_seconds": 2.985,
+      "wall_seconds": 6.1,
+      "dwarf_functions": 144,
+      "arity_accuracy": 0.7222,
+      "type_slots": 432,
+      "type_exact": 265,
+      "type_partial": 1,
+      "type_wrong": 166,
+      "type_exact_rate": 0.6134
+     },
+     "import": {
+      "seconds": 2.0,
+      "switch_stats": {
+       "vsa_resolved": 7,
+       "vsa_refused": 11,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 29.0,
+      "report": {
+       "analyzed": 1281,
+       "changed": 914,
+       "decompiler_failures": 0,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 0
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/psp-puzzle-bobble-pocket/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 160,
+       "to": 162,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 79,
+       "to": 81,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 121,
+       "to": 58,
+       "delta": -63,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 324,
+       "to": 160,
+       "delta": -164,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 70,
+       "to": 72,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13311,
+       "to": 13230,
+       "delta": -81,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7153,
+       "to": 0.7222,
+       "delta": 0.0069,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.411,
+       "to": 0.6134,
+       "delta": 0.2024,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.985,
+       "to": 1.0,
+       "delta": 0.015,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 311,
+       "to": 162,
+       "delta": -149,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 160,
+       "to": 81,
+       "delta": -79,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 130,
+       "to": 58,
+       "delta": -72,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 323,
+       "to": 160,
+       "delta": -163,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 70,
+       "to": 72,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13063,
+       "to": 13209,
+       "delta": 146,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7083,
+       "to": 0.7222,
+       "delta": 0.0139,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4064,
+       "to": 0.6134,
+       "delta": 0.207,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 197
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 160,
+       "to": 162,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 79,
+       "to": 81,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 121,
+       "to": 58,
+       "delta": -63,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 324,
+       "to": 160,
+       "delta": -164,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 70,
+       "to": 72,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13311,
+       "to": 13230,
+       "delta": -81,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7153,
+       "to": 0.7222,
+       "delta": 0.0069,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.411,
+       "to": 0.6134,
+       "delta": 0.2024,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "mixed"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 162,
+      "labels": 81,
+      "irregular_functions": 58,
+      "native_warnings": 160,
+      "text_warnings": 72,
+      "lines": 13220,
+      "median_seconds": 0.055,
+      "max_seconds": 2.942,
+      "wall_seconds": 6.2,
+      "dwarf_functions": 144,
+      "arity_accuracy": 0.7222,
+      "type_slots": 432,
+      "type_exact": 232,
+      "type_partial": 1,
+      "type_wrong": 199,
+      "type_exact_rate": 0.537
+     },
+     "import": {
+      "seconds": 2.0,
+      "switch_stats": {
+       "vsa_resolved": 7,
+       "vsa_refused": 11,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 29.2,
+      "report": {
+       "analyzed": 1258,
+       "changed": 876,
+       "decompiler_failures": 0,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 0
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/psp-puzzle-bobble-pocket/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 160,
+       "to": 162,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 79,
+       "to": 81,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 121,
+       "to": 58,
+       "delta": -63,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 324,
+       "to": 160,
+       "delta": -164,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 70,
+       "to": 72,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13311,
+       "to": 13220,
+       "delta": -91,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7153,
+       "to": 0.7222,
+       "delta": 0.0069,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.411,
+       "to": 0.537,
+       "delta": 0.126,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.985,
+       "to": 1.0,
+       "delta": 0.015,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 311,
+       "to": 162,
+       "delta": -149,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 160,
+       "to": 81,
+       "delta": -79,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 130,
+       "to": 58,
+       "delta": -72,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 323,
+       "to": 160,
+       "delta": -163,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 70,
+       "to": 72,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13063,
+       "to": 13199,
+       "delta": 136,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7083,
+       "to": 0.7222,
+       "delta": 0.0139,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4064,
+       "to": 0.537,
+       "delta": 0.1306,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 197
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 162,
+       "to": 162,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 81,
+       "to": 81,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 58,
+       "to": 58,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 160,
+       "to": 160,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 72,
+       "to": 72,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13230,
+       "to": 13220,
+       "delta": -10,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.7222,
+       "to": 0.7222,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.6134,
+       "to": 0.537,
+       "delta": -0.0764,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "readelf",
+    "functions": 145,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "psp",
+   "sample": [
+    "00000128",
+    "0000032c",
+    "000008b8",
+    "000008dc",
+    "00000dac",
+    "00001028",
+    "000012a0",
+    "00001468",
+    "0000206c",
+    "00002bd8",
+    "00003458",
+    "00003bc4",
+    "00003e24",
+    "0000450c",
+    "00004910",
+    "00004a3c",
+    "00004b9c",
+    "0000b070",
+    "0000d988",
+    "0000fd5c",
+    "00010224",
+    "000103fc",
+    "00010414",
+    "000109bc",
+    "0001161c",
+    "00011828",
+    "0001286c",
+    "00012c74",
+    "00013acc",
+    "00015948",
+    "00016078",
+    "000160c8",
+    "00016e5c",
+    "00017b24",
+    "00018a98",
+    "000192b4",
+    "000194e4",
+    "00019654",
+    "000197a8",
+    "000198ec",
+    "00019af0",
+    "0001a10c",
+    "0001a2e4",
+    "0001a370",
+    "0001a3ec",
+    "0001a84c",
+    "0001aa24",
+    "0001b074",
+    "0001b16c",
+    "0001b4dc",
+    "0001bc18",
+    "0001cd4c",
+    "0001ce34",
+    "0001d294",
+    "0001d940",
+    "0001e4ec",
+    "0001e974",
+    "0001e9b0",
+    "0001f948",
+    "0001fa5c",
+    "0001fb70",
+    "0001fc40",
+    "0001fd18",
+    "0001fe48",
+    "00020530",
+    "0002088c",
+    "000209b8",
+    "00020d28",
+    "00021a00",
+    "00021cd4",
+    "00021dfc",
+    "000225bc",
+    "00022698",
+    "000226b0",
+    "000228b4",
+    "000228bc",
+    "00022a74",
+    "00022a90",
+    "00022b70",
+    "00022b8c",
+    "00022cc0",
+    "00022ce4",
+    "00022d10",
+    "00022d5c",
+    "000230a4",
+    "0002310c",
+    "00023180",
+    "000234f8",
+    "0002371c",
+    "000237a4",
+    "0002382c",
+    "000238b4",
+    "00023990",
+    "00023a64",
+    "00023aa8",
+    "00023adc",
+    "00023b54",
+    "00023c20",
+    "00023c50",
+    "00023ef0",
+    "0002400c",
+    "00024170",
+    "000242d4",
+    "00024848",
+    "000248ac",
+    "00024954",
+    "00024960",
+    "00024a50",
+    "00024a7c",
+    "00024c18",
+    "00024c3c",
+    "00024c64",
+    "00024e98",
+    "00025404",
+    "00025510",
+    "000255c8",
+    "00025604",
+    "00025640",
+    "00025680",
+    "000256c8",
+    "00025770",
+    "00025794",
+    "00025818",
+    "0002583c",
+    "00025854",
+    "000258c0",
+    "0002591c",
+    "00025984",
+    "00025a14",
+    "00025b9c",
+    "00025be8",
+    "00025c90",
+    "00025d08",
+    "000276e8",
+    "000278b0",
+    "00027988",
+    "00027a94",
+    "00027b00",
+    "00027b34",
+    "00027c8c",
+    "00027cc8",
+    "00028128",
+    "0002823c",
+    "00028480",
+    "0002980c",
+    "00029900",
+    "00029958",
+    "000299cc",
+    "00029ab0",
+    "00029ad0",
+    "00029af4",
+    "00029b78",
+    "00029dfc",
+    "00029f40",
+    "0002a320",
+    "0002a428",
+    "0002a4bc",
+    "0002a4c8",
+    "0002a4d4",
+    "0002a500",
+    "0002a520",
+    "0002a678",
+    "0002a780",
+    "0002aa80",
+    "0002ab38",
+    "0002ab64",
+    "0002ad94",
+    "0002ae14",
+    "0002aecc",
+    "0002af00",
+    "0002b118",
+    "0002b230",
+    "0002b368",
+    "0002b3d0",
+    "0002b54c",
+    "0002b5bc",
+    "0002b6e0",
+    "0002b850",
+    "0002b8f0",
+    "0002b990",
+    "0002bf00",
+    "0002bf54",
+    "0002c070",
+    "0002c11c",
+    "0002c158",
+    "0002c184",
+    "0002c1ec",
+    "0002c274",
+    "0002c2e0",
+    "0002c304",
+    "0002c378",
+    "0002c3e0",
+    "0002c4a0",
+    "0002c4fc",
+    "0002c560",
+    "0002c5c8",
+    "0002c630",
+    "0002cba4",
+    "0002d150",
+    "0002d1d8"
+   ],
+   "sample_in_dwarf": 144
+  },
+  "psp-puzzle-bobble-pocket-symtab": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 137,
+      "labels": 61,
+      "irregular_functions": 109,
+      "native_warnings": 245,
+      "text_warnings": 62,
+      "lines": 12296,
+      "median_seconds": 0.059,
+      "max_seconds": 2.86,
+      "wall_seconds": 5.7,
+      "recall": 1.0,
+      "precision": 0.8627,
+      "discovered": 721,
+      "dwarf_functions": 145,
+      "arity_accuracy": 0.8828,
+      "type_slots": 444,
+      "type_exact": 259,
+      "type_partial": 1,
+      "type_wrong": 184,
+      "type_exact_rate": 0.5833
+     },
+     "import": {
+      "seconds": 1.6,
+      "switch_stats": {
+       "vsa_resolved": 12,
+       "vsa_refused": 7,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/psp-puzzle-bobble-pocket-symtab/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.7785,
+       "to": 0.8627,
+       "delta": 0.0842,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 290,
+       "to": 137,
+       "delta": -153,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 147,
+       "to": 61,
+       "delta": -86,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 120,
+       "to": 109,
+       "delta": -11,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 245,
+       "to": 245,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 62,
+       "to": 62,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12120,
+       "to": 12296,
+       "delta": 176,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8828,
+       "to": 0.8828,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5833,
+       "to": 0.5833,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.7785,
+       "to": 0.8627,
+       "delta": 0.0842,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 290,
+       "to": 137,
+       "delta": -153,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 147,
+       "to": 61,
+       "delta": -86,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 120,
+       "to": 109,
+       "delta": -11,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 245,
+       "to": 245,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 62,
+       "to": 62,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12120,
+       "to": 12296,
+       "delta": 176,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8828,
+       "to": 0.8828,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5833,
+       "to": 0.5833,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 290,
+      "labels": 147,
+      "irregular_functions": 120,
+      "native_warnings": 245,
+      "text_warnings": 62,
+      "lines": 12120,
+      "median_seconds": 0.055,
+      "max_seconds": 0.923,
+      "wall_seconds": 4.5,
+      "recall": 1.0,
+      "precision": 0.7785,
+      "discovered": 799,
+      "dwarf_functions": 145,
+      "arity_accuracy": 0.8828,
+      "type_slots": 444,
+      "type_exact": 259,
+      "type_partial": 1,
+      "type_wrong": 184,
+      "type_exact_rate": 0.5833
+     },
+     "import": {
+      "seconds": 0.6,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/psp-puzzle-bobble-pocket-symtab/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.8627,
+       "to": 0.7785,
+       "delta": -0.0842,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 137,
+       "to": 290,
+       "delta": 153,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 61,
+       "to": 147,
+       "delta": 86,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 109,
+       "to": 120,
+       "delta": 11,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 245,
+       "to": 245,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 62,
+       "to": 62,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12296,
+       "to": 12120,
+       "delta": -176,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8828,
+       "to": 0.8828,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5833,
+       "to": 0.5833,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 138,
+      "labels": 62,
+      "irregular_functions": 59,
+      "native_warnings": 142,
+      "text_warnings": 64,
+      "lines": 12231,
+      "median_seconds": 0.06,
+      "max_seconds": 2.943,
+      "wall_seconds": 5.8,
+      "dwarf_functions": 145,
+      "arity_accuracy": 0.8759,
+      "type_slots": 438,
+      "type_exact": 339,
+      "type_partial": 1,
+      "type_wrong": 98,
+      "type_exact_rate": 0.774
+     },
+     "import": {
+      "seconds": 1.6,
+      "switch_stats": {
+       "vsa_resolved": 12,
+       "vsa_refused": 7,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 28.4,
+      "report": {
+       "analyzed": 1301,
+       "changed": 874,
+       "decompiler_failures": 1,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 1
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/psp-puzzle-bobble-pocket-symtab/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 137,
+       "to": 138,
+       "delta": 1,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 61,
+       "to": 62,
+       "delta": 1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 109,
+       "to": 59,
+       "delta": -50,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 245,
+       "to": 142,
+       "delta": -103,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 62,
+       "to": 64,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12296,
+       "to": 12231,
+       "delta": -65,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8828,
+       "to": 0.8759,
+       "delta": -0.0069,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5833,
+       "to": 0.774,
+       "delta": 0.1907,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 290,
+       "to": 138,
+       "delta": -152,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 147,
+       "to": 62,
+       "delta": -85,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 120,
+       "to": 59,
+       "delta": -61,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 245,
+       "to": 142,
+       "delta": -103,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 62,
+       "to": 64,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12120,
+       "to": 12231,
+       "delta": 111,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8828,
+       "to": 0.8759,
+       "delta": -0.0069,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5833,
+       "to": 0.774,
+       "delta": 0.1907,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 137,
+       "to": 138,
+       "delta": 1,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 61,
+       "to": 62,
+       "delta": 1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 109,
+       "to": 59,
+       "delta": -50,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 245,
+       "to": 142,
+       "delta": -103,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 62,
+       "to": 64,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12296,
+       "to": 12231,
+       "delta": -65,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8828,
+       "to": 0.8759,
+       "delta": -0.0069,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5833,
+       "to": 0.774,
+       "delta": 0.1907,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "mixed"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 138,
+      "labels": 62,
+      "irregular_functions": 59,
+      "native_warnings": 142,
+      "text_warnings": 64,
+      "lines": 12219,
+      "median_seconds": 0.059,
+      "max_seconds": 2.982,
+      "wall_seconds": 5.8,
+      "dwarf_functions": 145,
+      "arity_accuracy": 0.8759,
+      "type_slots": 438,
+      "type_exact": 301,
+      "type_partial": 1,
+      "type_wrong": 136,
+      "type_exact_rate": 0.6872
+     },
+     "import": {
+      "seconds": 1.6,
+      "switch_stats": {
+       "vsa_resolved": 12,
+       "vsa_refused": 7,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 28.2,
+      "report": {
+       "analyzed": 1283,
+       "changed": 836,
+       "decompiler_failures": 1,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 1
+      }
+     },
+     "results_file": "/home/raikaru/runs/ProtoWork/cache/results/dd85b94735d35bf0/psp-puzzle-bobble-pocket-symtab/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 137,
+       "to": 138,
+       "delta": 1,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 61,
+       "to": 62,
+       "delta": 1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 109,
+       "to": 59,
+       "delta": -50,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 245,
+       "to": 142,
+       "delta": -103,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 62,
+       "to": 64,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12296,
+       "to": 12219,
+       "delta": -77,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8828,
+       "to": 0.8759,
+       "delta": -0.0069,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5833,
+       "to": 0.6872,
+       "delta": 0.1039,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 290,
+       "to": 138,
+       "delta": -152,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 147,
+       "to": 62,
+       "delta": -85,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 120,
+       "to": 59,
+       "delta": -61,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 245,
+       "to": 142,
+       "delta": -103,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 62,
+       "to": 64,
+       "delta": 2,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12120,
+       "to": 12219,
+       "delta": 99,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8828,
+       "to": 0.8759,
+       "delta": -0.0069,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5833,
+       "to": 0.6872,
+       "delta": 0.1039,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 138,
+       "to": 138,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 62,
+       "to": 62,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 59,
+       "to": 59,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 142,
+       "to": 142,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 64,
+       "to": 64,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 12231,
+       "to": 12219,
+       "delta": -12,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.8759,
+       "to": 0.8759,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.774,
+       "to": 0.6872,
+       "delta": -0.0868,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "readelf",
+    "functions": 145,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "psp",
+   "sample": [
+    "00000128",
+    "0000032c",
+    "00000e48",
+    "00001028",
+    "000010c4",
+    "000012a0",
+    "00001468",
+    "000018a0",
+    "00001e18",
+    "00002a8c",
+    "00002b6c",
+    "00002c8c",
+    "00003458",
+    "000036e4",
+    "000040ac",
+    "000045dc",
+    "0000484c",
+    "00004e80",
+    "00007c88",
+    "0000fd00",
+    "0000ffb0",
+    "00010224",
+    "000103fc",
+    "00010414",
+    "00010508",
+    "0001161c",
+    "00011638",
+    "00011ffc",
+    "000128a4",
+    "0001557c",
+    "00016c30",
+    "00016ce4",
+    "000170cc",
+    "00017450",
+    "00017a4c",
+    "00017c3c",
+    "000184e0",
+    "00018a98",
+    "00018c40",
+    "0001a10c",
+    "0001a41c",
+    "0001a4a0",
+    "0001af24",
+    "0001af60",
+    "0001b074",
+    "0001b95c",
+    "0001ba50",
+    "0001bc18",
+    "0001c790",
+    "0001c934",
+    "0001ca4c",
+    "0001cb18",
+    "0001cd4c",
+    "0001d294",
+    "0001d4b8",
+    "0001d738",
+    "0001f948",
+    "0001fa5c",
+    "0001fb70",
+    "0001fc40",
+    "0001fd18",
+    "0001fe48",
+    "00020530",
+    "0002088c",
+    "000209b8",
+    "00020d28",
+    "00021a00",
+    "00021cd4",
+    "00021dfc",
+    "000225bc",
+    "00022698",
+    "000226b0",
+    "000228b4",
+    "000228bc",
+    "00022a74",
+    "00022a90",
+    "00022b70",
+    "00022b8c",
+    "00022cc0",
+    "00022ce4",
+    "00022d10",
+    "00022d5c",
+    "000230a4",
+    "0002310c",
+    "00023180",
+    "000234f8",
+    "0002371c",
+    "000237a4",
+    "0002382c",
+    "000238b4",
+    "00023990",
+    "00023a64",
+    "00023aa8",
+    "00023adc",
+    "00023b54",
+    "00023c20",
+    "00023c50",
+    "00023ef0",
+    "0002400c",
+    "00024170",
+    "000244d4",
+    "000246c4",
+    "00024850",
+    "000248ac",
+    "00024954",
+    "00024960",
+    "00024a50",
+    "00024a7c",
+    "00024c18",
+    "00024c3c",
+    "00024c64",
+    "00024e98",
+    "00025404",
+    "00025510",
+    "000255c8",
+    "00025604",
+    "00025640",
+    "00025680",
+    "000256c8",
+    "00025770",
+    "00025794",
+    "00025818",
+    "0002583c",
+    "00025854",
+    "000258c0",
+    "0002591c",
+    "00025984",
+    "00025a14",
+    "00025b9c",
+    "00025be8",
+    "00025c90",
+    "00025d08",
+    "000276e8",
+    "000278b0",
+    "00027988",
+    "00027a94",
+    "00027b00",
+    "00027b34",
+    "00027c8c",
+    "00027cc8",
+    "00028128",
+    "0002823c",
+    "00028480",
+    "0002980c",
+    "00029900",
+    "00029958",
+    "000299cc",
+    "00029ab0",
+    "00029ad0",
+    "00029af4",
+    "00029b78",
+    "00029dfc",
+    "00029f40",
+    "0002a320",
+    "0002a428",
+    "0002a4bc",
+    "0002a4c8",
+    "0002a4d4",
+    "0002a500",
+    "0002a520",
+    "0002a678",
+    "0002a780",
+    "0002aa80",
+    "0002ab38",
+    "0002ab64",
+    "0002ac74",
+    "0002ad94",
+    "0002ae14",
+    "0002aecc",
+    "0002af00",
+    "0002b118",
+    "0002b230",
+    "0002b368",
+    "0002b3d0",
+    "0002b54c",
+    "0002b5bc",
+    "0002b6e0",
+    "0002b850",
+    "0002b8f0",
+    "0002b990",
+    "0002bf00",
+    "0002bf54",
+    "0002c070",
+    "0002c11c",
+    "0002c158",
+    "0002c184",
+    "0002c1ec",
+    "0002c274",
+    "0002c2e0",
+    "0002c304",
+    "0002c378",
+    "0002c3e0",
+    "0002c4a0",
+    "0002c4fc",
+    "0002c560",
+    "0002c5c8",
+    "0002c630",
+    "0002cba4",
+    "0002d150",
+    "0002d1d8"
+   ],
+   "sample_in_dwarf": 145
+  }
+ }
+}

@@ -1,0 +1,73 @@
+{
+ "id": "m10-004",
+ "recorded_at": "2026-10-09T04:57:14.145841+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "43 methods take a program and every one is driven or excused with a reason; 62 reads answered identically beside another image and alone, 18 of 30 telling the images apart; 15 writes left the other image byte-identical across every read while showing their own effect; three gates carry the milestone claim",
+ "metrics": {
+  "images.methods_program_scoped": 43,
+  "images.methods_excused": 0,
+  "images.reads_isolated": 62,
+  "images.reads_discriminating": 18,
+  "images.writes_isolated": 15,
+  "images.writes_inert": 5
+ },
+ "discriminating_reads": [
+  "events_since",
+  "function_at",
+  "function_evidence",
+  "function_graph",
+  "functions",
+  "functions_page",
+  "memory_regions",
+  "open",
+  "prototypes",
+  "return_behaviors",
+  "search",
+  "stack_variables",
+  "strings",
+  "symbols",
+  "symbols_page",
+  "thunks",
+  "xrefs",
+  "xrefs_page"
+ ],
+ "reads_equal_and_empty": [
+  "bookmarks",
+  "classes",
+  "collab_ops",
+  "comments",
+  "datatypes",
+  "matching_runs",
+  "matching_workspace",
+  "patches",
+  "signature_matches",
+  "trace_events",
+  "type_defs",
+  "type_fields"
+ ],
+ "writes_inert": {
+  "recover_classes": "the fixture declares no RTTI or typeinfo, so no class is recovered for either image",
+  "apply_signatures": "no signature database is passed, so no match is stored",
+  "analyse_function": "the demand walk answers with its own report (state, instructions, calls); no read here lists what it stored, and the isolation check above covers that it moves nothing in the other image",
+  "decompile_doc": "decompiling reads the image and returns a document; it stores no fact of its own",
+  "propagate_type_links": "the fixture carries no type links to propagate"
+ },
+ "methods_excused": {},
+ "milestone": {
+  "m10-001": {
+   "images.programs": 2,
+   "images.reads_compared": 16,
+   "images.overlapping_address": 4198400
+  },
+  "m10-002": {
+   "images.follow_facts_compared": 8,
+   "images.ui_programs": 2,
+   "images.ui_switch_functions": 112
+  },
+  "m10-003": {
+   "edits.reads_compared": 16,
+   "edits.revision_after_second_import": 9
+  }
+ }
+}

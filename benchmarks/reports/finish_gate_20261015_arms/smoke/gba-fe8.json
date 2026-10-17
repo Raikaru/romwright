@@ -1,0 +1,62 @@
+{
+ "name": "gba-fe8",
+ "image": "/home/raikaru/ventris-corpus/extracted/gba-fire-emblem-sacred-stones/fe8.gba",
+ "started": "2026-10-15T14:24:06Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 17.2,
+   "tail": [
+    "imported fe8 (8214 functions, ARM:LE:32:v4t; 1 program(s) in the store)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-gba-fe8: gba agbcc (Medium), 8203 functions as asm units (8191 Thumb, 12 ARM), 295 binary units, 8203 symbols, 0 prototypes (0 skipped), compiler `agbcc`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-gba-fe8 && python3 -m pip install -r requirements.txt && python3 configure.py && ninja"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/gba-fire-emblem-sacred-stones/fe8.gba /home/raikaru/runs/FinalGate2/smoke/proj-gba-fe8 --name fe8"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 23.8,
+   "tail": [
+    "download binutils-arm-none-eabi 13.3.rel1 <- https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz",
+    "download agbcc pret/agbcc release (2026-01-20 asset) <- https://github.com/pret/agbcc/releases/download/release/agbcc.tar.gz",
+    "download objdiff-cli v3.6.1 <- https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-linux-x86_64",
+    "asm/header.s: complement check 0x9d",
+    "configured: 8498 units, 0 C unit(s); run `ninja`"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 164.2,
+   "tail": [
+    "[8499/8503] autosyms",
+    "[8500/8503] as asm/main/0132/FUN_08fe2690.s",
+    "[8501/8503] link build/fe8.gba.elf",
+    "[8502/8503] rom build/fe8.gba",
+    "[8503/8503] verify build/fe8.gba",
+    "OK  build/fe8.gba  sha1 c25b145e37456171ada4b0d440bf88a19f4d509f"
+   ],
+   "cmd": "ninja"
+  }
+ },
+ "build_ok_lines": [
+  "OK  build/fe8.gba  sha1 c25b145e37456171ada4b0d440bf88a19f4d509f"
+ ],
+ "sha1_built": "c25b145e37456171ada4b0d440bf88a19f4d509f",
+ "build_rc": 0,
+ "match_functions": [
+  "0x080a6f0c"
+ ],
+ "matches": [
+  {
+   "function": "0x080a6f0c",
+   "rc": 0,
+   "secs": 0.8,
+   "head": "FUN_080a6f0c 0x80a6f0c (68 bytes)  compiler agbcc -O2 -mthumb-interwork -fhex-asm  metric: objdiff match %",
+   "best": "best: default  100.000% exact  (default 100.000%)  1 decompiles, 1 compiles, 0.8s; stopped at an exact variant",
+   "tail": []
+  }
+ ],
+ "result": "done",
+ "finished": "2026-10-15T14:27:32Z"
+}

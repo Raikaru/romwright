@@ -1,0 +1,3090 @@
+{
+ "schema": "ownership/1",
+ "generated": "2026-10-12T04:16:54+00:00",
+ "tree": {
+  "files": 346,
+  "sha256": "13aecb49a6d18986",
+  "vcs": "none: a working-tree snapshot, not a checkout"
+ },
+ "n": 50,
+ "seed": 20261006,
+ "inventory": {
+  "unit": "code lines: non-blank, non-comment; Rust test code excluded",
+  "rust_first_party": {
+   "code": 115139,
+   "test": 34794,
+   "crates": {
+    "romwright-api": {
+     "code": 862,
+     "test": 165
+    },
+    "romwright-cli": {
+     "code": 2486,
+     "test": 0
+    },
+    "romwright-core": {
+     "code": 65633,
+     "test": 26420
+    },
+    "romwright-db": {
+     "code": 5230,
+     "test": 2003
+    },
+    "romwright-debug": {
+     "code": 1659,
+     "test": 763
+    },
+    "romwright-desktop": {
+     "code": 13942,
+     "test": 271
+    },
+    "romwright-diff": {
+     "code": 1702,
+     "test": 776
+    },
+    "romwright-facts": {
+     "code": 1185,
+     "test": 542
+    },
+    "romwright-model": {
+     "code": 1914,
+     "test": 60
+    },
+    "romwright-sig": {
+     "code": 1018,
+     "test": 468
+    },
+    "romwright-worker": {
+     "code": 18199,
+     "test": 3160
+    },
+    "romwright-worker-client": {
+     "code": 1309,
+     "test": 166
+    }
+   },
+   "pipeline_code": 95956,
+   "pipeline_crates": [
+    "romwright-cli",
+    "romwright-core",
+    "romwright-db",
+    "romwright-facts",
+    "romwright-model",
+    "romwright-worker",
+    "romwright-worker-client"
+   ]
+  },
+  "rust_third_party_vendored": {
+   "kuna-sleigh (third_party/kuna-sleigh, patched copy; kuna-base and kuna-num are git dependencies, not counted)": 17854
+  },
+  "cpp_ours": {
+   "patch_added_code": 662,
+   "patch_files": 35,
+   "patch_new_files": [],
+   "headers": {
+    "romwright_budget.hh": 50,
+    "romwright_bytes.hh": 60,
+    "romwright_ir.hh": 232,
+    "romwright_ir_state.hh": 17,
+    "romwright_nonreturn.hh": 44,
+    "romwright_ppc_return.hh": 19,
+    "romwright_printir.hh": 1149,
+    "romwright_structure.hh": 539
+   },
+   "headers_code": 2110,
+   "code": 2772
+  },
+  "cpp_vendored": {
+   "code": 137961,
+   "files": 236,
+   "note": "counts every file of the pinned tree, including the SLEIGH compiler, the interactive console and the BFD loader, which `ghidra_opt` does not link; the coverage map's executable lines (`cpp_vendored`) are what the binary holds"
+  }
+ },
+ "stages": [
+  {
+   "stage": "load",
+   "scope": "container parsing, segments, symbols, relocations, platform maps; the bytes and names the decompiler is given"
+  },
+  {
+   "stage": "discovery",
+   "scope": "function entries and data/code references (walk, seeds, pattern and constant-propagation references, thunks, no-return)"
+  },
+  {
+   "stage": "flow",
+   "scope": "instruction flow classification during the walk"
+  },
+  {
+   "stage": "pcode_lift",
+   "scope": "SLEIGH decode and p-code build"
+  },
+  {
+   "stage": "switch_recovery",
+   "scope": "jump-table recovery (stored import tables and the decompiler's own)"
+  },
+  {
+   "stage": "simplification",
+   "scope": "p-code dataflow and the action/rule pipeline up to high variables"
+  },
+  {
+   "stage": "type_inference",
+   "scope": "type propagation, casts, and the p-code type solver"
+  },
+  {
+   "stage": "prototype",
+   "scope": "calling convention, parameter and return recovery; persisted prototypes"
+  },
+  {
+   "stage": "structuring",
+   "scope": "control-flow structuring of the function's block graph"
+  },
+  {
+   "stage": "printing",
+   "scope": "C expression/declaration emission, block layer and pretty printing"
+  },
+  {
+   "stage": "postprocess",
+   "scope": "export-c text canonicalisation (temporary names, honesty markers)"
+  },
+  {
+   "stage": "host",
+   "scope": "process, wire protocol, facade, database and CLI plumbing"
+  }
+ ],
+ "images": {
+  "gba-pokeemerald": {
+   "status": "ran",
+   "program": "gba",
+   "sample": [
+    "0800f638",
+    "080115ec",
+    "08019a30",
+    "0801f18c",
+    "08020480",
+    "0802c398",
+    "080678c4",
+    "08069dec",
+    "080701e0",
+    "08075094",
+    "080789fc",
+    "0807ac64",
+    "0807bbc8",
+    "08084acc",
+    "08086b14",
+    "080906b4",
+    "08094750",
+    "080999a0",
+    "08099ab0",
+    "0809b270",
+    "080aa364",
+    "080b8db4",
+    "080bd154",
+    "080cdbf8",
+    "080d883c",
+    "080dfd64",
+    "080e0a88",
+    "080ec1d4",
+    "080f0b64",
+    "080fa248",
+    "08116420",
+    "0811b454",
+    "08121178",
+    "08133118",
+    "08134640",
+    "08137fc0",
+    "08141800",
+    "08156de4",
+    "08161cd8",
+    "08166e24",
+    "0817c080",
+    "08185eb8",
+    "081a0a34",
+    "081bd784",
+    "081be968",
+    "081c90a0",
+    "081d6074",
+    "081d8db4",
+    "082e15ac",
+    "082e512c"
+   ],
+   "import": {
+    "seconds": 135.4,
+    "phases": {
+     "discover-wall": 131.402649,
+     "discovery": 63.051688,
+     "flow": 58.271175,
+     "parse": 1.328359,
+     "patterns": 2.562235,
+     "references": 38.411115,
+     "references-only": 38.411111,
+     "settle": 0.035253,
+     "store": 2.212127,
+     "switch": 14.92701,
+     "switch-lanes": 10.814727,
+     "switch-setup": 3.696616,
+     "switch-vsa": 11.014679
+    },
+    "switch_stats": {
+     "vsa_resolved": 1,
+     "vsa_refused": 97,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": [
+     {
+      "severity": "info",
+      "stage": "loader",
+      "message": "RAM image at 0x02000000 (multiboot): cartridge header with logo, fixed byte and complement check at ROM offset 0x9a6550; entry branch to 0x9a6650; 1 words in the ROM point at its entries"
+     },
+     {
+      "severity": "info",
+      "stage": "loader",
+      "message": "RAM image at 0x03001aa8 (bios-copy): BIOS CpuSet copies 0x800 bytes from ROM 0x82df0e0 to 0x3001aa8; 62% of them decode as Thumb code; 2 words in the ROM point at its entries"
+     }
+    ]
+   },
+   "facts": {
+    "functions": 15532,
+    "functions_by_producer": {
+     "pattern": 10168,
+     "call": 2959,
+     "flow": 1618,
+     "const": 784,
+     "thunk": 3
+    },
+    "xrefs_by_provenance": {
+     "native-analysis:constant-propagation|READ": 56741,
+     "native-import|UNCONDITIONAL_CALL": 52795,
+     "native-analysis:constant-propagation|DATA": 9520,
+     "native-import:switch|COMPUTED_JUMP": 5031,
+     "native-analysis:constant-propagation|WRITE": 63,
+     "native-import:branch|UNCONDITIONAL_JUMP": 20,
+     "native-analysis:constant-propagation|COMPUTED_JUMP": 7,
+     "native-import:branch|UNCONDITIONAL_CALL": 6,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 3,
+     "native-import:thunk|UNCONDITIONAL_JUMP": 3
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 53306
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 6,
+     "native-import:thunk": 1
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 17176872,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 9,
+     "const": 3,
+     "pattern": 31,
+     "flow": 7
+    },
+    "sample_instructions": 1911,
+    "sample_bytes": 4336
+   },
+   "switch": {
+    "stored_dispatches": 617,
+    "stored_cases": 5031,
+    "rust_vsa_dispatches": 598,
+    "rust_vsa_cases": 4863,
+    "decompiler_dispatches": 19,
+    "decompiler_cases": 168,
+    "vsa_only_import_dispatches": 598,
+    "sample_dispatches": 0,
+    "sample_rust_vsa": 0,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 0,
+    "sample_printed_as_switch_rust_vsa": 0,
+    "sample_printed_tables_not_stored": 0,
+    "sample_printed_stored": 0,
+    "sample_printed_stored_rust_vsa": 0
+   },
+   "default_pass": {
+    "wall_seconds": 130.2,
+    "sampled": 50,
+    "decompiled": 50,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 50,
+    "tokens": 6224,
+    "fragment_tokens": 970,
+    "block_layer_tokens": 957,
+    "rust_expression_tokens": 4297,
+    "spacing_tokens": 5584,
+    "ghidra_constructs": 0,
+    "printed_constructs": 323,
+    "kept_constructs": 0,
+    "gotos_ghidra": 4,
+    "gotos_printed": 1,
+    "labels_ghidra": 4,
+    "labels_printed": 1,
+    "restructured_functions": 7,
+    "operations": 1707,
+    "calls": 151,
+    "calls_with_stored_prototype": 0,
+    "edits": 5,
+    "edits_additive_inverse": 5,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 2,
+    "cuts_proposed": 4,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 0,
+    "jump_table_cases_printed": 0,
+    "printed_parameters": 38,
+    "parameters_from_pass": 0,
+    "identifiers": 3968,
+    "renamed_identifiers": 424,
+    "fragment_tokens_by_kind": {
+     "comment": 376,
+     "function_name": 50,
+     "operator": 13,
+     "paren": 104,
+     "punctuation": 125,
+     "type": 175,
+     "variable": 125,
+     "label": 2
+    },
+    "rust_expression_tokens_by_kind": {
+     "function_name": 158,
+     "operator": 1233,
+     "paren": 1370,
+     "type": 219,
+     "variable": 1312,
+     "punctuation": 5
+    },
+    "expressions_rust_by_kind": {
+     "branch.branch": 16,
+     "branch.cbranch": 100,
+     "negated.cbranch": 100,
+     "statement.assign": 148,
+     "statement.call": 149,
+     "statement.cbranch": 100,
+     "statement.return": 54,
+     "statement.store": 77
+    },
+    "expressions_fragment_by_kind": {
+     "branch.branch": 0,
+     "branch.cbranch": 0,
+     "negated.cbranch": 0,
+     "statement.assign": 0,
+     "statement.call": 0,
+     "statement.cbranch": 0,
+     "statement.return": 0,
+     "statement.store": 0
+    },
+    "expression_fallback_reasons": {},
+    "fragment_tokens_by_region": {
+     "body": 378,
+     "declaration": 313,
+     "locals": 279
+    },
+    "constructs_created_by_kind": {
+     "do_while": 13,
+     "if": 66,
+     "leaf": 222,
+     "condition": 20,
+     "goto_block": 1,
+     "while": 1
+    },
+    "constructs_removed_by_kind": {},
+    "structuring_applied": {
+     "sink_join": 1,
+     "loop_exits": 1,
+     "switch_tails": 1
+    },
+    "pass_items": {
+     "type_inference:analyze": 2649,
+     "additive_inverse:transform": 5,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 50,
+     "identical": 43,
+     "different": 7
+    },
+    "ir-none": {
+     "compared": 50,
+     "identical": 48,
+     "different": 2
+    },
+    "rust-expressions-off": {
+     "compared": 50,
+     "identical": 50,
+     "different": 0
+    },
+    "either": {
+     "compared": 50,
+     "identical": 42,
+     "different": 8
+    }
+   },
+   "persisted_prototypes": null
+  },
+  "nds-pokeheartgold-arm9": {
+   "status": "ran",
+   "program": "nds.arm9",
+   "sample": [
+    "02001688",
+    "02004908",
+    "02006efc",
+    "0200d2a4",
+    "0200d5d4",
+    "0200e33c",
+    "020159e4",
+    "0201d978",
+    "0201f984",
+    "02021910",
+    "02024868",
+    "02024b34",
+    "02024c9c",
+    "020258e0",
+    "02026218",
+    "020274e0",
+    "020290a0",
+    "0202b574",
+    "0202d0a4",
+    "0202dbf4",
+    "0202e2f8",
+    "0202eb38",
+    "0202f620",
+    "0202f658",
+    "0202fa64",
+    "0203b344",
+    "02041000",
+    "020415c4",
+    "020469b4",
+    "02046bc4",
+    "0204c7f4",
+    "0204cb0c",
+    "0204e9d8",
+    "0204eddc",
+    "0204fe78",
+    "02050530",
+    "0205316c",
+    "0205b4a4",
+    "0205b624",
+    "0205b84c",
+    "0205b894",
+    "0205f35c",
+    "0205f908",
+    "0206659c",
+    "02068e70",
+    "02069e84",
+    "0206c274",
+    "02078434",
+    "0207f0c8",
+    "020d13bc"
+   ],
+   "import": {
+    "seconds": 234.2,
+    "phases": {
+     "discover-wall": 74.657935,
+     "discovery": 28.085958,
+     "flow": 26.283423,
+     "parse": 0.317334,
+     "patterns": 0.691436,
+     "references": 22.205927,
+     "references-only": 22.205921,
+     "settle": 0.011329,
+     "store": 0.944272,
+     "switch": 13.473224,
+     "switch-lanes": 10.54541,
+     "switch-setup": 2.70506,
+     "switch-vsa": 10.232951
+    },
+    "switch_stats": {
+     "vsa_resolved": 2,
+     "vsa_refused": 2009,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 10801,
+    "functions_by_producer": {
+     "call": 5565,
+     "pattern": 2968,
+     "flow": 2054,
+     "const": 214
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 35287,
+     "native-analysis:constant-propagation|READ": 13762,
+     "native-import:switch|COMPUTED_JUMP": 3348,
+     "native-analysis:constant-propagation|DATA": 2006,
+     "native-analysis:constant-propagation|COMPUTED_JUMP": 729,
+     "native-analysis:constant-propagation|WRITE": 193,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 16,
+     "native-import:branch|UNCONDITIONAL_JUMP": 4,
+     "native-import|UNCONDITIONAL_JUMP": 1,
+     "native-import:branch|UNCONDITIONAL_CALL": 1
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 10121
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 1,
+     "native-import:thunk": 2
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 6528760,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "flow": 17,
+     "call": 22,
+     "pattern": 10,
+     "const": 1
+    },
+    "sample_instructions": 1057,
+    "sample_bytes": 2468
+   },
+   "switch": {
+    "stored_dispatches": 408,
+    "stored_cases": 3348,
+    "rust_vsa_dispatches": 384,
+    "rust_vsa_cases": 3190,
+    "decompiler_dispatches": 24,
+    "decompiler_cases": 158,
+    "vsa_only_import_dispatches": 384,
+    "sample_dispatches": 1,
+    "sample_rust_vsa": 1,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 1,
+    "sample_printed_as_switch_rust_vsa": 1,
+    "sample_printed_tables_not_stored": 0,
+    "sample_printed_stored": 1,
+    "sample_printed_stored_rust_vsa": 1
+   },
+   "default_pass": {
+    "wall_seconds": 34.8,
+    "sampled": 50,
+    "decompiled": 50,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 50,
+    "tokens": 4447,
+    "fragment_tokens": 819,
+    "block_layer_tokens": 663,
+    "rust_expression_tokens": 2965,
+    "spacing_tokens": 3924,
+    "ghidra_constructs": 0,
+    "printed_constructs": 243,
+    "kept_constructs": 0,
+    "gotos_ghidra": 0,
+    "gotos_printed": 0,
+    "labels_ghidra": 0,
+    "labels_printed": 0,
+    "restructured_functions": 3,
+    "operations": 1000,
+    "calls": 147,
+    "calls_with_stored_prototype": 0,
+    "edits": 1,
+    "edits_additive_inverse": 1,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 1,
+    "cuts_proposed": 0,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 1,
+    "jump_table_cases_printed": 5,
+    "printed_parameters": 94,
+    "parameters_from_pass": 0,
+    "identifiers": 3060,
+    "renamed_identifiers": 388,
+    "printed_switch_confirmed": 1,
+    "fragment_tokens_by_kind": {
+     "function_name": 50,
+     "operator": 26,
+     "paren": 100,
+     "punctuation": 166,
+     "type": 241,
+     "variable": 191,
+     "comment": 40,
+     "case_label": 5
+    },
+    "rust_expression_tokens_by_kind": {
+     "function_name": 147,
+     "operator": 867,
+     "paren": 956,
+     "type": 130,
+     "variable": 865
+    },
+    "expressions_rust_by_kind": {
+     "branch.branch": 13,
+     "branch.branchind": 1,
+     "branch.cbranch": 64,
+     "negated.cbranch": 64,
+     "statement.assign": 72,
+     "statement.branchind": 1,
+     "statement.call": 143,
+     "statement.cbranch": 64,
+     "statement.return": 70,
+     "statement.store": 25
+    },
+    "expressions_fragment_by_kind": {
+     "branch.branch": 0,
+     "branch.branchind": 0,
+     "branch.cbranch": 0,
+     "negated.cbranch": 0,
+     "statement.assign": 0,
+     "statement.branchind": 0,
+     "statement.call": 0,
+     "statement.cbranch": 0,
+     "statement.return": 0,
+     "statement.store": 0
+    },
+    "expression_fallback_reasons": {},
+    "fragment_tokens_by_region": {
+     "declaration": 460,
+     "locals": 305,
+     "body": 54
+    },
+    "constructs_created_by_kind": {
+     "do_while": 6,
+     "if": 52,
+     "leaf": 178,
+     "condition": 5,
+     "while": 1,
+     "switch": 1
+    },
+    "constructs_removed_by_kind": {},
+    "structuring_applied": {},
+    "pass_items": {
+     "type_inference:analyze": 1607,
+     "additive_inverse:transform": 1,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 50,
+     "identical": 47,
+     "different": 3
+    },
+    "ir-none": {
+     "compared": 50,
+     "identical": 49,
+     "different": 1
+    },
+    "rust-expressions-off": {
+     "compared": 50,
+     "identical": 50,
+     "different": 0
+    },
+    "either": {
+     "compared": 50,
+     "identical": 46,
+     "different": 4
+    }
+   },
+   "persisted_prototypes": null
+  },
+  "ps2-capcom-fighting-evolution": {
+   "status": "ran",
+   "program": "capcom",
+   "sample": [
+    "0012e020",
+    "0012f080",
+    "001306d0",
+    "00135d90",
+    "00136080",
+    "001363f0",
+    "00139a90",
+    "0013d7e0",
+    "001453f0",
+    "001526c0",
+    "0015c9e0",
+    "00166c90",
+    "00168690",
+    "00171620",
+    "0017a230",
+    "0017a660",
+    "0017a830",
+    "0017aa30",
+    "0017eb40",
+    "00189e90",
+    "0018e790",
+    "00191bd0",
+    "001a4150",
+    "001c0b00",
+    "001c1160",
+    "001c61d0",
+    "001cd870",
+    "001cfb70",
+    "001d2240",
+    "001d8670",
+    "001d9580",
+    "001e7270",
+    "001e8100",
+    "001ed210",
+    "001f7640",
+    "001fc400",
+    "00200940",
+    "0020c960",
+    "002112d0",
+    "002589c0",
+    "002875a0",
+    "002921f0",
+    "00292cd0",
+    "00293e70",
+    "00297250",
+    "00297610",
+    "0029a130",
+    "0029a3c0",
+    "0029b330",
+    "002a0ba0"
+   ],
+   "import": {
+    "seconds": 119.5,
+    "phases": {
+     "discover-wall": 118.866357,
+     "discovery": 30.219673,
+     "flow": 6.374746,
+     "parse": 0.010019,
+     "patterns": 10.520812,
+     "references": 8.082792,
+     "references-only": 8.082789,
+     "settle": 0.013539,
+     "store": 0.464558,
+     "switch": 77.699007,
+     "switch-lanes": 76.00574,
+     "switch-setup": 1.582497,
+     "switch-vsa": 2.229197
+    },
+    "switch_stats": {
+     "vsa_resolved": 2,
+     "vsa_refused": 395,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": [
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x182fa0: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x182ab0: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aa860: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aaae0: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aabf0: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aad00: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aad20: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aae00: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1ab430: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     }
+    ]
+   },
+   "facts": {
+    "functions": 8613,
+    "functions_by_producer": {
+     "flow": 4610,
+     "call": 3541,
+     "pattern": 353,
+     "thunk": 105,
+     "const": 4
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 21711,
+     "native-analysis:constant-propagation|READ": 10192,
+     "native-analysis:constant-propagation|WRITE": 4464,
+     "native-import:switch|COMPUTED_JUMP": 3440,
+     "native-analysis:constant-propagation|DATA": 2646,
+     "native-import:branch|UNCONDITIONAL_CALL": 1454,
+     "native-analysis:constant-propagation|READ_WRITE": 128,
+     "native-import:branch|UNCONDITIONAL_JUMP": 76,
+     "native-analysis:data-pointer|DATA": 72,
+     "native-import:thunk|UNCONDITIONAL_JUMP": 52,
+     "native-import:thunk|UNCONDITIONAL_CALL": 1
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-pointer": 72,
+     "native-analysis:data-width": 4146
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 1432,
+     "native-import:thunk": 58
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 3182208,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "flow": 34,
+     "call": 15,
+     "thunk": 1
+    },
+    "sample_instructions": 2324,
+    "sample_bytes": 11268
+   },
+   "switch": {
+    "stored_dispatches": 515,
+    "stored_cases": 3440,
+    "rust_vsa_dispatches": 184,
+    "rust_vsa_cases": 1006,
+    "decompiler_dispatches": 331,
+    "decompiler_cases": 2434,
+    "vsa_only_import_dispatches": 184,
+    "sample_dispatches": 4,
+    "sample_rust_vsa": 1,
+    "sample_decompiler": 3,
+    "sample_printed_as_switch": 4,
+    "sample_printed_as_switch_rust_vsa": 1,
+    "sample_printed_tables_not_stored": 0,
+    "sample_printed_stored": 5,
+    "sample_printed_stored_rust_vsa": 2
+   },
+   "default_pass": {
+    "wall_seconds": 7.3,
+    "sampled": 50,
+    "decompiled": 50,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 50,
+    "tokens": 17624,
+    "fragment_tokens": 902,
+    "block_layer_tokens": 2176,
+    "rust_expression_tokens": 14546,
+    "spacing_tokens": 16894,
+    "ghidra_constructs": 0,
+    "printed_constructs": 733,
+    "kept_constructs": 0,
+    "gotos_ghidra": 0,
+    "gotos_printed": 0,
+    "labels_ghidra": 0,
+    "labels_printed": 0,
+    "restructured_functions": 12,
+    "operations": 5855,
+    "calls": 190,
+    "calls_with_stored_prototype": 0,
+    "edits": 14,
+    "edits_additive_inverse": 14,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 8,
+    "cuts_proposed": 0,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 5,
+    "jump_table_cases_printed": 27,
+    "printed_parameters": 50,
+    "parameters_from_pass": 0,
+    "identifiers": 7209,
+    "renamed_identifiers": 1175,
+    "printed_switch_confirmed": 4,
+    "printed_switch_applied": 1,
+    "fragment_tokens_by_kind": {
+     "function_name": 50,
+     "paren": 108,
+     "punctuation": 184,
+     "type": 227,
+     "variable": 177,
+     "case_label": 23,
+     "comment": 125,
+     "operator": 8
+    },
+    "rust_expression_tokens_by_kind": {
+     "function_name": 190,
+     "operator": 4463,
+     "paren": 5078,
+     "type": 1064,
+     "variable": 3747,
+     "punctuation": 4
+    },
+    "expressions_rust_by_kind": {
+     "branch.branch": 59,
+     "branch.branchind": 5,
+     "branch.cbranch": 237,
+     "negated.cbranch": 237,
+     "statement.assign": 248,
+     "statement.branchind": 5,
+     "statement.call": 193,
+     "statement.cbranch": 237,
+     "statement.return": 70,
+     "statement.store": 554
+    },
+    "expressions_fragment_by_kind": {
+     "branch.branch": 0,
+     "branch.branchind": 0,
+     "branch.cbranch": 0,
+     "negated.cbranch": 0,
+     "statement.assign": 0,
+     "statement.branchind": 0,
+     "statement.call": 0,
+     "statement.cbranch": 0,
+     "statement.return": 0,
+     "statement.store": 0
+    },
+    "expression_fallback_reasons": {},
+    "fragment_tokens_by_region": {
+     "declaration": 309,
+     "locals": 400,
+     "body": 165,
+     "header": 28
+    },
+    "constructs_created_by_kind": {
+     "if": 180,
+     "leaf": 491,
+     "switch": 5,
+     "condition": 49,
+     "do_while": 8
+    },
+    "constructs_removed_by_kind": {},
+    "structuring_applied": {},
+    "pass_items": {
+     "type_inference:analyze": 8589,
+     "additive_inverse:transform": 14,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 50,
+     "identical": 38,
+     "different": 12
+    },
+    "ir-none": {
+     "compared": 50,
+     "identical": 42,
+     "different": 8
+    },
+    "rust-expressions-off": {
+     "compared": 50,
+     "identical": 50,
+     "different": 0
+    },
+    "either": {
+     "compared": 50,
+     "identical": 34,
+     "different": 16
+    }
+   },
+   "persisted_prototypes": null
+  },
+  "ps2-dungeon-game": {
+   "status": "ran",
+   "program": "dungeon",
+   "sample": [
+    "0010a160",
+    "0010f840",
+    "0010f978",
+    "00114430",
+    "00115930",
+    "00117460",
+    "00117a88",
+    "001183a0",
+    "00118bd8",
+    "001193f0",
+    "0011ec80",
+    "0011f1f0",
+    "0011f200",
+    "00120830",
+    "001293b0",
+    "00129598",
+    "0012adc8",
+    "0012cd60",
+    "0012d938",
+    "0012dc48",
+    "0012e090",
+    "0012e488",
+    "0012f888",
+    "00130130",
+    "00130f28",
+    "00131290",
+    "001313f8",
+    "00131508",
+    "00132260",
+    "001322d8",
+    "001322f8",
+    "001329a0",
+    "001329c0",
+    "00133068",
+    "00133100",
+    "00133140",
+    "00133378",
+    "001333d8",
+    "00133448",
+    "001334a8",
+    "00133718",
+    "00133770",
+    "00133830",
+    "001338d0",
+    "00133900",
+    "001339e0",
+    "00133b70",
+    "00133c58",
+    "00134e08",
+    "00134e38"
+   ],
+   "import": {
+    "seconds": 5.9,
+    "phases": {
+     "discover-wall": 5.180783,
+     "discovery": 2.991092,
+     "flow": 0.8934,
+     "parse": 0.147659,
+     "patterns": 0.638119,
+     "references": 0.542982,
+     "references-only": 0.54298,
+     "settle": 0.001071,
+     "store": 0.460853,
+     "switch": 1.395126,
+     "switch-lanes": 0.43617,
+     "switch-setup": 0.955665,
+     "switch-vsa": 0.130163
+    },
+    "switch_stats": {
+     "vsa_resolved": 4,
+     "vsa_refused": 6,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 786,
+    "functions_by_producer": {
+     "call": 453,
+     "flow": 289,
+     "pattern": 37,
+     "const": 7
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 2115,
+     "native-import:elf-pointer|DATA": 1444,
+     "native-analysis:constant-propagation|DATA": 1160,
+     "native-analysis:constant-propagation|READ": 655,
+     "native-analysis:constant-propagation|WRITE": 398,
+     "native-import:switch|COMPUTED_JUMP": 98,
+     "native-import:branch|UNCONDITIONAL_JUMP": 17,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 5,
+     "native-analysis:constant-propagation|READ_WRITE": 2,
+     "native-analysis:data-pointer|DATA": 2
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-pointer": 15,
+     "native-analysis:data-width": 436
+    },
+    "flow_overrides_by_provenance": {
+     "native-import:thunk": 5
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 4076520,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 36,
+     "flow": 13,
+     "pattern": 1
+    },
+    "sample_instructions": 2794,
+    "sample_bytes": 13412
+   },
+   "switch": {
+    "stored_dispatches": 13,
+    "stored_cases": 98,
+    "rust_vsa_dispatches": 8,
+    "rust_vsa_cases": 71,
+    "decompiler_dispatches": 5,
+    "decompiler_cases": 27,
+    "vsa_only_import_dispatches": 8,
+    "sample_dispatches": 0,
+    "sample_rust_vsa": 0,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 0,
+    "sample_printed_as_switch_rust_vsa": 0,
+    "sample_printed_tables_not_stored": 0,
+    "sample_printed_stored": 0,
+    "sample_printed_stored_rust_vsa": 0
+   },
+   "default_pass": {
+    "wall_seconds": 19.9,
+    "sampled": 50,
+    "decompiled": 50,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 50,
+    "tokens": 15532,
+    "fragment_tokens": 1126,
+    "block_layer_tokens": 2639,
+    "rust_expression_tokens": 11767,
+    "spacing_tokens": 13907,
+    "ghidra_constructs": 0,
+    "printed_constructs": 1080,
+    "kept_constructs": 0,
+    "gotos_ghidra": 46,
+    "gotos_printed": 9,
+    "labels_ghidra": 33,
+    "labels_printed": 8,
+    "restructured_functions": 14,
+    "operations": 4354,
+    "calls": 84,
+    "calls_with_stored_prototype": 0,
+    "edits": 42,
+    "edits_additive_inverse": 42,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 10,
+    "cuts_proposed": 28,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 0,
+    "jump_table_cases_printed": 0,
+    "printed_parameters": 81,
+    "parameters_from_pass": 0,
+    "identifiers": 7164,
+    "renamed_identifiers": 1990,
+    "fragment_tokens_by_kind": {
+     "function_name": 50,
+     "label": 17,
+     "operator": 38,
+     "paren": 132,
+     "punctuation": 264,
+     "type": 334,
+     "variable": 284,
+     "comment": 7
+    },
+    "rust_expression_tokens_by_kind": {
+     "function_name": 84,
+     "operator": 3065,
+     "paren": 3724,
+     "type": 622,
+     "variable": 4263,
+     "punctuation": 9
+    },
+    "expressions_rust_by_kind": {
+     "branch.branch": 118,
+     "branch.cbranch": 333,
+     "loop-iterate.assign": 1,
+     "negated.cbranch": 333,
+     "statement.assign": 691,
+     "statement.call": 107,
+     "statement.cbranch": 333,
+     "statement.return": 96,
+     "statement.store": 193
+    },
+    "expressions_fragment_by_kind": {
+     "branch.branch": 0,
+     "branch.cbranch": 0,
+     "loop-iterate.assign": 0,
+     "negated.cbranch": 0,
+     "statement.assign": 0,
+     "statement.call": 0,
+     "statement.cbranch": 0,
+     "statement.return": 0,
+     "statement.store": 0
+    },
+    "expression_fallback_reasons": {},
+    "fragment_tokens_by_region": {
+     "body": 17,
+     "declaration": 430,
+     "locals": 672,
+     "header": 7
+    },
+    "constructs_created_by_kind": {
+     "do_while": 16,
+     "goto_block": 12,
+     "if": 292,
+     "infinite_loop": 4,
+     "leaf": 729,
+     "while": 9,
+     "condition": 18
+    },
+    "constructs_removed_by_kind": {},
+    "structuring_applied": {
+     "loop_exits": 2,
+     "switch_tails": 19,
+     "irreducible_entry": 8,
+     "sink_join": 7,
+     "else_join": 1
+    },
+    "pass_items": {
+     "type_inference:analyze": 6696,
+     "additive_inverse:transform": 42,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 50,
+     "identical": 36,
+     "different": 14
+    },
+    "ir-none": {
+     "compared": 50,
+     "identical": 40,
+     "different": 10
+    },
+    "rust-expressions-off": {
+     "compared": 50,
+     "identical": 50,
+     "different": 0
+    },
+    "either": {
+     "compared": 50,
+     "identical": 34,
+     "different": 16
+    }
+   },
+   "persisted_prototypes": null
+  },
+  "psx-darkstalkers-3": {
+   "status": "ran",
+   "program": "psx",
+   "sample": [
+    "8013a180",
+    "8013a510",
+    "8013e41c",
+    "80140fcc",
+    "8014bf7c",
+    "8014c4b0",
+    "8014d9b8",
+    "8014f5a0",
+    "801505b0",
+    "801551e4",
+    "801555f0",
+    "8015c404",
+    "8015d6f8",
+    "80164c38",
+    "8016acb8",
+    "8016e1a4",
+    "8016f06c",
+    "8016fed8",
+    "801700b0",
+    "80170194",
+    "80170674",
+    "801709b0",
+    "80170b5c",
+    "80170ea8",
+    "80170ee0",
+    "80170f30",
+    "80170f68",
+    "8017195c",
+    "80172cc8",
+    "80172d90",
+    "80173b5c",
+    "80173fd8",
+    "8017a658",
+    "8017e848",
+    "80181af8",
+    "80181b08",
+    "80181fe8",
+    "80182898",
+    "80182ac4",
+    "80184a30",
+    "8018904c",
+    "8018916c",
+    "801893ec",
+    "801896d8",
+    "8018afd4",
+    "8018afe0",
+    "8018c5e8",
+    "8018c8b0",
+    "8018dcf4",
+    "8018e71c"
+   ],
+   "import": {
+    "seconds": 6.3,
+    "phases": {
+     "discover-wall": 6.075397,
+     "discovery": 2.461377,
+     "flow": 1.325581,
+     "parse": 0.002893,
+     "patterns": 0.692582,
+     "references": 1.759914,
+     "references-only": 1.759912,
+     "settle": 0.000808,
+     "store": 0.140167,
+     "switch": 1.561712,
+     "switch-lanes": 1.274524,
+     "switch-setup": 0.282465,
+     "switch-vsa": 0.235203
+    },
+    "switch_stats": {
+     "vsa_resolved": 0,
+     "vsa_refused": 31,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 2205,
+    "functions_by_producer": {
+     "pattern": 1425,
+     "call": 578,
+     "flow": 199,
+     "const": 3
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 4132,
+     "native-analysis:constant-propagation|READ": 1077,
+     "native-analysis:constant-propagation|WRITE": 572,
+     "native-analysis:constant-propagation|DATA": 464,
+     "native-import:switch|COMPUTED_JUMP": 136,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 21,
+     "native-analysis:constant-propagation|READ_WRITE": 2
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 289
+    },
+    "flow_overrides_by_provenance": {},
+    "prototypes_by_provenance": {},
+    "memory_bytes": 2518016,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 17,
+     "pattern": 31,
+     "flow": 2
+    },
+    "sample_instructions": 1687,
+    "sample_bytes": 8076
+   },
+   "switch": {
+    "stored_dispatches": 21,
+    "stored_cases": 136,
+    "rust_vsa_dispatches": 20,
+    "rust_vsa_cases": 131,
+    "decompiler_dispatches": 1,
+    "decompiler_cases": 5,
+    "vsa_only_import_dispatches": 20,
+    "sample_dispatches": 1,
+    "sample_rust_vsa": 1,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 1,
+    "sample_printed_as_switch_rust_vsa": 1,
+    "sample_printed_tables_not_stored": 0,
+    "sample_printed_stored": 1,
+    "sample_printed_stored_rust_vsa": 1
+   },
+   "default_pass": {
+    "wall_seconds": 3.0,
+    "sampled": 50,
+    "decompiled": 50,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 50,
+    "tokens": 7441,
+    "fragment_tokens": 637,
+    "block_layer_tokens": 1225,
+    "rust_expression_tokens": 5579,
+    "spacing_tokens": 6795,
+    "ghidra_constructs": 0,
+    "printed_constructs": 467,
+    "kept_constructs": 0,
+    "gotos_ghidra": 4,
+    "gotos_printed": 1,
+    "labels_ghidra": 3,
+    "labels_printed": 1,
+    "restructured_functions": 6,
+    "operations": 2927,
+    "calls": 92,
+    "calls_with_stored_prototype": 0,
+    "edits": 35,
+    "edits_additive_inverse": 35,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 11,
+    "cuts_proposed": 0,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 1,
+    "jump_table_cases_printed": 5,
+    "printed_parameters": 66,
+    "parameters_from_pass": 0,
+    "identifiers": 4465,
+    "renamed_identifiers": 616,
+    "printed_switch_confirmed": 1,
+    "fragment_tokens_by_kind": {
+     "function_name": 50,
+     "operator": 15,
+     "paren": 100,
+     "punctuation": 124,
+     "type": 195,
+     "variable": 145,
+     "case_label": 6,
+     "label": 2
+    },
+    "rust_expression_tokens_by_kind": {
+     "operator": 1705,
+     "paren": 1770,
+     "type": 335,
+     "variable": 1677,
+     "function_name": 92
+    },
+    "expressions_rust_by_kind": {
+     "branch.branch": 24,
+     "branch.branchind": 1,
+     "branch.cbranch": 147,
+     "loop-iterate.assign": 1,
+     "negated.cbranch": 147,
+     "statement.assign": 249,
+     "statement.branchind": 1,
+     "statement.call": 106,
+     "statement.cbranch": 147,
+     "statement.return": 65,
+     "statement.store": 104
+    },
+    "expressions_fragment_by_kind": {
+     "branch.branch": 0,
+     "branch.branchind": 0,
+     "branch.cbranch": 0,
+     "loop-iterate.assign": 0,
+     "negated.cbranch": 0,
+     "statement.assign": 0,
+     "statement.branchind": 0,
+     "statement.call": 0,
+     "statement.cbranch": 0,
+     "statement.return": 0,
+     "statement.store": 0
+    },
+    "expression_fallback_reasons": {},
+    "fragment_tokens_by_region": {
+     "declaration": 370,
+     "locals": 248,
+     "body": 19
+    },
+    "constructs_created_by_kind": {
+     "do_while": 10,
+     "leaf": 318,
+     "if": 106,
+     "while": 6,
+     "infinite_loop": 1,
+     "switch": 1,
+     "condition": 25
+    },
+    "constructs_removed_by_kind": {},
+    "structuring_applied": {
+     "switch_tails": 3
+    },
+    "pass_items": {
+     "type_inference:analyze": 4014,
+     "additive_inverse:transform": 35,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 50,
+     "identical": 44,
+     "different": 6
+    },
+    "ir-none": {
+     "compared": 50,
+     "identical": 39,
+     "different": 11
+    },
+    "rust-expressions-off": {
+     "compared": 50,
+     "identical": 50,
+     "different": 0
+    },
+    "either": {
+     "compared": 50,
+     "identical": 35,
+     "different": 15
+    }
+   },
+   "persisted_prototypes": null
+  },
+  "psv-need-for-speed-most-wanted": {
+   "status": "ran",
+   "program": "vita",
+   "sample": [
+    "8100d5b0",
+    "8101029a",
+    "8102ab7a",
+    "810d6338",
+    "810d89f6",
+    "810f8c80",
+    "81101a6c",
+    "81106ace",
+    "8114cf74",
+    "8115369a",
+    "8116e15a",
+    "81187e6a",
+    "81189c98",
+    "81197fc4",
+    "811ae36e",
+    "811ebe38",
+    "811f2e32",
+    "811f5980",
+    "8121838c",
+    "812338fa",
+    "8123f9b0",
+    "8126cd94",
+    "81276b8a",
+    "8128563c",
+    "812ac9a4",
+    "812d3ce0",
+    "8131d914",
+    "813f90a4",
+    "81408a40",
+    "81411254",
+    "814134b6",
+    "8144b776",
+    "8145a464",
+    "81480b2e",
+    "814de274",
+    "814e04fe",
+    "81505592",
+    "8150800a",
+    "81529e44",
+    "81561e64",
+    "8157e43a",
+    "815904c8",
+    "815c6000",
+    "815d9574",
+    "815e9ce0",
+    "8162564c",
+    "81627540",
+    "81629d0c",
+    "81645ccc",
+    "8165cc9c"
+   ],
+   "import": {
+    "seconds": 267.9,
+    "phases": {
+     "discover-wall": 264.803054,
+     "discovery": 95.706073,
+     "flow": 88.781639,
+     "parse": 0.009016,
+     "patterns": 2.247246,
+     "references": 54.273986,
+     "references-only": 54.273979,
+     "settle": 0.03263,
+     "store": 2.750387,
+     "switch": 89.845552,
+     "switch-lanes": 84.02032,
+     "switch-setup": 5.23197,
+     "switch-vsa": 20.738358
+    },
+    "switch_stats": {
+     "vsa_resolved": 106,
+     "vsa_refused": 176,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": [
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811cd8be: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811d10c4: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811d113e: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811e99c0: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x81428f64: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x814e180a: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     }
+    ]
+   },
+   "facts": {
+    "functions": 27566,
+    "functions_by_producer": {
+     "pattern": 19040,
+     "flow": 5174,
+     "call": 2621,
+     "thunk": 489,
+     "symbol": 202,
+     "const": 40
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 82415,
+     "native-analysis:constant-propagation|DATA": 35216,
+     "native-analysis:constant-propagation|WRITE": 30830,
+     "native-analysis:constant-propagation|READ": 27676,
+     "native-import:switch|COMPUTED_JUMP": 4843,
+     "native-import:branch|UNCONDITIONAL_JUMP": 1029,
+     "native-import:branch|UNCONDITIONAL_CALL": 409,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 27,
+     "native-analysis:data-pointer|DATA": 6
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-pointer": 6,
+     "native-analysis:data-width": 37113
+    },
+    "flow_overrides_by_provenance": {
+     "native-import:thunk": 409
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 9126464,
+    "symbols_by_source": {
+     "native-import": 580,
+     "native-import:elf-object": 2
+    },
+    "sample_functions_by_producer": {
+     "flow": 11,
+     "pattern": 35,
+     "call": 4
+    },
+    "sample_instructions": 4720,
+    "sample_bytes": 14596
+   },
+   "switch": {
+    "stored_dispatches": 601,
+    "stored_cases": 4843,
+    "rust_vsa_dispatches": 553,
+    "rust_vsa_cases": 4483,
+    "decompiler_dispatches": 48,
+    "decompiler_cases": 360,
+    "vsa_only_import_dispatches": 553,
+    "sample_dispatches": 5,
+    "sample_rust_vsa": 5,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 5,
+    "sample_printed_as_switch_rust_vsa": 5,
+    "sample_printed_tables_not_stored": 0,
+    "sample_printed_stored": 5,
+    "sample_printed_stored_rust_vsa": 5
+   },
+   "default_pass": {
+    "wall_seconds": 32.4,
+    "sampled": 50,
+    "decompiled": 50,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 50,
+    "tokens": 27471,
+    "fragment_tokens": 2804,
+    "block_layer_tokens": 2971,
+    "rust_expression_tokens": 21696,
+    "spacing_tokens": 25748,
+    "ghidra_constructs": 0,
+    "printed_constructs": 786,
+    "kept_constructs": 0,
+    "gotos_ghidra": 7,
+    "gotos_printed": 5,
+    "labels_ghidra": 7,
+    "labels_printed": 5,
+    "restructured_functions": 6,
+    "operations": 9429,
+    "calls": 187,
+    "calls_with_stored_prototype": 0,
+    "edits": 3,
+    "edits_additive_inverse": 3,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 3,
+    "cuts_proposed": 2,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 5,
+    "jump_table_cases_printed": 56,
+    "printed_parameters": 114,
+    "parameters_from_pass": 0,
+    "identifiers": 13817,
+    "renamed_identifiers": 3361,
+    "printed_switch_confirmed": 5,
+    "fragment_tokens_by_kind": {
+     "function_name": 50,
+     "paren": 414,
+     "punctuation": 818,
+     "type": 662,
+     "variable": 612,
+     "operator": 103,
+     "case_label": 55,
+     "comment": 80,
+     "label": 10
+    },
+    "rust_expression_tokens_by_kind": {
+     "function_name": 187,
+     "operator": 7064,
+     "paren": 6528,
+     "type": 1274,
+     "variable": 6287,
+     "punctuation": 356
+    },
+    "expressions_rust_by_kind": {
+     "branch.branch": 93,
+     "branch.branchind": 5,
+     "branch.cbranch": 249,
+     "loop-init.assign": 1,
+     "loop-iterate.assign": 2,
+     "negated.cbranch": 249,
+     "statement.assign": 983,
+     "statement.branchind": 5,
+     "statement.call": 359,
+     "statement.cbranch": 249,
+     "statement.return": 66,
+     "statement.store": 401
+    },
+    "expressions_fragment_by_kind": {
+     "branch.branch": 0,
+     "branch.branchind": 0,
+     "branch.cbranch": 0,
+     "loop-init.assign": 0,
+     "loop-iterate.assign": 0,
+     "negated.cbranch": 0,
+     "statement.assign": 0,
+     "statement.branchind": 0,
+     "statement.call": 0,
+     "statement.cbranch": 0,
+     "statement.return": 0,
+     "statement.store": 0
+    },
+    "expression_fallback_reasons": {},
+    "fragment_tokens_by_region": {
+     "declaration": 647,
+     "locals": 1903,
+     "body": 174,
+     "header": 80
+    },
+    "constructs_created_by_kind": {
+     "leaf": 528,
+     "if": 183,
+     "do_while": 26,
+     "switch": 5,
+     "condition": 37,
+     "goto_block": 2,
+     "multigoto": 1,
+     "while": 4
+    },
+    "constructs_removed_by_kind": {},
+    "structuring_applied": {
+     "loop_exits": 1,
+     "sink_join": 1
+    },
+    "pass_items": {
+     "type_inference:analyze": 13239,
+     "additive_inverse:transform": 3,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 50,
+     "identical": 44,
+     "different": 6
+    },
+    "ir-none": {
+     "compared": 50,
+     "identical": 47,
+     "different": 3
+    },
+    "rust-expressions-off": {
+     "compared": 50,
+     "identical": 50,
+     "different": 0
+    },
+    "either": {
+     "compared": 50,
+     "identical": 43,
+     "different": 7
+    }
+   },
+   "persisted_prototypes": null
+  },
+  "x360-black-ops-2": {
+   "status": "ran",
+   "program": "x360.xex",
+   "sample": [
+    "821464b0",
+    "821675c8",
+    "821ca168",
+    "821ed780",
+    "8221e9a0",
+    "822dd2c8",
+    "822fb128",
+    "822ff010",
+    "82300f80",
+    "8234e958",
+    "82376048",
+    "8237f7f0",
+    "8239b4c0",
+    "823a2ae8",
+    "823bec10",
+    "823f8778",
+    "82403268",
+    "8240d390",
+    "82422010",
+    "82448da0",
+    "82464e00",
+    "82498f48",
+    "824a2108",
+    "824a2798",
+    "824b2490",
+    "824b4178",
+    "824cf5b0",
+    "825228a8",
+    "82534588",
+    "8253e3f8",
+    "825412a8",
+    "82555d68",
+    "8255b578",
+    "825d93f8",
+    "82678230",
+    "8268fb00",
+    "8269ee28",
+    "82710068",
+    "8277f870",
+    "8278c330",
+    "827b5908",
+    "827c756c",
+    "827cbf88",
+    "827ce7e0",
+    "827faa80",
+    "82818a10",
+    "8281e7f8",
+    "8285c800",
+    "82869670",
+    "8287ea7c"
+   ],
+   "import": {
+    "seconds": 121.4,
+    "phases": {
+     "discover-wall": 115.364282,
+     "discovery": 35.88056,
+     "flow": 34.252845,
+     "parse": 0.767686,
+     "patterns": 0.684048,
+     "references": 20.744359,
+     "references-only": 20.744354,
+     "settle": 0.042236,
+     "store": 4.949357,
+     "switch": 46.048407,
+     "switch-lanes": 35.820628,
+     "switch-setup": 10.048437,
+     "switch-vsa": 10.525142
+    },
+    "switch_stats": {
+     "vsa_resolved": 205,
+     "vsa_refused": 266,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 27364,
+    "functions_by_producer": {
+     "call": 19134,
+     "flow": 7849,
+     "thunk": 302,
+     "const": 79
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 140548,
+     "native-import:pe-unwind|DATA": 21393,
+     "native-import:branch|UNCONDITIONAL_JUMP": 16987,
+     "native-import:switch|COMPUTED_JUMP": 3429,
+     "native-analysis:constant-propagation|DATA": 3094,
+     "native-import:branch|UNCONDITIONAL_CALL": 2114,
+     "native-import:thunk|UNCONDITIONAL_JUMP": 221,
+     "native-analysis:constant-propagation|READ": 15,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 1,
+     "native-analysis:constant-propagation|WRITE": 1
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 3
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 2049,
+     "native-import:thunk": 88
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 45628925,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "flow": 17,
+     "call": 33
+    },
+    "sample_instructions": 3246,
+    "sample_bytes": 12986
+   },
+   "switch": {
+    "stored_dispatches": 256,
+    "stored_cases": 3429,
+    "rust_vsa_dispatches": 246,
+    "rust_vsa_cases": 3152,
+    "decompiler_dispatches": 10,
+    "decompiler_cases": 277,
+    "vsa_only_import_dispatches": 246,
+    "sample_dispatches": 0,
+    "sample_rust_vsa": 0,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 0,
+    "sample_printed_as_switch_rust_vsa": 0,
+    "sample_printed_tables_not_stored": 0,
+    "sample_printed_stored": 0,
+    "sample_printed_stored_rust_vsa": 0
+   },
+   "default_pass": {
+    "wall_seconds": 104.0,
+    "sampled": 50,
+    "decompiled": 50,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 50,
+    "tokens": 16070,
+    "fragment_tokens": 1279,
+    "block_layer_tokens": 1981,
+    "rust_expression_tokens": 12810,
+    "spacing_tokens": 15257,
+    "ghidra_constructs": 0,
+    "printed_constructs": 645,
+    "kept_constructs": 0,
+    "gotos_ghidra": 7,
+    "gotos_printed": 0,
+    "labels_ghidra": 6,
+    "labels_printed": 0,
+    "restructured_functions": 14,
+    "operations": 5680,
+    "calls": 211,
+    "calls_with_stored_prototype": 0,
+    "edits": 104,
+    "edits_additive_inverse": 104,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 14,
+    "cuts_proposed": 3,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 0,
+    "jump_table_cases_printed": 0,
+    "printed_parameters": 86,
+    "parameters_from_pass": 0,
+    "identifiers": 8924,
+    "renamed_identifiers": 1800,
+    "fragment_tokens_by_kind": {
+     "function_name": 50,
+     "paren": 122,
+     "punctuation": 321,
+     "type": 380,
+     "variable": 330,
+     "operator": 38,
+     "comment": 38
+    },
+    "rust_expression_tokens_by_kind": {
+     "operator": 3655,
+     "paren": 4510,
+     "type": 954,
+     "variable": 3433,
+     "function_name": 220,
+     "punctuation": 38
+    },
+    "expressions_rust_by_kind": {
+     "branch.branch": 39,
+     "branch.cbranch": 211,
+     "loop-init.assign": 1,
+     "loop-iterate.assign": 3,
+     "negated.cbranch": 211,
+     "statement.assign": 405,
+     "statement.call": 213,
+     "statement.cbranch": 211,
+     "statement.return": 68,
+     "statement.store": 304
+    },
+    "expressions_fragment_by_kind": {
+     "branch.branch": 0,
+     "branch.cbranch": 0,
+     "loop-init.assign": 0,
+     "loop-iterate.assign": 0,
+     "negated.cbranch": 0,
+     "statement.assign": 0,
+     "statement.call": 0,
+     "statement.cbranch": 0,
+     "statement.return": 0,
+     "statement.store": 0
+    },
+    "expression_fallback_reasons": {},
+    "fragment_tokens_by_region": {
+     "declaration": 447,
+     "locals": 794,
+     "body": 20,
+     "header": 18
+    },
+    "constructs_created_by_kind": {
+     "leaf": 430,
+     "condition": 34,
+     "if": 154,
+     "while": 6,
+     "do_while": 18,
+     "goto_block": 2,
+     "infinite_loop": 1
+    },
+    "constructs_removed_by_kind": {},
+    "structuring_applied": {
+     "switch_tails": 7
+    },
+    "pass_items": {
+     "type_inference:analyze": 7909,
+     "additive_inverse:transform": 104,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 50,
+     "identical": 36,
+     "different": 14
+    },
+    "ir-none": {
+     "compared": 50,
+     "identical": 36,
+     "different": 14
+    },
+    "rust-expressions-off": {
+     "compared": 50,
+     "identical": 50,
+     "different": 0
+    },
+    "either": {
+     "compared": 50,
+     "identical": 27,
+     "different": 23
+    }
+   },
+   "persisted_prototypes": null
+  },
+  "gc-animal-crossing": {
+   "status": "ran",
+   "program": "gc",
+   "sample": [
+    "80005bac",
+    "80006a1c",
+    "8000ff1c",
+    "80015604",
+    "80015a04",
+    "80015d50",
+    "80030da0",
+    "80031520",
+    "80032860",
+    "80033000",
+    "80033960",
+    "80033ce0",
+    "80033de0",
+    "80034a00",
+    "8003b648",
+    "8003babc",
+    "8003c094",
+    "8003c60c",
+    "8003f39c",
+    "800414dc",
+    "80044e10",
+    "800486a8",
+    "800491c8",
+    "800499f4",
+    "80053d04",
+    "8005a8f8",
+    "8005c19c",
+    "8005ecc8",
+    "80061d28",
+    "8006417c",
+    "80064dd4",
+    "80065ef0",
+    "800674c8",
+    "80067b48",
+    "80067f38",
+    "8006abd8",
+    "80078868",
+    "8007a140",
+    "800819d4",
+    "80082db4",
+    "800838e8",
+    "80084ce8",
+    "8008536c",
+    "80086dfc",
+    "8008db94",
+    "80094900",
+    "80098ba4",
+    "8009aadc",
+    "8009ae78",
+    "800a233c"
+   ],
+   "import": {
+    "seconds": 13.5,
+    "phases": {
+     "discover-wall": 13.089466,
+     "discovery": 5.631325,
+     "flow": 2.333384,
+     "parse": 0.003186,
+     "patterns": 0.05415,
+     "references": 2.839876,
+     "references-only": 2.839874,
+     "settle": 0.010857,
+     "store": 0.332329,
+     "switch": 2.707969,
+     "switch-lanes": 1.659178,
+     "switch-setup": 1.029568,
+     "switch-vsa": 1.83477
+    },
+    "switch_stats": {
+     "vsa_resolved": 6,
+     "vsa_refused": 55,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 3138,
+    "functions_by_producer": {
+     "call": 2275,
+     "flow": 843,
+     "const": 14,
+     "pattern": 6
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 10861,
+     "native-analysis:constant-propagation|READ": 6394,
+     "native-analysis:constant-propagation|WRITE": 3373,
+     "native-analysis:constant-propagation|DATA": 3033,
+     "native-import:switch|COMPUTED_JUMP": 1148,
+     "native-import:branch|UNCONDITIONAL_JUMP": 201,
+     "native-import:branch|UNCONDITIONAL_CALL": 8,
+     "native-import|UNCONDITIONAL_JUMP": 5,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 3
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 2650
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 8,
+     "native-import:thunk": 73
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 2188829,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 36,
+     "flow": 14
+    },
+    "sample_instructions": 2879,
+    "sample_bytes": 11520
+   },
+   "switch": {
+    "stored_dispatches": 114,
+    "stored_cases": 1148,
+    "rust_vsa_dispatches": 114,
+    "rust_vsa_cases": 1148,
+    "decompiler_dispatches": 0,
+    "decompiler_cases": 0,
+    "vsa_only_import_dispatches": 114,
+    "sample_dispatches": 1,
+    "sample_rust_vsa": 1,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 1,
+    "sample_printed_as_switch_rust_vsa": 1,
+    "sample_printed_tables_not_stored": 0,
+    "sample_printed_stored": 1,
+    "sample_printed_stored_rust_vsa": 1
+   },
+   "default_pass": {
+    "wall_seconds": 6.1,
+    "sampled": 50,
+    "decompiled": 50,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 50,
+    "tokens": 25622,
+    "fragment_tokens": 1688,
+    "block_layer_tokens": 3481,
+    "rust_expression_tokens": 20453,
+    "spacing_tokens": 23925,
+    "ghidra_constructs": 0,
+    "printed_constructs": 1248,
+    "kept_constructs": 0,
+    "gotos_ghidra": 17,
+    "gotos_printed": 8,
+    "labels_ghidra": 15,
+    "labels_printed": 8,
+    "restructured_functions": 14,
+    "operations": 9817,
+    "calls": 216,
+    "calls_with_stored_prototype": 0,
+    "edits": 86,
+    "edits_additive_inverse": 86,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 17,
+    "cuts_proposed": 26,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 1,
+    "jump_table_cases_printed": 17,
+    "printed_parameters": 89,
+    "parameters_from_pass": 0,
+    "identifiers": 11334,
+    "renamed_identifiers": 1987,
+    "printed_switch_confirmed": 1,
+    "fragment_tokens_by_kind": {
+     "function_name": 50,
+     "paren": 114,
+     "punctuation": 393,
+     "type": 441,
+     "variable": 391,
+     "comment": 232,
+     "case_label": 7,
+     "label": 16,
+     "operator": 44
+    },
+    "rust_expression_tokens_by_kind": {
+     "function_name": 220,
+     "operator": 5985,
+     "paren": 6750,
+     "variable": 6201,
+     "type": 1292,
+     "punctuation": 5
+    },
+    "expressions_rust_by_kind": {
+     "branch.branch": 170,
+     "branch.branchind": 1,
+     "branch.cbranch": 389,
+     "loop-init.assign": 4,
+     "loop-iterate.assign": 5,
+     "negated.cbranch": 389,
+     "statement.assign": 749,
+     "statement.branchind": 1,
+     "statement.call": 229,
+     "statement.cbranch": 389,
+     "statement.return": 74,
+     "statement.store": 538
+    },
+    "expressions_fragment_by_kind": {
+     "branch.branch": 0,
+     "branch.branchind": 0,
+     "branch.cbranch": 0,
+     "loop-init.assign": 0,
+     "loop-iterate.assign": 0,
+     "negated.cbranch": 0,
+     "statement.assign": 0,
+     "statement.branchind": 0,
+     "statement.call": 0,
+     "statement.cbranch": 0,
+     "statement.return": 0,
+     "statement.store": 0
+    },
+    "expression_fallback_reasons": {},
+    "fragment_tokens_by_region": {
+     "declaration": 460,
+     "locals": 960,
+     "header": 192,
+     "body": 76
+    },
+    "constructs_created_by_kind": {
+     "if": 317,
+     "leaf": 853,
+     "do_while": 27,
+     "condition": 34,
+     "switch": 1,
+     "while": 11,
+     "goto_block": 2,
+     "infinite_loop": 3
+    },
+    "constructs_removed_by_kind": {},
+    "structuring_applied": {
+     "sink_join": 2,
+     "cond_merge": 1,
+     "switch_tails": 3,
+     "else_join": 3
+    },
+    "pass_items": {
+     "type_inference:analyze": 13411,
+     "additive_inverse:transform": 86,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 50,
+     "identical": 36,
+     "different": 14
+    },
+    "ir-none": {
+     "compared": 50,
+     "identical": 33,
+     "different": 17
+    },
+    "rust-expressions-off": {
+     "compared": 50,
+     "identical": 50,
+     "different": 0
+    },
+    "either": {
+     "compared": 50,
+     "identical": 28,
+     "different": 22
+    }
+   },
+   "persisted_prototypes": null
+  },
+  "psp-puzzle-bobble-pocket": {
+   "status": "error",
+   "reason": "import failed: thread 'main' (1319634) panicked at crates/romwright-core/src/native/discovery.rs:1170:58:\nattempt to add with overflow\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
+  },
+  "psp-puzzle-bobble-pocket-symtab": {
+   "status": "error",
+   "reason": "import failed: thread 'main' (1321179) panicked at crates/romwright-core/src/native/discovery.rs:1170:58:\nattempt to add with overflow\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
+  }
+ },
+ "tools": "ad8291070e1a047e",
+ "coverage": {
+  "profiles": 3,
+  "binaries": {
+   "romwright-cli": {
+    "files": 804
+   },
+   "romwright-worker": {
+    "files": 826
+   },
+   "ghidra_opt": {
+    "files": 189
+   }
+  },
+  "cpp_build_matches_tree": true,
+  "by_stage": {
+   "load": {
+    "rust_first_party": {
+     "executable": 12797,
+     "executed": 4494
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 7,
+     "executed": 3
+    },
+    "cpp_vendored": {
+     "executable": 4829,
+     "executed": 2351
+    }
+   },
+   "discovery": {
+    "rust_first_party": {
+     "executable": 10661,
+     "executed": 7719
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 32,
+     "executed": 28
+    },
+    "cpp_vendored": {
+     "executable": 0,
+     "executed": 0
+    }
+   },
+   "flow": {
+    "rust_first_party": {
+     "executable": 356,
+     "executed": 337
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 32,
+     "executed": 29
+    },
+    "cpp_vendored": {
+     "executable": 1005,
+     "executed": 762
+    }
+   },
+   "pcode_lift": {
+    "rust_first_party": {
+     "executable": 1261,
+     "executed": 772
+    },
+    "rust_third_party": {
+     "executable": 20801,
+     "executed": 6702
+    },
+    "cpp_ours": {
+     "executable": 35,
+     "executed": 19
+    },
+    "cpp_vendored": {
+     "executable": 10605,
+     "executed": 3904
+    }
+   },
+   "switch_recovery": {
+    "rust_first_party": {
+     "executable": 4881,
+     "executed": 2419
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 191,
+     "executed": 153
+    },
+    "cpp_vendored": {
+     "executable": 2058,
+     "executed": 1610
+    }
+   },
+   "simplification": {
+    "rust_first_party": {
+     "executable": 1000,
+     "executed": 792
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 321,
+     "executed": 268
+    },
+    "cpp_vendored": {
+     "executable": 38027,
+     "executed": 28924
+    }
+   },
+   "type_inference": {
+    "rust_first_party": {
+     "executable": 2713,
+     "executed": 155
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 6036,
+     "executed": 2942
+    }
+   },
+   "prototype": {
+    "rust_first_party": {
+     "executable": 1539,
+     "executed": 347
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 18,
+     "executed": 17
+    },
+    "cpp_vendored": {
+     "executable": 5773,
+     "executed": 2651
+    }
+   },
+   "structuring": {
+    "rust_first_party": {
+     "executable": 5846,
+     "executed": 4736
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 477,
+     "executed": 451
+    },
+    "cpp_vendored": {
+     "executable": 4641,
+     "executed": 1255
+    }
+   },
+   "printing": {
+    "rust_first_party": {
+     "executable": 4628,
+     "executed": 3362
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 1148,
+     "executed": 863
+    },
+    "cpp_vendored": {
+     "executable": 6616,
+     "executed": 1725
+    }
+   },
+   "postprocess": {
+    "rust_first_party": {
+     "executable": 3220,
+     "executed": 2412
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 0,
+     "executed": 0
+    }
+   },
+   "host": {
+    "rust_first_party": {
+     "executable": 28235,
+     "executed": 6269
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 180,
+     "executed": 121
+    },
+    "cpp_vendored": {
+     "executable": 10094,
+     "executed": 3366
+    }
+   }
+  },
+  "totals": {
+   "rust_first_party": {
+    "executable": 77137,
+    "executed": 33814
+   },
+   "rust_third_party": {
+    "executable": 20801,
+    "executed": 6702
+   },
+   "cpp_ours": {
+    "executable": 2441,
+    "executed": 1952
+   },
+   "cpp_vendored": {
+    "executable": 89684,
+    "executed": 49490
+   }
+  },
+  "rust_dependencies": {
+   "executable": 95075,
+   "executed": 4330,
+   "note": "other crates and std linked into the Rust binaries; not an owner"
+  },
+  "unassigned_rust_files": {
+   "crates/romwright-db/src/lib.rs": 1468,
+   "crates/romwright-core/src/native/store.rs": 703,
+   "crates/romwright-worker/src/worker.rs": 569,
+   "crates/romwright-worker/src/wire.rs": 319,
+   "crates/romwright-worker/src/doc.rs": 314,
+   "crates/romwright-core/src/opinion.rs": 275,
+   "crates/romwright-core/src/lib.rs": 244,
+   "crates/romwright-core/src/session.rs": 235,
+   "crates/romwright-cli/src/main.rs": 216,
+   "crates/romwright-core/src/artifact.rs": 200,
+   "crates/romwright-core/src/native_runtime.rs": 198,
+   "crates/romwright-worker/src/main.rs": 168,
+   "crates/romwright-core/src/exec.rs": 150,
+   "crates/romwright-core/src/session/snapshot.rs": 105,
+   "crates/romwright-worker/src/printc/ownership.rs": 97
+  },
+  "top_executed_vendored": [
+   [
+    "ruleaction.cc",
+    6469,
+    "simplification"
+   ],
+   [
+    "coreaction.cc",
+    3215,
+    "simplification"
+   ],
+   [
+    "subflow.cc",
+    2632,
+    "simplification"
+   ],
+   [
+    "fspec.cc",
+    2058,
+    "prototype"
+   ],
+   [
+    "double.cc",
+    1966,
+    "simplification"
+   ],
+   [
+    "rangeutil.cc",
+    1654,
+    "simplification"
+   ],
+   [
+    "heritage.cc",
+    1578,
+    "simplification"
+   ],
+   [
+    "jumptable.cc",
+    1542,
+    "switch_recovery"
+   ],
+   [
+    "typeop.cc",
+    1304,
+    "type_inference"
+   ],
+   [
+    "database.cc",
+    1285,
+    "load"
+   ],
+   [
+    "type.cc",
+    1135,
+    "type_inference"
+   ],
+   [
+    "funcdata_varnode.cc",
+    1122,
+    "simplification"
+   ],
+   [
+    "printc.cc",
+    1005,
+    "printing"
+   ],
+   [
+    "block.cc",
+    991,
+    "structuring"
+   ],
+   [
+    "merge.cc",
+    986,
+    "simplification"
+   ],
+   [
+    "varmap.cc",
+    951,
+    "simplification"
+   ],
+   [
+    "varnode.cc",
+    846,
+    "simplification"
+   ],
+   [
+    "flow.cc",
+    749,
+    "flow"
+   ],
+   [
+    "funcdata_op.cc",
+    689,
+    "simplification"
+   ],
+   [
+    "ruleaction.hh",
+    674,
+    "simplification"
+   ],
+   [
+    "op.cc",
+    667,
+    "simplification"
+   ],
+   [
+    "variable.cc",
+    655,
+    "simplification"
+   ],
+   [
+    "marshal.cc",
+    614,
+    "host"
+   ],
+   [
+    "funcdata_block.cc",
+    583,
+    "simplification"
+   ],
+   [
+    "pcodeparse.cc",
+    578,
+    "pcode_lift"
+   ]
+  ],
+  "top_executed_first_party": [
+   [
+    "crates/romwright-core/src/native/discovery.rs",
+    2119,
+    "discovery"
+   ],
+   [
+    "crates/romwright-worker/src/printc/structure.rs",
+    1477,
+    "structuring"
+   ],
+   [
+    "crates/romwright-db/src/lib.rs",
+    1468,
+    "host"
+   ],
+   [
+    "crates/romwright-core/src/native/vsa.rs",
+    1175,
+    "switch_recovery"
+   ],
+   [
+    "crates/romwright-core/src/native/switch_tables.rs",
+    1158,
+    "switch_recovery"
+   ],
+   [
+    "crates/romwright-worker/src/printc/render.rs",
+    1063,
+    "printing"
+   ],
+   [
+    "crates/romwright-worker/src/provider.rs",
+    988,
+    "load"
+   ],
+   [
+    "crates/romwright-core/src/native.rs",
+    977,
+    "discovery"
+   ],
+   [
+    "crates/romwright-core/src/native_runtime/propagation.rs",
+    919,
+    "discovery"
+   ],
+   [
+    "crates/romwright-worker/src/printc/collapse/loops.rs",
+    854,
+    "structuring"
+   ],
+   [
+    "crates/romwright-core/src/native/gba/overlays.rs",
+    838,
+    "load"
+   ],
+   [
+    "crates/romwright-core/src/native_runtime/propagation/graph.rs",
+    784,
+    "discovery"
+   ],
+   [
+    "crates/romwright-core/src/native/store.rs",
+    703,
+    "host"
+   ],
+   [
+    "crates/romwright-worker/src/printc/ir.rs",
+    661,
+    "printing"
+   ],
+   [
+    "crates/romwright-worker/src/printc/pretty.rs",
+    655,
+    "printing"
+   ],
+   [
+    "crates/romwright-core/src/structuring.rs",
+    634,
+    "structuring"
+   ],
+   [
+    "crates/romwright-core/src/emit_m2c/conform.rs",
+    604,
+    "postprocess"
+   ],
+   [
+    "crates/romwright-core/src/emit_m2c.rs",
+    592,
+    "postprocess"
+   ],
+   [
+    "crates/romwright-worker/src/printc/printer.rs",
+    582,
+    "printing"
+   ],
+   [
+    "crates/romwright-worker/src/worker.rs",
+    569,
+    "host"
+   ],
+   [
+    "crates/romwright-core/src/native_runtime/lift.rs",
+    560,
+    "pcode_lift"
+   ],
+   [
+    "crates/romwright-worker/src/printc/collapse.rs",
+    523,
+    "structuring"
+   ],
+   [
+    "crates/romwright-core/src/native/discovery/patterns.rs",
+    479,
+    "discovery"
+   ],
+   [
+    "crates/romwright-worker/src/printc/collapse/rules.rs",
+    463,
+    "structuring"
+   ],
+   [
+    "crates/romwright-core/src/emit_m2c/canonical.rs",
+    442,
+    "postprocess"
+   ]
+  ]
+ },
+ "stage_table": [
+  {
+   "stage": "load",
+   "unit": "bytes, symbols and types handed to the decompiler",
+   "basis": "code",
+   "owners": {
+    "rust_first_party": 1.0,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": null
+   },
+   "detail": "provider.rs answers every query the C++ makes for bytes, symbols, types and flow facts; C++ loader lines executed: 2351 vendored (storage of what it is given)"
+  },
+  {
+   "stage": "discovery",
+   "unit": "stored analysis facts (xrefs, data definitions, flow overrides) by provenance",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 1.0,
+    "rust_third_party": null,
+    "cpp_ours": 0.0,
+    "cpp_vendored": null
+   },
+   "detail": "sampled functions by producer: {'call': 172, 'const': 4, 'pattern': 108, 'flow': 115, 'thunk': 1} (all Rust passes); constant-propagation facts are computed in process (native_runtime/propagation); facts owned by C++: 0 of 743641. Import time in C++-owned phases: 25.6%"
+  },
+  {
+   "stage": "flow (import walk)",
+   "unit": "flow queries during the discovery walk",
+   "basis": "code",
+   "owners": {
+    "rust_first_party": null,
+    "rust_third_party": 1.0,
+    "cpp_ours": null,
+    "cpp_vendored": null
+   },
+   "detail": "discovery.rs walks with the in-process kuna-sleigh decoder (`SleighFlow`), and the constant propagation follows flow over the same decoder (native_runtime/propagation/graph.rs, FlowInfo); no C++ answers flow during import"
+  },
+  {
+   "stage": "flow (decompile)",
+   "unit": "instructions followed into the function body and its blocks",
+   "basis": "code + coverage",
+   "owners": {
+    "rust_first_party": null,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "the decompiler's own FlowInfo (flow.cc) builds the function's p-code and block graph on every decompile; vendored flow lines executed 762"
+  },
+  {
+   "stage": "pcode_lift",
+   "unit": "instructions lifted on the printed path",
+   "basis": "run + code",
+   "owners": {
+    "rust_first_party": null,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "20618 instructions in the sampled functions are lifted by the decompiler's own SLEIGH (ghidra_opt, ROMWRIGHT_SLA). Rust-lifted p-code (kuna-sleigh) feeds value-set analysis, SJA, the type solver and the prototype job, never the printed text"
+  },
+  {
+   "stage": "switch_recovery",
+   "unit": "dispatches in the stored import tables",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.8279,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.1721
+   },
+   "detail": "2107 of 2545 dispatches (84.0% of case edges) by Rust VSA; the rest by the decompiler path (a branch the decompiler-off import also stores is Rust's)"
+  },
+  {
+   "stage": "switch_recovery (printed)",
+   "unit": "switch tables the decompiler used when printing",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.7692,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.2308
+   },
+   "detail": "13 printed tables in 400 functions; the import's stored table was the authority for 13 (100.0%): 12 agreed with what jumptable.cc recovers again at decompile time, 1 replaced it; 0 had no stored table. Of the supplied tables 10 are Rust VSA's (the rest are the import's own decompiler pass, jumptable.cc at import time); jumptable.cc still derives the normalization, guards and case values. Of the sample's 9 Rust-recovered dispatches 9 also printed as a switch"
+  },
+  {
+   "stage": "simplification",
+   "unit": "final p-code operations",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.0071,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.9929
+   },
+   "detail": "290 Rust edits (290 additive_inverse, 0 canonical_helpers) over 40769 operations; 66 of 400 functions have an edit"
+  },
+  {
+   "stage": "type_inference (default)",
+   "unit": "printed type tokens",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.0,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "2655 type tokens; the default import stores no persisted prototype, so every printed type is Ghidra's. The Rust type solver still runs per function as an evidence pass whose classes only steer export-c's temporary and global names"
+  },
+  {
+   "stage": "prototype (default)",
+   "unit": "printed function prototypes; call sites",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.0,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "0 of 400 printed functions had a stored prototype; 0 of 1278 call sites name a callee with one (type-archive and SDK tables, Rust)"
+  },
+  {
+   "stage": "structuring",
+   "unit": "control-flow constructs in the printed tree",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 1.0,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.0
+   },
+   "detail": "gotos 85 -> 24 and labels 68 -> 23 after the Rust models; 76 of 400 functions printed a Rust tree; created {'do_while': 124, 'if': 1350, 'leaf': 3749, 'condition': 222, 'goto_block': 19, 'while': 38, 'switch': 13, 'infinite_loop': 9, 'multigoto': 1}; IR `structure` cuts kept 0 of 63"
+  },
+  {
+   "stage": "printing",
+   "unit": "visible text tokens",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.9151,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.0849
+   },
+   "detail": "120431 tokens: 10225 replayed from PrintC fragments (by kind {'comment': 898, 'function_name': 400, 'operator': 285, 'paren': 1194, 'punctuation': 2395, 'type': 2655, 'variable': 2255, 'label': 47, 'case_label': 96}), 16093 emitted by the Rust block layer and 94113 by the Rust expression printer (printc/render.rs, from the exported print trees; by kind {'function_name': 1298, 'operator': 28037, 'paren': 30686, 'type': 5890, 'variable': 27785, 'punctuation': 417}); 13569 expressions printed by Rust, 0 kept PrintC's fragment (by context.kind rust {'branch.branch': 532, 'branch.cbranch': 1730, 'negated.cbranch': 1730, 'statement.assign': 3545, 'statement.call': 1499, 'statement.cbranch': 1730, 'statement.return': 563, 'statement.store': 2196, 'branch.branchind': 13, 'statement.branchind': 13, 'loop-iterate.assign': 12, 'loop-init.assign': 6}, fragment {'branch.branch': 0, 'branch.cbranch': 0, 'negated.cbranch': 0, 'statement.assign': 0, 'statement.call': 0, 'statement.cbranch': 0, 'statement.return': 0, 'statement.store': 0, 'branch.branchind': 0, 'statement.branchind': 0, 'loop-iterate.assign': 0, 'loop-init.assign': 0}; why {}); 112034 spacing tokens laid out by printc/pretty.rs, a Rust port of EmitPrettyPrint (algorithm third-party, code first-party)"
+  },
+  {
+   "stage": "postprocess",
+   "unit": "identifiers in the export-c text",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.1959,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.8041
+   },
+   "detail": "11741 of 59941 identifier tokens are `temp_*`/`sp*` names emit_m2c gave decompiler locals; the rest keep the name the decompiler printed"
+  }
+ ],
+ "headline": {
+  "images_ran": 8,
+  "functions_printed": 400,
+  "printed_text_tokens_emitted_by_rust": 0.9151,
+  "printed_text_tokens_emitted_by_rust_block_layer": 0.1336,
+  "printed_text_tokens_emitted_by_rust_expressions": 0.7815,
+  "printed_text_tokens_replayed_from_cpp_fragments": 0.0849,
+  "printed_constructs_created_by_rust": 1.0,
+  "p_code_operations_edited_by_rust": 0.0071,
+  "functions_whose_text_changes_without_rust_components": 0.2775,
+  "functions_changed_by_rust_structuring": 0.19,
+  "functions_changed_by_rust_ir_passes": 0.165,
+  "functions_changed_by_rust_expression_printer": 0.0,
+  "executed_lines": {
+   "rust_first_party": 33814,
+   "rust_third_party": 6702,
+   "cpp_ours": 1952,
+   "cpp_vendored": 49490
+  },
+  "executed_lines_rust_share": 0.4406,
+  "executed_lines_first_party_rust_share": 0.3677
+ }
+}

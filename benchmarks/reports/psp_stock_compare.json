@@ -1,0 +1,149 @@
+{
+ "schema": "romwright.psp_stock_compare/1",
+ "generated": "2026-10-09T00:49:13+00:00",
+ "ghidra": "12.1.3",
+ "truth_functions": 622,
+ "dwarf_functions": 145,
+ "configs": {
+  "strip-all/loader-choice": {
+   "language": "MIPS:LE:32:default",
+   "compiler": "default",
+   "functions": 588,
+   "discovery": {
+    "truth": 622,
+    "found": 588,
+    "recall": 0.799,
+    "precision": 0.8452,
+    "invented": 91,
+    "sizes_compared": 497,
+    "size_exact": 494,
+    "size_short": 2,
+    "size_long": 1
+   },
+   "dwarf_entries_with_a_stock_function": 123,
+   "types_all_dwarf_entries": {
+    "dwarf_functions": 145,
+    "arity_accuracy": 0.669,
+    "type_slots": 426,
+    "type_exact": 150,
+    "type_partial": 55,
+    "type_wrong": 221,
+    "type_exact_rate": 0.3521
+   },
+   "types_stock_found_entries": {
+    "dwarf_functions": 123,
+    "arity_accuracy": 0.6585,
+    "type_slots": 362,
+    "type_exact": 138,
+    "type_partial": 43,
+    "type_wrong": 181,
+    "type_exact_rate": 0.3812
+   }
+  },
+  "strip-all/Allegrex": {
+   "language": "Allegrex:LE:32:default",
+   "compiler": "default",
+   "functions": 468,
+   "discovery": {
+    "truth": 622,
+    "found": 468,
+    "recall": 0.635,
+    "precision": 0.844,
+    "invented": 73,
+    "sizes_compared": 395,
+    "size_exact": 350,
+    "size_short": 45,
+    "size_long": 0
+   },
+   "dwarf_entries_with_a_stock_function": 112,
+   "types_all_dwarf_entries": {
+    "dwarf_functions": 145,
+    "arity_accuracy": 0.7103,
+    "type_slots": 444,
+    "type_exact": 165,
+    "type_partial": 52,
+    "type_wrong": 227,
+    "type_exact_rate": 0.3716
+   },
+   "types_stock_found_entries": {
+    "dwarf_functions": 112,
+    "arity_accuracy": 0.6696,
+    "type_slots": 348,
+    "type_exact": 138,
+    "type_partial": 35,
+    "type_wrong": 175,
+    "type_exact_rate": 0.3966
+   }
+  },
+  "symtab/loader-choice": {
+   "language": "MIPS:LE:32:default",
+   "compiler": "default",
+   "functions": 720,
+   "discovery": {
+    "truth": 622,
+    "found": 720,
+    "recall": 1.0,
+    "precision": 0.8639,
+    "invented": 98,
+    "sizes_compared": 621,
+    "size_exact": 619,
+    "size_short": 2,
+    "size_long": 0
+   },
+   "dwarf_entries_with_a_stock_function": 145,
+   "types_all_dwarf_entries": {
+    "dwarf_functions": 145,
+    "arity_accuracy": 0.7517,
+    "type_slots": 432,
+    "type_exact": 211,
+    "type_partial": 35,
+    "type_wrong": 186,
+    "type_exact_rate": 0.4884
+   },
+   "types_stock_found_entries": {
+    "dwarf_functions": 145,
+    "arity_accuracy": 0.7517,
+    "type_slots": 432,
+    "type_exact": 211,
+    "type_partial": 35,
+    "type_wrong": 186,
+    "type_exact_rate": 0.4884
+   }
+  },
+  "symtab/Allegrex": {
+   "language": "Allegrex:LE:32:default",
+   "compiler": "default",
+   "functions": 720,
+   "discovery": {
+    "truth": 622,
+    "found": 720,
+    "recall": 1.0,
+    "precision": 0.8639,
+    "invented": 98,
+    "sizes_compared": 621,
+    "size_exact": 621,
+    "size_short": 0,
+    "size_long": 0
+   },
+   "dwarf_entries_with_a_stock_function": 145,
+   "types_all_dwarf_entries": {
+    "dwarf_functions": 145,
+    "arity_accuracy": 0.7931,
+    "type_slots": 447,
+    "type_exact": 222,
+    "type_partial": 36,
+    "type_wrong": 189,
+    "type_exact_rate": 0.4966
+   },
+   "types_stock_found_entries": {
+    "dwarf_functions": 145,
+    "arity_accuracy": 0.7931,
+    "type_slots": 447,
+    "type_exact": 222,
+    "type_partial": 36,
+    "type_wrong": 189,
+    "type_exact_rate": 0.4966
+   }
+  }
+ }
+}

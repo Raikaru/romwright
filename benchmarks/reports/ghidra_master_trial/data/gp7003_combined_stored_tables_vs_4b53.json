@@ -1,0 +1,161 @@
+{
+ "ps2-dark-chronicle": {
+  "old": 124,
+  "new": 127,
+  "lost": [],
+  "gained": [
+   "0010e5e8",
+   "00271938",
+   "002eea4c"
+  ],
+  "different": [
+   "00193f70"
+  ],
+  "edges": [
+   1046,
+   1057
+  ]
+ },
+ "ps2-dark-chronicle-symtab": {
+  "old": 124,
+  "new": 127,
+  "lost": [],
+  "gained": [
+   "0010e5e8",
+   "00271938",
+   "002eea4c"
+  ],
+  "different": [
+   "00193f70"
+  ],
+  "edges": [
+   1046,
+   1057
+  ]
+ },
+ "ps2-dark-cloud": {
+  "old": 80,
+  "new": 80,
+  "lost": [],
+  "gained": [],
+  "different": [],
+  "edges": [
+   626,
+   626
+  ]
+ },
+ "ps2-dark-cloud-symtab": {
+  "old": 80,
+  "new": 80,
+  "lost": [],
+  "gained": [],
+  "different": [],
+  "edges": [
+   626,
+   626
+  ]
+ },
+ "ps2-digital-devil-saga": {
+  "old": 317,
+  "new": 317,
+  "lost": [],
+  "gained": [],
+  "different": [],
+  "edges": [
+   2190,
+   2190
+  ]
+ },
+ "ps2-fatal-frame": {
+  "old": 277,
+  "new": 278,
+  "lost": [
+   "001b217c"
+  ],
+  "gained": [
+   "001caab4",
+   "001cab80"
+  ],
+  "different": [],
+  "edges": [
+   2255,
+   2286
+  ]
+ },
+ "ps2-fatal-frame-symtab": {
+  "old": 278,
+  "new": 279,
+  "lost": [],
+  "gained": [
+   "001cab80"
+  ],
+  "different": [],
+  "edges": [
+   2285,
+   2288
+  ]
+ },
+ "ps2-god-hand": {
+  "old": 994,
+  "new": 992,
+  "lost": [
+   "0016ccfc",
+   "0016da2c",
+   "0028b96c",
+   "002a5a28"
+  ],
+  "gained": [
+   "0022cca8",
+   "0039a220"
+  ],
+  "different": [],
+  "edges": [
+   7900,
+   7902
+  ]
+ },
+ "ps2-persona-4": {
+  "old": 340,
+  "new": 346,
+  "lost": [],
+  "gained": [
+   "002be5c4",
+   "002c187c",
+   "00332c34",
+   "0041e9b8",
+   "0044672c",
+   "004469b4"
+  ],
+  "different": [],
+  "edges": [
+   2724,
+   2809
+  ]
+ },
+ "ps2-ratchet-clank": {
+  "old": 40,
+  "new": 41,
+  "lost": [],
+  "gained": [
+   "0012bd38"
+  ],
+  "different": [],
+  "edges": [
+   322,
+   326
+  ]
+ },
+ "ps2-ratchet-clank-pal": {
+  "old": 40,
+  "new": 41,
+  "lost": [],
+  "gained": [
+   "0012be78"
+  ],
+  "different": [],
+  "edges": [
+   328,
+   332
+  ]
+ }
+}

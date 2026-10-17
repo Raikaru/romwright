@@ -1,0 +1,125 @@
+{
+ "wave": "/home/raikaru/runs/CompilerRules/out/gates/console_research_wave_compiler_rules_20261012_ps2_combined.json",
+ "bin": "/home/raikaru/runs/CompilerRules/finalbin",
+ "games": {
+  "ps2-dark-chronicle": {
+   "sampled": 969,
+   "decompiled": 969,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 87.2
+  },
+  "ps2-dark-chronicle-symtab": {
+   "sampled": 962,
+   "decompiled": 962,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 149.5
+  },
+  "ps2-dark-cloud": {
+   "sampled": 937,
+   "decompiled": 936,
+   "success_rate": 0.9989,
+   "wave_success_rate": 0.9989,
+   "classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "failures": [
+    {
+     "address": "01db08a0",
+     "success": false,
+     "seconds": 60.09,
+     "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+     "class": "native runtime: native runtime: execution deadline exceeded"
+    }
+   ],
+   "wall_seconds": 119.0
+  },
+  "ps2-dark-cloud-symtab": {
+   "sampled": 940,
+   "decompiled": 940,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 124.3
+  },
+  "ps2-digital-devil-saga": {
+   "sampled": 977,
+   "decompiled": 977,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 135.4
+  },
+  "ps2-fatal-frame": {
+   "sampled": 942,
+   "decompiled": 942,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 94.5
+  },
+  "ps2-fatal-frame-symtab": {
+   "sampled": 940,
+   "decompiled": 940,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 105.4
+  },
+  "ps2-god-hand": {
+   "sampled": 980,
+   "decompiled": 980,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 203.2
+  },
+  "ps2-persona-4": {
+   "sampled": 975,
+   "decompiled": 974,
+   "success_rate": 0.999,
+   "wave_success_rate": 0.999,
+   "classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "failures": [
+    {
+     "address": "002be530",
+     "success": false,
+     "seconds": 60.08,
+     "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+     "class": "native runtime: native runtime: execution deadline exceeded"
+    }
+   ],
+   "wall_seconds": 215.5
+  },
+  "ps2-ratchet-clank": {
+   "sampled": 861,
+   "decompiled": 861,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 86.7
+  },
+  "ps2-ratchet-clank-pal": {
+   "sampled": 859,
+   "decompiled": 859,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 66.8
+  }
+ }
+}

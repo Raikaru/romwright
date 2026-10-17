@@ -1,0 +1,19 @@
+{
+  "id": "m5-013",
+  "recorded_at": "2026-10-09T04:52:41.864998+00:00",
+  "thresholds": {
+    "fn.recall": 0.964,
+    "fn.precision": 0.983
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "ARM9 unpacked to 1122040 bytes (stored 762644); 10795 functions, fn.recall 0.9742 and fn.precision 0.9944 over 11019 symbols; NitroMain 420 bytes, decompiled",
+  "metrics": {
+    "fn.recall": 0.9742263363281605,
+    "fn.precision": 0.9944418712366836,
+    "fn.symbols": 11019,
+    "fn.recovered": 10795,
+    "arm9.module_bytes": 1122040,
+    "arm9.stored_bytes": 762644
+  }
+}

@@ -1,0 +1,83 @@
+{
+ "name": "psp-melodie",
+ "image": "EBOOT.BIN",
+ "started": "2026-10-15T14:35:08Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 4.5,
+   "tail": [
+    "imported melodie (3361 functions, Allegrex:LE:32:default; 1 program(s) in the store)",
+    "wrote /home/xrdpuser/romwright/FinalGate2/smoke/proj-psp-melodie: psp psp-gcc (GNU C for the Allegrex (psp-gcc), Medium), 3361 functions as asm units, 18 binary units, 6712 symbols, 82 prototypes (1 skipped), splat `GCC`, compiler `psp-gcc-1.7.1`",
+    "note: PRX (ET_PRX 0xffa0): linked at address 0; the retail `.rel.*` relocation tables are carried as bytes of the tail",
+    "next: cd /home/xrdpuser/romwright/FinalGate2/smoke/proj-psp-melodie && python3 -m pip install -r requirements.txt && python3 configure.py && ninja"
+   ],
+   "cmd": "/home/xrdpuser/romwright/FinalGate2/bin/romwright-cli new-project EBOOT.BIN /home/xrdpuser/romwright/FinalGate2/smoke/proj-psp-melodie --name melodie"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 11.8,
+   "tail": [
+    "Split 1 MB (100.00%) in defined segments",
+    "             databin:   653 KB (38.63%) 3 split, 0 cached",
+    "                 asm:   960 KB (56.79%) 3361 split, 0 cached",
+    "             textbin:    77 KB (4.58%) 15 split, 0 cached",
+    "             unknown:      0 B (0.00%) from unknown bin files",
+    "configured: 3379 objects, 0 C unit(s); run `ninja`"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 42.8,
+   "tail": [
+    "[3378/3382] as asm/data/main2/0000/data_000fd6c8.s",
+    "[3379/3382] as asm/data/trailer.s",
+    "[3380/3382] link build/EBOOT.BIN.elf",
+    "[3381/3382] image build/EBOOT.BIN",
+    "[3382/3382] verify build/EBOOT.BIN",
+    "OK  build/EBOOT.BIN  sha1 724fe026421bfc1f881924d657099b07def869cb"
+   ],
+   "cmd": "ninja"
+  }
+ },
+ "build_ok_lines": [
+  "OK  build/EBOOT.BIN  sha1 724fe026421bfc1f881924d657099b07def869cb"
+ ],
+ "sha1_built": "724fe026421bfc1f881924d657099b07def869cb",
+ "build_rc": 0,
+ "pick_pool": 1060,
+ "match_functions": [
+  "0x28990",
+  "0x92540",
+  "0xbd21c"
+ ],
+ "matches": [
+  {
+   "function": "0x28990",
+   "rc": 0,
+   "secs": 2.4,
+   "head": "__0FPluaopen_loadlibP6Jlua_State 0x28990 (80 bytes)  compiler psp-gcc-1.7.1 -O2 -G0 -mno-abicalls -fno-pic  metric: objdiff match %",
+   "best": "best: default  64.200%  (default 64.200%)  7 decompiles, 1 compiles, 2.4s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x92540",
+   "rc": 0,
+   "secs": 2.6,
+   "head": "sceGimPictureGetEnableBits 0x92540 (24 bytes)  compiler psp-gcc-1.7.1 -O2 -G0 -mno-abicalls -fno-pic  metric: objdiff match %",
+   "best": "best: default  0.000%  (default 0.000%)  7 decompiles, 1 compiles, 2.5s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0xbd21c",
+   "rc": 0,
+   "secs": 2.4,
+   "head": "__0fSmcCaptureGameStateEInitP6NmcCaptureGameT 0xbd21c (28 bytes)  compiler psp-gcc-1.7.1 -O2 -G0 -mno-abicalls -fno-pic  metric: objdiff match %",
+   "best": "best: default  99.429%  (default 99.429%)  7 decompiles, 1 compiles, 2.4s; stopped at the variant budget",
+   "tail": []
+  }
+ ],
+ "result": "done",
+ "finished": "2026-10-15T14:36:15Z"
+}

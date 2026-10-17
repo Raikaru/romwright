@@ -1,0 +1,2148 @@
+{
+ "rules": {
+  "pe-jump-table-relocs": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9499,
+     0.9499
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1023,
+     1023
+    ],
+    "seconds": [
+     39.23,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "helps",
+    "recall": [
+     0.9662,
+     0.9662
+    ],
+    "precision": [
+     0.9561,
+     0.9938
+    ],
+    "invented": [
+     59,
+     8
+    ],
+    "hits": [
+     1286,
+     1286
+    ],
+    "seconds": [
+     30.08,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9417,
+     0.9417
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1777,
+     1777
+    ],
+    "seconds": [
+     52.92,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     43.4,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "hurts",
+    "recall": [
+     0.8463,
+     0.8463
+    ],
+    "precision": [
+     0.9682,
+     0.9677
+    ],
+    "invented": [
+     54,
+     55
+    ],
+    "hits": [
+     1646,
+     1646
+    ],
+    "seconds": [
+     18.49,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "helps",
+    "recall": [
+     0.8895,
+     0.8895
+    ],
+    "precision": [
+     0.967,
+     0.9714
+    ],
+    "invented": [
+     103,
+     89
+    ],
+    "hits": [
+     3018,
+     3018
+    ],
+    "seconds": [
+     124.6,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.8367,
+     0.8367
+    ],
+    "precision": [
+     0.9793,
+     0.9793
+    ],
+    "invented": [
+     37,
+     37
+    ],
+    "hits": [
+     1752,
+     1752
+    ],
+    "seconds": [
+     22.41,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.7897,
+     0.7897
+    ],
+    "precision": [
+     0.963,
+     0.9638
+    ],
+    "invented": [
+     46,
+     45
+    ],
+    "hits": [
+     1198,
+     1198
+    ],
+    "seconds": [
+     19.6,
+     19.12
+    ]
+   }
+  },
+  "pe-dense-case-tables": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9499,
+     0.9499
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1023,
+     1023
+    ],
+    "seconds": [
+     29.75,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "mixed",
+    "recall": [
+     0.9692,
+     0.9662
+    ],
+    "precision": [
+     0.9908,
+     0.9938
+    ],
+    "invented": [
+     12,
+     8
+    ],
+    "hits": [
+     1290,
+     1286
+    ],
+    "seconds": [
+     22.83,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9417,
+     0.9417
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1777,
+     1777
+    ],
+    "seconds": [
+     43.82,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     26.36,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "mixed",
+    "recall": [
+     0.8488,
+     0.8463
+    ],
+    "precision": [
+     0.9672,
+     0.9677
+    ],
+    "invented": [
+     56,
+     55
+    ],
+    "hits": [
+     1651,
+     1646
+    ],
+    "seconds": [
+     14.68,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "helps",
+    "recall": [
+     0.8892,
+     0.8895
+    ],
+    "precision": [
+     0.9689,
+     0.9714
+    ],
+    "invented": [
+     97,
+     89
+    ],
+    "hits": [
+     3017,
+     3018
+    ],
+    "seconds": [
+     102.9,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.8367,
+     0.8367
+    ],
+    "precision": [
+     0.9793,
+     0.9793
+    ],
+    "invented": [
+     37,
+     37
+    ],
+    "hits": [
+     1752,
+     1752
+    ],
+    "seconds": [
+     15.45,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "hurts",
+    "recall": [
+     0.793,
+     0.7897
+    ],
+    "precision": [
+     0.9639,
+     0.9638
+    ],
+    "invented": [
+     45,
+     45
+    ],
+    "hits": [
+     1203,
+     1198
+    ],
+    "seconds": [
+     9.32,
+     19.12
+    ]
+   }
+  },
+  "pe-x86-memory-operands": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9499,
+     0.9499
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1023,
+     1023
+    ],
+    "seconds": [
+     12.59,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "mixed",
+    "recall": [
+     0.9677,
+     0.9662
+    ],
+    "precision": [
+     0.9862,
+     0.9938
+    ],
+    "invented": [
+     18,
+     8
+    ],
+    "hits": [
+     1288,
+     1286
+    ],
+    "seconds": [
+     10.67,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9417,
+     0.9417
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1777,
+     1777
+    ],
+    "seconds": [
+     37.74,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     33.74,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "mixed",
+    "recall": [
+     0.8468,
+     0.8463
+    ],
+    "precision": [
+     0.9632,
+     0.9677
+    ],
+    "invented": [
+     63,
+     55
+    ],
+    "hits": [
+     1647,
+     1646
+    ],
+    "seconds": [
+     11.66,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "mixed",
+    "recall": [
+     0.8898,
+     0.8895
+    ],
+    "precision": [
+     0.9661,
+     0.9714
+    ],
+    "invented": [
+     106,
+     89
+    ],
+    "hits": [
+     3019,
+     3018
+    ],
+    "seconds": [
+     80.14,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.8367,
+     0.8367
+    ],
+    "precision": [
+     0.9733,
+     0.9793
+    ],
+    "invented": [
+     48,
+     37
+    ],
+    "hits": [
+     1752,
+     1752
+    ],
+    "seconds": [
+     23.89,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.7897,
+     0.7897
+    ],
+    "precision": [
+     0.9584,
+     0.9638
+    ],
+    "invented": [
+     52,
+     45
+    ],
+    "hits": [
+     1198,
+     1198
+    ],
+    "seconds": [
+     16.54,
+     19.12
+    ]
+   }
+  },
+  "pe-x86-scope-tables": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9499,
+     0.9499
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1023,
+     1023
+    ],
+    "seconds": [
+     28.24,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "helps",
+    "recall": [
+     0.9662,
+     0.9662
+    ],
+    "precision": [
+     0.9923,
+     0.9938
+    ],
+    "invented": [
+     10,
+     8
+    ],
+    "hits": [
+     1286,
+     1286
+    ],
+    "seconds": [
+     27.68,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9417,
+     0.9417
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1777,
+     1777
+    ],
+    "seconds": [
+     69.16,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     50.42,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "mixed",
+    "recall": [
+     0.8468,
+     0.8463
+    ],
+    "precision": [
+     0.9321,
+     0.9677
+    ],
+    "invented": [
+     120,
+     55
+    ],
+    "hits": [
+     1647,
+     1646
+    ],
+    "seconds": [
+     19.6,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "helps",
+    "recall": [
+     0.8895,
+     0.8895
+    ],
+    "precision": [
+     0.937,
+     0.9714
+    ],
+    "invented": [
+     203,
+     89
+    ],
+    "hits": [
+     3018,
+     3018
+    ],
+    "seconds": [
+     114.54,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.8367,
+     0.8367
+    ],
+    "precision": [
+     0.9793,
+     0.9793
+    ],
+    "invented": [
+     37,
+     37
+    ],
+    "hits": [
+     1752,
+     1752
+    ],
+    "seconds": [
+     22.15,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "mixed",
+    "recall": [
+     0.7917,
+     0.7897
+    ],
+    "precision": [
+     0.914,
+     0.9638
+    ],
+    "invented": [
+     113,
+     45
+    ],
+    "hits": [
+     1201,
+     1198
+    ],
+    "seconds": [
+     12.75,
+     19.12
+    ]
+   }
+  },
+  "pe-x86-local-calls": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9499,
+     0.9499
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1023,
+     1023
+    ],
+    "seconds": [
+     17.25,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "hurts",
+    "recall": [
+     0.9669,
+     0.9662
+    ],
+    "precision": [
+     0.9938,
+     0.9938
+    ],
+    "invented": [
+     8,
+     8
+    ],
+    "hits": [
+     1287,
+     1286
+    ],
+    "seconds": [
+     13.72,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9417,
+     0.9417
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1777,
+     1777
+    ],
+    "seconds": [
+     15.14,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     11.68,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "mixed",
+    "recall": [
+     0.8468,
+     0.8463
+    ],
+    "precision": [
+     0.9526,
+     0.9677
+    ],
+    "invented": [
+     82,
+     55
+    ],
+    "hits": [
+     1647,
+     1646
+    ],
+    "seconds": [
+     6.88,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "mixed",
+    "recall": [
+     0.8898,
+     0.8895
+    ],
+    "precision": [
+     0.9461,
+     0.9714
+    ],
+    "invented": [
+     172,
+     89
+    ],
+    "hits": [
+     3019,
+     3018
+    ],
+    "seconds": [
+     75.84,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.8367,
+     0.8367
+    ],
+    "precision": [
+     0.9611,
+     0.9793
+    ],
+    "invented": [
+     71,
+     37
+    ],
+    "hits": [
+     1752,
+     1752
+    ],
+    "seconds": [
+     18.36,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "mixed",
+    "recall": [
+     0.7904,
+     0.7897
+    ],
+    "precision": [
+     0.9419,
+     0.9638
+    ],
+    "invented": [
+     74,
+     45
+    ],
+    "hits": [
+     1199,
+     1198
+    ],
+    "seconds": [
+     9.22,
+     19.12
+    ]
+   }
+  },
+  "pe-x86-trailing-data": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9499,
+     0.9499
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1023,
+     1023
+    ],
+    "seconds": [
+     32.4,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "neutral",
+    "recall": [
+     0.9662,
+     0.9662
+    ],
+    "precision": [
+     0.9938,
+     0.9938
+    ],
+    "invented": [
+     8,
+     8
+    ],
+    "hits": [
+     1286,
+     1286
+    ],
+    "seconds": [
+     29.71,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9417,
+     0.9417
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1777,
+     1777
+    ],
+    "seconds": [
+     66.03,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     49.83,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.8463,
+     0.8463
+    ],
+    "precision": [
+     0.9677,
+     0.9677
+    ],
+    "invented": [
+     55,
+     55
+    ],
+    "hits": [
+     1646,
+     1646
+    ],
+    "seconds": [
+     18.98,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "helps",
+    "recall": [
+     0.8895,
+     0.8895
+    ],
+    "precision": [
+     0.8963,
+     0.9714
+    ],
+    "invented": [
+     349,
+     89
+    ],
+    "hits": [
+     3018,
+     3018
+    ],
+    "seconds": [
+     112.56,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.8367,
+     0.8367
+    ],
+    "precision": [
+     0.9744,
+     0.9793
+    ],
+    "invented": [
+     46,
+     37
+    ],
+    "hits": [
+     1752,
+     1752
+    ],
+    "seconds": [
+     22.13,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.7897,
+     0.7897
+    ],
+    "precision": [
+     0.9638,
+     0.9638
+    ],
+    "invented": [
+     45,
+     45
+    ],
+    "hits": [
+     1198,
+     1198
+    ],
+    "seconds": [
+     13.03,
+     19.12
+    ]
+   }
+  },
+  "pe-import-stub-position": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "helps",
+    "recall": [
+     0.9499,
+     0.9499
+    ],
+    "precision": [
+     0.999,
+     1.0
+    ],
+    "invented": [
+     1,
+     0
+    ],
+    "hits": [
+     1023,
+     1023
+    ],
+    "seconds": [
+     16.72,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "neutral",
+    "recall": [
+     0.9662,
+     0.9662
+    ],
+    "precision": [
+     0.9938,
+     0.9938
+    ],
+    "invented": [
+     8,
+     8
+    ],
+    "hits": [
+     1286,
+     1286
+    ],
+    "seconds": [
+     13.98,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "helps",
+    "recall": [
+     0.9417,
+     0.9417
+    ],
+    "precision": [
+     0.9983,
+     1.0
+    ],
+    "invented": [
+     3,
+     0
+    ],
+    "hits": [
+     1777,
+     1777
+    ],
+    "seconds": [
+     14.77,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     11.79,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.8463,
+     0.8463
+    ],
+    "precision": [
+     0.9677,
+     0.9677
+    ],
+    "invented": [
+     55,
+     55
+    ],
+    "hits": [
+     1646,
+     1646
+    ],
+    "seconds": [
+     6.92,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "neutral",
+    "recall": [
+     0.8895,
+     0.8895
+    ],
+    "precision": [
+     0.9714,
+     0.9714
+    ],
+    "invented": [
+     89,
+     89
+    ],
+    "hits": [
+     3018,
+     3018
+    ],
+    "seconds": [
+     75.18,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.8367,
+     0.8367
+    ],
+    "precision": [
+     0.9788,
+     0.9793
+    ],
+    "invented": [
+     38,
+     37
+    ],
+    "hits": [
+     1752,
+     1752
+    ],
+    "seconds": [
+     17.99,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.7897,
+     0.7897
+    ],
+    "precision": [
+     0.9638,
+     0.9638
+    ],
+    "invented": [
+     45,
+     45
+    ],
+    "hits": [
+     1198,
+     1198
+    ],
+    "seconds": [
+     9.91,
+     19.12
+    ]
+   }
+  },
+  "pe-x86-fill-starts": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "helps",
+    "recall": [
+     0.689,
+     0.9499
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     742,
+     1023
+    ],
+    "seconds": [
+     24.72,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "mixed",
+    "recall": [
+     0.9594,
+     0.9662
+    ],
+    "precision": [
+     0.9953,
+     0.9938
+    ],
+    "invented": [
+     6,
+     8
+    ],
+    "hits": [
+     1277,
+     1286
+    ],
+    "seconds": [
+     28.71,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "helps",
+    "recall": [
+     0.7356,
+     0.9417
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1388,
+     1777
+    ],
+    "seconds": [
+     52.51,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     51.64,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "mixed",
+    "recall": [
+     0.8051,
+     0.8463
+    ],
+    "precision": [
+     0.9697,
+     0.9677
+    ],
+    "invented": [
+     49,
+     55
+    ],
+    "hits": [
+     1566,
+     1646
+    ],
+    "seconds": [
+     25.38,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "mixed",
+    "recall": [
+     0.8892,
+     0.8895
+    ],
+    "precision": [
+     0.9739,
+     0.9714
+    ],
+    "invented": [
+     81,
+     89
+    ],
+    "hits": [
+     3017,
+     3018
+    ],
+    "seconds": [
+     117.43,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "mixed",
+    "recall": [
+     0.7722,
+     0.8367
+    ],
+    "precision": [
+     0.98,
+     0.9793
+    ],
+    "invented": [
+     33,
+     37
+    ],
+    "hits": [
+     1617,
+     1752
+    ],
+    "seconds": [
+     13.22,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.7541,
+     0.7897
+    ],
+    "precision": [
+     0.9638,
+     0.9638
+    ],
+    "invented": [
+     43,
+     45
+    ],
+    "hits": [
+     1144,
+     1198
+    ],
+    "seconds": [
+     13.44,
+     19.12
+    ]
+   }
+  },
+  "pe-x86-case-runs": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "neutral",
+    "recall": [
+     0.9499,
+     0.9499
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1023,
+     1023
+    ],
+    "seconds": [
+     17.57,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "neutral",
+    "recall": [
+     0.9662,
+     0.9662
+    ],
+    "precision": [
+     0.9938,
+     0.9938
+    ],
+    "invented": [
+     8,
+     8
+    ],
+    "hits": [
+     1286,
+     1286
+    ],
+    "seconds": [
+     13.61,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "helps",
+    "recall": [
+     0.9417,
+     0.9417
+    ],
+    "precision": [
+     0.9994,
+     1.0
+    ],
+    "invented": [
+     1,
+     0
+    ],
+    "hits": [
+     1777,
+     1777
+    ],
+    "seconds": [
+     24.54,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     9.24,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.8463,
+     0.8463
+    ],
+    "precision": [
+     0.9677,
+     0.9677
+    ],
+    "invented": [
+     55,
+     55
+    ],
+    "hits": [
+     1646,
+     1646
+    ],
+    "seconds": [
+     7.4,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "neutral",
+    "recall": [
+     0.8895,
+     0.8895
+    ],
+    "precision": [
+     0.9714,
+     0.9714
+    ],
+    "invented": [
+     89,
+     89
+    ],
+    "hits": [
+     3018,
+     3018
+    ],
+    "seconds": [
+     71.95,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.8367,
+     0.8367
+    ],
+    "precision": [
+     0.9793,
+     0.9793
+    ],
+    "invented": [
+     37,
+     37
+    ],
+    "hits": [
+     1752,
+     1752
+    ],
+    "seconds": [
+     17.12,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "neutral",
+    "recall": [
+     0.7897,
+     0.7897
+    ],
+    "precision": [
+     0.9638,
+     0.9638
+    ],
+    "invented": [
+     45,
+     45
+    ],
+    "hits": [
+     1198,
+     1198
+    ],
+    "seconds": [
+     11.3,
+     19.12
+    ]
+   }
+  },
+  "ALL": {
+   "pc-doomgeneric-mingw32": {
+    "verdict": "helps",
+    "recall": [
+     0.689,
+     0.9499
+    ],
+    "precision": [
+     0.9987,
+     1.0
+    ],
+    "invented": [
+     1,
+     0
+    ],
+    "hits": [
+     742,
+     1023
+    ],
+    "seconds": [
+     12.59,
+     14.66
+    ]
+   },
+   "pc-glquake-msvc42": {
+    "verdict": "helps",
+    "recall": [
+     0.9654,
+     0.9662
+    ],
+    "precision": [
+     0.8936,
+     0.9938
+    ],
+    "invented": [
+     153,
+     8
+    ],
+    "hits": [
+     1285,
+     1286
+    ],
+    "seconds": [
+     8.67,
+     15.58
+    ]
+   },
+   "pc-ioq3-ded-mingw32": {
+    "verdict": "helps",
+    "recall": [
+     0.7366,
+     0.9417
+    ],
+    "precision": [
+     0.9693,
+     1.0
+    ],
+    "invented": [
+     44,
+     0
+    ],
+    "hits": [
+     1390,
+     1777
+    ],
+    "seconds": [
+     14.19,
+     42.23
+    ]
+   },
+   "pc-ioq3-ded-mingw64": {
+    "verdict": "neutral",
+    "recall": [
+     1.0,
+     1.0
+    ],
+    "precision": [
+     1.0,
+     1.0
+    ],
+    "invented": [
+     0,
+     0
+    ],
+    "hits": [
+     1963,
+     1963
+    ],
+    "seconds": [
+     11.62,
+     53.22
+    ]
+   },
+   "pc-quake2-game-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.8093,
+     0.8463
+    ],
+    "precision": [
+     0.9172,
+     0.9677
+    ],
+    "invented": [
+     142,
+     55
+    ],
+    "hits": [
+     1574,
+     1646
+    ],
+    "seconds": [
+     8.48,
+     22.87
+    ]
+   },
+   "pc-quake2-game-msvc8-debug": {
+    "verdict": "mixed",
+    "recall": [
+     0.8904,
+     0.8895
+    ],
+    "precision": [
+     0.8465,
+     0.9714
+    ],
+    "invented": [
+     548,
+     89
+    ],
+    "hits": [
+     3021,
+     3018
+    ],
+    "seconds": [
+     55.31,
+     179.92
+    ]
+   },
+   "pc-quake2-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.7717,
+     0.8367
+    ],
+    "precision": [
+     0.9357,
+     0.9793
+    ],
+    "invented": [
+     111,
+     37
+    ],
+    "hits": [
+     1616,
+     1752
+    ],
+    "seconds": [
+     6.79,
+     53.12
+    ]
+   },
+   "pc-quake2-refgl-msvc8": {
+    "verdict": "helps",
+    "recall": [
+     0.7607,
+     0.7897
+    ],
+    "precision": [
+     0.8638,
+     0.9638
+    ],
+    "invented": [
+     182,
+     45
+    ],
+    "hits": [
+     1154,
+     1198
+    ],
+    "seconds": [
+     7.49,
+     19.12
+    ]
+   }
+  }
+ },
+ "baseline": {
+  "pc-doomgeneric-mingw32": {
+   "truth": 1077,
+   "found": 1023,
+   "hits": 1023,
+   "invented": 0,
+   "recall": 0.9499,
+   "precision": 1.0,
+   "sizes_compared": 944,
+   "size_exact": 934,
+   "size_short": 0,
+   "size_long": 10,
+   "verified_truth": 1077,
+   "verified_hits": 1023,
+   "verified_split": 0,
+   "recall_verified": 0.9499,
+   "precision_verified": 1.0,
+   "missed_sample": [
+    "0x4013f0 WinMainCRTStartup",
+    "0x401540 AM_getIslope",
+    "0x404a00 _D_Display.part.0",
+    "0x4057b0 _PrintGameVersion",
+    "0x405800 D_DoomMain",
+    "0x4064c0 D_ValidGameMode",
+    "0x406500 D_ValidEpisodeMap",
+    "0x4065c0 D_GetNumEpisodes",
+    "0x406610 D_ValidGameVersion",
+    "0x406670 D_IsEpisodeMap"
+   ],
+   "invented_sample": []
+  },
+  "pc-glquake-msvc42": {
+   "truth": 1331,
+   "found": 1294,
+   "hits": 1286,
+   "invented": 8,
+   "recall": 0.9662,
+   "precision": 0.9938,
+   "sizes_compared": 1286,
+   "size_exact": 1220,
+   "size_short": 64,
+   "size_long": 2,
+   "verified_truth": 1331,
+   "verified_hits": 1286,
+   "verified_split": 8,
+   "recall_verified": 0.9662,
+   "precision_verified": 0.9938,
+   "missed_sample": [
+    "0x422200 _M_Menu_ServerList_f",
+    "0x43ce9a _acos",
+    "0x43cea1 _atan",
+    "0x43cea8 _atan2",
+    "0x43cebc __CIacos",
+    "0x43cec3 __CIatan",
+    "0x43ceca __CIatan2",
+    "0x43d02a _log",
+    "0x43d034 _log10",
+    "0x43d03b _exp"
+   ],
+   "invented_sample": [
+    "0x42bce9",
+    "0x43c780",
+    "0x4407de",
+    "0x4407e5",
+    "0x442c6d",
+    "0x442c82",
+    "0x442d3c",
+    "0x445dc3"
+   ]
+  },
+  "pc-ioq3-ded-mingw32": {
+   "truth": 1887,
+   "found": 1777,
+   "hits": 1777,
+   "invented": 0,
+   "recall": 0.9417,
+   "precision": 1.0,
+   "sizes_compared": 1660,
+   "size_exact": 1523,
+   "size_short": 1,
+   "size_long": 136,
+   "verified_truth": 1887,
+   "verified_hits": 1777,
+   "verified_split": 0,
+   "recall_verified": 0.9417,
+   "precision_verified": 1.0,
+   "missed_sample": [
+    "0x4013f0 WinMainCRTStartup",
+    "0x4018e0 BotImport_Print",
+    "0x4019e0 _BotImport_HunkAlloc",
+    "0x401a20 BotImport_DebugLineShow",
+    "0x401cb0 SV_BotAllocateClient",
+    "0x401ff0 SV_BotLibSetup",
+    "0x402050 SV_BotLibShutdown",
+    "0x4053f0 SV_UpdateUserinfo_f",
+    "0x408420 SV_InitGameVM",
+    "0x4084b0 SV_NumForGentity"
+   ],
+   "invented_sample": []
+  },
+  "pc-ioq3-ded-mingw64": {
+   "truth": 1963,
+   "found": 1963,
+   "hits": 1963,
+   "invented": 0,
+   "recall": 1.0,
+   "precision": 1.0,
+   "sizes_compared": 1755,
+   "size_exact": 1606,
+   "size_short": 1,
+   "size_long": 148,
+   "verified_truth": 1963,
+   "verified_hits": 1963,
+   "verified_split": 0,
+   "recall_verified": 1.0,
+   "precision_verified": 1.0,
+   "missed_sample": [],
+   "invented_sample": []
+  },
+  "pc-quake2-game-msvc8": {
+   "truth": 1945,
+   "found": 1701,
+   "hits": 1646,
+   "invented": 55,
+   "recall": 0.8463,
+   "precision": 0.9677,
+   "sizes_compared": 1646,
+   "size_exact": 1600,
+   "size_short": 35,
+   "size_long": 11,
+   "verified_truth": 1945,
+   "verified_hits": 1646,
+   "verified_split": 47,
+   "recall_verified": 0.8463,
+   "precision_verified": 0.9722,
+   "missed_sample": [
+    "0x1000f650 SP_misc_teleporter_dest",
+    "0x10012880 WriteField2",
+    "0x10032a80 LittleShort",
+    "0x10032a90 BigLong",
+    "0x10032aa0 LittleLong",
+    "0x10032ab0 BigFloat",
+    "0x10032ad0 LittleFloat",
+    "0x10033634 _fpclear",
+    "0x10033635 _cfltcvt_init",
+    "0x10033695 __setfflag"
+   ],
+   "invented_sample": [
+    "0x1003229d",
+    "0x100322d8",
+    "0x10032313",
+    "0x1003234e",
+    "0x10032389",
+    "0x100323c4",
+    "0x100323fc",
+    "0x10032434",
+    "0x1003405d",
+    "0x10034f49"
+   ]
+  },
+  "pc-quake2-game-msvc8-debug": {
+   "truth": 3393,
+   "found": 3107,
+   "hits": 3018,
+   "invented": 89,
+   "recall": 0.8895,
+   "precision": 0.9714,
+   "sizes_compared": 3018,
+   "size_exact": 2677,
+   "size_short": 334,
+   "size_long": 7,
+   "verified_truth": 3393,
+   "verified_hits": 3018,
+   "verified_split": 77,
+   "recall_verified": 0.8895,
+   "precision_verified": 0.9751,
+   "missed_sample": [
+    "0x10001028 ILT+40",
+    "0x10001032 ILT+50",
+    "0x1000103c ILT+60",
+    "0x1000105f ILT+95",
+    "0x10001159 ILT+345",
+    "0x10001168 ILT+360",
+    "0x10001181 ILT+385",
+    "0x10001186 ILT+390",
+    "0x1000118b ILT+395",
+    "0x10001190 ILT+400"
+   ],
+   "invented_sample": [
+    "0x100041bc",
+    "0x1000a134",
+    "0x1000c9e4",
+    "0x1000ea40",
+    "0x1000ea54",
+    "0x1001ebec",
+    "0x10024dd8",
+    "0x100269c0",
+    "0x10026a90",
+    "0x1002ca3c"
+   ]
+  },
+  "pc-quake2-msvc8": {
+   "truth": 2094,
+   "found": 1789,
+   "hits": 1752,
+   "invented": 37,
+   "recall": 0.8367,
+   "precision": 0.9793,
+   "sizes_compared": 1752,
+   "size_exact": 1677,
+   "size_short": 61,
+   "size_long": 14,
+   "verified_truth": 2094,
+   "verified_hits": 1752,
+   "verified_split": 37,
+   "recall_verified": 0.8367,
+   "precision_verified": 0.9793,
+   "missed_sample": [
+    "0x403550 S_RegisterSexedModel",
+    "0x40f750 CL_CheckPredictionError",
+    "0x421000 M_DrawCharacter",
+    "0x42ce50 BigLong",
+    "0x42ce70 BigFloat",
+    "0x42ddf0 SNDDMA_Submit",
+    "0x430390 localtime",
+    "0x4303a0 time",
+    "0x437480 ClearLink",
+    "0x437490 RemoveLink"
+   ],
+   "invented_sample": [
+    "0x41ecb4",
+    "0x4280e4",
+    "0x42c65d",
+    "0x42c698",
+    "0x42c6d3",
+    "0x42c70e",
+    "0x42c749",
+    "0x42c784",
+    "0x42c7bc",
+    "0x42c7f4"
+   ]
+  },
+  "pc-quake2-refgl-msvc8": {
+   "truth": 1517,
+   "found": 1243,
+   "hits": 1198,
+   "invented": 45,
+   "recall": 0.7897,
+   "precision": 0.9638,
+   "sizes_compared": 1198,
+   "size_exact": 1156,
+   "size_short": 30,
+   "size_long": 12,
+   "verified_truth": 1517,
+   "verified_hits": 1198,
+   "verified_split": 44,
+   "recall_verified": 0.7897,
+   "precision_verified": 0.9646,
+   "missed_sample": [
+    "0x10019100 BigLong",
+    "0x10019120 BigFloat",
+    "0x10019e10 CompareAttributes",
+    "0x10019eb0 Sys_FindFirst",
+    "0x10019f90 Sys_FindNext",
+    "0x1001a040 Sys_FindClose",
+    "0x1001a0fa _fpclear",
+    "0x1001a0fb _cfltcvt_init",
+    "0x1001a15b __setfflag",
+    "0x1001a16b _fpmath"
+   ],
+   "invented_sample": [
+    "0x1001890d",
+    "0x10018948",
+    "0x10018983",
+    "0x100189be",
+    "0x100189f9",
+    "0x10018a34",
+    "0x10018a6c",
+    "0x10018aa4",
+    "0x1001a91d",
+    "0x1001aba8"
+   ]
+  }
+ }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "m20-006",
+  "recorded_at": "2026-10-15T09:57:31.633395+00:00",
+  "thresholds": {
+    "functions": 20000
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "572 SCE-seeded functions, 29488 BINMAP-named, NID imports resolved",
+  "metrics": {
+    "bare_functions": 572,
+    "mapped_functions": 29488
+  }
+}

@@ -1,0 +1,82 @@
+{
+ "name": "psx-silenthill",
+ "image": "/home/raikaru/ventris-corpus/extracted/psx-silent-hill/SLUS_007.07",
+ "started": "2026-10-15T14:23:55Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 0.9,
+   "tail": [
+    "imported silenthill (236 functions, PSX:LE:32:default; 1 program(s) in the store)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-psx-silenthill: psx psyq (PSY-Q 4.x era (libsys of 1998 or later), Low), 236 functions as asm units, 6 binary units, 236 symbols, 0 prototypes (0 skipped), splat `PSYQ`, compiler `psyq4.3`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-psx-silenthill && python3 -m pip install -r requirements.txt && python3 configure.py && ninja"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/psx-silent-hill/SLUS_007.07 /home/raikaru/runs/FinalGate2/smoke/proj-psx-silenthill --name silenthill"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 2.4,
+   "tail": [
+    "Split 81 KB (100.00%) in defined segments",
+    "             databin:     2 KB (2.50%) 1 split, 0 cached",
+    "             textbin:    36 KB (44.53%) 5 split, 0 cached",
+    "                 asm:    43 KB (52.97%) 236 split, 0 cached",
+    "             unknown:      0 B (0.00%) from unknown bin files",
+    "configured: 242 objects, 0 C unit(s); run `ninja`"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 5.0,
+   "tail": [
+    "[241/245] as asm/main/0012/FUN_8001ad8c.s",
+    "[242/245] as asm/data/main/0013/data_8001b118.s",
+    "[243/245] link build/SLUS_007.07.elf",
+    "[244/245] image build/SLUS_007.07",
+    "[245/245] verify build/SLUS_007.07",
+    "OK  build/SLUS_007.07  sha1 f38344565fb731befc52fd968eb5a667be37acf3"
+   ],
+   "cmd": "ninja"
+  }
+ },
+ "build_ok_lines": [
+  "OK  build/SLUS_007.07  sha1 f38344565fb731befc52fd968eb5a667be37acf3"
+ ],
+ "sha1_built": "f38344565fb731befc52fd968eb5a667be37acf3",
+ "build_rc": 0,
+ "pick_pool": 81,
+ "match_functions": [
+  "0x80012e1c",
+  "0x80013efc",
+  "0x80018784"
+ ],
+ "matches": [
+  {
+   "function": "0x80012e1c",
+   "rc": 0,
+   "secs": 0.7,
+   "head": "FUN_80012e1c 0x80012e1c (88 bytes)  compiler psyq4.3 -O2 -G0  metric: objdiff match %",
+   "best": "best: default  71.273%  (default 71.273%)  7 decompiles, 1 compiles, 0.7s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x80013efc",
+   "rc": 0,
+   "secs": 1.1,
+   "head": "FUN_80013efc 0x80013efc (60 bytes)  compiler psyq4.3 -O2 -G0  metric: objdiff match %",
+   "best": "best: default  91.667%  (default 91.667%)  7 decompiles, 2 compiles, 1.0s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x80018784",
+   "rc": 0,
+   "secs": 0.7,
+   "head": "FUN_80018784 0x80018784 (96 bytes)  compiler psyq4.3 -O2 -G0  metric: objdiff match %",
+   "best": "best: default  91.667%  (default 91.667%)  7 decompiles, 1 compiles, 0.7s; stopped at the variant budget",
+   "tail": []
+  }
+ ],
+ "result": "done",
+ "finished": "2026-10-15T14:24:06Z"
+}

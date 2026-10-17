@@ -1,0 +1,80 @@
+{
+ "name": "gc-pikmin2",
+ "image": "/home/raikaru/ventris-corpus/extracted/gc-pikmin-2/main.dol",
+ "started": "2026-10-15T14:20:25Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 24.3,
+   "tail": [
+    "DOL /home/raikaru/ventris-corpus/extracted/gc-pikmin-2/main.dol (5209600 bytes)",
+    "imported pikmin2 (24991 functions, PowerPC:BE:32:Gekko_Broadway)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-gc-pikmin2: mwcc-gc gc-2003-04 (Medium confidence), 13 sections (from the .init tables), 24989 functions, 24989 symbols (2 functions dtk cannot represent skipped), 0 REL module(s), 0 prototypes (0 skipped), compiler `GC/2.6`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-gc-pikmin2 && python3 -m pip install -r requirements.txt && python3 configure.py && ninja"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/gc-pikmin-2/main.dol /home/raikaru/runs/FinalGate2/smoke/proj-gc-pikmin2 --name pikmin2"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 11.7,
+   "tail": [
+    " INFO Initial analysis completed in 0.654s (found 25000 functions)",
+    " INFO Rebuilding relocations and splitting",
+    " INFO Splitting completed in 1.566s (wrote 495 objects)",
+    " INFO Total time: 2.222s",
+    "the DOL rebuilds byte for byte (arrangement: keep)",
+    "configured: 495 units, 0 module(s), 0 with C; run `ninja`"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 1.2,
+   "tail": [
+    "[1/3] link build/PIKMIN2/main.elf",
+    "[2/3] dol build/PIKMIN2/main.dol",
+    "[3/3] check config/PIKMIN2/build.sha1",
+    "build/PIKMIN2/main.dol: OK"
+   ],
+   "cmd": "ninja"
+  }
+ },
+ "build_ok_lines": [
+  "build/PIKMIN2/main.dol: OK"
+ ],
+ "sha1_built": null,
+ "build_rc": 0,
+ "match_functions": [
+  "0x800c03ec",
+  "0x8006bd04",
+  "0x800c0394"
+ ],
+ "matches": [
+  {
+   "function": "0x800c03ec",
+   "rc": 0,
+   "secs": 1.0,
+   "head": "FUN_800c03ec 0x800c03ec (32 bytes)  compiler mwcc-gc-wii-20251118 -nodefaults -proc gekko -align powerpc -enum int -fp hardware -Cpp_exceptions off -O4,p -inline auto -nosyspath -RTTI off -str reuse -",
+   "best": "best: default  100.000% exact  (default 100.000%)  1 decompiles, 1 compiles, 0.9s; stopped at an exact variant",
+   "tail": []
+  },
+  {
+   "function": "0x8006bd04",
+   "rc": 0,
+   "secs": 1.1,
+   "head": "FUN_8006bd04 0x8006bd04 (8 bytes)  compiler mwcc-gc-wii-20251118 -nodefaults -proc gekko -align powerpc -enum int -fp hardware -Cpp_exceptions off -O4,p -inline auto -nosyspath -RTTI off -str reuse -m",
+   "best": "best: default  100.000% exact  (default 100.000%)  1 decompiles, 1 compiles, 1.0s; stopped at an exact variant",
+   "tail": []
+  },
+  {
+   "function": "0x800c0394",
+   "rc": 0,
+   "secs": 6.6,
+   "head": "FUN_800c0394 0x800c0394 (88 bytes)  compiler mwcc-gc-wii-20251118 -nodefaults -proc gekko -align powerpc -enum int -fp hardware -Cpp_exceptions off -O4,p -inline auto -nosyspath -RTTI off -str reuse -",
+   "best": "best: default  49.250%  (default 49.250%)  7 decompiles, 1 compiles, 6.6s; stopped at the variant budget",
+   "tail": []
+  }
+ ],
+ "result": "done",
+ "finished": "2026-10-15T14:21:10Z"
+}

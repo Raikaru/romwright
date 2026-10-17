@@ -1,0 +1,66 @@
+{
+ "name": "scaffold-3ds",
+ "image": "/home/raikaru/ventris-corpus/extracted/3ds-fire-emblem-fates/exefs/code-decompressed.bin",
+ "started": "2026-10-15T15:03:05Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 202.0,
+   "tail": [
+    "import: 126.1s",
+    "warning: fates: no C for 0x100668: native runtime: worker failed (exit status: 1): error: decompiler exception: DataUnavailError: GHIDRA has no data in the loadimage at 0xb18d48",
+    "warning: fates: no C for 0x100674: native runtime: worker failed (exit status: 1): error: decompiler exception: DataUnavailError: GHIDRA has no data in the loadimage at 0xb18d48",
+    "decompile: 38 function(s) in 74.9s (2 refused by the decompiler)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-scaffold-3ds: non-matching scaffold for Nintendo 3DS (1 module(s)), 27625 function(s), 38 source(s), 36 target object(s) (61 calls relocated), 36 objdiff unit(s), 27625 symbols, 4 prototypes (0 skipped), clang target armv6k-none-eabi",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-scaffold-3ds && python3 build.py"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/3ds-fire-emblem-fates/exefs/code-decompressed.bin /home/raikaru/runs/FinalGate2/smoke/proj-scaffold-3ds --platform 3ds --name fates --raw 100000 --language ARM:LE:32:v6 --map /home/raikaru/ventris-corpus/extracted/3ds-fire-emblem-fates/romfs/debug/symbols.map --decompile first:40"
+  },
+  "fetch": {
+   "rc": 0,
+   "secs": 207.8,
+   "tail": [
+    "download clang-22.1.8 22.1.8 <- https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.8/LLVM-22.1.8-Linux-X64.tar.xz",
+    "/home/raikaru/runs/FinalGate2/smoke/proj-scaffold-3ds/build/tools/clang-22.1.8",
+    "download objdiff-cli v3.6.1 <- https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-linux-x86_64",
+    "/home/raikaru/runs/FinalGate2/smoke/proj-scaffold-3ds/build/tools/objdiff-cli"
+   ],
+   "cmd": "python3 build.py fetch"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 0.8,
+   "tail": [
+    "compiled 37/38 units with clang version 22.1.8 (https://github.com/llvm/llvm-project ca7933e47d3a3451d81e72ac174dcb5aa28b59d1) (1 failed, see build/compile_report.json)",
+    "  FAIL src/main/0010/std__string___C_allocate_unsigned.c: /home/raikaru/runs/FinalGate2/smoke/proj-scaffold-3ds/src/main/0010/std__string___C_allocate_unsigned.c:33:26: error: use of undeclared identifier 'register0x00000054'"
+   ],
+   "cmd": "python3 build.py -j 3"
+  },
+  "report": {
+   "rc": 0,
+   "secs": 0.1,
+   "tail": [
+    "INFO Loading project /home/raikaru/runs/FinalGate2/smoke/proj-scaffold-3ds",
+    " INFO Generating report for 36 units (using 8 threads)",
+    " INFO Report generated in 0.023s",
+    " INFO Writing to /home/raikaru/runs/FinalGate2/smoke/proj-scaffold-3ds/build/report.json"
+   ],
+   "cmd": "python3 build.py report"
+  }
+ },
+ "build/compile_report.json": {
+  "compiler": "clang version 22.1.8 (https://github.com/llvm/llvm-project ca7933e47d3a3451d81e72ac174dcb5aa28b59d1)",
+  "pinned": "clang-22.1.8",
+  "target": "armv6k-none-eabi",
+  "units": 38,
+  "compiled": 37,
+  "failed": 1,
+  "seconds": 0.6,
+  "failures_count": 1
+ },
+ "build_rc": 0,
+ "match_functions": [],
+ "matches": [],
+ "result": "done",
+ "finished": "2026-10-15T15:09:56Z"
+}

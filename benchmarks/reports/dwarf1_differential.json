@@ -1,0 +1,25 @@
+{
+ "elf": "/home/raikaru/ventris-corpus/extracted/ps2-capcom-fighting-evolution/SLUS_209.50",
+ "python_functions": 5221,
+ "python_conflicts_dropped": 0,
+ "rust_functions": 5221,
+ "compared": 5221,
+ "only_python": [],
+ "only_rust": [],
+ "arity_agreement": 5221,
+ "type_agreement": 5221,
+ "full_agreement": 5221,
+ "agreement_rate": 1.0,
+ "slots": 10808,
+ "slot_agreement": 1.0,
+ "disagreeing_class_pairs": [],
+ "disagreements": [],
+ "disagreement_count": 0,
+ "python_long_size": 8,
+ "rust_prototypes": 5221,
+ "prototype_spelling_agreement": [
+  5221,
+  5221
+ ],
+ "prototype_spelling_disagreements": []
+}

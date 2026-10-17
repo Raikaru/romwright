@@ -1,0 +1,7357 @@
+{
+  "benchmark": "structuring_baseline",
+  "date": "2026-10-07",
+  "commit": "7e29f17c211f732c7001d01778fe56ad52c42b50",
+  "ghidra_opt": "native/build/ghidra_opt",
+  "printer": "printc",
+  "configs": {
+    "default": null,
+    "ir-none": ""
+  },
+  "images": [
+    {
+      "image": "gba-pokeemerald",
+      "project": "/home/raikaru/.cache/romwright/research-eval/projects/gba-pokeemerald-a9dec84dfe7f-4f53cda18c2b-23c94218619e781c",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 53,
+        "ir-none": 53
+      },
+      "functions_with_gotos": {
+        "default": 23,
+        "ir-none": 23
+      },
+      "per_function": {
+        "08000f00": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "08006348": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08006648": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08007df8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080082b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08008744": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0800d434": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0800f1e0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "080124e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0801a43c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0801d1f0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "0801f0d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0801f5b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0801fd30": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "08020af4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08021944": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08022cb0": {
+          "default": 6,
+          "ir-none": 6
+        },
+        "080261cc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08027554": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "08028a88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08028b80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0802d598": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0802e120": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08031580": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08031c88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08033efc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0804b658": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0804de14": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08051064": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "08055dfc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08062ac4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08063364": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "080662f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080672dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0806782c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08070728": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080712c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08077288": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0807811c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0807ab04": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08081be0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080824fc": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "08084b1c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08086ce0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "08089588": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080897a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0808aaf8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0808b95c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0808b9ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0808df80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0808e594": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08090148": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08090df8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08091d84": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080935c4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08093c44": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080948d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08094d20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08095070": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080951a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080954dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080971c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08097d9c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0809b3b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0809b458": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080a14c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080a2390": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080a64ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080a67bc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080a7a74": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080ab3a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080addbc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080af314": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080af87c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080afbf4": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "080b08ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080b6fa8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080b72f4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080b86ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080bab08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080c5a48": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "080c63fc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080ca9c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080d5c20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080d622c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080d656c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080da198": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "080dbaa0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080de424": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080e5384": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080e5664": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080e5a10": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080e9214": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080e9238": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080f0ecc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "080f6404": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "080f8ee8": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "080f9438": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081005d4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08101440": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08102584": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08102de4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081052a4": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "0810916c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0810d308": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0810da10": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081157fc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081194c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08120160": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0812220c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08123190": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08125b5c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08126dcc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0812a750": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0812e230": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08131cec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08131d5c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08134ce8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081371d4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08138d10": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "0813a46c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0813d824": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08142a88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08144d94": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08149864": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "0814d288": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08153430": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08153850": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08153970": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08157644": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08159c08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0815c3a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0815e34c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08161d00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081621c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08164ed8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08167ba0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08168610": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08168af8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0816a788": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0816bfe0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0816d12c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0816f6d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08175ae4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0817603c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0817c7dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0817f3f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08180f2c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "08183574": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0818bfac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0818bfb8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0818fa20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0819a25c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081a09d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081a16b4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081a2560": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081a6a08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081a7140": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081a7974": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081a9134": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081aa760": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "081ac23c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081ac2e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081ad044": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081ad9ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081adc0c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081b0ef4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081b31b0": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "081b5d4c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081b9030": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081b951c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081b9d98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081bc484": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081bd778": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081bd784": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081bdff8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081c1da4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081c4484": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081c4c60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081c5518": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081c742c": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "081c7ba4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081ca3b4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081cbe88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081cc6f4": {
+          "default": 9,
+          "ir-none": 9
+        },
+        "081cf0c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081d2c3c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081d5520": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081d74c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081d93d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "081d961c": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "081da9bc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "082e0130": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "082e15a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "082e2c78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "082e2e70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "082e46ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "082e530c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "082e5c34": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "082e5cc8": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    },
+    {
+      "image": "gc-animal-crossing",
+      "project": "/home/raikaru/.cache/romwright/research-eval/projects/gc-animal-crossing-e3166b15b810-4f53cda18c2b-23c94218619e781c",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 44,
+        "ir-none": 44
+      },
+      "functions_with_gotos": {
+        "default": 9,
+        "ir-none": 9
+      },
+      "per_function": {
+        "80003834": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80006b08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80007188": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800080a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8000a620": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8000a880": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8000c744": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8000cec8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8000e294": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8000fe14": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800104f4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80010a24": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80011170": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80012e04": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80014254": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80014364": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800154bc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80015c78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80018380": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80018940": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80018c00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80018ce0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800191a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80019dc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8001a3c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8001a560": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8001a940": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8001b5e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8001d4e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8001da60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80021b20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80021b80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800223a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80023ce0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80023d80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80023f40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800248a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800256e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80025ee0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80026140": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80026400": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80027c00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80029a80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8002bac0": {
+          "default": 6,
+          "ir-none": 6
+        },
+        "8002c520": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8002d140": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8002d860": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8002ef20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800302c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80030620": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80030e00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80030e80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80030ec0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800318c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80032380": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80032a60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80032cc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80032de0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800331a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80033ee0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800343a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80035460": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800354a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800354e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80035560": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80036140": {
+          "default": 8,
+          "ir-none": 8
+        },
+        "80037640": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80038820": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "8003b5d4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8003b6f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8003d754": {
+          "default": 10,
+          "ir-none": 10
+        },
+        "80044e10": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "8004680c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80046c8c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80046d88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80047dd4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800492c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8004c31c": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "80050498": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800533ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80054554": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8005465c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80055e58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80059c8c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8005a8b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8005b754": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8005b7e4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8005bbf8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8005c53c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80060100": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80060668": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80060f04": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006127c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80061428": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80061438": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006147c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80061734": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80061898": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80061a70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80061dcc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80062618": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80062878": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80063b68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80063f84": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80064d54": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80064e40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80065a94": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80066130": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80066a08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80066e30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80067a88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80067ba8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80067f38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800685b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80069068": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800693e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80069530": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80069b0c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006af9c": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "8006b584": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006b9c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006bbb0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006bc2c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006bd74": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006cf64": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006db98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006e29c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006e800": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006e9a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8006f8d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800703dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80070488": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800708a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80070b10": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800716c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80071e0c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80071f98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80073908": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80074338": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8007672c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80076d60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80077380": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8007816c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80078384": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800786d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8007ac4c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8007b498": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8007da74": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8007dd1c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8007f77c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8007fdfc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80080d14": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80081d2c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008236c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800825f4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800836b4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80084a9c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80084fd8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80086300": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80086b94": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80087034": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008a594": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008ad54": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008b5f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008b858": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008ba34": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008bd74": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008c274": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008d1f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008d42c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8008fe98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800909d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80091028": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800923b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80092898": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80092ebc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80094908": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80095b10": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80095b2c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80095ca4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800965b4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80096b60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800995c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80099d80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8009a9cc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8009aaf4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8009af1c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8009c5a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8009d2d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8009df1c": {
+          "default": 5,
+          "ir-none": 5
+        },
+        "8009f5fc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8009fcd8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800a16ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800a2e90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800a3118": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800a4578": {
+          "default": 6,
+          "ir-none": 6
+        },
+        "800a5d1c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800a6e8c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800a8140": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "800a8ce0": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    },
+    {
+      "image": "nds-pokeheartgold-arm9",
+      "project": "/home/raikaru/.cache/romwright/research-eval/projects/nds-pokeheartgold-arm9-65f02a56842b-4f53cda18c2b-23c94218619e781c",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 9,
+        "ir-none": 9
+      },
+      "functions_with_gotos": {
+        "default": 3,
+        "ir-none": 3
+      },
+      "per_function": {
+        "02001f20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02002ba8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02002f30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020030b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020035f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020047c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02007974": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02007c60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02009138": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200a790": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200b9f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200bc4c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200c3e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200c578": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200cad8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200cf6c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200d934": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200dc34": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200dd60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200dd68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0200de00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020143e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02014708": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020149a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02015834": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020159e4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02015a5c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02015cc8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02016748": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020169cc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02019014": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201a928": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201aa38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201ab0c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201ace8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201ad0c": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "0201cc2c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201eeb4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201f5b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201f984": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0201fd2c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02020020": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02020aa0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020216f4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02021dd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02022238": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02022260": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020223c4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02023214": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020245fc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020248ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02024a6c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02024b34": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02025404": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02025b40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020274e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02027744": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02027d6c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02028d30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02028dc4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020290c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020296c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202984c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02029ef4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202a57c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202aed4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202b3f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202cc5c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202d9f4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202debc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202e0ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202e4b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202f720": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202f888": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202fa64": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0202fab0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02031774": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203197c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020327ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203b014": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203b470": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203ca44": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203d264": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203d488": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203e344": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203e3d4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203ea5c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0203f050": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02040ff0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02041040": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204146c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02041fb8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204236c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02044658": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020447cc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02045394": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204592c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204720c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204749c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02047518": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02047b6c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02049344": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02049460": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204a424": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204a6a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204a824": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204babc": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "0204bc98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204bfd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204c630": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204c63c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204c658": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204c91c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204cb7c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204d248": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204dfe4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204e4e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0204e7dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02050aac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02050d1c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02051114": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02051660": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02052544": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02053e08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020541b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020543f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02055640": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02055828": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020560c4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205b63c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205b858": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205b8a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205ba00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205c390": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205c6a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205c810": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205e2b4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205e400": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205ee10": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205f340": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205f414": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205f498": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205f5f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205f690": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205f89c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205f908": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205f954": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0205fcb8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02064910": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02064eb8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020650e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0206536c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02065670": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0206659c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020667a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02066860": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02066b60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02066d60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02067f4c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02068968": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02068f00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0206a798": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0206d8d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0206db94": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0206e5b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0206fd30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0206ffc8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02070068": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02070438": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02070588": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02070e34": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02071bd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0207280c": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "020733c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02073f00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02073ff8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02074490": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020778dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02077924": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02078724": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0207997c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0207bb14": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0207d1c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02080040": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0208421c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02084430": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0208f550": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02090dc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02090e5c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02090f00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02091240": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02093134": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "02097230": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020972c4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020d0fec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020d1868": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020d2444": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020d3a38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020d3cfc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "020e80f4": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    },
+    {
+      "image": "ps2-capcom-fighting-evolution",
+      "project": "/home/raikaru/.cache/romwright/research-eval/projects/ps2-capcom-fighting-evolution-84b53104d505-4f53cda18c2b-23c94218619e781c",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 8,
+        "ir-none": 8
+      },
+      "functions_with_gotos": {
+        "default": 6,
+        "ir-none": 6
+      },
+      "per_function": {
+        "001014b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001016a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102b00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00105a18": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00108ab0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010b240": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010b6c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010b950": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010e6d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001124d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112fc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001136b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001143c0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00114948": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00116118": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00116b48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00117e48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001250f8": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00125660": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012f670": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00130090": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00130650": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001311f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00133140": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00134080": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00134c60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001364b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00136a90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00136f70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00137c60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0013af20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0013b6e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0013e5c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0013ee40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0013fce0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0013fe20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00140140": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00140ed0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00144840": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00145dc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001491b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0014ad00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0014d040": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0014ed40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00153070": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00154aa0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00158e00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0015b690": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0015e300": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001615f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00163c50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001670b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00167260": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001686c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001686e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00169360": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0016c350": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0016c4e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0016c530": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00173dd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00174b00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00177150": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00177210": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00177eb0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0017c4f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00181e00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001855f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0018bed0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0019a150": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001a3f80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001a9a00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001aa4b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001ab380": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001affc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001b12e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001bf140": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001c1a90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001c23d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001c3830": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001c4330": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001c7ea0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001ca410": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001cc180": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001cc6f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001ce4a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001ceb60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001d2690": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001d32b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001d7530": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001dc3b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001dffe0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001e70b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001e8500": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001fbe60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001fdb60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00200dd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00201820": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002023d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00205dd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0020a4c0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "0020ab80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00210e90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00213dc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002284d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00228588": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0022ccd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0022df08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002302e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00230488": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00230f18": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00231388": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00233890": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00235138": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002364e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002368b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002368f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00237ab0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00237ae8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002389d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00238c58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00239678": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0023b838": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0023c518": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0023c828": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0023e2f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0023e5a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0023f068": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0023f3e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0023fe50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002413c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00241f30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00242f78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00243cc8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00246b20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00248890": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00248cf8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00249cd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0024b3a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0024b558": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0024d258": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0024d7d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0024e328": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0024fc40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0024fc60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00250f38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002522f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00253550": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002545f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002559d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002569e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00257510": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002587b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0025a8f0": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "0025c1b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0025c780": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0025d1c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0025db98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0025e030": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00262c58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00262fe8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002639e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00266800": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00266998": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00268a90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0026a8a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0026aec8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0026caa8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0026d8f8": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00275730": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002775d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002791b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00279720": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0027a930": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0027b380": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0027baf0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0027e730": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00282340": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00286ce0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002873c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002875a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00288f60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00289200": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0028ad10": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0028b2c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0028ce90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0028d310": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0028e1a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0028f030": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0028f060": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00292770": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00295290": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00296960": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00297080": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00297500": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00298250": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00298530": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0029c4e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002a5bc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002a7200": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "002a8930": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    },
+    {
+      "image": "ps2-dungeon-game",
+      "project": "/home/raikaru/.cache/romwright/research-eval/projects/ps2-dungeon-game-25faee2f9848-4f53cda18c2b-23c94218619e781c",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 121,
+        "ir-none": 124
+      },
+      "functions_with_gotos": {
+        "default": 25,
+        "ir-none": 25
+      },
+      "per_function": {
+        "001000d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001001d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00100280": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00100368": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00100530": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00100568": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00100c58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00101110": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00101158": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001017b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001019d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00101b30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00101b88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001025f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102780": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102ba8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102cc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102cd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103060": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103ba0": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "00106308": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00107e48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00108dc0": {
+          "default": 5,
+          "ir-none": 5
+        },
+        "00109180": {
+          "default": 3,
+          "ir-none": 4
+        },
+        "0010b040": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010c3f0": {
+          "default": 5,
+          "ir-none": 5
+        },
+        "0010cc90": {
+          "default": 30,
+          "ir-none": 31
+        },
+        "0010e698": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010e6b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010e7f8": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "0010ec08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010f000": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010f3c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010f710": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010f840": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010f870": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010f900": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010fc18": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010fc40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010fe48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00111860": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112148": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112538": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001127b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112918": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112ab8": {
+          "default": 4,
+          "ir-none": 5
+        },
+        "00113110": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00113710": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001140b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00114260": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001143e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001145d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00114800": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00114930": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00114a70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00114bf0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00114c30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00115930": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00115a58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00117488": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00117498": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001174a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001174b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001174c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001174c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00117a08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00117bb0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00117c28": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001183a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118bd8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118c00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118c28": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001192a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001192d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119fe0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011a198": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011a510": {
+          "default": 7,
+          "ir-none": 7
+        },
+        "0011b470": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011b910": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011b970": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011d3c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011de20": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "0011ea68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011eb58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011eda8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011ee50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011f0c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011f190": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011f1d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011f300": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011f368": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011f3d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011f778": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00120630": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00120ad8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001217d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00121a40": {
+          "default": 6,
+          "ir-none": 6
+        },
+        "001222c8": {
+          "default": 6,
+          "ir-none": 6
+        },
+        "00125140": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00125338": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00126388": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00126518": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00126b80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00126c90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00126d08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00126d68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00126d98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00126fe0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00127230": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "001284a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001284d8": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "00128740": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00128778": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00128780": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001289b8": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001290b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00129240": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00129300": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00129350": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00129b50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00129c90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00129ca0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012a5b8": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "0012a928": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012aaf8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012aed0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012b4f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012c468": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012c598": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012ca78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012d060": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012d1f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012d288": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012d3c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012d6b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012de48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012e088": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012e278": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012e310": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012e468": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012e4c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012e508": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012e840": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012eab0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012ec48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012f510": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "0012f910": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012f940": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012f980": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012fa00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0012fe90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00130028": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00130298": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00130d20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00130e08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00130ec0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00131018": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001311c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001313e4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001313f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00131548": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00131710": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00131760": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00131790": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001318a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00131948": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00131e00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00131f08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00132070": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00132250": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00132260": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001322d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001322f8": {
+          "default": 11,
+          "ir-none": 11
+        },
+        "001329a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001329c0": {
+          "default": 11,
+          "ir-none": 11
+        },
+        "00133068": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00133100": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00133140": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00133378": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001333d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00133448": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001334a8": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00133718": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00133770": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00133830": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001338d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00133900": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "001339e0": {
+          "default": 5,
+          "ir-none": 5
+        },
+        "00133b70": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00133c58": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "00133dd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00133e90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00134be8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00134c30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00134e48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00134e78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001356f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001357b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00135d98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00135dbc": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    },
+    {
+      "image": "psv-need-for-speed-most-wanted",
+      "project": "/home/raikaru/.cache/romwright/research-eval/projects/psv-need-for-speed-most-wanted-d15fc4d950ff-4f53cda18c2b-23c94218619e781c",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 23,
+        "ir-none": 23
+      },
+      "functions_with_gotos": {
+        "default": 12,
+        "ir-none": 12
+      },
+      "per_function": {
+        "8100215a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8100406a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8100cc2a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8100f3fe": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81012d32": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8102b540": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81034314": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81056d7e": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "8105cfe2": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8105d9b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810608c6": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810678c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8106792e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8106a2a4": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "810709a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81085452": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8108f43e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810aa768": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "810b7d24": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810d89f6": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810f05b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810f41c4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810f68a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810f7b8c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810fa082": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810fbf12": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810fc0fa": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "810fc36a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8111ac3c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8114f3fa": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8114f89e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81154d22": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8115cb12": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8115dd36": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8117d80c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8117df1e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81183b1a": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "8119011a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811955f2": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811a3a56": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811a3f42": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811a9cd6": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811ab536": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811ae8c4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811aee06": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811b10fc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811b1578": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811b6762": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811b713a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811bbcde": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811c0db6": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811c77ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811c88d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811d065c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "811e4ef8": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "8120030c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812089e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8120cc58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8120d83a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81217782": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8121866c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8121edcc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81224072": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81226eb8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81231658": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8123666a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81245728": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8124650c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812487ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81249534": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8124e96a": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "8125125a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81253934": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81256ff4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812669ba": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8126f79a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81276b8a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81280a1a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8128ce00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8128d0c2": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8129ff4a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812b5946": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812b82e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812c0f6e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812c587c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812c5f3a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812d532e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812d5c3e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812d716c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812e0980": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812e101a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812e7982": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812e7c94": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812ea368": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "812fd040": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81360726": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813a05ca": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813af99e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813afbdc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813b075e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813c0ac0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813c2076": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813d76d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813e262c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813e70ba": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "813e710c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81400f2e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814025fa": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81409e80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8140c6a2": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8140d2aa": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8140de98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8140e56a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8141116e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81411594": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81412b3c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814139ca": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8141b6aa": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8142bf22": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8142eeb8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8143b386": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8143cfce": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8144c9ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81453698": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81459f64": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81460f44": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81460fca": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81461fc2": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814994f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8149c420": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "814a4d78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814aa8d6": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814b51c6": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814dea6a": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814e04c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814e055e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814e8d1e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814e8fd4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814ea35e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814eafe4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814ef4e4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814f5436": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814f55b2": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "814fdaa8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81505592": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81510944": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81534fb6": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815415c4": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "8154eb60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8155b53e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81561094": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81577dd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8157ead6": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "8159fedc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815a4c90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815a715c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815a8818": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815a96f4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815a9810": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815b8278": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "815c0fb4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815c57c8": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "815cfadc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815d254c": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "815d49ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815d4c4c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815dba00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815e216c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815e2f98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "815e326c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81627550": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81629554": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8163628c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8163ba38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8163bbfc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8163daf0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8163ec90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "816424e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81642c38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81646484": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8164ce1c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8164d34c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8164e6e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81650770": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81653938": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "816554a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81656f70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8165816c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81658230": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81659600": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8165aa94": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8165cccc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8165f630": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81660408": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81662c40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8166b104": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8166ba08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8166d37c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8167103c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "81672110": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    },
+    {
+      "image": "psx-darkstalkers-3",
+      "project": "/home/raikaru/.cache/romwright/research-eval/projects/psx-darkstalkers-3-f933f98f1c35-4f53cda18c2b-23c94218619e781c",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 13,
+        "ir-none": 13
+      },
+      "functions_with_gotos": {
+        "default": 5,
+        "ir-none": 5
+      },
+      "per_function": {
+        "801395f0": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "80139dec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80139e58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80139f70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013a154": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013a39c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013c194": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013cd70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013d078": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "8013d994": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013dc70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013e40c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013e5e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013ea74": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013eeac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8013f064": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80140c48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80140d48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80143ffc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801463c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801468c0": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "8014b548": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014bc38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014bc9c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014bf2c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014c660": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014cdf0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014d108": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014d384": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014d480": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014d4a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014d9b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014e008": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014e264": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014e5b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014e9b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014ed9c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014ef7c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014f248": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014f39c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014f5d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8014fd4c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801505b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80151c54": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80151d6c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801546d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801551e4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801552c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80155458": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801598c4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80159b20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80159df8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8015ac2c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8015ad58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8015c33c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8015d568": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "8015dc8c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8015ed24": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8015f93c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8015fdd4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80160ad0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016178c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801639dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80163bf8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80163e04": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80164c38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801672b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016906c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016982c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016a7d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016aa04": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016c6bc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016c77c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016e1a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016ed04": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016eeac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016f320": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016f94c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016fdc8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016fe00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016fe38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016fe40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016fef8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8016ff38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80170000": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801700d4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80170354": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80170474": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017069c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801706ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017074c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80170ab4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80170aec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80170c58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80170ea8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80170f68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80171264": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017137c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80171564": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801716f4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017179c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017187c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801718b4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80171994": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80171ee0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80171f90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017215c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80172248": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801722a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80172c30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80173098": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80173270": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80173354": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80173418": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801735a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80173e48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017431c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017897c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80179248": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017a740": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017abf8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017afdc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017b060": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017b290": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017b858": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017be28": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017c4d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017c6a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017d228": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017e848": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "8017ee18": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017f2b8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8017f2e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80180678": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80180c48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80180d58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80181228": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80181810": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80181af8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80181bb8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80181f38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80181fb8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80182418": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801826e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801827a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80182998": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801829ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80182be8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80182edc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80182f70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80182fc8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018362c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801838d4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018397c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80183d3c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80184cbc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80184d4c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80184f5c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80185368": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80185894": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018597c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80185a60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801877cc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801877dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80187840": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80187880": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018908c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801890ec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801891bc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018923c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018931c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018933c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018937c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801893ac": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801893fc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80189530": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80189564": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80189648": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80189708": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801898bc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "801898fc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80189910": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "80189924": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018aa24": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018aab8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018afe0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018afec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018aff8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018b048": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018b0c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018c8b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018ccbc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018d29c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018d5cc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018d7dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018d804": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018d8dc": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018e72c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018e814": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8018ece0": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    },
+    {
+      "image": "x360-black-ops-2",
+      "project": "/home/raikaru/.cache/romwright/research-eval/projects/x360-black-ops-2-bbf68c880351-4f53cda18c2b-23c94218619e781c",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 41,
+        "ir-none": 45
+      },
+      "functions_with_gotos": {
+        "default": 18,
+        "ir-none": 18
+      },
+      "per_function": {
+        "821464b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82151c48": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82175968": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82182800": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82184ef0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82185ce8": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "8218ab60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8218cb60": {
+          "default": 6,
+          "ir-none": 6
+        },
+        "821a5c78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "821ae468": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "821afe90": {
+          "default": 3,
+          "ir-none": 4
+        },
+        "821c0ed8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "821dacb0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "821e32a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "821f28e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822013e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822117e8": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "8222fbc8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82232d38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8223ff68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82244038": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8225a060": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82268620": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8226a2e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8226ba78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822767f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822773d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82277a38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82277d20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82280cc8": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "822853c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82288638": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82289d88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8228b8a8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8228cc78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82295b68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8229e310": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822a9260": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822a9738": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822a9b90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822abc18": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822ac538": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "822b1568": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822cce08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822cf570": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822dfbf0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "822fb128": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82300018": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8231f8c8": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "823303b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823341f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8234c680": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823570c8": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "82367b50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82372480": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "82381348": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82386398": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8238e1d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8239f780": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823a2870": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823a5d08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823ae088": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823baf60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823beb30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823c1bd8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823cf380": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823e4298": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823e74b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823eea78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "823f8b88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8240a070": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82422010": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8242a668": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8242cb78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824470e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8244cb28": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82453668": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82455890": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8245bc30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8245d3e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8245dec0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "8246f820": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824774b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8247c848": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8247d8a8": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "82491e68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8249ffd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824a12d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824a2108": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824ae030": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824b0a68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824b6aa8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824cf738": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824e87e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "824f43c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82506de8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82507bd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8250ed38": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82518490": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82524130": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8253e770": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8254a258": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8254c088": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8254fa88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82550ae8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82554a60": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82558608": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8255aae0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8255b578": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82560b18": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82579488": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8257f228": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82582358": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82584178": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82585660": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82589050": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8258d150": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82592a68": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "825af148": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "825bc188": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "825c8708": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "825ca2e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "825d2548": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "825da3c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8261c948": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8261ccd8": {
+          "default": 1,
+          "ir-none": 2
+        },
+        "8261ef58": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8262cbd8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8262cd98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82639f08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82646700": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8264bb68": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "826584c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8265cba0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82666ef0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8267e218": {
+          "default": 3,
+          "ir-none": 4
+        },
+        "8268fa30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82691e08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826928a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82694168": {
+          "default": 3,
+          "ir-none": 4
+        },
+        "8269aac0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8269dc40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8269ef70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826ac740": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826af4d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826b7b50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826bcb08": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826d4540": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826dcde0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826dd2f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "826e3f78": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82707ea0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8270c208": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82710068": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827145d8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82715820": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8271d380": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8273db28": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8273f9e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827441c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82749bc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82757358": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827600f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8276a728": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8277f870": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82783678": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82796ce8": {
+          "default": 5,
+          "ir-none": 5
+        },
+        "827a76f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827aa7e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827b04f4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827b5908": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827b5938": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827ba1b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827bb0a4": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827bbe10": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827bc7f8": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "827bed40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827bf2e8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827c1890": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827c5258": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "827c756c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827cbf88": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827ce7e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827d4220": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827d86f8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827d94c8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "827fa530": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8284b210": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82857ad8": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8286bb20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82875b98": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "82879558": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8287a380": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8287c5d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8287dfc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8287ea7c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8287eaec": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "8287f40c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "828888e0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "828964e8": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    },
+    {
+      "image": "x86-libc",
+      "project": "/home/raikaru/.cache/romwright/printer-diff/libc-a5c5ad9d59d3c69e",
+      "sampled": 200,
+      "decompiled": 200,
+      "gotos": {
+        "default": 1199,
+        "ir-none": 1228
+      },
+      "functions_with_gotos": {
+        "default": 106,
+        "ir-none": 106
+      },
+      "per_function": {
+        "00100000": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001016a1": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00101828": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010189c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00101929": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001019df": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101a3c": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101a99": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101af6": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101b53": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101bb0": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101c0d": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101c6a": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101cc7": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101d24": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101d81": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101de3": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101e4a": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101ea7": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101f04": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101f61": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00101fbe": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "0010201b": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102078": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001020d5": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102132": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "0010218f": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001021ec": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102249": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001022a6": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102303": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102360": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001023d8": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102435": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102492": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102503": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102560": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001025bd": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "0010261a": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102677": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001026d4": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102731": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "0010278e": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102804": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102861": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00102a50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102b66": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102c03": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102c31": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102ceb": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102de3": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102e94": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102f45": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102f6e": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00102fb4": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00103011": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "0010306e": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001030cc": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "0010313c": {
+          "default": 20,
+          "ir-none": 20
+        },
+        "0010327c": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103389": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001033c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103430": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001034a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103500": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103600": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103710": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "001038d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103910": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103970": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001039c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103a20": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00103ac0": {
+          "default": 11,
+          "ir-none": 11
+        },
+        "00103cd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00103d10": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "001040c0": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00104300": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00104390": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00104460": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001044d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00104530": {
+          "default": 31,
+          "ir-none": 31
+        },
+        "001045c0": {
+          "default": 31,
+          "ir-none": 31
+        },
+        "00105260": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00105350": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001055f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00105730": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001057c0": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "00105b60": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00105cb0": {
+          "default": 2,
+          "ir-none": 3
+        },
+        "001060d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00106190": {
+          "default": 3,
+          "ir-none": 3
+        },
+        "001064f0": {
+          "default": 5,
+          "ir-none": 5
+        },
+        "001068a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001068d0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "001069e0": {
+          "default": 17,
+          "ir-none": 17
+        },
+        "00106f00": {
+          "default": 26,
+          "ir-none": 26
+        },
+        "001075c0": {
+          "default": 18,
+          "ir-none": 18
+        },
+        "00107ad0": {
+          "default": 32,
+          "ir-none": 34
+        },
+        "001081c0": {
+          "default": 18,
+          "ir-none": 19
+        },
+        "00108660": {
+          "default": 40,
+          "ir-none": 40
+        },
+        "001090c0": {
+          "default": 50,
+          "ir-none": 53
+        },
+        "00109c30": {
+          "default": 58,
+          "ir-none": 58
+        },
+        "0010a940": {
+          "default": 29,
+          "ir-none": 31
+        },
+        "0010b030": {
+          "default": 45,
+          "ir-none": 45
+        },
+        "0010bb20": {
+          "default": 29,
+          "ir-none": 29
+        },
+        "0010c210": {
+          "default": 45,
+          "ir-none": 45
+        },
+        "0010cd20": {
+          "default": 18,
+          "ir-none": 18
+        },
+        "0010d280": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010d360": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010d4c0": {
+          "default": 5,
+          "ir-none": 5
+        },
+        "0010d6e0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "0010d7a0": {
+          "default": 17,
+          "ir-none": 17
+        },
+        "0010dd90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010ddb0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010de00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010de90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010ded0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010e120": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "0010e280": {
+          "default": 14,
+          "ir-none": 15
+        },
+        "0010e550": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010e6c0": {
+          "default": 20,
+          "ir-none": 20
+        },
+        "0010ef40": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010efa0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0010f020": {
+          "default": 69,
+          "ir-none": 80
+        },
+        "0010f580": {
+          "default": 51,
+          "ir-none": 53
+        },
+        "0010f6a0": {
+          "default": 51,
+          "ir-none": 53
+        },
+        "0010fdb0": {
+          "default": 9,
+          "ir-none": 9
+        },
+        "00110210": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001104c0": {
+          "default": 24,
+          "ir-none": 25
+        },
+        "00110f20": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00110f80": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001111a0": {
+          "default": 13,
+          "ir-none": 13
+        },
+        "001118d0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00111a00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00111a70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00111b70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00111bc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00111c90": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00111ec0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00111ef0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112250": {
+          "default": 19,
+          "ir-none": 19
+        },
+        "001126b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001126f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112780": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112980": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00112a00": {
+          "default": 29,
+          "ir-none": 29
+        },
+        "00113520": {
+          "default": 11,
+          "ir-none": 11
+        },
+        "00113df0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00113f20": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "001141a0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00114200": {
+          "default": 115,
+          "ir-none": 115
+        },
+        "00115690": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001157a0": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "00115ce0": {
+          "default": 5,
+          "ir-none": 5
+        },
+        "00115eb0": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "00116000": {
+          "default": 7,
+          "ir-none": 7
+        },
+        "00116560": {
+          "default": 4,
+          "ir-none": 4
+        },
+        "001166e0": {
+          "default": 8,
+          "ir-none": 11
+        },
+        "00116960": {
+          "default": 2,
+          "ir-none": 2
+        },
+        "001169c0": {
+          "default": 41,
+          "ir-none": 41
+        },
+        "001179a0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00117b00": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00117ba0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00117da0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00117e20": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00117ea0": {
+          "default": 39,
+          "ir-none": 39
+        },
+        "00118820": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118970": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118ad0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118c50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118dd0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118e90": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00118fe0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119170": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119220": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119330": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119420": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119460": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00119590": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119640": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119710": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001197c0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119800": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "001198f0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119940": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "001199b0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119a10": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119a70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119ad0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119b50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119bb0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119c00": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00119c50": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119da0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119e30": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119e70": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119ec0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "00119ef0": {
+          "default": 1,
+          "ir-none": 1
+        },
+        "00119fc0": {
+          "default": 0,
+          "ir-none": 0
+        },
+        "0011a180": {
+          "default": 0,
+          "ir-none": 0
+        }
+      }
+    }
+  ]
+}

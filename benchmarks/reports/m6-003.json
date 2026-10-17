@@ -1,6 +1,6 @@
 {
  "id": "m6-003",
- "recorded_at": "2026-09-07T09:40:23.516629+00:00",
+ "recorded_at": "2026-10-15T09:47:37.938167+00:00",
  "thresholds": {
   "ui.list.load_ms": 500.0,
   "ui.list.filter_ms": 100.0
@@ -9,15 +9,20 @@
  "platform": {
   "system": "Linux",
   "machine": "x86_64",
-  "qt": "6.11.2"
+  "adapter": "llvmpipe (LLVM 22.1.8, 256 bits) (Vulkan)"
  },
  "passed": true,
- "summary": "packaged romwright-0.5-Linux-x86_64.tar.gz on Linux/x86_64 with Qt 6.11.2: store-only run from a clean prefix with no ROMWRIGHT_* configuration, ui.list.load_ms 1.96",
+ "summary": "packaged romwright-0.5.0-Linux-x86_64.tar.gz on Linux/x86_64 rendering on llvmpipe (LLVM 22.1.8, 256 bits) (Vulkan): store-only run from a clean prefix with no ROMWRIGHT_* configuration, ui.list.load_ms 22.64",
  "metrics": {
   "ui.install.prefix_ok": true,
   "ui.install.store_only_ok": true,
-  "ui.list.load_ms": 1.95652,
-  "ui.list.filter_ms": 2.025601
+  "ui.list.load_ms": 22.638664,
+  "ui.list.filter_ms": 16.108366,
+  "ui.source.fold_reverse_sync": true,
+  "ui.source.follow_rename": true,
+  "ui.source.hints_excluded_from_copy": true,
+  "ui.source.read_only": true,
+  "ui.source.selection_copy": true
  },
- "package": "romwright-0.5-Linux-x86_64.tar.gz"
+ "package": "romwright-0.5.0-Linux-x86_64.tar.gz"
 }

@@ -1,0 +1,1781 @@
+diff --git a/decompiler/Makefile b/decompiler/Makefile
+index ea89ec1..888221f 100644
+--- a/decompiler/Makefile
++++ b/decompiler/Makefile
+@@ -267,11 +267,11 @@ decomp_test_dbg:	$(TEST_DEBUG_OBJS)
+ test: decomp_test_dbg
+ 	./decomp_test_dbg
+ 
+-ghidra_dbg:	$(GHIDRA_DBG_OBJS)
+-	$(CXX) $(DBG_CXXFLAGS) $(ADDITIONAL_FLAGS) $(MAKE_STATIC) $(ARCH_TYPE) -o ghidra_dbg $(GHIDRA_DBG_OBJS)
++ghidra_dbg:	$(GHIDRA_DBG_OBJS) $(SLEIGH:%=ghi_opt/%.o) ghi_opt/inject_sleigh.o
++	$(CXX) $(DBG_CXXFLAGS) $(ADDITIONAL_FLAGS) $(MAKE_STATIC) $(ARCH_TYPE) -o ghidra_dbg $(GHIDRA_DBG_OBJS) $(SLEIGH:%=ghi_opt/%.o) ghi_opt/inject_sleigh.o -lz
+ 
+-ghidra_opt:	$(GHIDRA_OPT_OBJS)
+-	$(CXX) $(OPT_CXXFLAGS) $(ADDITIONAL_FLAGS) $(MAKE_STATIC) $(ARCH_TYPE)  -o ghidra_opt $(GHIDRA_OPT_OBJS)
++ghidra_opt:	$(GHIDRA_OPT_OBJS) $(SLEIGH:%=ghi_opt/%.o) ghi_opt/inject_sleigh.o
++	$(CXX) $(OPT_CXXFLAGS) $(ADDITIONAL_FLAGS) $(MAKE_STATIC) $(ARCH_TYPE)  -o ghidra_opt $(GHIDRA_OPT_OBJS) $(SLEIGH:%=ghi_opt/%.o) ghi_opt/inject_sleigh.o -lz
+ 
+ sleigh_dbg:	$(SLEIGH_DBG_OBJS)
+ 	$(CXX) $(DBG_CXXFLAGS) $(ADDITIONAL_FLAGS) $(MAKE_STATIC) $(ARCH_TYPE) -o sleigh_dbg $(SLEIGH_DBG_OBJS) $(LNK)
+diff --git a/decompiler/action.cc b/decompiler/action.cc
+index 0ac6895..32e2834 100644
+--- a/decompiler/action.cc
++++ b/decompiler/action.cc
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ #include "action.hh"
++#include "romwright_budget.hh"
+ #include "funcdata.hh"
+ 
+ #include "coreaction.hh"
+@@ -316,6 +317,7 @@ int4 Action::perform(Funcdata &data)
+ #ifdef OPACTION_DEBUG
+       data.debugActivate();
+ #endif
++      WorkBudget::current().charge(1);
+       res = apply(data);	// Start or continue action
+ #ifdef OPACTION_DEBUG
+       data.debugModPrint(getName());
+@@ -821,12 +823,14 @@ int4 ActionPool::processOp(PcodeOp *op,Funcdata &data)
+     return 0;
+   }
+   opc = op->code();
++  WorkBudget::current().charge(1);
+   while(rule_index < perop[opc].size()) {
+     rl = perop[opc][rule_index++];
+     if (rl->isDisabled()) continue;
+ #ifdef OPACTION_DEBUG
+     data.debugActivate();
+ #endif
++    WorkBudget::current().charge(1);
+     rl->count_tests += 1;
+     res = rl->applyOp(op,data);
+ #ifdef OPACTION_DEBUG
+diff --git a/decompiler/architecture.cc b/decompiler/architecture.cc
+index ac7d261..10a1c31 100644
+--- a/decompiler/architecture.cc
++++ b/decompiler/architecture.cc
+@@ -59,6 +59,8 @@ ElementId ELEM_EVAL_CALLED_PROTOTYPE = ElementId("eval_called_prototype",137);
+ ElementId ELEM_EVAL_CURRENT_PROTOTYPE = ElementId("eval_current_prototype",138);
+ ElementId ELEM_EXPERIMENTAL_RULES = ElementId("experimental_rules",139);
+ ElementId ELEM_FLOWOVERRIDELIST = ElementId("flowoverridelist",140);
++ElementId ELEM_STOREDJUMP = ElementId("storedjump",400);
++AttributeId ATTRIB_STOREDAPPLY = AttributeId("storedapply",400);
+ ElementId ELEM_FUNCPTR = ElementId("funcptr",141);
+ ElementId ELEM_GLOBAL = ElementId("global",142);
+ ElementId ELEM_INCIDENTALCOPY = ElementId("incidentalcopy",143);
+@@ -480,6 +482,40 @@ void Architecture::decodeFlowOverride(Decoder &decoder)
+   decoder.closeElement(elemId);
+ }
+ 
++/// Parse one \<storedjump> element: the address of an indirect branch followed by one
++/// \<dest> per address the import stored for it. The table is the authority for that branch
++/// in every function whose flow reaches it (see JumpTable::recoverStored).
++/// \param decoder is the stream decoder
++void Architecture::decodeStoredJump(Decoder &decoder)
++
++{
++  uint4 elemId = decoder.openElement(ELEM_STOREDJUMP);
++  StoredJump stored;
++  stored.apply = decoder.readBool(ATTRIB_STOREDAPPLY);
++  Address branch = Address::decode(decoder);
++  while(decoder.peekElement() == ELEM_DEST) {
++    uint4 destId = decoder.openElement();
++    VarnodeData vData;
++    vData.decodeFromAttributes(decoder);
++    stored.targets.push_back(vData.getAddr());
++    decoder.closeElement(destId);
++  }
++  if (stored.targets.empty() || branch.isInvalid())
++    throw LowlevelError("Bad storedjump tag");
++  decoder.closeElement(elemId);
++  storedjumps[branch] = stored;
++}
++
++/// \param addr is the address of a BRANCHIND
++/// \return the table stored for it, or null
++const StoredJump *Architecture::queryStoredJump(const Address &addr) const
++
++{
++  map<Address,StoredJump>::const_iterator iter = storedjumps.find(addr);
++  if (iter == storedjumps.end()) return (const StoredJump *)0;
++  return &(*iter).second;
++}
++
+ /// Write the current state of all types, symbols, functions, etc. to a stream.
+ /// \param encoder is the stream encoder
+ void Architecture::encode(Encoder &encoder) const
+diff --git a/decompiler/architecture.hh b/decompiler/architecture.hh
+index a27f842..31ba197 100644
+--- a/decompiler/architecture.hh
++++ b/decompiler/architecture.hh
+@@ -87,6 +87,8 @@ extern ElementId ELEM_EVAL_CALLED_PROTOTYPE;	///< Marshaling element \<eval_call
+ extern ElementId ELEM_EVAL_CURRENT_PROTOTYPE;	///< Marshaling element \<eval_current_prototype>
+ extern ElementId ELEM_EXPERIMENTAL_RULES;	///< Marshaling element \<experimental_rules>
+ extern ElementId ELEM_FLOWOVERRIDELIST;		///< Marshaling element \<flowoverridelist>
++extern ElementId ELEM_STOREDJUMP;		///< Romwright: marshaling element \<storedjump>
++extern AttributeId ATTRIB_STOREDAPPLY;		///< Romwright: marshaling attribute "storedapply"
+ extern ElementId ELEM_FUNCPTR;			///< Marshaling element \<funcptr>
+ extern ElementId ELEM_GLOBAL;			///< Marshaling element \<global>
+ extern ElementId ELEM_INCIDENTALCOPY;		///< Marshaling element \<incidentalcopy>
+@@ -162,6 +164,16 @@ public:
+ /// processor, and compiler spec. This class is the \e owner of
+ /// the LoadImage, Translate, symbols (Database), PrintLanguage, etc.
+ /// This class also holds numerous configuration parameters for the analysis process
++/// \brief A dispatch table the import already recovered for one indirect branch (Romwright)
++///
++/// The table is the set of addresses the branch can reach, as the import's value-set analysis
++/// (or its own earlier decompile) stored it. JumpTable::recoverStored() compares it with what
++/// jumptable.cc recovers and, when \b apply is set, makes it the authority.
++struct StoredJump {
++  vector<Address> targets;	///< Addresses the BRANCHIND reaches
++  bool apply;			///< \b true to install \b targets over a differing recovery, \b false only to compare
++};
++
+ class Architecture : public AddrSpaceManager {
+ public:
+   string archid;		///< ID string uniquely describing this architecture
+@@ -173,6 +185,7 @@ public:
+   int4 max_basetype_size;	///< Maximum size of an "integer" type before creating an array type
+   int4 min_funcsymbol_size;	///< Minimum size of a function symbol
+   uint4 max_jumptable_size;	///< Maximum number of entries in a single JumpTable
++  map<Address,StoredJump> storedjumps;	///< Romwright: dispatch tables the import stored, by BRANCHIND address
+   bool aggressive_ext_trim;	///< Aggressively trim inputs that look like they are sign extended
+   bool readonlypropagate;	///< true if readonly values should be treated as constants
+   bool infer_pointers;		///< True if we should infer pointers from constants that are likely addresses
+@@ -236,6 +249,8 @@ public:
+   void setPrintLanguage(const string &nm);		///< Establish a particular output language
+   void globalify(void);					///< Mark \e all spaces as global
+   void decodeFlowOverride(Decoder &decoder);		///< Decode flow overrides from a stream
++  void decodeStoredJump(Decoder &decoder);		///< Romwright: decode one \<storedjump> dispatch table
++  const StoredJump *queryStoredJump(const Address &addr) const;	///< Romwright: the stored table of a BRANCHIND, or null
+   virtual ~Architecture(void);				///< Destructor
+ 
+   /// \brief Get a string describing \b this architecture
+diff --git a/decompiler/block.cc b/decompiler/block.cc
+index 55fc926..ade8113 100644
+--- a/decompiler/block.cc
++++ b/decompiler/block.cc
+@@ -15,6 +15,7 @@
+  * limitations under the License.
+  */
+ #include "block.hh"
++#include "romwright_budget.hh"
+ #include "funcdata.hh"
+ 
+ namespace ghidra {
+@@ -2295,8 +2296,10 @@ void BlockBasic::insert(list<PcodeOp *>::iterator iter,PcodeOp *inst)
+   }
+   else
+     ordafter = (*iter)->getSeqNum().getOrder();
+-  if (ordafter-ordbefore<=1)
++  if (ordafter-ordbefore<=1) {
++    WorkBudget::current().charge(op.size());	// renumbers the whole block
+     setOrder();
++  }
+   else
+     inst->setOrder( ordafter/2 + ordbefore/2 ); // Beware overflow
+ 
+diff --git a/decompiler/context.hh b/decompiler/context.hh
+index abe1701..e560818 100644
+--- a/decompiler/context.hh
++++ b/decompiler/context.hh
+@@ -96,8 +96,13 @@ class ParserContext {
+   friend class ParserWalker;
+   friend class ParserWalkerChange;
+ public:
+-  static constexpr int4 MAX_DEPTH = 32;			///< Maximum subconstructor depth in a single instruction
+-  static constexpr int4 MAX_OPERAND = 20;		///< Maximum operands for a single constructor
++  // Romwright: Ghidra's disassembler bounds the walk at depth 64 (ParserWalker.java MAX_PARSE_DEPTH,
++  // breadcrumb[65]) and sizes each ConstructState's operand array per constructor. A deep walk
++  // (PowerPC lmw/stmw name every register from rD to r31, one nested subconstructor each) and a
++  // constructor that names more than 20 operands are valid there. With the throw at depth
++  // MAX_DEPTH-1 the bound below is Ghidra's 64.
++  static constexpr int4 MAX_DEPTH = 65;			///< Maximum subconstructor depth in a single instruction
++  static constexpr int4 MAX_OPERAND = 64;		///< Maximum operands for a single constructor
+   static constexpr int4 MAX_INSTRUCTION_LEN = 16;	///< Maximum number of bytes in a single instruction
+   static constexpr int4 INITIAL_STATE_NUM = 64;		///< Recommended number of initial states
+   static constexpr int4 STATE_GROWTH = 64;		///< Number of states to add for each expansion
+diff --git a/decompiler/coreaction.cc b/decompiler/coreaction.cc
+index aea3206..395f4a2 100644
+--- a/decompiler/coreaction.cc
++++ b/decompiler/coreaction.cc
+@@ -5793,6 +5793,22 @@ void ActionDatabase::buildDefaultGroups(void)
+ 			    "conditionalexe", "" };
+   setGroup("decompile",members);
+ 
++  // Match-emission root (P4.6): the decompile pipeline minus the groups that
++  // discard instruction-level structure a match diff needs. Kept: everything
++  // through merge (locals must exist to print) and the analysis core.
++  // Dropped: casts (hides real conversions), dynamic (invents symbols),
++  // splitcopy/splitpointer (restructures loads), doubleload/doubleprecis
++  // (merges 32-bit pairs into 64-bit), conditionalexe (predication hides
++  // branches), fixateglobals (names globals), constsequence/bitfields
++  // (idiom recognition), segment, returnsplit, nodejoin (merges blocks),
++  // subvar (splits locals), floatprecision, cleanup, switchnorm.
++  const char *matchmemb[] = { "base", "protorecovery", "protorecovery_a", "deindirect",
++                             "localrecovery", "deadcode", "typerecovery", "stackptrflow",
++                             "blockrecovery", "stackvars", "deadcontrolflow",
++                             "analysis", "fixateproto", "merge",
++                             "unreachable", "" };
++  setGroup("match",matchmemb);
++
+   const char *jumptab[] = { "base", "noproto", "localrecovery", "deadcode", "stackptrflow",
+ 			    "stackvars", "analysis", "segment", "subvar", "normalizebranches", "conditionalexe", "" };
+   setGroup("jumptable",jumptab);
+diff --git a/decompiler/database_ghidra.cc b/decompiler/database_ghidra.cc
+index 87b294b..f8e1332 100644
+--- a/decompiler/database_ghidra.cc
++++ b/decompiler/database_ghidra.cc
+@@ -34,6 +34,19 @@ ScopeGhidra::ScopeGhidra(ArchitectureGhidra *g)
+   cacheDirty = false;
+ }
+ 
++Symbol *ScopeGhidra::addMapSymToCache(Decoder &decoder) const
++
++{
++  return cache->addMapSym(decoder);
++}
++
++void ScopeGhidra::renameFunction(FunctionSymbol *sym,const string &newname) const
++
++{
++  cache->renameSymbol(sym,newname);
++  sym->getFunction()->setName(newname);
++}
++
+ ScopeGhidra::~ScopeGhidra(void)
+ 
+ {
+diff --git a/decompiler/database_ghidra.hh b/decompiler/database_ghidra.hh
+index eb36ef3..4572523 100644
+--- a/decompiler/database_ghidra.hh
++++ b/decompiler/database_ghidra.hh
+@@ -64,6 +64,8 @@ public:
+   /// can reset to it before decompiling a new function.
+   void lockDefaultProperties(void) { flagbaseDefault = ghidra->symboltab->getProperties(); cacheDirty = false; }
+   virtual ~ScopeGhidra(void);
++  Symbol *addMapSymToCache(Decoder &decoder) const;
++  void renameFunction(FunctionSymbol *sym,const string &newname) const;
+   virtual void clear(void);
+   virtual MapEntry *addSymbol(const string &nm,Datatype *ct,const Address &addr,const Address &usepoint);
+   virtual string buildVariableName(const Address &addr,
+diff --git a/decompiler/dynamic.cc b/decompiler/dynamic.cc
+index ae7bcfb..62a76e4 100644
+--- a/decompiler/dynamic.cc
++++ b/decompiler/dynamic.cc
+@@ -430,7 +430,9 @@ void DynamicHash::uniqueHash(const Varnode *root,Funcdata *fd)
+   uint4 method;
+   uint8 tmphash;
+   Address tmpaddr;
+-  uint4 maxduplicates = 8;
++  uint8 championhash = 0;
++  Address championaddr;
++  uint4 maxduplicates = 128;
+ 
+   for(method=0;method<4;++method) {
+     clear();
+@@ -453,6 +455,8 @@ void DynamicHash::uniqueHash(const Varnode *root,Funcdata *fd)
+     if (vnlist2.size() <= maxduplicates) {
+       if ((champion.size()==0)||(vnlist2.size() < champion.size())) {
+ 	champion = vnlist2;
++        championhash = tmphash;
++        championaddr = tmpaddr;
+ 	if (champion.size()==1) break; // Current hash is unique
+       }
+     }
+@@ -471,9 +475,8 @@ void DynamicHash::uniqueHash(const Varnode *root,Funcdata *fd)
+     addrresult = Address();
+     return;
+   }
+-  hash = tmphash | ((uint8)pos << 49); // Store three bits for position with list of duplicate hashes
+-  hash |= ((uint8)total << 52);	// Store three bits for total number of duplicate hashes
+-  addrresult = tmpaddr;
++  hash = withTotalPosition(championhash,pos,total+1);
++  addrresult = championaddr;
+ }
+ 
+ /// Different hash methods are cycled through until a hash is found that distinguishes the given
+@@ -491,7 +494,9 @@ void DynamicHash::uniqueHash(const PcodeOp *op,int4 slot,Funcdata *fd)
+   uint4 method;
+   uint8 tmphash;
+   Address tmpaddr;
+-  uint4 maxduplicates = 8;
++  uint8 championhash = 0;
++  Address championaddr;
++  uint4 maxduplicates = 128;
+ 
+   moveOffSkip(op, slot);
+   if (op == (const PcodeOp *)0) {
+@@ -506,7 +511,6 @@ void DynamicHash::uniqueHash(const PcodeOp *op,int4 slot,Funcdata *fd)
+     if (hash == 0) return;	// Can't get a good hash
+     tmphash = hash;
+     tmpaddr = addrresult;
+-    oplist.clear();
+     oplist2.clear();
+     for(uint4 i=0;i<oplist.size();++i) {
+       PcodeOp *tmpop = oplist[i];
+@@ -522,6 +526,8 @@ void DynamicHash::uniqueHash(const PcodeOp *op,int4 slot,Funcdata *fd)
+     if (oplist2.size() <= maxduplicates) {
+       if ((champion.size()==0)||(oplist2.size() < champion.size())) {
+ 	champion = oplist2;
++        championhash = tmphash;
++        championaddr = tmpaddr;
+ 	if (champion.size()==1)
+ 	  break; // Current hash is unique
+       }
+@@ -542,9 +548,8 @@ void DynamicHash::uniqueHash(const PcodeOp *op,int4 slot,Funcdata *fd)
+     addrresult = Address();
+     return;
+   }
+-  hash = tmphash | ((uint8)pos << 49); // Store three bits for position with list of duplicate hashes
+-  hash |= ((uint8)total << 52);	// Store three bits for total number of duplicate hashes
+-  addrresult = tmpaddr;
++  hash = withTotalPosition(championhash,pos,total+1);
++  addrresult = championaddr;
+ }
+ 
+ /// \brief Given an address and hash, find the unique matching Varnode
+@@ -719,7 +724,7 @@ uint4 DynamicHash::getOpCodeFromHash(uint8 h)
+ uint4 DynamicHash::getPositionFromHash(uint8 h)
+ 
+ {
+-  return (uint4)((h>>49)&7);
++  return (uint4)(((h>>49)&7) | (((h>>55)&15)<<3));
+ }
+ 
+ /// The hash encodes the total number of collisions for that hash
+@@ -728,7 +733,7 @@ uint4 DynamicHash::getPositionFromHash(uint8 h)
+ uint4 DynamicHash::getTotalFromHash(uint8 h)
+ 
+ {
+-  return ((uint4)((h>>52)&7)+1);
++  return (uint4)(((h>>52)&7) | (((h>>59)&15)<<3)) + 1;
+ }
+ 
+ /// The hash encodes whether or not the root was directly attached to its PcodeOp
+@@ -746,10 +751,23 @@ bool DynamicHash::getIsNotAttached(uint8 h)
+ void DynamicHash::clearTotalPosition(uint8 &h)
+ 
+ {
+-  uint8 val = 0x3f;
++  uint8 val = 0x3fff;
+   val <<= 49;
+   val = ~val;
+   h &= val;
+ }
+ 
++// Preserve the existing three-bit fields for collision sets of up to eight.
++// SIMD lane temporaries need larger sets: use previously unused bits for
++// four additional bits of position and total, keeping the formal hash intact.
++uint8 DynamicHash::withTotalPosition(uint8 h,uint4 position,uint4 total)
++{
++  if (total == 0 || total > 128 || position >= total)
++    throw LowlevelError("Invalid dynamic hash collision identity");
++  clearTotalPosition(h);
++  uint4 count = total - 1;
++  return h | ((uint8)(position&7)<<49) | ((uint8)(count&7)<<52)
++      | ((uint8)(position>>3)<<55) | ((uint8)(count>>3)<<59);
++}
++
+ } // End namespace ghidra
+diff --git a/decompiler/dynamic.hh b/decompiler/dynamic.hh
+index a6db983..238dfed 100644
+--- a/decompiler/dynamic.hh
++++ b/decompiler/dynamic.hh
+@@ -99,6 +99,7 @@ public:
+   static uint4 getTotalFromHash(uint8 h);		///< Retrieve the encoded collision total from a hash
+   static bool getIsNotAttached(uint8 h);		///< Retrieve the attachment boolean from a hash
+   static void clearTotalPosition(uint8 &h);		///< Clear the collision total and position fields within a hash
++  static uint8 withTotalPosition(uint8 h,uint4 position,uint4 total);
+   static uint4 getComparable(uint8 h) { return (uint4)h; }	///< Get only the formal hash for comparing
+   static const uint4 transtable[];				///< Translation of op-codes to hash values
+ };
+diff --git a/decompiler/flow.cc b/decompiler/flow.cc
+index 337b6c8..aa45f43 100644
+--- a/decompiler/flow.cc
++++ b/decompiler/flow.cc
+@@ -743,6 +743,38 @@ void FlowInfo::truncateIndirectJump(PcodeOp *op,JumpTable::RecoveryMode mode)
+ 
+ {
+   if (mode == JumpTable::fail_return) {
++    // Romwright: remember the register the target was read from (`pop {r1}; bx r1`). It holds the
++    // return address, so output recovery must not offer it as a return value. The flow is not yet in
++    // SSA form, so follow the copies and masks backwards through the ops that precede the jump.
++    {
++      Address wanted = op->getIn(0)->getAddr();
++      int4 wantedSize = op->getIn(0)->getSize();
++      list<PcodeOp *>::const_iterator iter = op->getInsertIter();
++      list<PcodeOp *>::const_iterator startiter = data.beginOpDead();
++      for(int4 budget=0;budget<32 && iter!=startiter;++budget) {
++	--iter;
++	const PcodeOp *prior = *iter;
++	const Varnode *out = prior->getOut();
++	if (out == (const Varnode *)0 || wanted.overlap(0,out->getAddr(),out->getSize()) == -1)
++	  continue;
++	OpCode opc = prior->code();
++	if (opc == CPUI_COPY || (opc == CPUI_INT_AND && prior->getIn(1)->isConstant())) {
++	  const Varnode *source = prior->getIn(0);
++	  if (source->isConstant()) break;
++	  wanted = source->getAddr();
++	  wantedSize = source->getSize();
++	}
++	else
++	  break;
++      }
++      if (wanted.getSpace()->getType() == IPTR_PROCESSOR) {
++	VarnodeData storage;
++	storage.space = wanted.getSpace();
++	storage.offset = wanted.getOffset();
++	storage.size = wantedSize;
++	data.romwrightReturnTargets.push_back(storage);
++      }
++    }
+     data.opSetOpcode(op,CPUI_RETURN);	// Turn jump into return
+     data.warning("Treating indirect jump as return",op->getAddr());
+   }
+@@ -896,6 +928,10 @@ void FlowInfo::fillinBranchStubs(void)
+     PcodeOp *op = artificialHalt(*iter,PcodeOp::missing);
+     data.opMarkStartBasic(op);
+     data.opMarkStartInstruction(op);
++    // Explicit bounded exits must be discoverable by branchTarget()/target().
++    VisitStat &visit = visited[*iter];
++    visit.seqnum = op->getSeqNum();
++    visit.size = 1;
+   }
+ }
+ 
+diff --git a/decompiler/fspec.cc b/decompiler/fspec.cc
+index 9fb9bcc..1c845a0 100644
+--- a/decompiler/fspec.cc
++++ b/decompiler/fspec.cc
+@@ -2387,6 +2387,28 @@ ProtoModel::~ProtoModel(void)
+     delete sharedActions[i];
+ }
+ 
++/// A parameter assigned to a register of the floating-point class has the
++/// floating-point type, whatever integer type later propagation put on its
++/// bytes: the convention, not the use, says which register file a value is in.
++/// \param addr is the start of the storage range
++/// \param sz is the size of the range in bytes
++/// \return \b true if an input entry of the float storage class holds the whole range
++bool ProtoModel::inFloatRegister(const Address &addr,int4 sz) const
++
++{
++  const ParamListStandard *standard = dynamic_cast<const ParamListStandard *>(input);
++  if (standard == (const ParamListStandard *)0)
++    return false;
++  const list<ParamEntry> &entries(standard->getEntry());
++  for(list<ParamEntry>::const_iterator iter=entries.begin();iter!=entries.end();++iter) {
++    const ParamEntry &entry(*iter);
++    if (entry.getType() != TYPECLASS_FLOAT || entry.getSpace() != addr.getSpace()) continue;
++    if (addr.getOffset() >= entry.getBase() && addr.getOffset() + sz <= entry.getBase() + entry.getSize())
++      return true;
++  }
++  return false;
++}
++
+ /// Test whether one ProtoModel can substituted for another during FuncCallSpecs::deindirect
+ /// Currently this can only happen if one model is a copy of the other except for the
+ /// hasThis boolean property.
+@@ -4058,6 +4080,14 @@ void FuncProto::updateInputTypes(Funcdata &data,const vector<Datatype *> &typeLi
+       pieces.addr = trial.getAddress();
+       pieces.type = typeList[trial.getSlot()-1];
+       pieces.flags = 0;
++      // An integer type propagated from a store or a copy does not make a
++      // parameter that travels in a floating-point register an integer: the
++      // convention names its class
++      type_metatype meta = pieces.type->getMetatype();
++      int4 sz = pieces.type->getSize();
++      if ((meta == TYPE_UNKNOWN || meta == TYPE_INT || meta == TYPE_UINT) && (sz == 4 || sz == 8) &&
++	  model != (ProtoModel *)0 && model->inFloatRegister(pieces.addr,sz))
++	pieces.type = data.getArch()->types->getBase(sz,TYPE_FLOAT);
+       store->setInput(count,"",pieces);
+       count += 1;
+     }
+diff --git a/decompiler/fspec.hh b/decompiler/fspec.hh
+index efd0d5a..9cda8cb 100644
+--- a/decompiler/fspec.hh
++++ b/decompiler/fspec.hh
+@@ -805,6 +805,7 @@ public:
+   int4 getInjectUponEntry(void) const { return injectUponEntry; }	///< Get the inject \e uponentry id
+   int4 getInjectUponReturn(void) const { return injectUponReturn; }	///< Get the inject \e uponreturn id
+   bool isCompatible(const ProtoModel *op2) const;	///< Return \b true if other given model can be substituted for \b this
++  bool inFloatRegister(const Address &addr,int4 sz) const;	///< Does the input model keep this range in a floating-point register
+ 
+   /// \brief Given a list of input \e trials, derive the most likely input prototype
+   ///
+diff --git a/decompiler/funcdata.hh b/decompiler/funcdata.hh
+index 5007fb2..2d13e13 100644
+--- a/decompiler/funcdata.hh
++++ b/decompiler/funcdata.hh
+@@ -135,9 +135,11 @@ class Funcdata {
+   static void encodeVarnode(Encoder &encoder,VarnodeLocSet::const_iterator iter,VarnodeLocSet::const_iterator enditer);
+   static bool checkIndirectUse(Varnode *vn);
+ public:
++  vector<VarnodeData> romwrightReturnTargets;	///< Registers an indirect jump turned into a RETURN took its target from
+   Funcdata(const string &nm,const string &disp,Scope *conf,const Address &addr,FunctionSymbol *sym,int4 sz=0);	///< Constructor
+   ~Funcdata(void);							///< Destructor
+-  const string &getName(void) const { return name; }			///< Get the function's local symbol name
++  const string &getName(void) const { return name; }
++  void setName(const string &nm) { name = nm; displayName = nm; }	///< Rename the function for output			///< Get the function's local symbol name
+   const string &getDisplayName(void) const { return displayName; }	///< Get the name to display in output
+   const Address &getAddress(void) const { return baseaddr; }		///< Get the entry point address
+   int4 getSize(void) const { return size; }				///< Get the function body size in bytes
+diff --git a/decompiler/funcdata_block.cc b/decompiler/funcdata_block.cc
+index cad42f1..74464b7 100644
+--- a/decompiler/funcdata_block.cc
++++ b/decompiler/funcdata_block.cc
+@@ -550,7 +550,11 @@ JumpTable::RecoveryMode Funcdata::stageJumpTable(Funcdata &partial,JumpTable *jt
+   try {
+     jt->setLoadCollect(flow->doesJumpRecord());
+     jt->setIndirectOp(partop);
+-    if (jt->isPartial())
++    // Romwright: the import's stored dispatch table, when it has one for this branch
++    const StoredJump *stored = jt->isOverride() ? (const StoredJump *)0 : glb->queryStoredJump(op->getAddr());
++    if (stored != (const StoredJump *)0)
++      jt->recoverStored(&partial,stored->targets,stored->apply);
++    else if (jt->isPartial())
+       jt->recoverMultistage(&partial);
+     else
+       jt->recoverAddresses(&partial); // Analyze partial to recover jumptable addresses
+@@ -676,9 +680,12 @@ JumpTable *Funcdata::recoverJumpTable(Funcdata &partial,PcodeOp *op,FlowInfo *fl
+ 
+   if ((flags & jumptablerecovery_dont)!=0)
+     return (JumpTable *)0;	// Explicitly told not to recover jumptables
+-  mode = earlyJumpTableFail(op);
+-  if (mode != JumpTable::success)
+-    return (JumpTable *)0;
++  const StoredJump *stored = glb->queryStoredJump(op->getAddr());
++  if (stored == (const StoredJump *)0 || !stored->apply) {	// Romwright: a stored table may recover what the early check refuses
++    mode = earlyJumpTableFail(op);
++    if (mode != JumpTable::success)
++      return (JumpTable *)0;
++  }
+   JumpTable trialjt;
+   mode = stageJumpTable(partial,&trialjt,op,flow);
+   if (mode != JumpTable::success)
+diff --git a/decompiler/funcdata_varnode.cc b/decompiler/funcdata_varnode.cc
+index 41d9834..0422a5b 100644
+--- a/decompiler/funcdata_varnode.cc
++++ b/decompiler/funcdata_varnode.cc
+@@ -1505,6 +1505,9 @@ Varnode *Funcdata::getInternalString(const uint1 *buf,int4 size,Datatype *ptrTyp
+ 
+ /// Follow the Varnode back to see if it comes from the return address for \b this function.
+ /// If so, return \b true.  The return address can flow through COPY, INDIRECT, and AND operations.
++/// Romwright: it can also flow through a MULTIEQUAL when every one of its inputs does, which is the
++/// shape of a saved link register reloaded after control flow that rejoins (`push {lr}` ...
++/// `pop {r1}; bx r1` around an if/else).
+ /// If there are any other operations in the flow path, or if a standard storage location for the
+ /// return address was not defined, return \b false.
+ /// \param vn is the given Varnode to trace
+@@ -1515,25 +1518,39 @@ bool Funcdata::testForReturnAddress(Varnode *vn)
+   VarnodeData &retaddr(glb->defaultReturnAddr);
+   if (retaddr.space == (AddrSpace *)0)
+     return false;			// No standard storage location to compare to
+-  while(vn->isWritten()) {
+-    PcodeOp *op = vn->getDef();
+-    OpCode opc = op->code();
+-    if (opc == CPUI_INDIRECT || opc == CPUI_COPY) {
+-      vn = op->getIn(0);
+-    }
+-    else if (opc == CPUI_INT_AND) {
+-      // We only want to allow "alignment" style masking
+-      if (!op->getIn(1)->isConstant())
++  vector<Varnode *> pending;
++  set<Varnode *> visited;
++  pending.push_back(vn);
++  while(!pending.empty()) {
++    vn = pending.back();
++    pending.pop_back();
++    if (!visited.insert(vn).second)
++      continue;			// Already tested, or a cycle of MULTIEQUALs
++    if (vn->isWritten()) {
++      PcodeOp *op = vn->getDef();
++      OpCode opc = op->code();
++      if (opc == CPUI_INDIRECT || opc == CPUI_COPY) {
++	pending.push_back(op->getIn(0));
++      }
++      else if (opc == CPUI_INT_AND) {
++	// We only want to allow "alignment" style masking
++	if (!op->getIn(1)->isConstant())
++	  return false;
++	pending.push_back(op->getIn(0));
++      }
++      else if (opc == CPUI_MULTIEQUAL) {
++	for(int4 i=0;i<op->numInput();++i)
++	  pending.push_back(op->getIn(i));
++      }
++      else
+ 	return false;
+-      vn = op->getIn(0);
++      continue;
+     }
+-    else
++    if (vn->getSpace() != retaddr.space || vn->getOffset() != retaddr.offset || vn->getSize() != retaddr.size)
++      return false;
++    if (!vn->isInput())
+       return false;
+   }
+-  if (vn->getSpace() != retaddr.space || vn->getOffset() != retaddr.offset || vn->getSize() != retaddr.size)
+-    return false;
+-  if (!vn->isInput())
+-    return false;
+   return true;
+ }
+ 
+diff --git a/decompiler/ghidra_arch.cc b/decompiler/ghidra_arch.cc
+index 27c76b0..95817ba 100644
+--- a/decompiler/ghidra_arch.cc
++++ b/decompiler/ghidra_arch.cc
+@@ -21,6 +21,8 @@
+ #include "comment_ghidra.hh"
+ #include "string_ghidra.hh"
+ #include "cpool_ghidra.hh"
++#include "sleigh.hh"
++#include "inject_sleigh.hh"
+ #include "inject_ghidra.hh"
+ 
+ namespace ghidra {
+@@ -276,6 +278,14 @@ void ArchitectureGhidra::postSpecFile(void)
+ 
+ {
+   Architecture::postSpecFile();
++  // ARM's stock compiler spec omits the link register because Java's
++  // analyzer supplies return flow overrides. Raw SLEIGH needs this ABI
++  // fact for Funcdata::testForReturnAddress's existing SSA proof.
++  const char *language = getenv("ROMWRIGHT_LANGUAGE");
++  const char *rawsla = getenv("ROMWRIGHT_SLA");
++  if (defaultReturnAddr.space == nullptr && rawsla != nullptr && rawsla[0] != '\0' &&
++      language != nullptr && strncmp(language,"ARM:",4) == 0)
++    defaultReturnAddr = translate->getRegister("lr");
+   ScopeGhidra *scopeGhidra = (ScopeGhidra *)symboltab->getGlobalScope();
+   scopeGhidra->lockDefaultProperties();
+ }
+@@ -289,12 +299,68 @@ void ArchitectureGhidra::buildLoader(DocumentStorage &store)
+ PcodeInjectLibrary *ArchitectureGhidra::buildPcodeInjectLibrary(void)
+ 
+ {
++  const char *rawsla = getenv("ROMWRIGHT_SLA");
++  if ((rawsla != (const char *)0) && (rawsla[0] != '\0')) {
++    // Raw-SLEIGH mode: injections must be compiled from the loaded compiler
++    // spec, not fetched from a client. PcodeInjectLibraryGhidra asks the
++    // client for every payload (inject_ghidra.cc:56), which a JVM-free
++    // worker cannot answer, so any language whose semantics use an injection
++    // fails to decompile at all -- ARM `bx` emits CALLOTHER setISAMode.
++    // PcodeInjectLibrarySleigh parses <callfixup>/<callotherfixup> bodies
++    // with the SLEIGH translator this mode already builds (inject_sleigh.cc;
++    // SleighArchitecture::buildPcodeInjectLibrary, sleigh_arch.cc).
++    return new PcodeInjectLibrarySleigh(this);
++  }
+   return new PcodeInjectLibraryGhidra(this);
+ }
+ 
++void ArchitectureGhidra::modifySpaces(Translate *trans)
++
++{
++  // Client-driven mode: GhidraTranslate::decode handled the truncations.
++  for(int4 i=0;i<rawTruncations.size();++i)
++    trans->truncateSpace(rawTruncations[i]);
++}
++
+ Translate *ArchitectureGhidra::buildTranslator(DocumentStorage &store)
+ 
+ {
++  const char *slafile = getenv("ROMWRIGHT_SLA");
++  if ((slafile != (const char *)0) && (slafile[0] != '\0')) {
++    // Raw-SLEIGH mode (spike): register the <sleigh> tag whose CONTENT is
++    // the compiled .sla path (same handshake as
++    // SleighArchitecture::buildSpecFile, sleigh_arch.cc:410-418), then
++    // build a self-disassembling Sleigh translator instead of the
++    // client-driven GhidraTranslate. The slave instruction bytes come from
++    // the client via getBytes (LoadImageGhidra), so the worker's
++    // program-provider serves both bytes and pcode generation.
++    // The client's tspec names the truncations its language declares
++    // (mips.ldefs: <truncate_space space="ram" size="4"/> on 64-32addr);
++    // GhidraTranslate::decode applied them in client-driven mode. Keep them
++    // before the tag is replaced, and apply them from modifySpaces as
++    // SleighArchitecture does (sleigh_arch.cc:423-429). Without this the
++    // stack pointer stays 8 bytes wide in a 4-byte space
++    // (Architecture::decodeStackPointer) and no sp-relative access is a
++    // stack address.
++    rawTruncations.clear();
++    const Element *tspecRoot = store.getTag("sleigh");
++    if (tspecRoot != (const Element *)0) {
++      const List &children(tspecRoot->getChildren());
++      for(List::const_iterator iter=children.begin();iter!=children.end();++iter) {
++        if ((*iter)->getName() != ELEM_TRUNCATE_SPACE.getName()) continue;
++        XmlDecode decoder(this,*iter);
++        rawTruncations.emplace_back();
++        rawTruncations.back().decode(decoder);
++      }
++    }
++    istringstream s(string("<sleigh>") + slafile + "</sleigh>");
++    Document *doc = store.parseDocument(s);
++    store.registerTag(doc->getRoot());
++    Sleigh *trans = new Sleigh(loader, context);
++    const char *language = getenv("ROMWRIGHT_LANGUAGE");
++    trans->setPowerPcReturns(language != nullptr && strncmp(language,"PowerPC:",8) == 0);
++    return trans;
++  }
+   return new GhidraTranslate(this);
+ }
+ 
+@@ -369,7 +435,15 @@ void ArchitectureGhidra::buildConstantPool(DocumentStorage &store)
+ void ArchitectureGhidra::buildContext(DocumentStorage &store)
+ 
+ {
+-  context = new ContextGhidra(this);
++  const char *slafile = getenv("ROMWRIGHT_SLA");
++  if ((slafile != (const char *)0) && (slafile[0] != '\0')) {
++    // Raw-SLEIGH mode: the Sleigh self-disassembler needs a real context
++    // database (ContextGhidra blocks registerVariable).
++    context = new ContextInternal();
++  }
++  else {
++    context = new ContextGhidra(this);
++  }
+ }
+ 
+ void ArchitectureGhidra::buildSymbols(DocumentStorage &store)
+@@ -898,10 +972,10 @@ bool ArchitectureGhidra::getCPoolRef(const vector<uintb> &refs,Decoder &decoder)
+ void ArchitectureGhidra::printWarning(const string &message) const
+ 
+ {
+-  sout.write("\000\000\001\022",4);
+-  sout << "Decompiler: " << message;
+-  sout.write("\000\000\001\023",4);
+-  sout.flush();
++  // Romwright: the 12.1.3 protocol. The worker reads warnings in the result frame
++  // (sendResult) and treats any burst between the response header and result as an error;
++  // master's immediate warning packet (0x12/0x13) is not part of that protocol.
++  warnings += '\n'+message;
+ }
+ 
+ /// \brief Construct given specification files and i/o streams
+diff --git a/decompiler/ghidra_arch.hh b/decompiler/ghidra_arch.hh
+index 81d2c8a..2d85e6d 100644
+--- a/decompiler/ghidra_arch.hh
++++ b/decompiler/ghidra_arch.hh
+@@ -86,9 +86,11 @@ class ArchitectureGhidra : public Architecture {
+   string cspecxml;		///< XML cspec passed from Ghidra
+   string tspecxml;              ///< Stripped down .sla file passed from Ghidra
+   string corespecxml;		///< A specification of the core data-types
++  vector<TruncationTag> rawTruncations;	///< Raw-SLEIGH mode: truncations the client's tspec declared
+   bool sendsyntaxtree;		///< True if the syntax tree should be sent with function output
+   bool sendCcode;		///< True if C code should be sent with function output
+   bool sendParamMeasures;       ///< True if measurements for argument and return parameters should be sent
++  mutable string warnings;	///< Romwright: warnings accumulated by the running command (12.1.3 protocol; master sends each as it occurs)
+   virtual Scope *buildDatabase(DocumentStorage &store);
+   virtual Translate *buildTranslator(DocumentStorage &store);
+   virtual void buildLoader(DocumentStorage &store);
+@@ -101,7 +103,7 @@ class ArchitectureGhidra : public Architecture {
+   virtual void buildContext(DocumentStorage &store);
+   virtual void buildSymbols(DocumentStorage &store);
+   virtual void buildSpecFile(DocumentStorage &store);
+-  virtual void modifySpaces(Translate *trans) {}	// This is handled directly by GhidraTranslate::initialize
++  virtual void modifySpaces(Translate *trans);
+   virtual void postSpecFile(void);
+   virtual void resolveArchitecture(void);
+ public:
+@@ -148,6 +150,8 @@ public:
+   void setSendParamMeasures(bool val) { sendParamMeasures = val; }
+ 
+   bool getSendParamMeasures(void) const { return sendParamMeasures; }	///< Get the current setting for emitting parameter info
++  const string &getWarnings(void) const { return warnings; }	///< Romwright: get warnings produced by the last command
++  void clearWarnings(void) { warnings.clear(); }		///< Romwright: clear warnings
+ 
+   void getStringData(vector<uint1> &buffer,const Address &addr,Datatype *ct,int4 maxBytes,bool &isTrunc);
+   virtual void printWarning(const string &message) const;
+diff --git a/decompiler/ghidra_process.cc b/decompiler/ghidra_process.cc
+index aab4fcf..2d40091 100644
+--- a/decompiler/ghidra_process.cc
++++ b/decompiler/ghidra_process.cc
+@@ -14,6 +14,10 @@
+  * limitations under the License.
+  */
+ #include "ghidra_process.hh"
++#include "database_ghidra.hh"
++#include "romwright_nonreturn.hh"
++#include "romwright_ir.hh"
++#include "romwright_budget.hh"
+ #include "flow.hh"
+ #include "blockaction.hh"
+ 
+@@ -99,6 +103,7 @@ void GhidraCommand::loadParameters(void)
+ 
+   if (ghidra == (ArchitectureGhidra *)0)
+     throw JavaError("decompiler","No architecture registered with decompiler");
++  ghidra->clearWarnings();
+ }
+ 
+ /// This method can be overloaded to send back any kind of information as a string. Individual records
+@@ -109,7 +114,9 @@ void GhidraCommand::sendResult(const string &errorMsg)
+ {
+   if (ghidra != (ArchitectureGhidra *)0) {
+     sout.write("\000\000\001\020",4);
+-    sout << errorMsg;
++    sout << ghidra->getWarnings();	// Romwright: the 12.1.3 result frame: warnings, then the error
++    if (!errorMsg.empty())
++      sout << '\n' << errorMsg;
+     sout.write("\000\000\001\021",4);
+   }
+ }
+@@ -141,6 +148,10 @@ int4 GhidraCommand::doit(void)
+     ArchitectureGhidra::passJavaException(sout,err.type,err.explain);
+     return status;			// Abort sending any results
+   }
++  catch(WorkBudgetExceeded &err) {
++    ArchitectureGhidra::passJavaException(sout,"WorkBudgetExceeded",err.explain);
++    return status;			// Abort sending any results
++  }
+   catch(RecovError &err) {
+     errorMsg = "Recoverable Error: " + err.explain;
+   }
+@@ -164,6 +175,7 @@ void RegisterProgram::loadParameters(void)
+   ArchitectureGhidra::readStringStream(sin,cspec);
+   ArchitectureGhidra::readStringStream(sin,tspec);
+   ArchitectureGhidra::readStringStream(sin,corespec);
++  ArchitectureGhidra::readStringStream(sin,functionShell);
+ }
+ 
+ 
+@@ -186,6 +198,28 @@ void RegisterProgram::rawAction(void)
+ 
+   DocumentStorage store;	// temp storage of initialization xml docs
+   ghidra->init(store);
++
++  if (!functionShell.empty()) {
++    istringstream input(functionShell);
++    PackedDecode decoder(ghidra);
++    decoder.ingestStream(input);
++    uint4 docId = decoder.openElement(ELEM_DOC);
++    while (decoder.peekElement() != 0) {
++      uint4 elemId = decoder.peekElement();
++      if (elemId == ELEM_STOREDJUMP) {	// Romwright: a dispatch table stored by the import
++	ghidra->decodeStoredJump(decoder);
++	continue;
++      }
++      if (elemId != ELEM_MAPSYM)
++	throw LowlevelError("Unknown function shell tag");
++      ScopeGhidra *scope = dynamic_cast<ScopeGhidra *>(ghidra->symboltab->getGlobalScope());
++      if (scope == (ScopeGhidra *)0)
++	throw LowlevelError("Global scope is not Ghidra-backed");
++      scope->addMapSymToCache(decoder);
++    }
++    decoder.closeElement(docId);
++  }
++
+   if (open == -1) {
+     open = archlist.size();
+     archlist.push_back((ArchitectureGhidra *)0);
+@@ -203,6 +237,67 @@ void RegisterProgram::sendResult(const string &errorMsg)
+   GhidraCommand::sendResult(errorMsg);
+ }
+ 
++void SetFunctionSignature::loadParameters(void)
++
++{
++  GhidraCommand::loadParameters();
++  // Command instances are reused; readStringStream appends to its output.
++  functionName.clear();
++  signature.clear();
++  functionAddress.clear();
++  mode.clear();
++  ArchitectureGhidra::readStringStream(sin,functionName);
++  ArchitectureGhidra::readStringStream(sin,signature);
++  ArchitectureGhidra::readStringStream(sin,functionAddress);
++  ArchitectureGhidra::readStringStream(sin,mode);
++}
++
++void SetFunctionSignature::rawAction(void)
++
++{
++  if (mode != "asserted" && mode != "inferred" && mode != "recovery" && mode != "params")
++    throw ParseError("Unknown prototype mode: " + mode);
++  istringstream input(signature);
++  PrototypePieces pieces;
++  parse_protopieces(pieces,input,ghidra);
++  string requestedName = pieces.name;
++  if (functionName.empty())
++    functionName = requestedName;
++  if (functionName.empty())
++    throw ParseError("Prototype has no function name");
++  if (requestedName.empty()) {
++    requestedName = functionName;
++    pieces.name = functionName;
++  }
++  istringstream addressInput(functionAddress);
++  uintb offset = 0;
++  addressInput >> hex >> offset;
++  if (addressInput.fail())
++    throw ParseError("Bad function address: " + functionAddress);
++  Address functionAddressValue(ghidra->getDefaultCodeSpace(),offset);
++  Funcdata *fd = ghidra->symboltab->getGlobalScope()->findFunction(functionAddressValue);
++  if (fd == (Funcdata *)0)
++    throw ParseError("Unknown function address: " + functionAddress);
++  fd->getFuncProto().setPieces(pieces);
++  if (mode == "recovery") {
++    fd->getFuncProto().setInputLock(false);
++    fd->getFuncProto().setOutputLock(false);
++    fd->getFuncProto().setModelLock(false);
++  }
++  if (mode == "params") {
++    // The parameter list is proved (a mangled name's); the return value is
++    // not, so the decompiler recovers it.
++    fd->getFuncProto().setOutputLock(false);
++  }
++  if (mode == "asserted" && requestedName != functionName) {
++    ScopeGhidra *ghidraScope = dynamic_cast<ScopeGhidra *>(ghidra->symboltab->getGlobalScope());
++    if (ghidraScope == (ScopeGhidra *)0)
++      throw LowlevelError("Global scope is not Ghidra-backed");
++    ghidraScope->renameFunction(fd->getSymbol(),requestedName);
++  }
++  ghidra->clearAnalysis(fd);
++}
++
+ void DeregisterProgram::loadParameters(void)
+ 
+ {
+@@ -219,6 +314,7 @@ void DeregisterProgram::loadParameters(void)
+ 
+   if (ghidra == (ArchitectureGhidra *)0)
+     throw JavaError("decompiler","No architecture registered with decompiler");
++  ghidra->clearWarnings();
+ }
+ 
+ void DeregisterProgram::rawAction(void)
+@@ -299,8 +395,16 @@ void DecompileAt::rawAction(void)
+ #ifdef __REMOTE_SOCKET__
+     connect_to_console(fd);
+ #endif
+-    ghidra->allacts.getCurrent()->reset( *fd );
+-    ghidra->allacts.getCurrent()->perform( *fd );
++    WorkBudget::current().begin();
++    try {
++      ghidra->allacts.getCurrent()->reset( *fd );
++      ghidra->allacts.getCurrent()->perform( *fd );
++    }
++    catch(WorkBudgetExceeded &err) {
++      WorkBudget::current().finish(addr.getOffset(),"exceeded");
++      throw;
++    }
++    WorkBudget::current().finish(addr.getOffset(),"ok");
+   }
+ 
+   sout.write("\000\000\001\016",4);
+@@ -317,10 +421,18 @@ void DecompileAt::rawAction(void)
+ 	ParamIDAnalysis pidanalysis( fd, false );
+ 	pidanalysis.encode( encoder, true );
+       }
+-      fd->encode(encoder,0,ghidra->getSendSyntaxTree(),false);
++      {
++        RomwrightNoReturnHint hint(*fd);
++        fd->encode(encoder,0,ghidra->getSendSyntaxTree(),false);
++      }
++      if (ghidra->getSendSyntaxTree())
++        romwrightEncodeCallPrototypes(*fd,encoder);
+       if (ghidra->getSendCCode()&&
+-	  (ghidra->allacts.getCurrentName() == "decompile"))
++	  (ghidra->allacts.getCurrentName() == "decompile")) {
+         ghidra->print->docFunction(fd);
++        // The worker prints C from this IR (crates/romwright-worker/src/printc).
++        romwrightEncodePrintIr(ghidra->print,*fd,encoder);
++      }
+     }
+     encoder.closeElement(ELEM_DOC);
+   }
+@@ -490,6 +602,8 @@ void GhidraDecompCapability::initialize(void)
+ 
+ {
+   commandmap["registerProgram"] = new RegisterProgram();
++  commandmap["setFunctionSignature"] = new SetFunctionSignature();
++  commandmap["renderFunctionIR"] = new RenderFunctionIr();
+   commandmap["deregisterProgram"] = new DeregisterProgram();
+   commandmap["flushNative"] = new FlushNative();
+   commandmap["decompileAt"] = new DecompileAt();
+diff --git a/decompiler/ghidra_process.hh b/decompiler/ghidra_process.hh
+index 7b01dcc..c1c4015 100644
+--- a/decompiler/ghidra_process.hh
++++ b/decompiler/ghidra_process.hh
+@@ -101,16 +101,18 @@ public:
+ ///
+ /// An id is assigned to the program, and an Architecture object for the program
+ /// is created and initialized. This must be issued before any other command.
+-/// The command expects four XML document parameters:
++/// The command expects four XML document parameters plus one packed document:
+ ///   - The processor specification
+ ///   - The compiler specification
+ ///   - The stripped down \<sleigh> tag describing address spaces for the program
+ ///   - The \<coretypes> tag describing the built-in datatypes for the program
++//   - A <doc> containing optional <mapsym><functionshell> entries
+ class RegisterProgram : public GhidraCommand {
+   string pspec;				///< Processor specification to configure with
+   string cspec;				///< Compiler specification to configure with
+   string tspec;				///< Configuration (address-spaces) for the Translate object
+   string corespec;			///< A description of core data-types for the TypeFactory object
++  string functionShell;			///< Preloaded function shells for prototype overrides
+   virtual void loadParameters(void);
+   virtual void sendResult(const string &errorMsg);
+ public:
+@@ -118,6 +120,21 @@ public:
+   virtual void rawAction(void);
+ };
+ 
++/// \brief Apply a C prototype to a preloaded function.
++///
++/// The function shell is installed during registerProgram so the function's
++/// prototype is symbol-table backed. This command uses the decompiler's own
++/// C declaration parser and invalidates derived analysis after the update.
++class SetFunctionSignature : public GhidraCommand {
++  string functionName;
++  string signature;
++  string functionAddress;
++  string mode;
++  virtual void loadParameters(void);
++public:
++  virtual void rawAction(void);
++};
++
+ /// \brief Command to \b release all resources associated with a Program (executable) in the decompiler
+ ///
+ /// The command frees the ArchitectureGhidra object (recursively affecting all resources)
+diff --git a/decompiler/grammar.cc b/decompiler/grammar.cc
+index d93a492..fa2d12d 100644
+--- a/decompiler/grammar.cc
++++ b/decompiler/grammar.cc
+@@ -2312,11 +2312,7 @@ Datatype *FunctionModifier::modType(Datatype *base,const TypeDeclarator *decl,Ar
+     proto.outtype = glb->types->getTypeVoid();
+   else
+     proto.outtype = base;
+-  // Varargs is encoded as extra null pointer in paramlist
+-  proto.firstVarArgSlot = -1;
+-  if ((!paramlist.empty())&&(paramlist.back() == (TypeDeclarator *)0)) {
+-    proto.firstVarArgSlot = paramlist.size() - 1;
+-  }
++  proto.firstVarArgSlot = dotdotdot ? paramlist.size() : -1;
+ 
+   getInTypes(proto.intypes,glb);
+ 
+@@ -2406,16 +2402,9 @@ bool TypeDeclarator::isValid(void) const
+   if (count > 1)
+     throw ParseError("Multiple storage specifiers");
+ 
+-  count = 0;
+-  if ((flags & CParse::f_const)!=0)
+-    count += 1;
+-  if ((flags & CParse::f_restrict)!=0)
+-    count += 1;
+-  if ((flags & CParse::f_volatile)!=0)
+-    count += 1;
+-  if (count > 1)
+-    throw ParseError("Multiple type qualifiers");
+-  
++  // C type qualifiers combine; unlike storage specifiers they are
++  // not mutually exclusive.
++
+   for(uint4 i=0;i<mods.size();++i) {
+     if (!mods[i]->isValid())
+       return false;
+diff --git a/decompiler/heritage.cc b/decompiler/heritage.cc
+index d053249..a6651ca 100644
+--- a/decompiler/heritage.cc
++++ b/decompiler/heritage.cc
+@@ -1638,6 +1638,27 @@ void Heritage::guardReturnsOverlapping(const Address &addr,int4 size)
+   }
+ }
+ 
++/// \brief Test if an indirect jump turned into a RETURN took its target from the given storage
++///
++/// Romwright: a Thumb function can return with \b pop {r1}; bx r1, which the decompiler turns into a
++/// RETURN whose target is a general register that the output model also lists. That register holds
++/// the return address, not a result, so it must not be offered as a possible return value.
++/// \param fd is the function being analyzed
++/// \param addr is the first address of the storage
++/// \param size is the number of bytes in the storage
++/// \return \b true if a live RETURN reads its target from overlapping storage
++static bool romwrightReturnTargetOverlaps(Funcdata *fd,const Address &addr,int4 size)
++
++{
++  for(int4 i=0;i<fd->romwrightReturnTargets.size();++i) {
++    const VarnodeData &target(fd->romwrightReturnTargets[i]);
++    Address start(target.space,target.offset);
++    if (addr.overlap(0,start,target.size) != -1) return true;
++    if (start.overlap(0,addr,size) != -1) return true;
++  }
++  return false;
++}
++
+ /// \brief Guard global data-flow at RETURN ops in preparation for renaming
+ ///
+ /// For the given global (persistent) address range, data-flow must persist up to
+@@ -1657,7 +1678,7 @@ void Heritage::guardReturns(uint4 fl,const Address &addr,int4 size,vector<Varnod
+   PcodeOp *op,*copyop;
+ 
+   ParamActive *active = fd->getActiveOutput();
+-  if (active != (ParamActive *)0) {
++  if (active != (ParamActive *)0 && !romwrightReturnTargetOverlaps(fd,addr,size)) {
+     int4 outputCharacter = fd->getFuncProto().characterizeAsOutput(addr, size);
+     if (outputCharacter == ParamEntry::contained_by)
+       guardReturnsOverlapping(addr, size);
+diff --git a/decompiler/jumptable.cc b/decompiler/jumptable.cc
+index e22e1ab..837ee12 100644
+--- a/decompiler/jumptable.cc
++++ b/decompiler/jumptable.cc
+@@ -22,6 +22,10 @@ namespace ghidra {
+ 
+ AttributeId ATTRIB_LABEL = AttributeId("label",131);
+ AttributeId ATTRIB_NUM = AttributeId("num",132);
++AttributeId ATTRIB_STOREDOUT = AttributeId("storedout",401);
++AttributeId ATTRIB_STOCKSIZE = AttributeId("stocksize",402);
++AttributeId ATTRIB_STOREDSIZE = AttributeId("storedsize",403);
++AttributeId ATTRIB_COMMONSIZE = AttributeId("commonsize",404);
+ 
+ ElementId ELEM_BASICOVERRIDE = ElementId("basicoverride",211);
+ ElementId ELEM_DEST = ElementId("dest",212);
+@@ -1816,6 +1820,80 @@ JumpBasicOverride::JumpBasicOverride(JumpTable *jt)
+   startingvalue = 0;
+   hash = 0;
+   istrivial = false;
++  usedguards = false;
++}
++
++/// \brief Find the normalized switch variable the way JumpBasic does, for a table supplied from outside (Romwright)
++///
++/// The guard analysis gives the normalized switch variable and the range of values it takes, exactly as
++/// it does when jumptable.cc recovers a table itself. Each value in the range is emulated to its address,
++/// and the model keeps the (value,address) pairs whose address is in the supplied set. This succeeds
++/// only if every supplied address is produced by some value in the range. Then the case values, the
++/// normalization to fold and the guards to fold are those of a recovered table, restricted to the
++/// supplied addresses, rather than values guessed upward from zero.
++/// \param fd is the function containing the switch
++/// \param indop is the BRANCHIND
++/// \param maxtablesize is the maximum size of the value range
++/// \return \b true if the model was recovered this way
++bool JumpBasicOverride::recoverFromGuards(Funcdata *fd,PcodeOp *indop,uint4 maxtablesize)
++
++{
++  if (jrange != (JumpValuesRange *)0)
++    delete jrange;
++  jrange = new JumpValuesRange();
++  varnodeIndex = 0;
++  bool ok = false;
++  try {
++    findNormalized(fd,indop->getParent(),-1,0,maxtablesize);
++    ok = (jrange->getSize() <= maxtablesize);
++  }
++  catch(LowlevelError &err) {
++    ok = false;
++  }
++  if (ok) {
++    markFoldableGuards();
++    vector<uintb> vals;
++    vector<Address> addrs;
++    set<Address> seen;
++    EmulateFunction emul(fd);
++    uintb mask = ~((uintb)0);
++    int4 bit = fd->getArch()->funcptr_align;
++    if (bit != 0)
++      mask = (mask >> bit) << bit;
++    AddrSpace *spc = indop->getAddr().getSpace();
++    try {
++      bool notdone = jrange->initializeForReading();
++      while(notdone) {
++	uintb val = jrange->getValue();
++	uintb addr = emul.emulatePath(val,pathMeld,jrange->getStartOp(),jrange->getStartVarnode());
++	addr = AddrSpace::addressToByte(addr,spc->getWordSize());
++	addr &= mask;
++	Address newaddr(spc,addr);
++	if (adset.find(newaddr) != adset.end()) {
++	  vals.push_back(val);
++	  addrs.push_back(newaddr);
++	  seen.insert(newaddr);
++	}
++	notdone = jrange->next();
++      }
++    }
++    catch(LowlevelError &err) {
++      ok = false;
++    }
++    if (ok && seen.size() == adset.size()) {
++      values = vals;
++      addrtable = addrs;
++      normalvn = pathMeld.getVarnode(varnodeIndex);
++      usedguards = true;
++      delete jrange;
++      jrange = (JumpValuesRange *)0;
++      return true;
++    }
++  }
++  selectguards.clear();
++  delete jrange;
++  jrange = (JumpValuesRange *)0;
++  return false;
+ }
+ 
+ /// \param adtable is the list of externally provided addresses, which will be deduped
+@@ -1997,6 +2075,9 @@ bool JumpBasicOverride::recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel
+ {
+   clearCopySpecific();
+   findDeterminingVarnodes(indop,0);
++  usedguards = false;
++  if (!istrivial && hash == 0 && startingvalue == 0 && recoverFromGuards(fd,indop,maxtablesize))
++    return true;		// Romwright: a supplied table over the range the guards give
+   if (!istrivial) {		// If we haven't previously decided to use trivial model
+     Varnode *trialvn = (Varnode *)0;
+     if (hash != 0) {
+@@ -2439,6 +2520,10 @@ JumpTable::JumpTable(Address ad)
+   partialTable = false;
+   collectloads = false;
+   defaultIsFolded = false;
++  storedState = stored_none;
++  stockSize = -1;
++  storedSize = 0;
++  commonSize = 0;
+ }
+ 
+ /// This is a partial clone of another jump-table. Objects that are specific
+@@ -2458,6 +2543,10 @@ JumpTable::JumpTable(const JumpTable *op2)
+   partialTable = op2->partialTable;
+   collectloads = op2->collectloads;
+   defaultIsFolded = false;
++  storedState = op2->storedState;
++  stockSize = op2->stockSize;
++  storedSize = op2->storedSize;
++  commonSize = op2->commonSize;
+ 				// We just clone the addresses themselves
+   addresstable = op2->addresstable;
+   loadpoints = op2->loadpoints;
+@@ -2692,6 +2781,104 @@ void JumpTable::recoverAddresses(Funcdata *fd)
+   }
+ }
+ 
++/// \brief Recover the addresses of \b this table with the import's stored dispatch table as authority (Romwright)
++///
++/// jumptable.cc recovers the table first, exactly as it would without a stored table, so that its
++/// normalization, guards and case labels are available. Its address set is then compared with
++/// the stored one. If they are equal nothing else changes. If they differ (or jumptable.cc
++/// failed) and \b apply is set, the model is switched over to the manual override model
++/// (setOverride) carrying the stored addresses, which then rebuilds the case values by emulation,
++/// as it does for a table the user supplied. If \b apply is not set, the comparison is only
++/// recorded and jumptable.cc's outcome stands, failure included.
++/// \param fd is the (partial) function containing the switch
++/// \param stored is the stored table
++/// \param apply is \b true to install the stored table over a differing recovery
++void JumpTable::recoverStored(Funcdata *fd,const vector<Address> &stored,bool apply)
++
++{
++  set<Address> want(stored.begin(),stored.end());
++  bool failed = false;
++  bool thunk = false;
++  string why;
++  try {
++    if (isPartial())
++      recoverMultistage(fd);
++    else
++      recoverAddresses(fd);
++  }
++  catch(JumptableThunkError &err) {
++    failed = thunk = true;
++    why = err.explain;
++  }
++  catch(LowlevelError &err) {
++    failed = true;
++    why = err.explain;
++  }
++  storedSize = want.size();
++  stockSize = -1;
++  commonSize = 0;
++  bool same = false;
++  if (!failed) {
++    set<Address> got(addresstable.begin(),addresstable.end());
++    stockSize = got.size();
++    for(set<Address>::const_iterator iter=got.begin();iter!=got.end();++iter)
++      if (want.find(*iter) != want.end())
++	commonSize += 1;
++    same = (stockSize == storedSize && commonSize == stockSize);
++  }
++  if (same) {
++    storedState = stored_confirmed;
++    return;
++  }
++  if (!apply) {
++    storedState = stored_observed;
++    if (thunk)
++      throw JumptableThunkError(why);
++    if (failed)
++      throw LowlevelError(why);
++    return;
++  }
++  // Try the stored table as a manual override over jumptable.cc's own model. If that finds no
++  // normalized switch variable (the trivial model labels cases with addresses, which would
++  // not match what is switched on), the override is not used and jumptable.cc's outcome stands.
++  JumpModel *stockmodel = jmodel;
++  jmodel = (JumpModel *)0;
++  vector<Address> stocktable = addresstable;
++  vector<LoadTable> stockloads = loadpoints;
++  bool stockpartial = partialTable;
++  setOverride(stored,Address(),0,0);
++  addresstable.clear();
++  loadpoints.clear();
++  label.clear();
++  partialTable = false;
++  bool installed = false;
++  try {
++    recoverAddresses(fd);
++    installed = (jmodel != (JumpModel *)0) && !((JumpBasicOverride *)jmodel)->isTrivialModel();
++  }
++  catch(LowlevelError &err) {
++    installed = false;
++  }
++  if (installed) {
++    storedState = stored_applied;
++    if (stockmodel != (JumpModel *)0)
++      delete stockmodel;
++    return;
++  }
++  if (jmodel != (JumpModel *)0)
++    delete jmodel;
++  jmodel = stockmodel;
++  addresstable = stocktable;
++  loadpoints = stockloads;
++  partialTable = stockpartial;
++  label.clear();
++  storedState = stored_observed;
++  if (thunk)
++    throw JumptableThunkError(why);
++  if (failed)
++    throw LowlevelError(why);
++}
++
+ /// Do a normal recoverAddresses, but save off the old JumpModel, and if we fail recovery, put back the old model.
+ /// \param fd is the function containing the switch
+ void JumpTable::recoverMultistage(Funcdata *fd)
+@@ -2736,7 +2923,10 @@ void JumpTable::matchModel(Funcdata *fd)
+       saveModel();
+     else {
+       clearSavedModel();
+-      fd->warning("Switch is manually overridden",opaddress);
++      if (storedState == stored_applied)
++	fd->warning("Switch table taken from the stored dispatch table",opaddress);
++      else
++	fd->warning("Switch is manually overridden",opaddress);
+     }
+   }
+   recoverModel(fd,origmodel);		// Create a current instance of the model (matching the previous model)
+@@ -2815,6 +3005,12 @@ void JumpTable::encode(Encoder &encoder) const
+   encoder.openElement(ELEM_JUMPTABLE);
+   if (displayFormat != 0)
+     encoder.writeUnsignedInteger(ATTRIB_FORMAT, displayFormat);
++  if (storedState != stored_none) {
++    encoder.writeUnsignedInteger(ATTRIB_STOREDOUT, storedState);
++    encoder.writeSignedInteger(ATTRIB_STOCKSIZE, stockSize);
++    encoder.writeUnsignedInteger(ATTRIB_STOREDSIZE, storedSize);
++    encoder.writeUnsignedInteger(ATTRIB_COMMONSIZE, commonSize);
++  }
+   opaddress.encode(encoder);
+   for(int4 i=0;i<addresstable.size();++i) {
+     encoder.openElement(ELEM_DEST);
+diff --git a/decompiler/jumptable.hh b/decompiler/jumptable.hh
+index 6ce41bc..0e419e2 100644
+--- a/decompiler/jumptable.hh
++++ b/decompiler/jumptable.hh
+@@ -31,6 +31,10 @@ extern AttributeId ATTRIB_LABEL;	///< Marshaling attribute "label"
+ extern AttributeId ATTRIB_NUM;		///< Marshaling attribute "num"
+ 
+ extern ElementId ELEM_BASICOVERRIDE;	///< Marshaling element \<basicoverride>
++extern AttributeId ATTRIB_STOREDOUT;	///< Romwright: marshaling attribute "storedout"
++extern AttributeId ATTRIB_STOCKSIZE;	///< Romwright: marshaling attribute "stocksize"
++extern AttributeId ATTRIB_STOREDSIZE;	///< Romwright: marshaling attribute "storedsize"
++extern AttributeId ATTRIB_COMMONSIZE;	///< Romwright: marshaling attribute "commonsize"
+ extern ElementId ELEM_DEST;		///< Marshaling element \<dest>
+ extern ElementId ELEM_JUMPTABLE;	///< Marshaling element \<jumptable>
+ extern ElementId ELEM_LOADTABLE;	///< Marshaling element \<loadtable>
+@@ -467,6 +471,8 @@ class JumpBasicOverride : public JumpBasic {
+   Address normaddress;		///< Dynamic info for recovering normalized switch variable
+   uint8 hash;			///< if (hash==0) there is no normalized switch (use trivial model)
+   bool istrivial;		///< \b true if we use a trivial value model
++  bool usedguards;		///< Romwright: the normalized switch variable and its range came from the guard analysis
++  bool recoverFromGuards(Funcdata *fd,PcodeOp *indop,uint4 maxtablesize);	///< Romwright: find the normalized switch variable as JumpBasic does
+   int4 findStartOp(Varnode *vn);
+   int4 trialNorm(Funcdata *fd,Varnode *trialvn,uint4 tolerance);
+   void setupTrivial(void);
+@@ -478,6 +484,7 @@ public:
+   void setNorm(const Address &addr,uintb h) { normaddress = addr; hash = h; }	///< Set the normalized switch variable
+   void setStartingValue(uintb val) { startingvalue = val; }		///< Set the starting value for the normalized range
+   virtual bool isOverride(void) const { return true; }
++  bool isTrivialModel(void) const { return istrivial; }	///< Romwright: \b true if no normalized switch variable was found
+   virtual int4 getTableSize(void) const { return addrtable.size(); }
+   virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize);
+   virtual void buildAddresses(Funcdata *fd,PcodeOp *indop,vector<Address> &addresstable,
+@@ -485,7 +492,7 @@ public:
+   // findUnnormalized inherited from JumpBasic
+   virtual void buildLabels(Funcdata *fd,vector<Address> &addresstable,vector<uintb> &label,const JumpModel *orig) const;
+   // foldInNormalization inherited from JumpBasic
+-  virtual bool foldInGuards(Funcdata *fd,JumpTable *jump) { return false; }
++  virtual bool foldInGuards(Funcdata *fd,JumpTable *jump) { return usedguards ? JumpBasic::foldInGuards(fd,jump) : false; }
+   virtual bool sanityCheck(Funcdata *fd,PcodeOp *indop,vector<Address> &addresstable,
+ 			   vector<LoadTable> &loadpoints,vector<int4> *loadcounts) { return true; }
+   virtual JumpModel *clone(JumpTable *jt) const;
+@@ -577,6 +584,10 @@ private:
+   bool partialTable;		///< Set to \b true if \b this table is incomplete and needs additional recovery steps
+   bool collectloads;		///< Set to \b true if information about in-memory model data is/should be collected
+   bool defaultIsFolded;		///< The \e default block is the target of a folded CBRANCH (and cannot have a label)
++  uint4 storedState;		///< Romwright: how the import's stored table (if any) related to the recovery, a StoredState
++  int4 stockSize;		///< Romwright: distinct addresses jumptable.cc recovered, or -1 if it failed
++  int4 storedSize;		///< Romwright: distinct addresses in the stored table
++  int4 commonSize;		///< Romwright: distinct addresses in both
+   void saveModel(void);		///< Save off current model (if any) and prepare for instantiating a new model
+   void restoreSavedModel(void);	///< Restore any saved model as the current model
+   void clearSavedModel(void);	///< Clear any saved model
+@@ -587,6 +598,13 @@ private:
+   int4 block2Position(const FlowBlock *bl) const;	///< Convert a basic-block to an out-edge index from the switch.
+   static bool isReachable(PcodeOp *op);	///< Check if the given PcodeOp still seems reachable in its function
+ public:
++  /// \brief How the import's stored dispatch table related to jumptable.cc's recovery of the same branch
++  enum StoredState {
++    stored_none = 0,		///< No stored table: jumptable.cc is the only source
++    stored_confirmed = 1,	///< jumptable.cc recovered exactly the stored addresses
++    stored_applied = 2,		///< The stored table differed (or jumptable.cc failed) and was installed as the authority
++    stored_observed = 3		///< The stored table differed but was not used (only compared, or no usable model); jumptable.cc's outcome stands
++  };
+   JumpTable(Address ad=Address());			///< Constructor
+   JumpTable(const JumpTable *op2);			///< Copy constructor
+   ~JumpTable(void);					///< Destructor
+@@ -604,6 +622,8 @@ public:
+   uint4 getDisplayFormat(void) const { return displayFormat; }		///< Get the display format for integer cases
+   void setDisplayFormat(uint4 format) { displayFormat = format; }	///< Set the display format to use for integer case values
+   void setOverride(const vector<Address> &addrtable,const Address &naddr,uintb h,uintb sv);
++  void recoverStored(Funcdata *fd,const vector<Address> &stored,bool apply);
++  uint4 getStoredState(void) const { return storedState; }	///< Get how the stored table related to the recovery
+   int4 numIndicesByBlock(const FlowBlock *bl) const;
+   int4 getIndexByBlock(const FlowBlock *bl,int4 i) const;
+   Address getAddressByIndex(int4 i) const { return addresstable[i]; }	///< Get the i-th address table entry
+diff --git a/decompiler/marshal.cc b/decompiler/marshal.cc
+index 72a823d..11d1379 100644
+--- a/decompiler/marshal.cc
++++ b/decompiler/marshal.cc
+@@ -1107,10 +1107,9 @@ OpCode PackedDecode::readOpcode(AttributeId &attribId)
+ type_metatype PackedDecode::readDatatypeMeta(void)
+ 
+ {
+-  int4 val = (int4)readSignedInteger();
+-  if (val < 0 || val > TYPE_VOID)
+-    throw DecoderError("Bad encoded metatype");
+-  return (type_metatype)val;
++  // Romwright: the 12.1.3 wire form, the metatype's name (master sends a signed integer).
++  string nm = readString();
++  return string2metatype(nm);
+ }
+ 
+ type_metatype PackedDecode::readDatatypeMeta(AttributeId &attribId)
+@@ -1302,8 +1301,10 @@ void PackedEncode::writeOpcode(const AttributeId &attribId,OpCode opc)
+ void PackedEncode::writeDatatypeMeta(const AttributeId &attribId,type_metatype metatype)
+ 
+ {
+-  writeHeader(ATTRIBUTE, attribId.getId());
+-  writeInteger((TYPECODE_SIGNEDINT_POSITIVE << TYPECODE_SHIFT), metatype);
++  // Romwright: the 12.1.3 wire form, the metatype's name (master sends a signed integer).
++  string name;
++  metatype2string(metatype, name);
++  writeString(attribId, name);
+ }
+ 
+ // Common attributes.  Attributes with multiple uses
+diff --git a/decompiler/op.cc b/decompiler/op.cc
+index cc4b68d..8d385c5 100644
+--- a/decompiler/op.cc
++++ b/decompiler/op.cc
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ #include "op.hh"
++#include "romwright_ir_state.hh"
+ #include "funcdata.hh"
+ 
+ namespace ghidra {
+@@ -413,7 +414,9 @@ void PcodeOp::encode(Encoder &encoder) const
+ 
+ {
+   encoder.openElement(ELEM_OP);
+-  encoder.writeSignedInteger(ATTRIB_CODE, (int4)code());
++  const auto projection = romwrightIrProjections().find(this);
++  bool projected = projection != romwrightIrProjections().end();
++  encoder.writeSignedInteger(ATTRIB_CODE, (int4)(projected ? projection->second : code()));
+   start.encode(encoder);
+   if (output==(Varnode *)0) {
+     encoder.openElement(ELEM_VOID);
+@@ -424,7 +427,7 @@ void PcodeOp::encode(Encoder &encoder) const
+     encoder.writeUnsignedInteger(ATTRIB_REF, output->getCreateIndex());
+     encoder.closeElement(ELEM_ADDR);
+   }
+-  for(int4 i=0;i<inrefs.size();++i) {
++  for(int4 i=projected ? 1 : 0;i<inrefs.size();++i) {
+     const Varnode *vn = getIn(i);
+     if (vn == (const Varnode *)0) {
+       encoder.openElement(ELEM_VOID);
+diff --git a/decompiler/pcodeinject.hh b/decompiler/pcodeinject.hh
+index f123ac7..91d178e 100644
+--- a/decompiler/pcodeinject.hh
++++ b/decompiler/pcodeinject.hh
+@@ -223,6 +223,7 @@ public:
+   PcodeInjectLibrary(Architecture *g,uint4 tmpbase) { glb = g; tempbase = tmpbase; }	///< Constructor
+   virtual ~PcodeInjectLibrary(void);				///< Destructor
+   uint4 getUniqueBase(void) const { return tempbase; }		///< Get the (current) offset for building temporary registers
++  const map<string,int4> &getCallFixups(void) const { return callFixupMap; }
+   int4 getPayloadId(int4 type,const string &nm) const;		///< Map name and type to the payload id
+   InjectPayload *getPayload(int4 id) const { return injection[id]; }	///< Get the InjectPayload by id
+   string getCallFixupName(int4 injectid) const;			///< Get the call-fixup name associated with an id
+diff --git a/decompiler/printc.cc b/decompiler/printc.cc
+index 9c6db91..f2f3d9a 100644
+--- a/decompiler/printc.cc
++++ b/decompiler/printc.cc
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ #include "printc.hh"
++#include "romwright_ir_state.hh"
+ #include "funcdata.hh"
+ 
+ namespace ghidra {
+@@ -612,6 +613,14 @@ void PrintC::opBranchind(const PcodeOp *op)
+ void PrintC::opCall(const PcodeOp *op)
+ 
+ {
++  const auto projection = romwrightIrProjections().find(op);
++  if (projection != romwrightIrProjections().end()) {
++    OpCode opcode = projection->second;
++    pushOp((opcode == CPUI_INT_DIV || opcode == CPUI_INT_SDIV) ? &divide : &modulo,op);
++    pushVn(op->getIn(2),op,mods);
++    pushVn(op->getIn(1),op,mods);
++    return;
++  }
+   pushOp(&function_call,op);
+   const Varnode *callpoint = op->getIn(0);
+   FuncCallSpecs *fc;
+diff --git a/decompiler/printlanguage.cc b/decompiler/printlanguage.cc
+index b96e226..e8e0236 100644
+--- a/decompiler/printlanguage.cc
++++ b/decompiler/printlanguage.cc
+@@ -276,6 +276,22 @@ bool PrintLanguage::parentheses(const OpToken *op2)
+   switch(topToken->type) {
+   case OpToken::space:
+   case OpToken::binary:
++    // Make mixed arithmetic/bitwise grouping explicit for C compilers'
++    // -Wparentheses without changing the native expression tree.
++    if (topToken->type == OpToken::binary && op2->type == OpToken::binary) {
++      const string &parent = topToken->print1;
++      const string &child = op2->print1;
++      if ((parent == "&" || parent == "^" || parent == "|") &&
++          (child == "+" || child == "-" || child == "*" || child == "/" || child == "%" ||
++           child == "<<" || child == ">>" || child == "==" || child == "!=" ||
++           child == "<" || child == "<=" || child == ">" || child == ">=" ||
++           child == "&&" || child == "||" ||
++           ((child == "&" || child == "^" || child == "|") && child != parent)))
++        return true;
++      if (((parent == "<<" || parent == ">>") && (child == "+" || child == "-")) ||
++          (parent == "||" && child == "&&"))
++        return true;
++    }
+     if (topToken->precedence > op2->precedence) return true;
+     if (topToken->precedence < op2->precedence) return false;
+     if (topToken->associative && (topToken == op2)) return false;
+diff --git a/decompiler/sleigh.cc b/decompiler/sleigh.cc
+index f6b718d..887feea 100644
+--- a/decompiler/sleigh.cc
++++ b/decompiler/sleigh.cc
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ #include "sleigh.hh"
++#include "romwright_ppc_return.hh"
+ #include "loadimage.hh"
+ 
+ namespace ghidra {
+@@ -153,6 +154,11 @@ void SleighBuilder::generateLocation(const VarnodeTpl *vntpl,VarnodeData &vn)
+ 
+ {
+   vn.space = vntpl->getSpace().fixSpace(*walker);
++  // A constructor whose operand exports nothing leaves its handle without a
++  // space (seen in the Xenon VMX128 tables); treat the word as bad data
++  // rather than dereferencing null.
++  if (vn.space == (AddrSpace *)0)
++    throw BadDataError("Unresolved varnode space");
+   vn.size = vntpl->getSize().fix(*walker);
+   if (vn.space == const_space)
+     vn.offset = vntpl->getOffset().fix(*walker) & calc_mask(vn.size);
+@@ -178,6 +184,8 @@ AddrSpace *SleighBuilder::generatePointer(const VarnodeTpl *vntpl,VarnodeData &v
+ {
+   const FixedHandle &hand(walker->getFixedHandle(vntpl->getOffset().getHandleIndex()));
+   vn.space = hand.offset_space;
++  if (vn.space == (AddrSpace *)0 || hand.space == (AddrSpace *)0)
++    throw BadDataError("Unresolved pointer space");
+   vn.size = hand.offset_size;
+   if (vn.space == const_space)
+     vn.offset = hand.offset_offset & calc_mask(vn.size);
+@@ -769,11 +777,23 @@ int4 Sleigh::oneInstruction(PcodeEmit &emit,const Address &baseaddr) const
+   ParserWalker walker(pos);
+   walker.baseState();
+   pcode_cache.clear();
++  bool conditionalLrReturn = false;
++  if (powerpc_returns && pos->getLength() == 4) {
++    uint4 word = walker.getInstructionBytes(0,4);
++    if (!isBigEndian())
++      word = (word << 24) | ((word & 0xff00) << 8) | ((word >> 8) & 0xff00) | (word >> 24);
++    conditionalLrReturn = (word & 0xfc80ffff) == 0x4c000020;
++  }
+   SleighBuilder builder(&walker,discache,&pcode_cache,getConstantSpace(),getUniqueSpace(),unique_allocatemask);
+   try {
+     builder.build(walker.getConstructor()->getTempl(),-1);
+     pcode_cache.resolveRelatives();
+-    pcode_cache.emit(baseaddr,&emit);
++    if (conditionalLrReturn) {
++      PowerPcReturnEmit returns(emit,getRegister("LR"));
++      pcode_cache.emit(baseaddr,&returns);
++    } else {
++      pcode_cache.emit(baseaddr,&emit);
++    }
+   } catch(UnimplError &err) {
+     ostringstream s;
+     s << "Instruction not implemented in pcode:\n ";
+diff --git a/decompiler/sleigh.hh b/decompiler/sleigh.hh
+index 95249cf..0997e57 100644
+--- a/decompiler/sleigh.hh
++++ b/decompiler/sleigh.hh
+@@ -166,6 +166,7 @@ class Sleigh : public SleighBase {
+   mutable DisassemblyCache *discache;	///< Cache of recently parsed instructions
+   mutable PcodeCacher pcode_cache;	///< Cache of p-code data just prior to emitting
+   void clearForDelete(void);		///< Delete the context and disassembly caches
++  bool powerpc_returns = false;
+ protected:
+   ParserContext *obtainContext(const Address &addr,ParserContext::parse_state state) const;
+   void resolve(ParserContext &pos) const;	///< Generate a parse tree suitable for disassembly
+@@ -180,6 +181,7 @@ public:
+   virtual void allowContextSet(bool val) const;
+   virtual int4 instructionLength(const Address &baseaddr) const;
+   virtual int4 oneInstruction(PcodeEmit &emit,const Address &baseaddr) const;
++  void setPowerPcReturns(bool enabled) { powerpc_returns = enabled; }
+   virtual int4 printAssembly(AssemblyEmit &emit,const Address &baseaddr) const;
+ };
+ 
+diff --git a/decompiler/sleigh_arch.cc b/decompiler/sleigh_arch.cc
+index 3ee5e85..4981d76 100644
+--- a/decompiler/sleigh_arch.cc
++++ b/decompiler/sleigh_arch.cc
+@@ -183,6 +183,7 @@ Translate *SleighArchitecture::buildTranslator(DocumentStorage &store)
+   }
+   pair<map<int4,Sleigh>::iterator,bool> res;
+   res = translators.emplace(piecewise_construct,forward_as_tuple(languageindex),forward_as_tuple(loader,context));
++  res.first->second.setPowerPcReturns(description[languageindex].getProcessor() == "PowerPC");
+   return &(*res.first).second;
+ }
+ 
+@@ -429,6 +430,16 @@ void SleighArchitecture::modifySpaces(Translate *trans)
+   }
+ }
+ 
++void SleighArchitecture::postSpecFile(void)
++
++{
++  Architecture::postSpecFile();
++  // Match raw-worker ARM return recovery without replacing an explicit ABI.
++  if (defaultReturnAddr.space == nullptr &&
++      description[languageindex].getProcessor() == "ARM")
++    defaultReturnAddr = translate->getRegister("lr");
++}
++
+ /// Prepare \b this SleighArchitecture for analyzing the given executable image.
+ /// Full initialization, including creation of the Translate object, still must be
+ /// performed by calling the init() method.
+diff --git a/decompiler/sleigh_arch.hh b/decompiler/sleigh_arch.hh
+index 5b40bdf..f4ec97e 100644
+--- a/decompiler/sleigh_arch.hh
++++ b/decompiler/sleigh_arch.hh
+@@ -128,6 +128,7 @@ protected:
+   virtual void buildSymbols(DocumentStorage &store);
+   virtual void buildSpecFile(DocumentStorage &store);
+   virtual void modifySpaces(Translate *trans);
++  virtual void postSpecFile(void);
+   virtual void resolveArchitecture(void);
+ public:
+   SleighArchitecture(const string &fname,const string &targ,ostream *estream);	///< Construct given executable file
+diff --git a/decompiler/variable.cc b/decompiler/variable.cc
+index c20ac6c..220c229 100644
+--- a/decompiler/variable.cc
++++ b/decompiler/variable.cc
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ #include "variable.hh"
++#include "romwright_budget.hh"
+ #include "op.hh"
+ #include "expression.hh"
+ #include "database.hh"
+@@ -359,6 +360,7 @@ void HighVariable::updateFlags(void) const
+   vector<Varnode *>::const_iterator iter;
+   uint4 fl = 0;
+ 
++  WorkBudget::current().charge(inst.size());
+   for(iter=inst.begin();iter!=inst.end();++iter)
+     fl |= (*iter)->getFlags();
+ 
+@@ -769,6 +771,7 @@ Varnode *HighVariable::getTiedVarnode(void) const
+ {
+   int4 i;
+ 
++  WorkBudget::current().charge(inst.size());
+   for(i=0;i<inst.size();++i)
+     if (inst[i]->isAddrTied())
+       return inst[i];
+@@ -862,7 +865,21 @@ void HighVariable::encode(Encoder &encoder) const
+     if (symboloffset >= 0)
+       encoder.writeSignedInteger(ATTRIB_OFFSET, symboloffset);
+   }
+-  getType()->encodeRef(encoder);
++  getType()->encode(encoder);
++  if (symbol != (Symbol *)0) {
++    encoder.openElement(ELEM_SYMBOL);
++    encoder.writeString(ATTRIB_NAME, symbol->getName());
++    encoder.writeBool(ATTRIB_VOLATILE, symbol->isVolatile());
++    encoder.writeBool(ATTRIB_PERSISTS, symbol->getScope()->isGlobal());
++    symbol->getType()->encode(encoder);
++    SymbolEntry *entry = symbol->numEntries() == 0 ? (SymbolEntry *)0 : symbol->getFirstWholeMap();
++    if (entry != (SymbolEntry *)0 && entry->isMapEntry()) {	// A dynamic or unassigned entry has no address
++      const Address &entryAddr(static_cast<MapEntry *>(entry)->getAddr());
++      if (!entryAddr.isInvalid())
++	entryAddr.encode(encoder);
++    }
++    encoder.closeElement(ELEM_SYMBOL);
++  }
+   for(int4 j=0;j<inst.size();++j) {
+     encoder.openElement(ELEM_ADDR);
+     encoder.writeUnsignedInteger(ATTRIB_REF, inst[j]->getCreateIndex());
+diff --git a/decompiler/varnode.cc b/decompiler/varnode.cc
+index 2131e66..2cb9b06 100644
+--- a/decompiler/varnode.cc
++++ b/decompiler/varnode.cc
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ #include "varnode.hh"
++#include "romwright_budget.hh"
+ #include "funcdata.hh"
+ 
+ namespace ghidra {
+@@ -318,9 +319,13 @@ void Varnode::eraseDescend(PcodeOp *op)
+ {
+   list<PcodeOp *>::iterator iter;
+ 
++  uint8 steps = 1;
+   iter = descend.begin();
+-  while (*iter != op)		// Find this op in list of vn's descendants
++  while (*iter != op) {		// Find this op in list of vn's descendants
+     iter++;
++    steps += 1;
++  }
++  WorkBudget::current().charge(steps);
+   descend.erase(iter);		// Remove it from list
+   setFlags(Varnode::coverdirty);
+ }

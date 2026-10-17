@@ -1,0 +1,15 @@
+{
+  "id": "m20-006",
+  "recorded_at": "2026-10-09T04:56:59.529054+00:00",
+  "thresholds": {
+    "named_recall": 0.95
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "8522 functions, symbols.txt recall 1.0000 over 8522 dtk rows, round-trip 8522/8522",
+  "metrics": {
+    "named_recall": 1.0,
+    "dtk_rows": 8522,
+    "roundtrip": 8522
+  }
+}

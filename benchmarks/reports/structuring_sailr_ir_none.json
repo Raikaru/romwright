@@ -1,0 +1,713 @@
+{
+ "benchmark": "structuring_models",
+ "date": "2026-10-07",
+ "commit": "7e29f17c211f732c7001d01778fe56ad52c42b50",
+ "ghidra_opt": "/tmp/rw-structmodels-build/ghidra_opt",
+ "ir_passes": "",
+ "configs": {
+  "baseline": null,
+  "all": "all",
+  "five": "break_continue,collapsed_edges,switch_tails,loop_exits,irreducible_entry"
+ },
+ "totals": {
+  "baseline": {
+   "gotos": 1547,
+   "labels": 918,
+   "lines": 77607,
+   "statements": 51164,
+   "better": 0,
+   "worse": 0,
+   "functions": 1800
+  },
+  "all": {
+   "gotos": 919,
+   "labels": 597,
+   "lines": 78801,
+   "statements": 51695,
+   "better": 186,
+   "worse": 0,
+   "functions": 1800,
+   "applied.break_continue": 8,
+   "applied.collapsed_edges": 0,
+   "applied.else_join": 45,
+   "applied.irreducible_entry": 91,
+   "applied.loop_exits": 119,
+   "applied.sink_join": 33,
+   "applied.switch_tails": 331,
+   "remaining.skip_after/no-tail": 52,
+   "remaining.loop_exit/no-tail": 183,
+   "remaining.cross_arm/no-tail": 121,
+   "remaining.into_loop/no-tail": 55,
+   "remaining.backward/tail<=6": 23,
+   "remaining.loop_exit/tail<=6": 8,
+   "remaining.exit_nested/no-tail": 56,
+   "remaining.exit_nested/tail<=12": 1,
+   "remaining.into_arm/no-tail": 67,
+   "remaining.loop_exit/tail<=12": 3,
+   "remaining.skip_after/tail<=6": 7,
+   "remaining.skip_after/tail<=12": 4,
+   "remaining.exit_nested/tail<=24": 4,
+   "remaining.exit_nested/tail<=6": 9,
+   "remaining.backward/tail<=12": 1,
+   "remaining.other/tail<=24": 1,
+   "remaining.backward/no-tail": 160,
+   "remaining.cross_arm/tail<=12": 2,
+   "refused": 1,
+   "remaining.case/no-tail": 61,
+   "remaining.exit_nested/tail<=64": 4,
+   "remaining.loop_exit/tail<=24": 1,
+   "remaining.flat_skip/no-tail": 3,
+   "remaining.cross_arm/tail<=6": 4,
+   "remaining.into_arm/tail<=6": 7,
+   "remaining.into_loop/tail<=6": 36,
+   "remaining.other/no-tail": 21,
+   "remaining.flat_skip/tail<=12": 1,
+   "remaining.other/tail<=6": 4
+  },
+  "five": {
+   "gotos": 974,
+   "labels": 627,
+   "lines": 78781,
+   "statements": 51782,
+   "better": 175,
+   "worse": 0,
+   "functions": 1800,
+   "applied.break_continue": 6,
+   "applied.collapsed_edges": 0,
+   "applied.irreducible_entry": 82,
+   "applied.loop_exits": 122,
+   "applied.switch_tails": 362,
+   "remaining.skip_after/tail<=64": 1,
+   "remaining.exit_nested/no-tail": 63,
+   "remaining.skip_after/no-tail": 80,
+   "remaining.loop_exit/no-tail": 183,
+   "remaining.cross_arm/no-tail": 117,
+   "remaining.into_loop/no-tail": 55,
+   "remaining.backward/tail<=6": 23,
+   "remaining.loop_exit/tail<=6": 9,
+   "remaining.exit_nested/tail<=12": 2,
+   "remaining.into_arm/no-tail": 68,
+   "remaining.loop_exit/tail<=12": 3,
+   "remaining.skip_after/tail<=6": 15,
+   "remaining.skip_after/tail<=12": 8,
+   "remaining.exit_nested/tail<=24": 7,
+   "remaining.exit_nested/tail<=6": 9,
+   "remaining.backward/tail<=12": 1,
+   "remaining.other/tail<=24": 1,
+   "remaining.backward/no-tail": 154,
+   "remaining.cross_arm/tail<=12": 2,
+   "remaining.skip_after/tail<=24": 7,
+   "refused": 1,
+   "remaining.case/no-tail": 61,
+   "remaining.exit_nested/tail<=64": 6,
+   "remaining.loop_exit/tail<=24": 1,
+   "remaining.flat_skip/no-tail": 3,
+   "remaining.cross_arm/tail<=6": 4,
+   "remaining.into_arm/tail<=6": 9,
+   "remaining.into_loop/tail<=6": 36,
+   "remaining.other/no-tail": 21,
+   "remaining.flat_skip/tail<=12": 1,
+   "remaining.other/tail<=6": 4
+  }
+ },
+ "images": [
+  {
+   "image": "gba-pokeemerald",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 53,
+     "labels": 34,
+     "lines": 4806,
+     "statements": 2878,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 1,
+     "labels": 1,
+     "lines": 4875,
+     "statements": 2932,
+     "functions_better": 23,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 0,
+      "applied.irreducible_entry": 3,
+      "applied.loop_exits": 5,
+      "applied.sink_join": 2,
+      "applied.switch_tails": 42,
+      "remaining.skip_after/no-tail": 1
+     }
+    },
+    "five": {
+     "gotos": 3,
+     "labels": 3,
+     "lines": 4873,
+     "statements": 2930,
+     "functions_better": 22,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 3,
+      "applied.loop_exits": 5,
+      "applied.switch_tails": 42,
+      "remaining.skip_after/tail<=64": 1,
+      "remaining.exit_nested/no-tail": 1,
+      "remaining.skip_after/no-tail": 1
+     }
+    }
+   }
+  },
+  {
+   "image": "gc-animal-crossing",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 44,
+     "labels": 24,
+     "lines": 7590,
+     "statements": 4532,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 22,
+     "labels": 14,
+     "lines": 7614,
+     "statements": 4539,
+     "functions_better": 8,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 1,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 7,
+      "applied.irreducible_entry": 0,
+      "applied.loop_exits": 3,
+      "applied.sink_join": 3,
+      "applied.switch_tails": 8,
+      "remaining.loop_exit/no-tail": 9,
+      "remaining.cross_arm/no-tail": 3,
+      "remaining.into_loop/no-tail": 2,
+      "remaining.backward/tail<=6": 2,
+      "remaining.loop_exit/tail<=6": 2,
+      "remaining.exit_nested/no-tail": 1,
+      "remaining.exit_nested/tail<=12": 1,
+      "remaining.into_arm/no-tail": 2
+     }
+    },
+    "five": {
+     "gotos": 30,
+     "labels": 17,
+     "lines": 7602,
+     "statements": 4545,
+     "functions_better": 7,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 1,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 0,
+      "applied.loop_exits": 3,
+      "applied.switch_tails": 10,
+      "remaining.loop_exit/no-tail": 9,
+      "remaining.cross_arm/no-tail": 3,
+      "remaining.into_loop/no-tail": 2,
+      "remaining.backward/tail<=6": 2,
+      "remaining.loop_exit/tail<=6": 2,
+      "remaining.skip_after/no-tail": 7,
+      "remaining.exit_nested/tail<=12": 2,
+      "remaining.exit_nested/no-tail": 1,
+      "remaining.into_arm/no-tail": 2
+     }
+    }
+   }
+  },
+  {
+   "image": "nds-pokeheartgold-arm9",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 9,
+     "labels": 7,
+     "lines": 4003,
+     "statements": 2349,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 0,
+     "labels": 0,
+     "lines": 4022,
+     "statements": 2349,
+     "functions_better": 3,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 3,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 0,
+      "applied.irreducible_entry": 4,
+      "applied.loop_exits": 0,
+      "applied.sink_join": 0,
+      "applied.switch_tails": 2
+     }
+    },
+    "five": {
+     "gotos": 0,
+     "labels": 0,
+     "lines": 4022,
+     "statements": 2349,
+     "functions_better": 3,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 3,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 4,
+      "applied.loop_exits": 0,
+      "applied.switch_tails": 2
+     }
+    }
+   }
+  },
+  {
+   "image": "ps2-capcom-fighting-evolution",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 8,
+     "labels": 7,
+     "lines": 5482,
+     "statements": 3330,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 6,
+     "labels": 5,
+     "lines": 5488,
+     "statements": 3334,
+     "functions_better": 2,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 0,
+      "applied.irreducible_entry": 0,
+      "applied.loop_exits": 1,
+      "applied.sink_join": 0,
+      "applied.switch_tails": 1,
+      "remaining.backward/tail<=6": 2,
+      "remaining.loop_exit/tail<=12": 1,
+      "remaining.skip_after/tail<=6": 2,
+      "remaining.skip_after/tail<=12": 1
+     }
+    },
+    "five": {
+     "gotos": 6,
+     "labels": 5,
+     "lines": 5488,
+     "statements": 3334,
+     "functions_better": 2,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 0,
+      "applied.loop_exits": 1,
+      "applied.switch_tails": 1,
+      "remaining.backward/tail<=6": 2,
+      "remaining.loop_exit/tail<=12": 1,
+      "remaining.skip_after/tail<=6": 2,
+      "remaining.skip_after/tail<=12": 1
+     }
+    }
+   }
+  },
+  {
+   "image": "ps2-dungeon-game",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 124,
+     "labels": 98,
+     "lines": 10366,
+     "statements": 7291,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 52,
+     "labels": 44,
+     "lines": 10481,
+     "statements": 7334,
+     "functions_better": 25,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 2,
+      "applied.irreducible_entry": 24,
+      "applied.loop_exits": 4,
+      "applied.sink_join": 10,
+      "applied.switch_tails": 32,
+      "remaining.cross_arm/no-tail": 15,
+      "remaining.into_loop/no-tail": 11,
+      "remaining.exit_nested/tail<=24": 1,
+      "remaining.exit_nested/no-tail": 16,
+      "remaining.loop_exit/no-tail": 2,
+      "remaining.loop_exit/tail<=12": 1,
+      "remaining.exit_nested/tail<=6": 2,
+      "remaining.skip_after/no-tail": 2,
+      "remaining.backward/tail<=12": 1,
+      "remaining.into_arm/no-tail": 1
+     }
+    },
+    "five": {
+     "gotos": 64,
+     "labels": 55,
+     "lines": 10452,
+     "statements": 7332,
+     "functions_better": 24,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 24,
+      "applied.loop_exits": 4,
+      "applied.switch_tails": 32,
+      "remaining.cross_arm/no-tail": 15,
+      "remaining.into_loop/no-tail": 11,
+      "remaining.exit_nested/tail<=24": 1,
+      "remaining.exit_nested/no-tail": 22,
+      "remaining.loop_exit/no-tail": 2,
+      "remaining.loop_exit/tail<=12": 1,
+      "remaining.exit_nested/tail<=6": 2,
+      "remaining.skip_after/no-tail": 4,
+      "remaining.skip_after/tail<=12": 2,
+      "remaining.skip_after/tail<=6": 2,
+      "remaining.backward/tail<=12": 1,
+      "remaining.into_arm/no-tail": 1
+     }
+    }
+   }
+  },
+  {
+   "image": "psv-need-for-speed-most-wanted",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 23,
+     "labels": 23,
+     "lines": 12404,
+     "statements": 9426,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 15,
+     "labels": 15,
+     "lines": 12417,
+     "statements": 9431,
+     "functions_better": 6,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 0,
+      "applied.irreducible_entry": 2,
+      "applied.loop_exits": 1,
+      "applied.sink_join": 3,
+      "applied.switch_tails": 2,
+      "remaining.loop_exit/no-tail": 3,
+      "remaining.exit_nested/no-tail": 4,
+      "remaining.cross_arm/no-tail": 4,
+      "remaining.other/tail<=24": 1,
+      "remaining.backward/no-tail": 2,
+      "remaining.into_loop/no-tail": 1
+     }
+    },
+    "five": {
+     "gotos": 18,
+     "labels": 18,
+     "lines": 12409,
+     "statements": 9430,
+     "functions_better": 4,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 2,
+      "applied.loop_exits": 1,
+      "applied.switch_tails": 2,
+      "remaining.loop_exit/no-tail": 3,
+      "remaining.skip_after/no-tail": 3,
+      "remaining.exit_nested/no-tail": 4,
+      "remaining.cross_arm/no-tail": 4,
+      "remaining.other/tail<=24": 1,
+      "remaining.backward/no-tail": 2,
+      "remaining.into_loop/no-tail": 1
+     }
+    }
+   }
+  },
+  {
+   "image": "psx-darkstalkers-3",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 13,
+     "labels": 11,
+     "lines": 3034,
+     "statements": 1584,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 2,
+     "labels": 2,
+     "lines": 3058,
+     "statements": 1601,
+     "functions_better": 4,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 0,
+      "applied.irreducible_entry": 1,
+      "applied.loop_exits": 0,
+      "applied.sink_join": 1,
+      "applied.switch_tails": 9,
+      "remaining.cross_arm/no-tail": 1,
+      "remaining.cross_arm/tail<=12": 1
+     }
+    },
+    "five": {
+     "gotos": 3,
+     "labels": 3,
+     "lines": 3057,
+     "statements": 1601,
+     "functions_better": 4,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 0,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 1,
+      "applied.loop_exits": 0,
+      "applied.switch_tails": 9,
+      "remaining.cross_arm/no-tail": 1,
+      "remaining.skip_after/no-tail": 1,
+      "remaining.cross_arm/tail<=12": 1
+     }
+    }
+   }
+  },
+  {
+   "image": "x360-black-ops-2",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 45,
+     "labels": 31,
+     "lines": 7757,
+     "statements": 5059,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 8,
+     "labels": 7,
+     "lines": 7812,
+     "statements": 5076,
+     "functions_better": 17,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 1,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 4,
+      "applied.irreducible_entry": 8,
+      "applied.loop_exits": 0,
+      "applied.sink_join": 5,
+      "applied.switch_tails": 19,
+      "remaining.exit_nested/tail<=24": 3,
+      "remaining.cross_arm/no-tail": 3,
+      "remaining.loop_exit/no-tail": 1,
+      "remaining.skip_after/no-tail": 1
+     }
+    },
+    "five": {
+     "gotos": 21,
+     "labels": 10,
+     "lines": 7799,
+     "statements": 5085,
+     "functions_better": 12,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 1,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 3,
+      "applied.loop_exits": 0,
+      "applied.switch_tails": 20,
+      "remaining.exit_nested/tail<=24": 6,
+      "remaining.cross_arm/no-tail": 3,
+      "remaining.loop_exit/no-tail": 1,
+      "remaining.skip_after/tail<=24": 7,
+      "remaining.skip_after/tail<=12": 2,
+      "remaining.skip_after/no-tail": 1,
+      "remaining.skip_after/tail<=6": 1
+     }
+    }
+   }
+  },
+  {
+   "image": "x86-libc",
+   "decompiled": 200,
+   "configs": {
+    "baseline": {
+     "gotos": 1228,
+     "labels": 683,
+     "lines": 22165,
+     "statements": 14715,
+     "functions_better": 0,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {}
+    },
+    "all": {
+     "gotos": 813,
+     "labels": 509,
+     "lines": 23034,
+     "statements": 15099,
+     "functions_better": 98,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 3,
+      "applied.collapsed_edges": 0,
+      "applied.else_join": 32,
+      "applied.irreducible_entry": 49,
+      "applied.loop_exits": 105,
+      "applied.sink_join": 9,
+      "applied.switch_tails": 216,
+      "refused": 1,
+      "remaining.into_loop/no-tail": 41,
+      "remaining.backward/no-tail": 158,
+      "remaining.case/no-tail": 61,
+      "remaining.exit_nested/no-tail": 35,
+      "remaining.into_arm/no-tail": 64,
+      "remaining.loop_exit/no-tail": 168,
+      "remaining.cross_arm/no-tail": 95,
+      "remaining.exit_nested/tail<=64": 4,
+      "remaining.skip_after/no-tail": 48,
+      "remaining.skip_after/tail<=6": 5,
+      "remaining.loop_exit/tail<=24": 1,
+      "remaining.flat_skip/no-tail": 3,
+      "remaining.backward/tail<=6": 19,
+      "remaining.exit_nested/tail<=6": 7,
+      "remaining.cross_arm/tail<=6": 4,
+      "remaining.cross_arm/tail<=12": 1,
+      "remaining.loop_exit/tail<=6": 6,
+      "remaining.into_arm/tail<=6": 7,
+      "remaining.into_loop/tail<=6": 36,
+      "remaining.other/no-tail": 21,
+      "remaining.flat_skip/tail<=12": 1,
+      "remaining.loop_exit/tail<=12": 1,
+      "remaining.skip_after/tail<=12": 3,
+      "remaining.other/tail<=6": 4
+     }
+    },
+    "five": {
+     "gotos": 829,
+     "labels": 516,
+     "lines": 23079,
+     "statements": 15176,
+     "functions_better": 97,
+     "functions_worse": 0,
+     "worse": [],
+     "stats": {
+      "functions": 200,
+      "applied.break_continue": 1,
+      "applied.collapsed_edges": 0,
+      "applied.irreducible_entry": 45,
+      "applied.loop_exits": 108,
+      "applied.switch_tails": 244,
+      "refused": 1,
+      "remaining.into_loop/no-tail": 41,
+      "remaining.backward/no-tail": 152,
+      "remaining.case/no-tail": 61,
+      "remaining.exit_nested/no-tail": 35,
+      "remaining.into_arm/no-tail": 65,
+      "remaining.skip_after/no-tail": 63,
+      "remaining.loop_exit/no-tail": 168,
+      "remaining.cross_arm/no-tail": 91,
+      "remaining.exit_nested/tail<=64": 6,
+      "remaining.skip_after/tail<=6": 10,
+      "remaining.loop_exit/tail<=24": 1,
+      "remaining.flat_skip/no-tail": 3,
+      "remaining.backward/tail<=6": 19,
+      "remaining.exit_nested/tail<=6": 7,
+      "remaining.cross_arm/tail<=6": 4,
+      "remaining.cross_arm/tail<=12": 1,
+      "remaining.loop_exit/tail<=6": 7,
+      "remaining.into_arm/tail<=6": 9,
+      "remaining.into_loop/tail<=6": 36,
+      "remaining.other/no-tail": 21,
+      "remaining.flat_skip/tail<=12": 1,
+      "remaining.loop_exit/tail<=12": 1,
+      "remaining.skip_after/tail<=12": 3,
+      "remaining.other/tail<=6": 4
+     }
+    }
+   }
+  }
+ ]
+}

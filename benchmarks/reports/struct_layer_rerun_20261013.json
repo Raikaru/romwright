@@ -1,0 +1,501 @@
+{
+ "generated": "2026-10-13",
+ "tag": "struct-layer-rerun",
+ "binary": "final-bin10 (default arm); final-bin5 (off arm: the off path is unchanged by the later edits)",
+ "root_cause": "the first m22-003 arms ran --layers romwright alone: the harness took the callees whose prototypes are asserted from the m2c splat assembly only, so romwright asserted just the target (dds off 48/164/63.275 against the Ps2Lanes reports 61/196/76.802). Fixed in the harness by Ps2Lanes; these arms ran --layers romwright,m2c in a copy of the Ps2Lanes work dir (gh: a fresh clone).",
+ "m22-003": {
+  "dds": {
+   "context": {
+    "off": {
+     "exact": 61,
+     "compiled": 196,
+     "mean_percent": 76.802
+    },
+    "default": {
+     "exact": 61,
+     "compiled": 196,
+     "mean_percent": 76.818
+    },
+    "paired": {
+     "better": 1,
+     "worse": 1,
+     "same": 198,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "standalone": {
+    "off": {
+     "exact": 48,
+     "compiled": 188,
+     "mean_percent": 72.054
+    },
+    "default": {
+     "exact": 48,
+     "compiled": 188,
+     "mean_percent": 72.07
+    },
+    "paired": {
+     "better": 1,
+     "worse": 1,
+     "same": 198,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "best": {
+    "off": {
+     "exact": 61,
+     "compiled": 196,
+     "mean_percent": 77.173
+    },
+    "default": {
+     "exact": 61,
+     "compiled": 196,
+     "mean_percent": 77.188
+    },
+    "paired": {
+     "better": 1,
+     "worse": 1,
+     "same": 198,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   }
+  },
+  "rc": {
+   "context": {
+    "off": {
+     "exact": 26,
+     "compiled": 199,
+     "mean_percent": 68.095
+    },
+    "default": {
+     "exact": 26,
+     "compiled": 199,
+     "mean_percent": 68.104
+    },
+    "paired": {
+     "better": 3,
+     "worse": 2,
+     "same": 195,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "standalone": {
+    "off": {
+     "exact": 23,
+     "compiled": 191,
+     "mean_percent": 65.199
+    },
+    "default": {
+     "exact": 23,
+     "compiled": 191,
+     "mean_percent": 65.208
+    },
+    "paired": {
+     "better": 3,
+     "worse": 2,
+     "same": 195,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "best": {
+    "off": {
+     "exact": 26,
+     "compiled": 199,
+     "mean_percent": 68.095
+    },
+    "default": {
+     "exact": 26,
+     "compiled": 199,
+     "mean_percent": 68.104
+    },
+    "paired": {
+     "better": 3,
+     "worse": 2,
+     "same": 195,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   }
+  },
+  "p4": {
+   "context": {
+    "off": {
+     "exact": 60,
+     "compiled": 193,
+     "mean_percent": 79.121
+    },
+    "default": {
+     "exact": 60,
+     "compiled": 193,
+     "mean_percent": 79.129
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "standalone": {
+    "off": {
+     "exact": 45,
+     "compiled": 145,
+     "mean_percent": 56.577
+    },
+    "default": {
+     "exact": 45,
+     "compiled": 145,
+     "mean_percent": 56.585
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "best": {
+    "off": {
+     "exact": 61,
+     "compiled": 196,
+     "mean_percent": 80.072
+    },
+    "default": {
+     "exact": 61,
+     "compiled": 196,
+     "mean_percent": 80.079
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   }
+  },
+  "gh": {
+   "context": {
+    "off": {
+     "exact": 78,
+     "compiled": 199,
+     "mean_percent": 81.988
+    },
+    "default": {
+     "exact": 78,
+     "compiled": 199,
+     "mean_percent": 82.057
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "standalone": {
+    "off": {
+     "exact": 76,
+     "compiled": 198,
+     "mean_percent": 80.976
+    },
+    "default": {
+     "exact": 76,
+     "compiled": 198,
+     "mean_percent": 81.044
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "best": {
+    "off": {
+     "exact": 79,
+     "compiled": 199,
+     "mean_percent": 82.138
+    },
+    "default": {
+     "exact": 79,
+     "compiled": 199,
+     "mean_percent": 82.207
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   }
+  }
+ },
+ "m22-002": {
+  "mwcc-20261010": {
+   "context": {
+    "off": {
+     "exact": 55,
+     "compiled": 193,
+     "mean_percent": 76.986
+    },
+    "default": {
+     "exact": 55,
+     "compiled": 193,
+     "mean_percent": 76.987
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "standalone": {
+    "off": {
+     "exact": 42,
+     "compiled": 148,
+     "mean_percent": 56.976
+    },
+    "default": {
+     "exact": 42,
+     "compiled": 148,
+     "mean_percent": 56.978
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "best": {
+    "off": {
+     "exact": 56,
+     "compiled": 196,
+     "mean_percent": 78.154
+    },
+    "default": {
+     "exact": 56,
+     "compiled": 196,
+     "mean_percent": 78.156
+    },
+    "paired": {
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "field_agreement": {
+    "off": {
+     "functions": 200,
+     "with_truth": 1,
+     "with_candidate": 1,
+     "truth_accesses": 6,
+     "agreed": 0,
+     "printed": 0,
+     "printed_wrong": 0,
+     "printing_functions": 0,
+     "field_agreement": 0.0,
+     "functions_printing_members": 0.0
+    },
+    "default": {
+     "functions": 200,
+     "with_truth": 1,
+     "with_candidate": 1,
+     "truth_accesses": 6,
+     "agreed": 0,
+     "printed": 0,
+     "printed_wrong": 0,
+     "printing_functions": 0,
+     "field_agreement": 0.0,
+     "functions_printing_members": 0.0
+    }
+   }
+  },
+  "mwcc-20261011": {
+   "context": {
+    "off": {
+     "exact": 57,
+     "compiled": 194,
+     "mean_percent": 78.321
+    },
+    "default": {
+     "exact": 57,
+     "compiled": 194,
+     "mean_percent": 78.321
+    },
+    "paired": {
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "standalone": {
+    "off": {
+     "exact": 38,
+     "compiled": 148,
+     "mean_percent": 56.463
+    },
+    "default": {
+     "exact": 38,
+     "compiled": 148,
+     "mean_percent": 56.463
+    },
+    "paired": {
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "best": {
+    "off": {
+     "exact": 57,
+     "compiled": 198,
+     "mean_percent": 79.501
+    },
+    "default": {
+     "exact": 57,
+     "compiled": 198,
+     "mean_percent": 79.501
+    },
+    "paired": {
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "exact_gained": 0,
+     "exact_lost": 0
+    }
+   },
+   "field_agreement": {
+    "off": {
+     "functions": 200,
+     "with_truth": 4,
+     "with_candidate": 4,
+     "truth_accesses": 9,
+     "agreed": 0,
+     "printed": 0,
+     "printed_wrong": 0,
+     "printing_functions": 0,
+     "field_agreement": 0.0,
+     "functions_printing_members": 0.0
+    },
+    "default": {
+     "functions": 200,
+     "with_truth": 4,
+     "with_candidate": 4,
+     "truth_accesses": 9,
+     "agreed": 7,
+     "printed": 7,
+     "printed_wrong": 0,
+     "printing_functions": 2,
+     "field_agreement": 0.7778,
+     "functions_printing_members": 0.5
+    }
+   }
+  },
+  "eegcc": {
+   "context": {
+    "off": {
+     "exact": 106,
+     "compiled": 199,
+     "mean_percent": 87.151
+    },
+    "default": {
+     "exact": 107,
+     "compiled": 199,
+     "mean_percent": 87.177
+    },
+    "paired": {
+     "better": 2,
+     "worse": 1,
+     "same": 197,
+     "exact_gained": 1,
+     "exact_lost": 0
+    }
+   },
+   "standalone": {
+    "off": {
+     "exact": 100,
+     "compiled": 184,
+     "mean_percent": 80.394
+    },
+    "default": {
+     "exact": 101,
+     "compiled": 184,
+     "mean_percent": 80.725
+    },
+    "paired": {
+     "better": 2,
+     "worse": 1,
+     "same": 197,
+     "exact_gained": 1,
+     "exact_lost": 0
+    }
+   },
+   "best": {
+    "off": {
+     "exact": 110,
+     "compiled": 199,
+     "mean_percent": 87.499
+    },
+    "default": {
+     "exact": 111,
+     "compiled": 199,
+     "mean_percent": 87.557
+    },
+    "paired": {
+     "better": 2,
+     "worse": 1,
+     "same": 197,
+     "exact_gained": 1,
+     "exact_lost": 0
+    }
+   },
+   "field_agreement": {
+    "off": {
+     "functions": 200,
+     "with_truth": 5,
+     "with_candidate": 5,
+     "truth_accesses": 14,
+     "agreed": 0,
+     "printed": 0,
+     "printed_wrong": 0,
+     "printing_functions": 0,
+     "field_agreement": 0.0,
+     "functions_printing_members": 0.0
+    },
+    "default": {
+     "functions": 200,
+     "with_truth": 5,
+     "with_candidate": 5,
+     "truth_accesses": 14,
+     "agreed": 7,
+     "printed": 7,
+     "printed_wrong": 0,
+     "printing_functions": 1,
+     "field_agreement": 0.5,
+     "functions_printing_members": 0.2
+    }
+   }
+  }
+ }
+}

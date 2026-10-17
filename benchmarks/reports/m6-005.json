@@ -1,6 +1,6 @@
 {
  "id": "m6-005",
- "recorded_at": "2026-09-07T09:51:28.130051+00:00",
+ "recorded_at": "2026-10-15T09:47:36.020494+00:00",
  "status": "pass",
  "passed": true,
  "summary": "1 documented commands run in two environments, 8 output lines checked, 23 client helpers all documented",

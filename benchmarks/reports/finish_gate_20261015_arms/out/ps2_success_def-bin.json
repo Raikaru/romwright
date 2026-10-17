@@ -1,0 +1,454 @@
+{
+ "wave": "/home/raikaru/runs/FinalGate2/succ-def-bin/wave.json",
+ "bin": "/home/raikaru/runs/FinalGate2/bin-def",
+ "games": {
+  "ps2-fatal-frame": {
+   "sampled": 942,
+   "decompiled": 942,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 300.5
+  },
+  "ps2-ratchet-clank-pal": {
+   "sampled": 859,
+   "decompiled": 858,
+   "success_rate": 0.9988,
+   "wave_success_rate": 1.0,
+   "classes": {
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "failures": [
+    {
+     "address": "0023aa38",
+     "success": false,
+     "seconds": 0.4,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+    }
+   ],
+   "wall_seconds": 177.3
+  },
+  "ps2-god-hand": {
+   "sampled": 980,
+   "decompiled": 980,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 357.6
+  },
+  "ps2-digital-devil-saga": {
+   "sampled": 977,
+   "decompiled": 977,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 312.0
+  },
+  "ps2-dark-chronicle": {
+   "sampled": 969,
+   "decompiled": 969,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 437.1
+  },
+  "ps2-ratchet-clank": {
+   "sampled": 861,
+   "decompiled": 860,
+   "success_rate": 0.9988,
+   "wave_success_rate": 1.0,
+   "classes": {
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "failures": [
+    {
+     "address": "00239780",
+     "success": false,
+     "seconds": 0.27,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+    }
+   ],
+   "wall_seconds": 104.3
+  },
+  "ps2-persona-4": {
+   "sampled": 975,
+   "decompiled": 974,
+   "success_rate": 0.999,
+   "wave_success_rate": 1.0,
+   "classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "failures": [
+    {
+     "address": "002be530",
+     "success": false,
+     "seconds": 60.08,
+     "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+     "class": "native runtime: native runtime: execution deadline exceeded"
+    }
+   ],
+   "wall_seconds": 278.4
+  },
+  "ps2-dark-cloud": {
+   "sampled": 937,
+   "decompiled": 888,
+   "success_rate": 0.9477,
+   "wave_success_rate": 1.0,
+   "classes": {
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo": 49
+   },
+   "failures": [
+    {
+     "address": "01dabd80",
+     "success": false,
+     "seconds": 1.09,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dac110",
+     "success": false,
+     "seconds": 1.01,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dacc50",
+     "success": false,
+     "seconds": 1.05,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dad090",
+     "success": false,
+     "seconds": 1.07,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01daff10",
+     "success": false,
+     "seconds": 1.06,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db0450",
+     "success": false,
+     "seconds": 1.05,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db0780",
+     "success": false,
+     "seconds": 1.03,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db08a0",
+     "success": false,
+     "seconds": 1.03,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db0ae0",
+     "success": false,
+     "seconds": 1.08,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db2930",
+     "success": false,
+     "seconds": 0.94,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db59d0",
+     "success": false,
+     "seconds": 0.9,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db78e0",
+     "success": false,
+     "seconds": 0.84,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db7b90",
+     "success": false,
+     "seconds": 0.81,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db8550",
+     "success": false,
+     "seconds": 0.79,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01db9330",
+     "success": false,
+     "seconds": 0.75,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dba060",
+     "success": false,
+     "seconds": 0.72,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dba230",
+     "success": false,
+     "seconds": 0.78,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbb220",
+     "success": false,
+     "seconds": 0.87,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbbef0",
+     "success": false,
+     "seconds": 0.79,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbc930",
+     "success": false,
+     "seconds": 0.76,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbcdd0",
+     "success": false,
+     "seconds": 0.77,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbcf00",
+     "success": false,
+     "seconds": 0.79,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbdcf0",
+     "success": false,
+     "seconds": 0.76,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbe760",
+     "success": false,
+     "seconds": 0.81,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbec60",
+     "success": false,
+     "seconds": 0.75,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dbf9d0",
+     "success": false,
+     "seconds": 0.73,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc0550",
+     "success": false,
+     "seconds": 0.8,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc1290",
+     "success": false,
+     "seconds": 0.72,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc1400",
+     "success": false,
+     "seconds": 0.71,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc17e0",
+     "success": false,
+     "seconds": 0.82,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc1a00",
+     "success": false,
+     "seconds": 0.72,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc1ee0",
+     "success": false,
+     "seconds": 0.81,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc35b0",
+     "success": false,
+     "seconds": 0.79,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc3880",
+     "success": false,
+     "seconds": 0.81,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc3c90",
+     "success": false,
+     "seconds": 0.72,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc5600",
+     "success": false,
+     "seconds": 0.78,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc68f0",
+     "success": false,
+     "seconds": 0.86,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc8600",
+     "success": false,
+     "seconds": 0.81,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc8eb0",
+     "success": false,
+     "seconds": 1.05,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dc9e70",
+     "success": false,
+     "seconds": 1.08,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dccd20",
+     "success": false,
+     "seconds": 1.08,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dcd1d0",
+     "success": false,
+     "seconds": 0.97,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dce480",
+     "success": false,
+     "seconds": 0.91,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dd3e40",
+     "success": false,
+     "seconds": 0.98,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dd3fc0",
+     "success": false,
+     "seconds": 0.89,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dd4420",
+     "success": false,
+     "seconds": 0.86,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dd4cc0",
+     "success": false,
+     "seconds": 0.85,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01dd5230",
+     "success": false,
+     "seconds": 0.82,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    },
+    {
+     "address": "01de1720",
+     "success": false,
+     "seconds": 0.66,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Flow exceeded maximum allo"
+    }
+   ],
+   "wall_seconds": 155.8
+  }
+ }
+}

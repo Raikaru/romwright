@@ -1,0 +1,42 @@
+{
+  "benchmark": "structuring_compile",
+  "compiler": "gcc",
+  "configs": {
+    "all": {
+      "functions": 1800,
+      "rewritten": 177,
+      "error_free": 1519,
+      "regressions": []
+    },
+    "break_continue": {
+      "functions": 1800,
+      "rewritten": 4,
+      "error_free": 1519,
+      "regressions": []
+    },
+    "collapsed_edges": {
+      "functions": 1800,
+      "rewritten": 3,
+      "error_free": 1519,
+      "regressions": []
+    },
+    "irreducible_entry": {
+      "functions": 1800,
+      "rewritten": 41,
+      "error_free": 1519,
+      "regressions": []
+    },
+    "loop_exits": {
+      "functions": 1800,
+      "rewritten": 36,
+      "error_free": 1519,
+      "regressions": []
+    },
+    "switch_tails": {
+      "functions": 1800,
+      "rewritten": 153,
+      "error_free": 1519,
+      "regressions": []
+    }
+  }
+}

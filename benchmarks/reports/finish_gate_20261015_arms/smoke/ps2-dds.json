@@ -1,0 +1,82 @@
+{
+ "name": "ps2-dds",
+ "image": "/home/raikaru/ventris-corpus/extracted/ps2-digital-devil-saga/SLUS_209.74",
+ "started": "2026-10-15T14:16:33Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 24.3,
+   "tail": [
+    "imported dds (10327 functions, r5900:LE:32:default)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-ps2-dds: ee-gcc (EE GCC 2.95 - 2.96 era (.mdebug.eabi64), High), 10327 functions as asm units, 21 binary units, 10327 symbols, 0 prototypes (0 skipped), splat `EEGCC`, compiler `ee-gcc2.96`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-ps2-dds && python3 -m pip install -r requirements.txt && python3 configure.py && ninja"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/ps2-digital-devil-saga/SLUS_209.74 /home/raikaru/runs/FinalGate2/smoke/proj-ps2-dds --name dds"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 39.9,
+   "tail": [
+    "Split 2 MB (100.00%) in defined segments",
+    "             databin:    22 KB (0.79%) 4 split, 0 cached",
+    "             textbin:   695 KB (24.00%) 17 split, 0 cached",
+    "                 asm:     2 MB (75.21%) 10327 split, 0 cached",
+    "             unknown:      0 B (0.00%) from unknown bin files",
+    "configured: 10348 objects, 0 C unit(s); run `ninja`"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 155.9,
+   "tail": [
+    "[10347/10351] as asm/data/trailer.s",
+    "[10348/10351] as asm/data/main2/0001/data_003bd63c.s",
+    "[10349/10351] link build/SLUS_209.74.elf",
+    "[10350/10351] image build/SLUS_209.74",
+    "[10351/10351] verify build/SLUS_209.74",
+    "OK  build/SLUS_209.74  sha1 6d18898e2724bf1d145392766e8ba1e678487419"
+   ],
+   "cmd": "ninja"
+  }
+ },
+ "build_ok_lines": [
+  "OK  build/SLUS_209.74  sha1 6d18898e2724bf1d145392766e8ba1e678487419"
+ ],
+ "sha1_built": "6d18898e2724bf1d145392766e8ba1e678487419",
+ "build_rc": 0,
+ "pick_pool": 3760,
+ "match_functions": [
+  "0x17b3d8",
+  "0x21a088",
+  "0x2a5a00"
+ ],
+ "matches": [
+  {
+   "function": "0x17b3d8",
+   "rc": 0,
+   "secs": 5.3,
+   "head": "FUN_0017b3d8 0x17b3d8 (32 bytes)  compiler ee-gcc2.96 -O2  metric: objdiff match %",
+   "best": "best: default  0.000%  (default 0.000%)  7 decompiles, 1 compiles, 5.3s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x21a088",
+   "rc": 0,
+   "secs": 3.0,
+   "head": "FUN_0021a088 0x21a088 (40 bytes)  compiler ee-gcc2.96 -O2  metric: objdiff match %",
+   "best": "best: default  0.000%  (default 0.000%)  7 decompiles, 1 compiles, 2.9s; stopped at the variant budget",
+   "tail": []
+  },
+  {
+   "function": "0x2a5a00",
+   "rc": 0,
+   "secs": 2.8,
+   "head": "FUN_002a5a00 0x2a5a00 (88 bytes)  compiler ee-gcc2.96 -O2  metric: objdiff match %",
+   "best": "best: default  0.000%  (default 0.000%)  7 decompiles, 1 compiles, 2.7s; stopped at the variant budget",
+   "tail": []
+  }
+ ],
+ "result": "done",
+ "finished": "2026-10-15T14:20:24Z"
+}

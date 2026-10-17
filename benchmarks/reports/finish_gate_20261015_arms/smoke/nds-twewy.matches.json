@@ -1,0 +1,23 @@
+{
+ "matches": [
+  {
+   "function": "0x02018edc",
+   "rc": 0,
+   "head": "FUN_02018edc 0x2018edc (32 bytes)  compiler mwccarm -O4,p -enum int -char signed -str noreuse -proc arm946e -gccext,on -fp soft -inline noauto -lang c99 -Cpp_exceptions off -interworking -w off -msgst",
+   "best": "best: default  100.000% exact  (default 100.000%)  1 decompiles, 1 compiles, 0.8s; stopped at an exact variant"
+  },
+  {
+   "function": "0x02027564",
+   "rc": 0,
+   "head": "FUN_02027564 0x2027564 (84 bytes)  compiler mwccarm -O4,p -enum int -char signed -str noreuse -proc arm946e -gccext,on -fp soft -inline noauto -lang c99 -Cpp_exceptions off -interworking -w off -msgst",
+   "best": "best: default  80.000%  (default 80.000%)  7 decompiles, 2 compiles, 3.2s; stopped at the variant budget"
+  },
+  {
+   "function": "0x020391d4",
+   "rc": 0,
+   "head": "FUN_020391d4 0x20391d4 (40 bytes)  compiler mwccarm -O4,p -enum int -char signed -str noreuse -proc arm946e -gccext,on -fp soft -inline noauto -lang c99 -Cpp_exceptions off -interworking -w off -msgst",
+   "best": "best: default  68.909%  (default 68.909%)  7 decompiles, 1 compiles, 3.0s; stopped at the variant budget"
+  }
+ ],
+ "note": "run by hand with ~/runs/FinalGate2/mtch.sh after the smoke (the NDS repository has no symbols.txt for the auto pick)"
+}
