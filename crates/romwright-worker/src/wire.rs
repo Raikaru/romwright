@@ -170,6 +170,11 @@ pub mod elem {
     pub const OVERRIDE: u32 = 223;
     /// ELEM_FLOW (override.cc:22).
     pub const FLOW: u32 = 219;
+    /// ELEM_DEST (jumptable.cc:27): one jump-table destination.
+    pub const DEST: u32 = 212;
+    /// ELEM_STOREDJUMP (our `architecture.cc` hunk, native/ghidra-opt-sleigh.patch):
+    /// a dispatch table the import stored for one BRANCHIND.
+    pub const STOREDJUMP: u32 = 400;
     /// ELEM_LABELSYM (database.cc:37).
     pub const LABELSYM: u32 = 75;
     /// ELEM_MAPSYM (database.cc:38)
@@ -220,6 +225,9 @@ pub mod attr {
     pub const NAME: u32 = 14;
     /// ATTRIB_LABEL (jumptable.cc:23; shared marshaling id).
     pub const LABEL: u32 = 131;
+    /// ATTRIB_STOREDAPPLY (our `architecture.cc` hunk): install the stored table
+    /// over a differing recovery (true) or only compare (false).
+    pub const STORED_APPLY: u32 = 400;
     /// ATTRIB_OFFSET (marshal.cc:1247).
     pub const OFFSET: u32 = 16;
     /// ATTRIB_SIZE (marshal.cc:1252).
@@ -252,6 +260,8 @@ pub mod attr {
     pub const MODEL: u32 = 13;
     /// ATTRIB_MODELLOCK (fspec.cc:29).
     pub const MODELLOCK: u32 = 122;
+    /// ATTRIB_EXTRAPOP (marshal.cc:1237).
+    pub const EXTRAPOP: u32 = 6;
     /// ATTRIB_NORETURN (fspec.cc:30).
     pub const NORETURN: u32 = 123;
 }
@@ -440,6 +450,15 @@ pub fn encode_addr_element_size(out: &mut Vec<u8>, space_index: u32, offset: u64
     encode_header(out, ELEMENT_END, elem::ADDR);
 }
 
+/// A stored convention is a model name, optionally followed by `+N`: the bytes the function's `ret` pops (i386
+/// `__stdcall+12`). The model is the name the compiler spec declares.
+pub fn split_model_purge(convention: &str) -> (&str, Option<u32>) {
+    match convention.split_once('+') {
+        Some((model, purge)) => (model, purge.parse().ok()),
+        None => (convention, None),
+    }
+}
+
 /// Full function metadata for callbacks and non-returning preload entries.
 /// Funcdata::decode requires a unique nonzero local scope id. FuncProto::decode
 /// requires a returnsym; the unlocked void output leaves type recovery enabled.
@@ -478,7 +497,14 @@ pub(crate) fn encode_function_element(
         // (`FunctionPrototype.grabFromFunction`, :135-136). Without the lock
         // the decompiler is free to reconsider the convention it was told.
         if let Some(model) = convention {
+            let (model, purge) = split_model_purge(model);
             encode_string_attribute(out, attr::MODEL, model.as_bytes());
+            // The bytes the callee pops beside its return address, where the analysis read them off a `ret N`:
+            // without them a call site's stack adjustment is left to the decompiler's solver, which cannot
+            // settle more than one unknown purge in a function.
+            if let Some(purge) = purge {
+                encode_attribute(out, attr::EXTRAPOP, attr_type::POSITIVE_INT, u64::from(purge) + 4);
+            }
             encode_header(out, ATTRIBUTE, attr::MODELLOCK);
             out.push((attr_type::BOOLEAN << 4) | 1);
         }
@@ -580,6 +606,33 @@ pub(crate) fn encode_flow_override(out: &mut Vec<u8>, space: u32, branches: &[u6
     encode_header(out, ELEMENT_END, elem::OVERRIDE);
 }
 
+/// One dispatch table the import stored, for the function-shell document
+/// (`registerProgram`'s fifth parameter): `<storedjump storedapply=...>` holding
+/// the branch's `<addr>` and one `<dest>` per target. The decompiler keeps it by
+/// branch address (`Architecture::decodeStoredJump`, our hunk in
+/// native/ghidra-opt-sleigh.patch), so it holds in every function whose flow
+/// reaches the branch; `apply` installs it over a differing `jumptable.cc`
+/// recovery, otherwise it is only compared (`JumpTable::recoverStored`).
+pub(crate) fn encode_stored_jump(
+    out: &mut Vec<u8>,
+    space: u32,
+    branch: u64,
+    targets: &[u64],
+    apply: bool,
+) {
+    encode_header(out, ELEMENT_START, elem::STOREDJUMP);
+    encode_header(out, ATTRIBUTE, attr::STORED_APPLY);
+    out.push((attr_type::BOOLEAN << 4) | u8::from(apply));
+    encode_addr_element(out, space, branch);
+    for target in targets {
+        encode_header(out, ELEMENT_START, elem::DEST);
+        encode_attribute(out, attr::SPACE, attr_type::SPACE, u64::from(space));
+        encode_attribute(out, attr::OFFSET, attr_type::UNSIGNED_INT, *target);
+        encode_header(out, ELEMENT_END, elem::DEST);
+    }
+    encode_header(out, ELEMENT_END, elem::STOREDJUMP);
+}
+
 /// A name for a location the store holds no type for: `<labelsym>`, which the
 /// C++ decodes into a `LabSymbol` -- one byte of `TYPE_UNKNOWN`
 /// (database.cc:728-757), the same shape Ghidra's own `encodeLabel` sends for
@@ -638,11 +691,11 @@ pub(crate) fn encode_typeref(out: &mut Vec<u8>, name: &str, id: u64) {
 
 /// An array of a core type (`TypeArray::decode`, type.cc:1500-1520, which
 /// requires `arraysize * element size == size`).
-pub(crate) fn encode_array_type(out: &mut Vec<u8>, element: (&str, u64), count: u64) {
+pub(crate) fn encode_array_type(out: &mut Vec<u8>, element: (&str, u64), element_size: u64, count: u64) {
     encode_header(out, ELEMENT_START, elem::TYPE);
     encode_string_attribute(out, attr::NAME, b"");
     encode_string_attribute(out, attr::METATYPE, b"array");
-    encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, count);
+    encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, count * element_size);
     encode_attribute(out, attr::ARRAYSIZE, attr_type::POSITIVE_INT, count);
     encode_typeref(out, element.0, element.1);
     encode_header(out, ELEMENT_END, elem::TYPE);

@@ -151,8 +151,14 @@ fn thumb_saved_return_address_is_proved_without_reclassifying_indirect_dispatch(
     ));
     // push {r4,lr}; adds r0,#1; pop {r4}; pop {r1}; bx r1.
     let saved_lr = [0x10, 0xb5, 1, 0x30, 0x10, 0xbc, 2, 0xbc, 8, 0x47];
+    // push {lr}; cmp r0,#0; beq skip; bl next; skip: pop {r1}; bx r1. The
+    // saved link register reaches the pop through a join, with a call on one
+    // arm, so the reloaded value is a phi of the stored one.
+    let saved_across_branches =
+        [0, 0xb5, 0, 0x28, 1, 0xd0, 0, 0xf0, 0, 0xf8, 2, 0xbc, 8, 0x47];
     for (bytes, explicit_return, is_return) in [
         (saved_lr.as_slice(), "", true),
+        (saved_across_branches.as_slice(), "", true),
         ([8, 0x47].as_slice(), "", false), // Unproven bx r1 is not a return.
         (
             saved_lr.as_slice(),
@@ -173,9 +179,9 @@ fn thumb_saved_return_address_is_proved_without_reclassifying_indirect_dispatch(
             "</compiler_spec>",
             &format!(
                 "{explicit_return}<context_data><context_set space=\"ram\" \
-             first=\"0x1000\" last=\"0x1009\"><set name=\"TMode\" val=\"1\"/>\
+             first=\"0x1000\" last=\"{:#x}\"><set name=\"TMode\" val=\"1\"/>\
              </context_set></context_data></compiler_spec>"
-            ),
+            , 0x1000 + bytes.len() - 1),
         );
         let mut command = std::process::Command::new(&cfg.decompiler_path);
         command
@@ -326,29 +332,39 @@ saved_return:
             .entry
             .offset
     };
-    // Six Thumb-1 instructions, four table words, four 4-byte cases and the folded default.
-    let expected: std::collections::BTreeSet<_> = [28, 32, 36, 40, 44]
+    // Six Thumb-1 instructions, four table words, then the four 4-byte cases.
+    // `default_case` (+44) is reached by `bhi`, never by `bx r0`: Ghidra
+    // folds it into the table without a case label, and the decoder drops
+    // that entry because it is not a target of the indirect branch.
+    let expected: std::collections::BTreeSet<_> = [28, 32, 36, 40]
         .into_iter()
         .map(|offset| entry("dispatch") + offset)
         .collect();
     let (sla, specs, language_dir, language) =
         romwright_core::native_runtime::language_decompile_config(&config, "ARM:LE:32:v8").unwrap();
-    let output = std::process::Command::new(&config.worker_path)
-        .arg(&config.decompiler_path)
-        .arg(specs)
-        .arg("switches")
-        .arg(format!("{:x}", entry("dispatch")))
-        .arg("ffff0000")
-        .arg(format!("{:x}", entry("saved_return")))
-        .arg("--project")
-        .arg(&project)
-        .arg("--switches")
-        .env("ROMWRIGHT_SLA", sla)
-        .env("ROMWRIGHT_LANGUAGE_DIR", language_dir)
-        .env("ROMWRIGHT_LANGUAGE", language)
-        .env("WORKER_DECOMPILE_TIMEOUT_SECS", "10")
-        .output()
-        .unwrap();
+    let ask = |budget: Option<&str>| {
+        let mut command = std::process::Command::new(&config.worker_path);
+        command
+            .arg(&config.decompiler_path)
+            .arg(&specs)
+            .arg("switches")
+            .arg(format!("{:x}", entry("dispatch")))
+            .arg("ffff0000")
+            .arg(format!("{:x}", entry("saved_return")))
+            .arg("--project")
+            .arg(&project)
+            .arg("--switches")
+            .env("ROMWRIGHT_SLA", &sla)
+            .env("ROMWRIGHT_LANGUAGE_DIR", &language_dir)
+            .env("ROMWRIGHT_LANGUAGE", &language)
+            .env("WORKER_DECOMPILE_TIMEOUT_SECS", "10")
+            .env_remove("ROMWRIGHT_WORK_BUDGET");
+        if let Some(budget) = budget {
+            command.env("ROMWRIGHT_WORK_BUDGET", budget);
+        }
+        command.output().unwrap()
+    };
+    let output = ask(None);
     assert!(
         output.status.success(),
         "{}",
@@ -384,6 +400,27 @@ saved_return:
         serde_json::json!([]),
         "the next function completes without mistaking a saved return for a switch"
     );
+    for answer in &answers {
+        assert_eq!(answer["wall_clock"], false, "nothing here ran out of wall clock: {answer}");
+    }
+    // The same batch with a work budget no decompile can fit in: every
+    // function is refused by name, the refusal is not the wall clock's, and
+    // the batch goes on to the next function after each one.
+    let output = ask(Some("1"));
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let refused: Vec<serde_json::Value> = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(refused.len(), 3, "a refused function must not abandon the batch");
+    // The unmapped address never reaches an action, so it fails as it did.
+    for (answer, charged) in refused.iter().zip([true, false, true]) {
+        let error = answer["result"]["Err"].as_str().unwrap_or_default();
+        assert!(!error.is_empty(), "{answer}");
+        assert_eq!(error.contains("WorkBudgetExceeded"), charged, "{answer}");
+        assert_eq!(answer["wall_clock"], false, "{answer}");
+    }
     drop(core);
     std::fs::remove_dir_all(root).unwrap();
 }

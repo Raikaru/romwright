@@ -116,9 +116,9 @@ pub struct ProgramProvider {
     pub prototypes: HashMap<u64, romwright_model::PrototypeRow>,
     /// RAM entries with a stored non-returning fact.
     pub non_returning: HashSet<u64>,
-    /// Declared stack locals per function entry: (name, offset, size),
-    /// the frame the store recovered or was told.
-    pub stack_frames: HashMap<u64, Vec<(String, i64, u64)>>,
+    /// Declared stack locals per function entry: (name, offset, size,
+    /// type name), the frame the store recovered or was told.
+    pub stack_frames: HashMap<u64, Vec<(String, i64, u64, Option<String>)>>,
     /// RAM call edges ordered by source/destination offset.
     pub call_edges: Vec<(romwright_model::Address, romwright_model::Address)>,
     /// Track which space index `ram` occupies once the tspec registers it.
@@ -142,6 +142,11 @@ pub struct ProgramProvider {
     pub base_types: std::collections::BTreeMap<String, romwright_core::library_types::BaseType>,
     /// Pointer width in bytes, from the language's tspec.
     pub pointer_size: u64,
+    /// Struct layouts the store holds and `ROMWRIGHT_STRUCTS` lets the
+    /// decompiler see (`struct_types`), and whether they were checked against
+    /// this language's types yet.
+    pub structs: crate::struct_types::Layouts,
+    pub structs_checked: bool,
     /// Executable address ranges, from the store's memory regions: an unnamed
     /// address in one of them is code, and Ghidra's label for code is `LAB_`
     /// (`SymbolUtilities.DEFAULT_SYMBOL_PREFIX`, :49-53).
@@ -160,20 +165,63 @@ pub struct ProgramProvider {
     /// whose name is a target (`CallFixupAnalyzer.getTargetFixupMap`, :436-459).
     pub call_fixups: HashMap<String, String>,
     /// (Function entry, register name) -> the loader-established value that
-    /// register holds there. PowerPC EABI small-data-area bases: `_SDA_BASE_`
-    /// in `r13`, `_SDA2_BASE_` in `r2` on 32-bit. Discovery stores one point
-    /// per function; the decompiler reads them through `getTrackedRegisters`
-    /// the same way it reads MIPS `t9` (which needs no table: the value is
-    /// the entry address by convention).
+    /// register holds there (`romwright_core::native::STORED_BASE_REGISTERS`):
+    /// PowerPC EABI small-data-area bases (`_SDA_BASE_` in `r13`,
+    /// `_SDA2_BASE_` in `r2` on 32-bit) and the MIPS/R5900 global pointer
+    /// `gp` of non-PIC images. Discovery stores one point per function; the
+    /// decompiler reads them through `getTrackedRegisters` the same way it
+    /// reads MIPS `t9` (which needs no table: the value is the entry address
+    /// by convention).
     pub tracked_values: HashMap<(u64, String), u64>,
+    /// The dispatch tables the import stored, `(BRANCHIND address, targets)`
+    /// sorted by branch, targets sorted and distinct. The decompiler is handed
+    /// them as the authoritative address table of that branch, in every
+    /// function whose flow reaches it (`ROMWRIGHT_STORED_SWITCHES`,
+    /// `StoredSwitches`).
+    pub stored_switches: Vec<(u64, Vec<u64>)>,
+    /// What the decompiler does with `stored_switches`.
+    pub stored_switch_mode: StoredSwitches,
+}
+
+/// What the decompiler does with the dispatch tables the import stored
+/// (`ROMWRIGHT_STORED_SWITCHES=off|observe|apply`, default `apply`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum StoredSwitches {
+    /// The decompiler recovers every table itself (`jumptable.cc` only).
+    Off,
+    /// The decompiler recovers the table itself and reports whether it agrees
+    /// with the stored one; its own table stands.
+    Observe,
+    /// The stored table is the authority: `jumptable.cc` still runs for the
+    /// normalization, guards and case values, and what it recovered is
+    /// replaced when it differs from the stored table.
+    #[default]
+    Apply,
+}
+
+impl StoredSwitches {
+    pub fn from_env() -> Result<Self> {
+        match std::env::var("ROMWRIGHT_STORED_SWITCHES") {
+            Ok(value) => match value.as_str() {
+                "off" => Ok(Self::Off),
+                "observe" => Ok(Self::Observe),
+                "apply" => Ok(Self::Apply),
+                other => Err(WorkerError::Setup(format!(
+                    "ROMWRIGHT_STORED_SWITCHES={other}: expected off, observe or apply"
+                ))),
+            },
+            Err(std::env::VarError::NotPresent) => Ok(Self::default()),
+            Err(error) => Err(WorkerError::Setup(error.to_string())),
+        }
+    }
 }
 
 impl ProgramProvider {
     /// The values a processor's ABI puts in registers on entry to the
     /// function containing `address`, each with that register's storage.
     /// MIPS is the conventional case: `t9` holds the callee's own entry
-    /// address. PowerPC EABI is the stored case: `r13`/`r2` hold the
-    /// small-data-area bases discovery recorded at the containing entry.
+    /// address. The stored cases are the PowerPC EABI `r13`/`r2`
+    /// small-data-area bases and the MIPS `gp`, recorded at the containing entry.
     pub fn entry_registers(&self, address: u64) -> Vec<(u64, (u64, u64))> {
         let mut out = Vec::new();
         if let Some(storage) = self.registers.get("t9") {
@@ -184,7 +232,7 @@ impl ProgramProvider {
             }
         }
         if let Some(entry) = self.function_containing(address) {
-            for name in ["r13", "r2"] {
+            for name in romwright_core::native::STORED_BASE_REGISTERS {
                 if let (Some(&value), Some(&storage)) = (
                     self.tracked_values.get(&(entry, name.to_string())),
                     self.registers.get(name),
@@ -234,9 +282,13 @@ impl ProgramProvider {
             executable: Vec::new(),
             data_definitions: BTreeMap::new(),
             call_return_branches: HashMap::new(),
+            stored_switches: Vec::new(),
+            stored_switch_mode: StoredSwitches::default(),
             core_types: HashMap::new(),
             base_types: std::collections::BTreeMap::new(),
             pointer_size: 8,
+            structs: crate::struct_types::Layouts::default(),
+            structs_checked: false,
             registers: HashMap::new(),
             conventions: HashMap::new(),
             declared_models: HashSet::new(),
@@ -258,24 +310,54 @@ impl ProgramProvider {
         let mut provider = Self::new(BinaryBacking::from_input(project, input)?, Vec::new());
         provider.load_language_info(specs)?;
         // Function entries from the project store.
-        for f in db.functions(pid)? {
+        let stored_functions = db.functions(pid)?;
+        let held = db.symbols(pid)?;
+        // CodeWarrior-mangled names print as the name they encode
+        // (`UberBond_Update`); the mangled name stays the function's linkage
+        // name in the store. One pass names functions and data symbols so a
+        // shared `Class::name` is disambiguated across both.
+        let printed = {
+            let mut seen = std::collections::HashSet::new();
+            let names = stored_functions
+                .iter()
+                .map(|f| (f.entry.offset, f.name.as_str()))
+                .chain(
+                    held.iter()
+                        .filter(|symbol| {
+                            symbol.address.space == romwright_model::AddressSpace::Ram
+                                && symbol.source != romwright_core::native::DEMANGLE_SOURCE
+                                && symbol.source
+                                    != romwright_core::qualified_prototypes::mangled::DISPLAY_SOURCE
+                        })
+                        .map(|symbol| (symbol.address.offset, symbol.name.as_str())),
+                )
+                .filter(|(offset, name)| seen.insert((*offset, *name)));
+            romwright_core::qualified_prototypes::mangled::print_names(names)
+        };
+        for f in stored_functions {
             let off = f.entry.offset;
             provider.functions.push(off);
-            provider
-                .function_names
-                .insert(off, crate::c_identifier(&f.name));
+            provider.function_names.insert(
+                off,
+                printed
+                    .get(&off)
+                    .cloned()
+                    .unwrap_or_else(|| crate::c_identifier(&f.name)),
+            );
             provider.function_sizes.insert(off, f.size as u64);
         }
-        let held = db.symbols(pid)?;
         // Stock applies a demangled name as the *primary* symbol at its address
         // (`DemangledAddressTable.applyTo`, :86, through
         // `DemangledObject.applyDemangledName`, :551-554), and the primary is the
         // name a decompiler prints. Which is why `_ZTIi` prints as `typeinfo`.
-        let primary: std::collections::HashMap<u64, String> = held
+        let mut primary: std::collections::HashMap<u64, String> = held
             .iter()
             .filter(|symbol| symbol.source == romwright_core::native::DEMANGLE_SOURCE)
             .map(|symbol| (symbol.address.offset, crate::c_identifier(&symbol.name)))
             .collect();
+        for (address, name) in &printed {
+            primary.entry(*address).or_insert_with(|| name.clone());
+        }
         // A demangled name is applied inside the namespace the mangled name
         // names -- `typeinfo` in `int` -- and the decompiler prints a symbol
         // outside the global scope scope-qualified. The namespace is re-derived
@@ -370,6 +452,11 @@ impl ProgramProvider {
                 .datatypes
                 .insert(datatype.name, datatype.definition);
         }
+        provider.structs = crate::struct_types::Layouts::load(
+            db,
+            pid,
+            romwright_model::structs::StructMode::from_env(),
+        )?;
         for prototype in db.prototypes(pid)? {
             if !prototype.signature.is_empty() {
                 provider
@@ -409,11 +496,13 @@ impl ProgramProvider {
                     .push((region.start.offset, region.start.offset + region.size));
             }
         }
+        let mut definitions = Vec::new();
         for row in db.data_definitions(pid)? {
             if row.address.space == romwright_model::AddressSpace::Ram && row.size > 0 {
                 provider
                     .data_definitions
-                    .insert(row.address.offset, (row.data_type, row.size));
+                    .insert(row.address.offset, (row.data_type.clone(), row.size));
+                definitions.push((row.address.offset, row.data_type, row.size, row.provenance.source));
             }
         }
         // A stub's transfer is recorded as a flow override by the importer, which
@@ -461,7 +550,11 @@ impl ProgramProvider {
         // A pointer's label names its referent, so a pointer-typed slot's target
         // has to travel with it. Which rule typed the slot does not matter: what
         // the label needs is the address the slot holds (m4-027).
+        let mut address_taken = std::collections::BTreeSet::new();
         for xref in db.xrefs(pid)? {
+            if xref.kind == "DATA" && xref.to.space == romwright_model::AddressSpace::Ram {
+                address_taken.insert(xref.to.offset);
+            }
             let pointer = matches!(
                 provider.data_definitions.get(&xref.from.offset),
                 Some((kind, _)) if kind == "pointer" || kind == "code-pointer"
@@ -475,6 +568,41 @@ impl ProgramProvider {
                     .pointer_targets
                     .insert(xref.from.offset, xref.to.offset);
             }
+        }
+        provider.data_definitions = crate::layout::globals(
+            definitions,
+            |address| provider.strings.contains_key(&address) || provider.functions.binary_search(&address).is_ok(),
+            |start, end| address_taken.range(start..end).next().is_some(),
+        );
+        provider.stored_switch_mode = StoredSwitches::from_env()?;
+        // The dispatch tables the import recovered: a branch the switch stage
+        // gave COMPUTED_JUMP edges to, and every COMPUTED_JUMP edge it has. An
+        // edge another pass laid first (the console's constant propagation
+        // resolving one slot) is the same (from, to, kind) fact and keeps that
+        // pass's provenance, so the switch provenance alone misses its target.
+        let xrefs = db.xrefs(pid)?;
+        let computed = |xref: &romwright_model::XrefRow| {
+            xref.kind == "COMPUTED_JUMP"
+                && xref.from.space == romwright_model::AddressSpace::Ram
+                && xref.to.space == romwright_model::AddressSpace::Ram
+        };
+        let switch_branches: std::collections::HashSet<u64> = xrefs
+            .iter()
+            .filter(|xref| {
+                computed(xref) && xref.provenance.source == romwright_core::native::SWITCH_PROVENANCE
+            })
+            .map(|xref| xref.from.offset)
+            .collect();
+        let mut tables: std::collections::BTreeMap<u64, Vec<u64>> = Default::default();
+        for xref in xrefs.iter().filter(|xref| computed(xref)) {
+            if switch_branches.contains(&xref.from.offset) {
+                tables.entry(xref.from.offset).or_default().push(xref.to.offset);
+            }
+        }
+        for (branch, mut targets) in tables {
+            targets.sort_unstable();
+            targets.dedup();
+            provider.stored_switches.push((branch, targets));
         }
         provider.load_call_edges(db, pid)?;
         provider.load_return_behaviors(db, pid, asserted_returns_only)?;
@@ -530,14 +658,16 @@ impl ProgramProvider {
             self.stack_frames
                 .entry(row.function.offset)
                 .or_default()
-                .push((row.name, offset, size));
+                .push((row.name, offset, size, row.type_name));
         }
         Ok(())
     }
 
-    /// The function's declared locals in wire form, typed `undefined<size>`
-    /// from the core types this language carries; a width the language has
-    /// no undefined type for is left out rather than mistyped.
+    /// The function's declared locals in wire form. A local is typed with
+    /// the core type its row names when this language carries that type at
+    /// the row's width (a debug stream's `int`); any other row is typed
+    /// `undefined<size>`, and a width the language has no undefined type
+    /// for is left out rather than mistyped.
     pub fn stack_locals(&self, entry: u64) -> Vec<(String, u64, u64, String, u64)> {
         let mask = if self.pointer_size >= 8 {
             u64::MAX
@@ -549,9 +679,19 @@ impl ProgramProvider {
             .map(|frame| {
                 frame
                     .iter()
-                    .filter_map(|(name, offset, size)| {
-                        let type_name = format!("undefined{size}");
-                        let (type_id, _) = self.core_types.get(&type_name).copied()?;
+                    .filter_map(|(name, offset, size, declared)| {
+                        let named = declared
+                            .as_deref()
+                            .and_then(|n| self.core_types.get(n).map(|&(id, width)| (n, id, width)))
+                            .filter(|&(_, _, width)| width == *size);
+                        let (type_name, type_id) = match named {
+                            Some((n, id, _)) => (n.to_string(), id),
+                            None => {
+                                let undefined = format!("undefined{size}");
+                                let (id, _) = self.core_types.get(&undefined).copied()?;
+                                (undefined, id)
+                            }
+                        };
                         Some((
                             name.clone(),
                             (*offset as u64) & mask,
@@ -669,8 +809,19 @@ impl ProgramProvider {
             &self.conventions,
             &fixups,
             &self.call_return_branches,
+            &self.stored_switches_for_decompiler(),
+            self.stored_switch_mode == StoredSwitches::Apply,
             |entry| self.stack_locals(entry),
         ))
+    }
+
+    /// The stored tables the decompiler is handed: none when the mode is off.
+    pub fn stored_switches_for_decompiler(&self) -> Vec<(u64, Vec<u64>)> {
+        if self.stored_switch_mode == StoredSwitches::Off {
+            Vec::new()
+        } else {
+            self.stored_switches.clone()
+        }
     }
 
     /// Name of the function at `vaddr`, if known.
@@ -734,7 +885,7 @@ impl ProgramProvider {
 /// body itself in this build (`PcodeInjectLibrarySleigh`), so only the name
 /// has to travel. Target names are stored as C identifiers, the form a name
 /// reaches the decompiler in (`__i686.get_pc_thunk.bx` cannot be printed).
-fn call_fixup_targets(cspec: &str) -> HashMap<String, String> {
+pub(crate) fn call_fixup_targets(cspec: &str) -> HashMap<String, String> {
     let mut found = HashMap::new();
     let mut rest = cspec;
     while let Some(pos) = rest.find("<callfixup ") {
@@ -771,7 +922,7 @@ fn tag_name(header: &str) -> Option<String> {
 /// The names of `<prototype name="...">` elements a compiler spec declares.
 /// A `<prototype>` inside `<callfixup>` or a comment does not exist here:
 /// only start tags carrying a name, which is what `CompilerSpec` registers.
-fn prototype_models(cspec: &str) -> HashSet<String> {
+pub(crate) fn prototype_models(cspec: &str) -> HashSet<String> {
     let mut found = HashSet::new();
     let mut rest = cspec;
     while let Some(pos) = rest.find("<prototype ") {
@@ -960,6 +1111,7 @@ impl NativeWorker {
             | wire::query::GETPCODE
             | wire::query::GETPCODEEXECUTABLE => self.answer_empty(),
             wire::query::GETUSEROPNAME => self.answer_str(""),
+            crate::printc::query::QUERY_ID => self.answer_structure(&payload),
             wire::query::GETTRACKEDREGISTERS => self.answer_tracked_pointset(provider, &payload),
             other => {
                 let msg = format!("romwright-worker: unsupported query id {other}");
@@ -971,6 +1123,30 @@ impl NativeWorker {
                 Ok(())
             }
         }
+    }
+
+    /// The structuring query (native/romwright_structure.hh): `ghidra_opt`
+    /// sends the control-flow graph it is decompiling and the worker's
+    /// structurer answers which return-block edges are `goto`s.
+    fn answer_structure(&mut self, payload: &[u8]) -> Result<()> {
+        let answer = find_bytes_attribute(payload, 1)
+            .ok_or_else(|| "structuring query has no content".to_string())
+            .and_then(|content| crate::printc::query::answer(&content));
+        let mut buf = Vec::new();
+        match answer {
+            Ok(bytes) => {
+                encode_burst(&mut buf, burst::QRESPONSE_OPEN);
+                encode_string_stream(&mut buf, &bytes);
+                encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
+            }
+            Err(message) => {
+                encode_burst(&mut buf, burst::EXCEP_OPEN);
+                encode_string_stream(&mut buf, format!("romwright-worker: {message}").as_bytes());
+                encode_burst(&mut buf, burst::EXCEP_CLOSE);
+            }
+        }
+        self.write_frame(&buf)?;
+        Ok(())
     }
 
     /// getBytes (ghidra_arch.cc `ArchitectureGhidra::getBytes`): the query
@@ -1252,6 +1428,11 @@ impl NativeWorker {
             encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
             return self.write_frame(&buf);
         }
+        if let Some(doc) = provider.struct_datatype(&name) {
+            encode_string_stream(&mut buf, &doc);
+            encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
+            return self.write_frame(&buf);
+        }
         if provider.datatypes.contains_key(&name) {
             let mut doc = Vec::new();
             wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::TYPE);
@@ -1394,7 +1575,7 @@ impl NativeWorker {
                         vaddr,
                         &name,
                         read_only,
-                        |out| wire::encode_array_type(out, ("char", char_id), count),
+                        |out| wire::encode_array_type(out, ("char", char_id), 1, count),
                     );
                     close_document(&mut doc);
                 } else if let (true, Some((code_id, _))) = (
@@ -1467,14 +1648,15 @@ impl NativeWorker {
                         },
                     );
                     close_document(&mut doc);
-                } else if let (Some(count), Some((byte_id, _))) = (
-                    provider
-                        .data_definitions
-                        .get(&vaddr)
-                        .filter(|(kind, _)| kind == "undefined1[]")
-                        .map(|(_, size)| *size),
-                    core("undefined1"),
-                ) {
+                } else if let Some((width, count, (element, element_id))) = provider
+                    .data_definitions
+                    .get(&vaddr)
+                    .and_then(|(kind, size)| {
+                        let width = crate::layout::element_width(kind)?;
+                        let name = format!("undefined{width}");
+                        Some((width, size / width, (name.clone(), core(&name)?.0)))
+                    })
+                {
                     // An object wider than a word: Ghidra applies the size the
                     // ELF symbol declares as an array of `undefined1`
                     // (`Undefined.getUndefinedDataType`, :51-53), and the C
@@ -1492,7 +1674,7 @@ impl NativeWorker {
                         vaddr,
                         &name,
                         read_only,
-                        |out| wire::encode_array_type(out, ("undefined1", byte_id), count),
+                        |out| wire::encode_array_type(out, (element.as_str(), element_id), width, count),
                     );
                     close_document(&mut doc);
                 } else if let (Some(width), Some((type_id, _))) = (
@@ -1805,6 +1987,35 @@ pub fn packed_element_span(data: &[u8]) -> Option<usize> {
                 }
                 return fail_point.or(Some(pos - 1));
             }
+        }
+    }
+    None
+}
+
+/// Finds the raw bytes of the string attribute with the given id.
+pub fn find_bytes_attribute(data: &[u8], target: u32) -> Option<Vec<u8>> {
+    let mut pos = 0usize;
+    while pos < data.len() {
+        let header = data[pos];
+        pos += 1;
+        match header & wire::HEADER_MASK_EQ {
+            h if h == wire::ELEMENT_START_EQ || h == wire::ELEMENT_END_EQ => {
+                if header & 0x20 != 0 {
+                    pos = pos.checked_add(1)?;
+                }
+            }
+            h if h == wire::ATTRIBUTE_EQ => {
+                let (id, ty) = decode_attr_header(header, data, &mut pos)?;
+                let value = decode_attr_value(data, ty, &mut pos)?;
+                if ty >> 4 == wire::attr_type::STRING {
+                    let end = pos.checked_add(usize::try_from(value).ok()?)?;
+                    if id == target {
+                        return Some(data.get(pos..end)?.to_vec());
+                    }
+                    pos = end;
+                }
+            }
+            _ => return None,
         }
     }
     None

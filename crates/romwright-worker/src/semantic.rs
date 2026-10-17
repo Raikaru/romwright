@@ -371,6 +371,7 @@ fn decode(mut ast: Node, high: Option<Node>, ram: Option<u64>) -> Result<Functio
         control_flow_cuts: Vec::new(),
         passes: Vec::new(),
         diagnostics: Vec::new(),
+        cast_types: Vec::new(),
     };
     result.validate()?;
     Ok(result)

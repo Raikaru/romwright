@@ -51,6 +51,9 @@ pub type Result<T, E = WorkerError> = std::result::Result<T, E>;
 enum PrototypeMode {
     Asserted,
     Inferred,
+    /// The parameter list is proved and locked; the return value is left to
+    /// the decompiler (`ghidra_opt`'s `params` mode).
+    Params,
     Recovery,
 }
 
@@ -65,6 +68,9 @@ pub struct NativeWorker {
     /// Architecture slot returned by registerProgram.
     arch_id: i32,
     applied_prototypes: HashMap<u64, PrototypeMode>,
+    /// The function whose prototype is one the struct pass wrote for it alone,
+    /// applied for the decompile of that function only.
+    local_applied: Option<u64>,
     /// Path passed to ghidra_opt for diagnostics.
     pub binary: PathBuf,
 }
@@ -92,6 +98,7 @@ impl NativeWorker {
             child: std::sync::Arc::new(std::sync::Mutex::new(Some(child))),
             arch_id: 0,
             applied_prototypes: HashMap::new(),
+            local_applied: None,
             stdin: Some(stdin),
             stdout,
             out_buf: Vec::new(),
@@ -121,6 +128,8 @@ impl NativeWorker {
         address: u64,
         recover: bool,
     ) -> Result<()> {
+        // What the struct pass wrote for an earlier target alone ends with it.
+        self.release_local_prototype(provider, address)?;
         if let Some(&size) = provider.function_sizes.get(&address) {
             let first = provider
                 .call_edges
@@ -130,10 +139,71 @@ impl NativeWorker {
                     break;
                 }
                 let callee = provider.call_edges[index].1.offset;
-                self.apply_stored_prototype(provider, callee, false)?;
+                self.apply_callee_prototype(provider, callee)?;
             }
         }
+        if !recover && self.apply_local_prototype(provider, address)? {
+            return Ok(());
+        }
         self.apply_stored_prototype(provider, address, recover)
+    }
+
+    /// A callee's stored prototype. One the struct pass wrote for that
+    /// function's own decompile is not its callers' business: they see the
+    /// call as the decompiler recovers it.
+    fn apply_callee_prototype(&mut self, provider: &mut ProgramProvider, address: u64) -> Result<()> {
+        if provider
+            .prototypes
+            .get(&address)
+            .is_some_and(crate::struct_types::Layouts::is_function_local)
+        {
+            return Ok(());
+        }
+        self.apply_stored_prototype(provider, address, false)
+    }
+
+    /// Types the target with the signature the struct pass wrote for it alone
+    /// (`ROMWRIGHT_STRUCT_OVERLAY`, or a stored row of that pass), locked the
+    /// way an inferred prototype is. Returns whether there was one.
+    fn apply_local_prototype(&mut self, provider: &mut ProgramProvider, address: u64) -> Result<bool> {
+        let Some(signature) = provider.local_prototype(address) else {
+            return Ok(false);
+        };
+        let name = provider.function_names.get(&address).cloned().ok_or_else(|| {
+            WorkerError::Setup(format!("prototype target {address:#x} has no function name"))
+        })?;
+        self.set_function_signature(provider, address, &name, &signature, PrototypeMode::Inferred)?;
+        self.applied_prototypes.remove(&address);
+        self.local_applied = Some(address);
+        Ok(true)
+    }
+
+    /// Ends the target-only prototype of the previous target when the next
+    /// one is another function: its stored prototype is applied again, or,
+    /// with none, the recovered one it had, unlocked and with no struct.
+    fn release_local_prototype(&mut self, provider: &mut ProgramProvider, next: u64) -> Result<()> {
+        let Some(previous) = self.local_applied else {
+            return Ok(());
+        };
+        if previous == next {
+            return Ok(());
+        }
+        self.local_applied = None;
+        self.applied_prototypes.remove(&previous);
+        let stored = provider
+            .prototypes
+            .get(&previous)
+            .is_some_and(|row| !crate::struct_types::Layouts::is_function_local(row));
+        if stored {
+            return self.apply_stored_prototype(provider, previous, false);
+        }
+        if let Some(signature) = provider.local_prototype(previous) {
+            let signature = provider.erase_struct_names(&signature);
+            if let Some(name) = provider.function_names.get(&previous).cloned() {
+                self.set_function_signature(provider, previous, &name, &signature, PrototypeMode::Recovery)?;
+            }
+        }
+        Ok(())
     }
 
     fn apply_stored_prototype(
@@ -142,12 +212,24 @@ impl NativeWorker {
         address: u64,
         recover: bool,
     ) -> Result<()> {
-        let Some(prototype) = provider.prototypes.get(&address) else {
+        let Some(stored) = provider.prototypes.get(&address).cloned() else {
+            return Ok(());
+        };
+        // The mode may hide structs or the pass's own rows (`struct_types`).
+        let Some(prototype) = provider.gated_prototype(&stored) else {
             return Ok(());
         };
         let mode = match prototype.provenance.kind {
             romwright_model::FactKind::Asserted => PrototypeMode::Asserted,
             romwright_model::FactKind::Inferred if recover => PrototypeMode::Recovery,
+            // A mangled name spells its parameters and nothing about the
+            // return value: locking one would invent it.
+            romwright_model::FactKind::Inferred
+                if prototype.provenance.source
+                    == romwright_core::qualified_prototypes::mangled::PROTOTYPE_SOURCE =>
+            {
+                PrototypeMode::Params
+            }
             romwright_model::FactKind::Inferred => PrototypeMode::Inferred,
         };
         if self.applied_prototypes.get(&address) == Some(&mode) {
@@ -215,6 +297,8 @@ impl NativeWorker {
             &provider.conventions,
             &std::collections::HashMap::new(),
             &provider.call_return_branches,
+            &provider.stored_switches_for_decompiler(),
+            provider.stored_switch_mode == crate::provider::StoredSwitches::Apply,
             |_| Vec::new(),
         );
         self.register_program_with_shell(provider, pspec, cspec, tspec, corespec, &shell)
@@ -250,6 +334,7 @@ impl NativeWorker {
                 WorkerError::Protocol("registerProgram returned no architecture id".into())
             })?;
         self.applied_prototypes.clear();
+        self.local_applied = None;
         self.configure_options(provider, false)
     }
 
@@ -304,9 +389,9 @@ impl NativeWorker {
     ) -> Result<()> {
         let arch_id = self.arch_id.to_string();
         let address = format!("{function_address:x}");
-        let signature = signature.trim();
+        let signature = escape_type_named_parameters(signature.trim());
         let normalized = if signature.ends_with(';') {
-            signature.to_owned()
+            signature
         } else {
             format!("{signature};")
         };
@@ -321,6 +406,7 @@ impl NativeWorker {
                 match mode {
                     PrototypeMode::Asserted => b"asserted",
                     PrototypeMode::Inferred => b"inferred",
+                    PrototypeMode::Params => b"params",
                     PrototypeMode::Recovery => b"recovery",
                 },
             ],
@@ -336,6 +422,8 @@ impl NativeWorker {
     /// Encodes the packed document accepted as registerProgram's fifth
     /// parameter. Entries are `(RAM address, function name, byte size)`.
     /// Known non-returning entries carry full prototypes instead of lazy shells.
+    // The shell document's inputs are independent tables keyed by function.
+    #[allow(clippy::too_many_arguments)]
     pub fn encode_function_shell_doc(
         space_index: u32,
         entries: &[(u64, &str, u64)],
@@ -343,6 +431,8 @@ impl NativeWorker {
         conventions: &std::collections::HashMap<u64, String>,
         fixups: &std::collections::HashMap<u64, String>,
         call_return_branches: &std::collections::HashMap<u64, Vec<u64>>,
+        stored_jumps: &[(u64, Vec<u64>)],
+        apply_stored: bool,
         locals_for: impl Fn(u64) -> Vec<(String, u64, u64, String, u64)>,
     ) -> Vec<u8> {
         let mut doc = Vec::new();
@@ -434,6 +524,9 @@ impl NativeWorker {
                 crate::wire::ELEMENT_END,
                 crate::wire::elem::MAPSYM,
             );
+        }
+        for (branch, targets) in stored_jumps {
+            crate::wire::encode_stored_jump(&mut doc, space_index, *branch, targets, apply_stored);
         }
         crate::wire::encode_header(&mut doc, crate::wire::ELEMENT_END, crate::wire::elem::DOC);
         doc
@@ -533,22 +626,10 @@ impl NativeWorker {
             }
             callees.sort_unstable();
             callees.dedup();
-            let mut applied: Vec<_> = self
-                .applied_prototypes
-                .iter()
-                .map(|(&entry, &mode)| (entry, mode))
-                .collect();
-            applied.sort_unstable_by_key(|&(entry, _)| entry);
             // The native caller already incorporated the old callee facts.
             // Rebuild it, retaining the target's inferred/recovery mode.
             // Each round adds a previously unapplied stored prototype.
-            self.flush_native(provider)?;
-            for (entry, mode) in applied {
-                self.apply_stored_prototype(provider, entry, mode == PrototypeMode::Recovery)?;
-            }
-            for callee in callees {
-                self.apply_stored_prototype(provider, callee, false)?;
-            }
+            self.rebuild_native(provider, &callees)?;
             let response = self.decompile_at(provider, space, address)?;
             decoded = crate::doc::decode_document_with_ram_space(&response, Some(space as u64));
         }
@@ -566,57 +647,29 @@ impl NativeWorker {
                 .run(ir, &context)
                 .map_err(WorkerError::Decompiler)?
         };
+        let proposed_cuts = plan.cuts.len();
         if !plan.edits.is_empty() || !plan.cuts.is_empty() {
-            use crate::wire::{
-                ELEMENT_END, ELEMENT_START, attr_type, encode_attribute, encode_header,
-                encode_string_attribute,
+            let stock_gotos = printed_gotos(&decoded.tokens);
+            let rendered = self.render_function_ir(provider, space, address, &plan)?;
+            // A cut reaches C only as a forced `goto`, and the native
+            // structurer re-collapses around it: one cut on an edge it would
+            // print as `break`, `continue` or a fallthrough costs gotos of
+            // its own and can cascade into more. Cuts are published only
+            // when the printed function has fewer gotos than without them.
+            decoded = if plan.cuts.is_empty() || printed_gotos(&rendered.tokens) < stock_gotos {
+                rendered
+            } else {
+                plan.withdraw_cuts();
+                if plan.edits.is_empty() {
+                    decoded
+                } else {
+                    // The rejected render already mutated the live function
+                    // (edits and goto marks); rebuild it from scratch.
+                    self.rebuild_native(provider, &[])?;
+                    self.decompile_at(provider, space, address)?;
+                    self.render_function_ir(provider, space, address, &plan)?
+                }
             };
-            // Pinned ELEM_DOC/OP/EDGE and their native attributes.
-            let mut encoded = Vec::new();
-            encode_header(&mut encoded, ELEMENT_START, 229);
-            for edit in &plan.edits {
-                encode_header(&mut encoded, ELEMENT_START, 27);
-                for (attribute, value) in [
-                    (16, edit.address.offset),
-                    (18, edit.operation.0),
-                    (25, edit.constant),
-                ] {
-                    encode_attribute(&mut encoded, attribute, attr_type::UNSIGNED_INT, value);
-                }
-                for (attribute, value) in [
-                    (78, edit.before as u64),
-                    (43, edit.after as u64),
-                    (19, edit.width as u64),
-                ] {
-                    encode_attribute(&mut encoded, attribute, attr_type::POSITIVE_INT, value);
-                }
-                encode_string_attribute(&mut encoded, 14, edit.helper.as_bytes());
-                encode_header(&mut encoded, ELEMENT_END, 27);
-            }
-            for cut in &plan.cuts {
-                encode_header(&mut encoded, ELEMENT_START, 105);
-                for (attribute, value) in [
-                    (10, cut.source.0),
-                    (79, cut.successor_slot as u64),
-                    (77, cut.target.0),
-                ] {
-                    encode_attribute(&mut encoded, attribute, attr_type::POSITIVE_INT, value);
-                }
-                encode_header(&mut encoded, ELEMENT_END, 105);
-            }
-            encode_header(&mut encoded, ELEMENT_END, 229);
-            let mut location = Vec::new();
-            encode_addr_element(&mut location, space, address);
-            let arch = self.arch_id.to_string();
-            let response = self.run_command(
-                provider,
-                "renderFunctionIR",
-                &[arch.as_bytes(), &location, &encoded],
-            )?;
-            decoded = crate::doc::decode_document_with_ram_space(&response, Some(space as u64));
-            if let Some(error) = decoded.semantic_error.take() {
-                return Err(WorkerError::Decompiler(error));
-            }
         }
         if decoded.cut_projection.len() != plan.cuts.len() {
             return Err(WorkerError::Decompiler(
@@ -631,6 +684,9 @@ impl NativeWorker {
             }
             *cut = projected;
         }
+        if let Some(path) = std::env::var_os("ROMWRIGHT_OWNERSHIP_LOG") {
+            self.log_ownership(&path, provider, address, &decoded, &plan, proposed_cuts);
+        }
         let ir = decoded.function_ir.as_mut().ok_or_else(|| {
             WorkerError::Decompiler("native projection has no semantic graph".into())
         })?;
@@ -643,6 +699,164 @@ impl NativeWorker {
             .finish(ir, plan, &context)
             .map_err(WorkerError::Decompiler)?;
         Ok(decoded)
+    }
+
+    /// Appends one JSON line saying who produced this function's output
+    /// (docs/ownership.md): the printed-token and construct accounting, the
+    /// Rust semantic edits and cuts, the stored prototypes the decompiler was
+    /// given, and the jump tables it recovered. A no-op unless
+    /// `ROMWRIGHT_OWNERSHIP_LOG` names a file; it never changes the output.
+    fn log_ownership(
+        &self,
+        path: &std::ffi::OsStr,
+        provider: &ProgramProvider,
+        address: u64,
+        decoded: &crate::doc::DecodedDocument,
+        plan: &romwright_core::func_ir::Plan,
+        proposed_cuts: usize,
+    ) {
+        use romwright_model::function_ir::{Opcode, Operand};
+        let (mut operations, mut calls, mut calls_stored, mut high) = (0u64, 0u64, 0u64, 0u64);
+        if let Some(ir) = &decoded.function_ir {
+            high = ir.high_variables.len() as u64;
+            for op in ir.blocks.iter().flat_map(|block| &block.operations) {
+                operations += 1;
+                if op.opcode != Opcode::CALL {
+                    continue;
+                }
+                calls += 1;
+                if let Some(Operand::Value(target)) = op.inputs.first()
+                    && let Some(callee) = ir.values.get(target).and_then(|value| value.offset)
+                    && provider.prototypes.contains_key(&callee)
+                {
+                    calls_stored += 1;
+                }
+            }
+        }
+        let additive = plan.edits.iter().filter(|edit| edit.helper.is_empty()).count();
+        let record = serde_json::json!({
+            "address": format!("{address:x}"),
+            "operations": operations,
+            "high_variables": high,
+            "calls": calls,
+            "calls_with_stored_prototype": calls_stored,
+            "stored_prototype": provider.prototypes.get(&address).map(|row| serde_json::json!({
+                "source": row.provenance.source,
+                "kind": format!("{:?}", row.provenance.kind),
+            })),
+            "printed_prototype": decoded.prototype.as_ref().map(|proto| serde_json::json!({
+                "parameters": proto.parameters.len(),
+                "parameter_source": proto.parameter_source,
+            })),
+            "applied_prototypes": self.applied_prototypes.len(),
+            "edits": {
+                "total": plan.edits.len(),
+                "additive_inverse": additive,
+                "canonical_helpers": plan.edits.len() - additive,
+            },
+            "cuts": {"proposed": proposed_cuts, "kept": plan.cuts.len()},
+            "passes": plan.reports.iter().map(|report| serde_json::json!({
+                "name": report.name,
+                "role": report.role,
+                "items": report.items,
+            })).collect::<Vec<_>>(),
+            "jump_tables": decoded.jump_tables.as_ref().map(|tables| {
+                tables.iter().map(|table| serde_json::json!({
+                    "branch": format!("{:x}", table.branch.offset),
+                    "targets": table.targets.len(),
+                })).collect::<Vec<_>>()
+            }),
+            "switch_sources": decoded.switch_sources,
+            "print": decoded.print_stats,
+        });
+        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            let _ = writeln!(file, "{record}");
+        }
+    }
+
+    /// Applies a plan's edits and cuts to the live native function and
+    /// renders it (`renderFunctionIR`, native/romwright_ir.hh).
+    fn render_function_ir(
+        &mut self,
+        provider: &mut ProgramProvider,
+        space: u32,
+        address: u64,
+        plan: &romwright_core::func_ir::Plan,
+    ) -> Result<crate::doc::DecodedDocument> {
+        use crate::wire::{
+            ELEMENT_END, ELEMENT_START, attr_type, encode_attribute, encode_header,
+            encode_string_attribute,
+        };
+        // Pinned ELEM_DOC/OP/EDGE and their native attributes.
+        let mut encoded = Vec::new();
+        encode_header(&mut encoded, ELEMENT_START, 229);
+        for edit in &plan.edits {
+            encode_header(&mut encoded, ELEMENT_START, 27);
+            for (attribute, value) in [
+                (16, edit.address.offset),
+                (18, edit.operation.0),
+                (25, edit.constant),
+            ] {
+                encode_attribute(&mut encoded, attribute, attr_type::UNSIGNED_INT, value);
+            }
+            for (attribute, value) in [
+                (78, edit.before as u64),
+                (43, edit.after as u64),
+                (19, edit.width as u64),
+            ] {
+                encode_attribute(&mut encoded, attribute, attr_type::POSITIVE_INT, value);
+            }
+            encode_string_attribute(&mut encoded, 14, edit.helper.as_bytes());
+            encode_header(&mut encoded, ELEMENT_END, 27);
+        }
+        for cut in &plan.cuts {
+            encode_header(&mut encoded, ELEMENT_START, 105);
+            for (attribute, value) in [
+                (10, cut.source.0),
+                (79, cut.successor_slot as u64),
+                (77, cut.target.0),
+            ] {
+                encode_attribute(&mut encoded, attribute, attr_type::POSITIVE_INT, value);
+            }
+            encode_header(&mut encoded, ELEMENT_END, 105);
+        }
+        encode_header(&mut encoded, ELEMENT_END, 229);
+        let mut location = Vec::new();
+        encode_addr_element(&mut location, space, address);
+        let arch = self.arch_id.to_string();
+        let response = self.run_command(
+            provider,
+            "renderFunctionIR",
+            &[arch.as_bytes(), &location, &encoded],
+        )?;
+        let mut decoded = crate::doc::decode_document_with_ram_space(&response, Some(space as u64));
+        if let Some(error) = decoded.semantic_error.take() {
+            return Err(WorkerError::Decompiler(error));
+        }
+        Ok(decoded)
+    }
+
+    /// Discards the native program state and re-applies every prototype it
+    /// was built with, plus `callees` as inferred prototypes.
+    fn rebuild_native(&mut self, provider: &mut ProgramProvider, callees: &[u64]) -> Result<()> {
+        let mut applied: Vec<_> = self
+            .applied_prototypes
+            .iter()
+            .map(|(&entry, &mode)| (entry, mode))
+            .collect();
+        applied.sort_unstable_by_key(|&(entry, _)| entry);
+        let local = self.local_applied.take();
+        self.flush_native(provider)?;
+        for (entry, mode) in applied {
+            self.apply_stored_prototype(provider, entry, mode == PrototypeMode::Recovery)?;
+        }
+        for &callee in callees {
+            self.apply_callee_prototype(provider, callee)?;
+        }
+        if let Some(entry) = local {
+            self.apply_local_prototype(provider, entry)?;
+        }
+        Ok(())
     }
 
     /// Decompiles one address, killing the decompiler if it does not answer
@@ -724,7 +938,30 @@ impl NativeWorker {
         // second function in a batch decompiled `printf` as `void
         // printf(void)` while the first saw the declaration.
         self.applied_prototypes.clear();
+        self.local_applied = None;
         Ok(())
+    }
+
+    /// Releases the native architecture (`deregisterProgram`), freeing
+    /// everything it owns, and returns whether one was registered. After
+    /// this the worker holds no program; register again to continue. The
+    /// reply is the result stream with no warnings frame
+    /// (`DeregisterProgram::sendResult`), which `run_command` does not read.
+    pub fn deregister_program(&mut self, provider: &mut ProgramProvider) -> Result<bool> {
+        let arch_id = self.arch_id.to_string();
+        let mut buf = Vec::new();
+        wire::encode_burst(&mut buf, burst::COMMAND_OPEN);
+        wire::encode_string_stream(&mut buf, b"deregisterProgram");
+        wire::encode_string_stream(&mut buf, arch_id.as_bytes());
+        wire::encode_burst(&mut buf, burst::COMMAND_CLOSE);
+        self.write_frame(&buf)?;
+        self.expect_burst(burst::RESPONSE_OPEN)?;
+        self.expect_burst(burst::STRINGSTREAM_OPEN)?;
+        let released = self.read_string_payload(provider)? == b"1";
+        self.expect_burst(burst::RESPONSE_CLOSE)?;
+        self.applied_prototypes.clear();
+        self.local_applied = None;
+        Ok(released)
     }
 
     /// Selects the decompiler action root (Java: `setAction "decompile" ""`),
@@ -967,6 +1204,64 @@ impl NativeWorker {
     }
 }
 
+/// `goto` keywords in a printed function: PrintC emits them as syntax tokens
+/// (`EmitMarkup::print`), or op tokens when printing flat (`opBranch`).
+fn printed_gotos(tokens: &[romwright_model::DecompToken]) -> usize {
+    use romwright_model::TokenKind;
+    tokens
+        .iter()
+        .filter(|token| matches!(token.kind, TokenKind::Syntax | TokenKind::Op) && token.text == "goto")
+        .count()
+}
+
+/// Names the decompiler's C parser reads as types (`coretypes.xml`): a
+/// parameter called `code` or `byte` is a syntax error there, not a name.
+const CORE_TYPE_NAMES: &[&str] = &[
+    "bool", "byte", "char", "code", "double", "float", "int", "long", "longlong", "qword", "sbyte",
+    "short", "sqword", "uint", "ulong", "ulonglong", "ushort", "void", "wchar_t", "word", "dword",
+    "undefined", "undefined1", "undefined2", "undefined3", "undefined4", "undefined5",
+    "undefined6", "undefined7", "undefined8",
+];
+
+/// A signature whose parameter names the parser would take for types, with
+/// those names suffixed by `_`. Parameters of function-pointer type and
+/// unnamed parameters are left as written.
+fn escape_type_named_parameters(signature: &str) -> String {
+    let Some(open) = signature.find('(') else {
+        return signature.to_string();
+    };
+    let Some(close) = signature.rfind(')') else {
+        return signature.to_string();
+    };
+    if close < open {
+        return signature.to_string();
+    }
+    let parameters = &signature[open + 1..close];
+    if parameters.contains('(') {
+        return signature.to_string();
+    }
+    let rewritten: Vec<String> = parameters
+        .split(',')
+        .map(|parameter| {
+            let trimmed = parameter.trim_end();
+            let word_start = trimmed
+                .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+                .map_or(0, |at| at + 1);
+            let (head, word) = trimmed.split_at(word_start);
+            let before = head.trim_end().rsplit(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).next().unwrap_or("");
+            // `unsigned char` is one type, not a type and a name.
+            let one_type = matches!(before, "unsigned" | "signed" | "long" | "short" | "struct" | "union" | "enum");
+            let typed = (!before.is_empty() || head.contains('*')) && !one_type;
+            if typed && CORE_TYPE_NAMES.contains(&word) {
+                format!("{head}{word}_{}", &parameter[trimmed.len()..])
+            } else {
+                parameter.to_string()
+            }
+        })
+        .collect();
+    format!("{}{}{}", &signature[..=open], rewritten.join(","), &signature[close..])
+}
+
 /// Verifies the pinned build is present; called before launch.
 pub fn check_setup(ghidra_opt: &Path, sla_path: &Path) -> Result<()> {
     for p in [ghidra_opt, sla_path] {
@@ -1005,5 +1300,19 @@ mod tests {
     fn check_setup_rejects_missing_binary() {
         let err = check_setup(Path::new("/nonexistent/ghidra_opt"), Path::new("/tmp")).unwrap_err();
         assert!(matches!(err, WorkerError::Setup(_)));
+    }
+
+    #[test]
+    fn parameters_named_like_core_types_are_escaped() {
+        assert_eq!(
+            escape_type_named_parameters("byte f(byte code, char * byte, unsigned char, uint x)"),
+            "byte f(byte code_, char * byte_, unsigned char, uint x)"
+        );
+        assert_eq!(escape_type_named_parameters("void f(void)"), "void f(void)");
+        assert_eq!(escape_type_named_parameters("void f(byte)"), "void f(byte)");
+        assert_eq!(
+            escape_type_named_parameters("void f(void (*cb)(byte code))"),
+            "void f(void (*cb)(byte code))"
+        );
     }
 }
