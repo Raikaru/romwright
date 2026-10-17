@@ -554,7 +554,7 @@ mod tests {
     fn perfect_dark_ntsc_final_loads_its_real_segments() {
         use sha2::{Digest, Sha256};
         let Some(path) = std::env::var_os("HOME")
-            .map(|home| std::path::PathBuf::from(home).join("ventris-corpus/perfect_dark_ntsc_final.z64"))
+            .map(|home| std::path::PathBuf::from(home).join("romwright-corpus/perfect_dark_ntsc_final.z64"))
             .filter(|path| path.is_file())
         else {
             eprintln!("SKIP: perfect_dark_ntsc_final.z64 not in the corpus");

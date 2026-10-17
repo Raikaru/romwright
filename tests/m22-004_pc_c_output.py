@@ -23,7 +23,7 @@ names the `compiler` (a manifest id of `crates/romwright-core/src/new_project/to
   classify `--artifacts DIR` keeps every candidate's C, compile log and bytes; `tests/m22-004/failure_classes.py REPORT DIR` sorts the
            non-exact functions into compile-failure classes and byte-difference classes (needs the capstone Python module).
 
-    python3 tests/m22-004_pc_c_output.py --fixture ~/ventris-corpus/extracted/pc-quake-gl --tag arm0
+    python3 tests/m22-004_pc_c_output.py --fixture ~/romwright-corpus/extracted/pc-quake-gl --tag arm0
 
 Exit status is non-zero only when the harness itself breaks. See docs/pc-project.md.
 """

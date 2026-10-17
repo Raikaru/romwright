@@ -17,7 +17,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-SCRATCH = Path.home() / "ventris-scratch" / "factpack"
+SCRATCH = Path.home() / "romwright-scratch" / "factpack"
 MAX_BYTES = 2 * 1024**3
 EXTENSIONS = (".h", ".hpp", ".hh", ".hxx", ".c", ".cpp", ".cc", ".cxx")
 PATTERNS = [f"*{e}" for e in EXTENSIONS]

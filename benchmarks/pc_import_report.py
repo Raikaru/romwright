@@ -66,7 +66,7 @@ def main() -> int:
     wave_report, loo, detect = load(args.wave), load(args.loo), load(args.detect)
     meta = {}
     for fixture in ours:
-        path = Path.home() / "ventris-corpus" / "extracted" / fixture / "truth" / "meta.json"
+        path = Path.home() / "romwright-corpus" / "extracted" / fixture / "truth" / "meta.json"
         if path.is_file():
             meta[fixture] = json.loads(path.read_text())
     rows = []

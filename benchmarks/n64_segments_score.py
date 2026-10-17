@@ -4,7 +4,7 @@ against the public decomp's truth and against stock Ghidra.
 
 Inputs (all on the host, none committed):
 
-* the retail ROM (`~/ventris-corpus/perfect_dark_ntsc_final.z64`);
+* the retail ROM (`~/romwright-corpus/perfect_dark_ntsc_final.z64`);
 * the truth JSON from `benchmarks/pd_ido_truth.py truth` (names and
   addresses derived from n64decomp/perfect_dark, MIT; see that file for how
   an address is derived and checked);

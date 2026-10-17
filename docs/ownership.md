@@ -727,11 +727,11 @@ benchmarks/ownership.py --target-dir $HOME/runs/OwnershipMetric/target-cov \
   --cov-build $HOME/runs/OwnershipMetric/cov-build \
   --cache $HOME/runs/OwnershipMetric/cache \
   --prototype-cache $HOME/runs/OwnershipMetric/protocache \
-  --source-root $HOME/runs/OwnershipMetric/ventris --jobs 2
+  --source-root $HOME/runs/OwnershipMetric/romwright --jobs 2
 # the stock path and the default path on the same decompiles as a report (structuring handoff)
 benchmarks/ownership_stock_coverage.py --target-dir $HOME/runs/OwnershipMetric/target-cov \
   --cov-build $HOME/runs/OwnershipMetric/cov-build --cache $HOME/runs/OwnershipMetric/cache \
-  --source-root $HOME/runs/OwnershipMetric/ventris --report benchmarks/reports/ownership_structuring.json \
+  --source-root $HOME/runs/OwnershipMetric/romwright --report benchmarks/reports/ownership_structuring.json \
   --out stock.json            # add --default-path for the default one
 # static line counts only
 benchmarks/ownership.py --inventory-only

@@ -13459,3 +13459,10 @@ One gate over everything the finish line produced, on one build of a frozen tree
 **Limits / remains:** one build with LTO off; the memory envelopes (`m7-*`), the unit tests and the doc gates were not re-run (they belong to ReleaseReady, ReleaseFixes, MemoryFix and ReleaseProfile); no wall time is a measurement (load 5-32); PC import's stock side is PcImport's cached run; the 3DS scaffold is `first:40` (Xenoblade's 2,023 s import not run) and `match` does not apply to a scaffold; NDS `match` ran on three hand-picked ARM9 functions. The host `~/runs/FinalGate2` keeps the scripts (`*.sh`, `smoke.py`), `out/`, `logs/` and the binaries; the heavy work directories were removed.
 
 **Orchestrator decision on D1/D2 (2026-10-15):** `ROMWRIGHT_EXPORT_FLOAT_STORES` and `ROMWRIGHT_EXPORT_SQRT` stay on for every target. They were written for x86, but on the consoles they lose no exact, compiled or percent point and gain two exact functions, so they are general rules, not PC-only rules. Each keeps its `=off` switch. After ReleaseProfile's changes, `cargo test --release --workspace` on the final tree passes 1,370 tests with 0 failures (nih-vps-u, ghidra_opt 4532792d).
+
+## Repository renamed ventris -> romwright (2026-10-17)
+
+- GitHub: `Raikaru/ventris` is now `Raikaru/romwright` (private, GitHub redirects the old URL); `origin` points at the new URL.
+- Data directories: `~/ventris-corpus` and `~/ventris-scratch` are now `~/romwright-corpus` and `~/romwright-scratch` on the laptop and nih-vps-u, and every script, test, lane config and doc defaults to the new names. A `ventris-*` symlink stays beside each, so the absolute paths recorded in reports, in this file and in prepared work directories still resolve.
+- The fact-pack scripts' `--ghidra-opt` default is now the checkout's own `native/build/ghidra_opt`, not `~/ventris/native/build/ghidra_opt`.
+- Reports and the earlier sections of this file keep the paths they recorded. The binary fixture `tests/fixtures-src/exports32.dll` keeps its built-in string.

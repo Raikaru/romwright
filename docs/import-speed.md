@@ -21,7 +21,7 @@ python3 benchmarks/import_speed.py --no-build --only psx-darkstalkers-3 --runs 1
     --report /tmp/speed.json
 ```
 
-Needs the corpus (`~/ventris-corpus/extracted`), `native/build/ghidra_opt`,
+Needs the corpus (`~/romwright-corpus/extracted`), `native/build/ghidra_opt`,
 and a Ghidra 12.1.3 install (`--ghidra`, default `~/ghidra_12.1.3_PUBLIC`)
 with the console extensions the corpus needs (gba-ghidra-loader, NdsLoader,
 PsxLoader, XEXLoaderWV, ghidra-emotionengine-reloaded,

@@ -7,7 +7,7 @@
     "commit": "2efac00ccfe0529628f6cc74cdad220f2dd6fa20"
   },
   "retail": {
-    "path": "~/ventris-corpus/extracted/ps2-fatal-frame/SLUS_203.88",
+    "path": "~/romwright-corpus/extracted/ps2-fatal-frame/SLUS_203.88",
     "sha1": "5ac4626e0d76218e977b01f4fae5948de9a1755e"
   },
   "program": "ps2-ff",
@@ -29,7 +29,7 @@
   "symbols": [
     {
       "kind": "truth_tsv",
-      "path": "~/ventris-corpus/extracted/ps2-fatal-frame/truth/functions.tsv"
+      "path": "~/romwright-corpus/extracted/ps2-fatal-frame/truth/functions.tsv"
     },
     {
       "kind": "splat",

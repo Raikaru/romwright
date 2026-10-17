@@ -27,7 +27,7 @@ rerun; the donor and DWARF stages need the venv with tree-sitter that benchmarks
                        changes) over every function the import found; writes dump-GAME.json. The runs of the report
                        used `--strong-entries` for the larger images (the driver's docstring says what that changes)
   score [GAME]         join truth and the dump -> scores/GAME.json (cheap, memory is the size of the dump)
-  transfer [GAME]      Q2 over the donors in benchmarks/fact_pack/donors.json (their repos under ~/ventris-scratch/factpack)
+  transfer [GAME]      Q2 over the donors in benchmarks/fact_pack/donors.json (their repos under ~/romwright-scratch/factpack)
   exactness            Q3 on a prepared m22-002 work dir (`--work`/q3work/{p4repo,verify_report.json}, see
                        tests/m22-002_ps2_c_output.py `ensure_repo`/`verify_report`); needs /var/tmp/p4ci, wibo
   validate-layouts     the layout engine against MWCC `sizeof` / member-address assertions (same work dir)
@@ -53,9 +53,9 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "fact_pack"))
 
 HOME = Path.home()
-SCRATCH = HOME / "ventris-scratch" / "factpack"
-CORPUS = HOME / "ventris-corpus" / "extracted"
-WORK = HOME / "ventris-scratch" / "structaudit"
+SCRATCH = HOME / "romwright-scratch" / "factpack"
+CORPUS = HOME / "romwright-corpus" / "extracted"
+WORK = HOME / "romwright-scratch" / "structaudit"
 
 
 def log(message):

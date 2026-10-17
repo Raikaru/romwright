@@ -10,7 +10,7 @@ measured with fresh imports per arm.
 A fixture is a directory in the truth contract of [console-research.md](console-research.md#the-truth-contract): the image,
 `truth/functions.tsv` (`start size name module verified`) and `truth/meta.json` (`compiler`, `flags`, `repo`, `commit`),
 built from an open-source game with the vendor compiler and read back from its own PDB, COFF symbols or DWARF (never from the
-importer). PcImport's fixtures live on `nih-vps-u:~/ventris-corpus/extracted/pc-*` and are listed with their compilers, flags
+importer). PcImport's fixtures live on `nih-vps-u:~/romwright-corpus/extracted/pc-*` and are listed with their compilers, flags
 and source commits in `benchmarks/pc_fixtures/` (the build recipes); the ones this page measures:
 
 | fixture | game | compiler | flags | truth |
@@ -43,7 +43,7 @@ from the game's own code (the statically linked C runtime is excluded: the link 
    A function the importer did not discover at the truth address, or that does not compile, scores 0.
 
 ```
-python3 tests/m22-004_pc_c_output.py --fixture ~/ventris-corpus/extracted/pc-glquake-msvc42 --tag arm \
+python3 tests/m22-004_pc_c_output.py --fixture ~/romwright-corpus/extracted/pc-glquake-msvc42 --tag arm \
     [--env ROMWRIGHT_PE_CONVENTIONS=off] [--report STEM] [--functions-out FILE] [--all-code] [--mingw-root DIR] \
     [--artifacts DIR] [--search N] [--flags "..."] [--target-relocs retail|candidate] [--no-strict-relocs]
 python3 tests/m22-004/failure_classes.py REPORT.json DIR    # the classes of the non-exact functions (needs capstone)

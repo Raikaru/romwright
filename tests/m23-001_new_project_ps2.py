@@ -54,8 +54,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CORPUS = Path(os.environ.get("ROMWRIGHT_CORPUS", Path.home() / "ventris-corpus" / "extracted"))
-REPOS = Path(os.environ.get("ROMWRIGHT_PS2_REPOS", Path.home() / "ventris-scratch" / "ps2-truth" / "repos"))
+CORPUS = Path(os.environ.get("ROMWRIGHT_CORPUS", Path.home() / "romwright-corpus" / "extracted"))
+REPOS = Path(os.environ.get("ROMWRIGHT_PS2_REPOS", Path.home() / "romwright-scratch" / "ps2-truth" / "repos"))
 P4CI = Path("/var/tmp/p4ci")
 
 # --------------------------------------------------------------------------

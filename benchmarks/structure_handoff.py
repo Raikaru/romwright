@@ -24,7 +24,7 @@ whose Rust tree differs from the decompiler's.
 
 Usage (on the build host; see docs/ownership.md for the cache):
   benchmarks/structure_handoff.py --target ~/runs/RustStructure/target \\
-      --ghidra-opt ~/runs/RustStructure/ventris/native/build/ghidra_opt \\
+      --ghidra-opt ~/runs/RustStructure/romwright/native/build/ghidra_opt \\
       --cache ~/runs/OwnershipMetric/cache --limit 100 --jobs 3 --out /tmp/handoff.json
 """
 from __future__ import annotations
@@ -78,7 +78,7 @@ def main() -> int:
     parser.add_argument("--target", type=Path, required=True, help="cargo target dir with release/romwright-cli")
     parser.add_argument("--ghidra-opt", type=Path, required=True)
     parser.add_argument("--cache", type=Path, default=Path.home() / "runs/OwnershipMetric/cache")
-    parser.add_argument("--corpus", type=Path, default=Path.home() / "ventris-corpus" / "extracted")
+    parser.add_argument("--corpus", type=Path, default=Path.home() / "romwright-corpus" / "extracted")
     parser.add_argument("--images", default="", help="comma list of image ids (default: all)")
     parser.add_argument("--limit", type=int, default=0, help="functions per image (0: the whole sample)")
     parser.add_argument("--jobs", type=int, default=2)

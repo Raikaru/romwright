@@ -7,7 +7,7 @@
     "commit": "92a331e880e026bf14d8aff6099f1e5e711ca443"
   },
   "retail": {
-    "path": "~/ventris-corpus/extracted/ps2-digital-devil-saga/SLUS_209.74",
+    "path": "~/romwright-corpus/extracted/ps2-digital-devil-saga/SLUS_209.74",
     "sha1": "6d18898e2724bf1d145392766e8ba1e678487419"
   },
   "program": "ps2-dds",
@@ -25,7 +25,7 @@
   "symbols": [
     {
       "kind": "truth_tsv",
-      "path": "~/ventris-corpus/extracted/ps2-digital-devil-saga/truth/functions.tsv"
+      "path": "~/romwright-corpus/extracted/ps2-digital-devil-saga/truth/functions.tsv"
     },
     {
       "kind": "splat",

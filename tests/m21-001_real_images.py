@@ -46,7 +46,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "target" / "release" / "romwright-cli"
-CORPUS = Path.home() / "ventris-corpus" / "extracted"
+CORPUS = Path.home() / "romwright-corpus" / "extracted"
 
 
 ET_SCE_PSPRELEXEC = 0xFFA0

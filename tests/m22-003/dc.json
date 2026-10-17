@@ -7,7 +7,7 @@
     "commit": "63f7a9e591f75146dc50b0f79df31be25d0cb0db"
   },
   "retail": {
-    "path": "~/ventris-corpus/extracted/ps2-dark-chronicle/SCES_511.90",
+    "path": "~/romwright-corpus/extracted/ps2-dark-chronicle/SCES_511.90",
     "sha1": "32d26ba8e132a6b65f53212c89803903d0ad7f4d"
   },
   "program": "ps2-dc",

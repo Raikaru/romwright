@@ -340,7 +340,7 @@ def merge(images: dict, key: str) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--corpus", type=Path, default=Path.home() / "ventris-corpus" / "extracted")
+    parser.add_argument("--corpus", type=Path, default=Path.home() / "romwright-corpus" / "extracted")
     parser.add_argument("--cache", type=Path, default=Path.home() / ".cache" / "romwright" / "switch-feed")
     parser.add_argument("--target-dir", type=Path, required=True)
     parser.add_argument("--out", type=Path, default=ROOT / "benchmarks" / "reports" / "switch_feed.json")
