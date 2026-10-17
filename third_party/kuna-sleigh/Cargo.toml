@@ -1,0 +1,25 @@
+# Vendored copy of kuna-sleigh (https://github.com/noelo-Lab/kuna, Apache-2.0,
+# rev c4f735f903026ec486a47f395e0e9944069e95e5, decompiler/crates/kuna-sleigh)
+# with three local changes: the constructor-walk depth bound is Ghidra's 64
+# (src/sleigh.rs `MAX_DEPTH`), the per-constructor operand bound is the
+# console's 74 operand states (`MAX_OPERAND`), and `Sleigh::reset_for_reuse`
+# puts a decoded engine back to its spec's state. Replaces the git crate through the workspace
+# `[patch]`; see docs/third-party.md.
+[package]
+name = "kuna-sleigh"
+description = "kuna Rust port: SLEIGH .sla reader + instruction decode runtime (no compiler)"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.90"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+kuna-base = { git = "https://github.com/noelo-Lab/kuna", rev = "c4f735f903026ec486a47f395e0e9944069e95e5" }
+kuna-num = { git = "https://github.com/noelo-Lab/kuna", rev = "c4f735f903026ec486a47f395e0e9944069e95e5" }
+
+# Upstream builds this crate as a git dependency, where cargo caps its lints;
+# as a path dependency its upstream `unused` warnings would show in every
+# build.
+[lints.rust]
+unused = "allow"
