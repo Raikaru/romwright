@@ -1,0 +1,19 @@
+{
+  "id": "m20-014",
+  "passed": true,
+  "results": {
+    "valid": {
+      "outcome": "exact"
+    },
+    "relocations": {
+      "outcome": "exact",
+      "words_compared": 6
+    },
+    "bad_offset": {
+      "outcome": "refused"
+    },
+    "truncated": {
+      "outcome": "refused"
+    }
+  }
+}

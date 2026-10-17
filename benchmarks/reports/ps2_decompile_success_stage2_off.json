@@ -1,0 +1,99 @@
+{
+ "wave": "/home/raikaru/runs/Stage2/succ-g1/wave.json",
+ "bin": "/home/raikaru/runs/Stage2/bin6-off",
+ "games": {
+  "ps2-fatal-frame": {
+   "sampled": 942,
+   "decompiled": 942,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 270.7
+  },
+  "ps2-ratchet-clank-pal": {
+   "sampled": 859,
+   "decompiled": 858,
+   "success_rate": 0.9988,
+   "wave_success_rate": 1.0,
+   "classes": {
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "failures": [
+    {
+     "address": "0023aa38",
+     "success": false,
+     "seconds": 0.16,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+    }
+   ],
+   "wall_seconds": 78.0
+  },
+  "ps2-god-hand": {
+   "sampled": 980,
+   "decompiled": 980,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 291.5
+  },
+  "ps2-digital-devil-saga": {
+   "sampled": 977,
+   "decompiled": 977,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 303.9
+  },
+  "ps2-dark-chronicle": {
+   "sampled": 969,
+   "decompiled": 969,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 328.0
+  },
+  "ps2-ratchet-clank": {
+   "sampled": 861,
+   "decompiled": 860,
+   "success_rate": 0.9988,
+   "wave_success_rate": 1.0,
+   "classes": {
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "failures": [
+    {
+     "address": "00239780",
+     "success": false,
+     "seconds": 0.18,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+    }
+   ],
+   "wall_seconds": 86.7
+  },
+  "ps2-persona-4": {
+   "sampled": 975,
+   "decompiled": 974,
+   "success_rate": 0.999,
+   "wave_success_rate": 1.0,
+   "classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "failures": [
+    {
+     "address": "002be530",
+     "success": false,
+     "seconds": 60.07,
+     "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+     "class": "native runtime: native runtime: execution deadline exceeded"
+    }
+   ],
+   "wall_seconds": 285.6
+  }
+ }
+}

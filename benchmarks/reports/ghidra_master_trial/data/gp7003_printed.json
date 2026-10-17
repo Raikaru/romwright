@@ -1,0 +1,998 @@
+{
+ "bins": [
+  "base",
+  "cp",
+  "rg",
+  "cf"
+ ],
+ "games": {
+  "gba-kh-chain-of-memories": {
+   "functions": 64,
+   "identical": 60,
+   "differing": [
+    {
+     "function": "0800a774",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 163
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 2,
+      "lines": 94
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 2,
+      "lines": 94
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 163
+     },
+     "identical": false
+    },
+    {
+     "function": "0800ad90",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 20,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 249
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 2,
+      "lines": 100
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 2,
+      "lines": 100
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 20,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 249
+     },
+     "identical": false
+    },
+    {
+     "function": "080b13d0",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 12,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 42
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 2,
+      "lines": 13
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 2,
+      "lines": 13
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 12,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 42
+     },
+     "identical": false
+    },
+    {
+     "function": "080c4708",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 89
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 2,
+      "lines": 32
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 2,
+      "lines": 32
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 89
+     },
+     "identical": false
+    }
+   ]
+  },
+  "gc-pikmin-2": {
+   "functions": 60,
+   "identical": 60,
+   "differing": []
+  },
+  "n64-super-mario-64": {
+   "functions": 60,
+   "identical": 60,
+   "differing": []
+  },
+  "nds-kh-358-2-days": {
+   "functions": 60,
+   "identical": 60,
+   "differing": []
+  },
+  "ps2-dark-chronicle": {
+   "functions": 61,
+   "identical": 60,
+   "differing": [
+    {
+     "function": "00111ad8",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 73,
+      "goto": 13,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 325
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 21
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 21
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 73,
+      "goto": 13,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 325
+     },
+     "identical": false
+    }
+   ]
+  },
+  "ps2-dark-cloud": {
+   "functions": 61,
+   "identical": 60,
+   "differing": [
+    {
+     "function": "00115e88",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 73,
+      "goto": 13,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 325
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 21
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 21
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 73,
+      "goto": 13,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 325
+     },
+     "identical": false
+    }
+   ]
+  },
+  "ps2-digital-devil-saga": {
+   "functions": 60,
+   "identical": 60,
+   "differing": []
+  },
+  "ps2-fatal-frame": {
+   "functions": 62,
+   "identical": 60,
+   "differing": [
+    {
+     "function": "001ca528",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 30,
+      "goto": 0,
+      "jumptable_warning": 1,
+      "indirect_jump": 1,
+      "lines": 63
+     },
+     "cp": {
+      "printed": true,
+      "switch": 2,
+      "case": 61,
+      "goto": 9,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 323
+     },
+     "rg": {
+      "printed": true,
+      "switch": 2,
+      "case": 61,
+      "goto": 9,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 323
+     },
+     "cf": {
+      "printed": true,
+      "switch": 2,
+      "case": 61,
+      "goto": 9,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 323
+     },
+     "identical": false
+    },
+    {
+     "function": "001ca9d8",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 30,
+      "goto": 0,
+      "jumptable_warning": 1,
+      "indirect_jump": 1,
+      "lines": 63
+     },
+     "cp": {
+      "printed": true,
+      "switch": 3,
+      "case": 70,
+      "goto": 23,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 441
+     },
+     "rg": {
+      "printed": true,
+      "switch": 3,
+      "case": 70,
+      "goto": 23,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 441
+     },
+     "cf": {
+      "printed": true,
+      "switch": 3,
+      "case": 70,
+      "goto": 23,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 441
+     },
+     "identical": false
+    }
+   ]
+  },
+  "ps2-god-hand": {
+   "functions": 70,
+   "identical": 60,
+   "differing": [
+    {
+     "function": "001471f0",
+     "base": {
+      "printed": true,
+      "switch": 2,
+      "case": 11,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 90
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 15
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 15
+     },
+     "cf": {
+      "printed": true,
+      "switch": 2,
+      "case": 11,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 90
+     },
+     "identical": false
+    },
+    {
+     "function": "00160b90",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 7,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 31
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 18
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 18
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 7,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 31
+     },
+     "identical": false
+    },
+    {
+     "function": "00163598",
+     "base": {
+      "printed": true,
+      "switch": 2,
+      "case": 13,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 106
+     },
+     "cp": {
+      "printed": true,
+      "switch": 1,
+      "case": 5,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 59
+     },
+     "rg": {
+      "printed": true,
+      "switch": 1,
+      "case": 5,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 59
+     },
+     "cf": {
+      "printed": true,
+      "switch": 2,
+      "case": 13,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 106
+     },
+     "identical": false
+    },
+    {
+     "function": "0020f3c0",
+     "base": {
+      "printed": true,
+      "switch": 4,
+      "case": 55,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 404
+     },
+     "cp": {
+      "printed": true,
+      "switch": 4,
+      "case": 51,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 389
+     },
+     "rg": {
+      "printed": true,
+      "switch": 4,
+      "case": 55,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 404
+     },
+     "cf": {
+      "printed": true,
+      "switch": 4,
+      "case": 55,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 404
+     },
+     "identical": false
+    },
+    {
+     "function": "0025b6e8",
+     "base": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 1,
+      "indirect_jump": 1,
+      "lines": 111
+     },
+     "cp": {
+      "printed": true,
+      "switch": 1,
+      "case": 5,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 156
+     },
+     "rg": {
+      "printed": true,
+      "switch": 1,
+      "case": 5,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 156
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 5,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 156
+     },
+     "identical": false
+    },
+    {
+     "function": "002744e0",
+     "base": {
+      "printed": true,
+      "switch": 5,
+      "case": 39,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 328
+     },
+     "cp": {
+      "printed": true,
+      "switch": 5,
+      "case": 38,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 325
+     },
+     "rg": {
+      "printed": true,
+      "switch": 5,
+      "case": 39,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 328
+     },
+     "cf": {
+      "printed": true,
+      "switch": 5,
+      "case": 39,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 328
+     },
+     "identical": false
+    },
+    {
+     "function": "002ff748",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 7,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 73
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 56
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 56
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 7,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 73
+     },
+     "identical": false
+    },
+    {
+     "function": "002ff8a0",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 7,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 85
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 59
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 59
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 7,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 85
+     },
+     "identical": false
+    },
+    {
+     "function": "0037a9c8",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 5,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 33
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 13
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 13
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 5,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 33
+     },
+     "identical": false
+    },
+    {
+     "function": "003a9d88",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 2,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 48
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 2,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 44
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 2,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 44
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 2,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 48
+     },
+     "identical": false
+    }
+   ]
+  },
+  "ps2-persona-4": {
+   "functions": 61,
+   "identical": 60,
+   "differing": [
+    {
+     "function": "004235c8",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 28,
+      "goto": 26,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 650
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 91
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 91
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 28,
+      "goto": 26,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 650
+     },
+     "identical": false
+    }
+   ]
+  },
+  "ps2-ratchet-clank": {
+   "functions": 32,
+   "identical": 30,
+   "differing": [
+    {
+     "function": "00119da0",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 73,
+      "goto": 7,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 348
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 34
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 34
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 73,
+      "goto": 7,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 348
+     },
+     "identical": false
+    },
+    {
+     "function": "00216c48",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 194
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 161
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 161
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 194
+     },
+     "identical": false
+    }
+   ]
+  },
+  "ps2-ratchet-clank-pal": {
+   "functions": 32,
+   "identical": 30,
+   "differing": [
+    {
+     "function": "0011a0a0",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 73,
+      "goto": 7,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 348
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 34
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 34
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 73,
+      "goto": 7,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 348
+     },
+     "identical": false
+    },
+    {
+     "function": "00217ae8",
+     "base": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 194
+     },
+     "cp": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 161
+     },
+     "rg": {
+      "printed": true,
+      "switch": 0,
+      "case": 0,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 1,
+      "lines": 161
+     },
+     "cf": {
+      "printed": true,
+      "switch": 1,
+      "case": 6,
+      "goto": 0,
+      "jumptable_warning": 0,
+      "indirect_jump": 0,
+      "lines": 194
+     },
+     "identical": false
+    }
+   ]
+  }
+ }
+}

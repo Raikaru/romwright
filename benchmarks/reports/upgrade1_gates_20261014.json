@@ -1,0 +1,3139 @@
+{
+ "benchmark": "upgrade1_gates",
+ "date": "20261014",
+ "tag": "p2",
+ "switches": {
+  "sub": {
+   "env": "ROMWRIGHT_EXPORT_SUBPIECE_ARITY",
+   "what": "SUBPIECE intrinsic macro takes the printed offset argument"
+  },
+  "odd": {
+   "env": "ROMWRIGHT_EXPORT_ODD_WIDTHS",
+   "what": "`undefined3/5/6/7` declared as byte arrays"
+  },
+  "loc": {
+   "env": "ROMWRIGHT_EXPORT_LOCAL_VIEWS",
+   "what": "byte-array locals: whole-array values and `_off_w_` members"
+  },
+  "mis": {
+   "env": "ROMWRIGHT_EXPORT_MISMATCH_NAMES",
+   "what": "`_NAME` / `stack0x...` / `_DAT_...` mismatch-symbol uses"
+  },
+  "dec": {
+   "env": "ROMWRIGHT_EXPORT_DECLARED_VIEWS",
+   "what": "globals the header declares are read through that declaration"
+  },
+  "ctx": {
+   "env": "ROMWRIGHT_EXPORT_CONTEXT_NAMES",
+   "what": "`void (*T[])(..)` is a declared name"
+  },
+  "ptr": {
+   "env": "ROMWRIGHT_STRUCT_POINTEE_RUNS",
+   "what": "struct pointer field to a scalar run is `T *`"
+  },
+  "flt": {
+   "env": "ROMWRIGHT_EXPORT_FLOAT_ARGS",
+   "what": "integer literal passed to a `float` parameter is the float its bits spell"
+  },
+  "acc": {
+   "env": "ROMWRIGHT_EXPORT_DECLARED_ACCESS",
+   "what": "a header object of another shape than the printed one is read through its address"
+  }
+ },
+ "gates": [
+  {
+   "gate": "m22-002 MWCC seed 20261010",
+   "off": {
+    "functions": 200,
+    "exact": 55,
+    "compiled": 193,
+    "mean_percent": 76.968
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-sub": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-odd": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-loc": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-mis": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-dec": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-ctx": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-ptr": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-flt": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "only-acc": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-002 MWCC seed 20261011",
+   "off": {
+    "functions": 200,
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.316
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 57,
+      "compiled": 194,
+      "mean_percent": 78.316
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-002 ee-gcc",
+   "off": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.403
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 106,
+      "compiled": 197,
+      "mean_percent": 86.403
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dds",
+   "off": {
+    "functions": 200,
+    "exact": 61,
+    "compiled": 196,
+    "mean_percent": 76.818,
+    "classes": {
+     "type mismatch (assignment, operand, return, cast)": 1,
+     "member access on a type the context lacks": 1,
+     "undeclared identifier": 2
+    },
+    "named": {
+     "c1: byte-array local value": 1,
+     "b: partial member `_o_w_`": 1,
+     "undeclared `_NAME`/stack0x": 2
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 61,
+      "compiled": 200,
+      "mean_percent": 77.224,
+      "classes": {},
+      "named": {}
+     },
+     "paired": 200,
+     "better": 2,
+     "worse": 0,
+     "same": 198,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0017c220",
+      "00239e30",
+      "00284258",
+      "002848e0"
+     ],
+     "better_addresses": [
+      "00239e30",
+      "002848e0"
+     ],
+     "worse_addresses": []
+    },
+    "only-loc": {
+     "summary": {
+      "functions": 4,
+      "exact": 0,
+      "compiled": 2,
+      "mean_percent": 2.368,
+      "classes": {
+       "undeclared identifier": 2
+      },
+      "named": {
+       "undeclared `_NAME`/stack0x": 2
+      }
+     },
+     "paired": 4,
+     "better": 1,
+     "worse": 0,
+     "same": 3,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0017c220",
+      "00239e30"
+     ],
+     "better_addresses": [
+      "00239e30"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 4,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 1,
+       "member access on a type the context lacks": 1,
+       "undeclared identifier": 2
+      },
+      "named": {
+       "c1: byte-array local value": 1,
+       "b: partial member `_o_w_`": 1,
+       "undeclared `_NAME`/stack0x": 2
+      }
+     }
+    },
+    "only-mis": {
+     "summary": {
+      "functions": 4,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 1,
+       "member access on a type the context lacks": 3
+      },
+      "named": {
+       "c1: byte-array local value": 1,
+       "b: partial member `_o_w_`": 3
+      }
+     },
+     "paired": 4,
+     "better": 0,
+     "worse": 0,
+     "same": 4,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 4,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 1,
+       "member access on a type the context lacks": 1,
+       "undeclared identifier": 2
+      },
+      "named": {
+       "c1: byte-array local value": 1,
+       "b: partial member `_o_w_`": 1,
+       "undeclared `_NAME`/stack0x": 2
+      }
+     }
+    },
+    "no-loc": {
+     "summary": {
+      "functions": 4,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0
+     },
+     "paired": 4,
+     "better": 0,
+     "worse": 2,
+     "same": 2,
+     "lost_exact": [],
+     "lost_compiled": [
+      "0017c220",
+      "00239e30",
+      "00284258",
+      "002848e0"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00239e30",
+      "002848e0"
+     ],
+     "def_on_same_functions": {
+      "functions": 4,
+      "exact": 0,
+      "compiled": 4,
+      "mean_percent": 20.283
+     }
+    },
+    "no-mis": {
+     "summary": {
+      "functions": 4,
+      "exact": 0,
+      "compiled": 2,
+      "mean_percent": 2.368
+     },
+     "paired": 4,
+     "better": 0,
+     "worse": 1,
+     "same": 3,
+     "lost_exact": [],
+     "lost_compiled": [
+      "00284258",
+      "002848e0"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "002848e0"
+     ],
+     "def_on_same_functions": {
+      "functions": 4,
+      "exact": 0,
+      "compiled": 4,
+      "mean_percent": 20.283
+     }
+    }
+   }
+  },
+  {
+   "gate": "m22-003 rc",
+   "off": {
+    "functions": 200,
+    "exact": 26,
+    "compiled": 199,
+    "mean_percent": 68.113,
+    "classes": {
+     "type mismatch (assignment, operand, return, cast)": 1
+    },
+    "named": {
+     "c1: byte-array local value": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 26,
+      "compiled": 200,
+      "mean_percent": 68.158,
+      "classes": {},
+      "named": {}
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "00128d28"
+     ],
+     "better_addresses": [
+      "00128d28"
+     ],
+     "worse_addresses": []
+    },
+    "only-loc": {
+     "summary": {
+      "functions": 200,
+      "exact": 26,
+      "compiled": 200,
+      "mean_percent": 68.158,
+      "classes": {},
+      "named": {}
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "00128d28"
+     ],
+     "better_addresses": [
+      "00128d28"
+     ],
+     "worse_addresses": []
+    },
+    "no-loc": {
+     "summary": {
+      "functions": 1,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0
+     },
+     "paired": 1,
+     "better": 0,
+     "worse": 1,
+     "same": 0,
+     "lost_exact": [],
+     "lost_compiled": [
+      "00128d28"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00128d28"
+     ],
+     "def_on_same_functions": {
+      "functions": 1,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 8.878
+     }
+    }
+   }
+  },
+  {
+   "gate": "m22-003 p4",
+   "off": {
+    "functions": 200,
+    "exact": 60,
+    "compiled": 193,
+    "mean_percent": 79.4,
+    "classes": {
+     "call does not match prototype": 1,
+     "undeclared identifier": 1,
+     "type mismatch (assignment, operand, return, cast)": 5
+    },
+    "named": {
+     "undeclared `_NAME`/stack0x": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 60,
+      "compiled": 193,
+      "mean_percent": 79.4,
+      "classes": {
+       "call does not match prototype": 1,
+       "undeclared identifier": 1,
+       "type mismatch (assignment, operand, return, cast)": 5
+      },
+      "named": {
+       "undeclared `_NAME`/stack0x": 1
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 gh (pristine repo copy: a smaller build than the harness clone)",
+   "off": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 196,
+    "mean_percent": 79.062,
+    "classes": {
+     "undeclared identifier": 1,
+     "member access on a type the context lacks": 1,
+     "assembler rejected the compiler's output": 1
+    },
+    "named": {
+     "undeclared `_NAME`/stack0x": 1,
+     "b: partial member `_o_w_`": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 78,
+      "compiled": 198,
+      "mean_percent": 79.157,
+      "classes": {
+       "assembler rejected the compiler's output": 1
+      },
+      "named": {}
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0018c370",
+      "002a8d30"
+     ],
+     "better_addresses": [
+      "0018c370"
+     ],
+     "worse_addresses": []
+    },
+    "only-mis": {
+     "summary": {
+      "functions": 2,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 9.5,
+      "classes": {
+       "member access on a type the context lacks": 1
+      },
+      "named": {
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 2,
+     "better": 1,
+     "worse": 0,
+     "same": 1,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0018c370"
+     ],
+     "better_addresses": [
+      "0018c370"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 2,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "undeclared identifier": 1,
+       "member access on a type the context lacks": 1
+      },
+      "named": {
+       "undeclared `_NAME`/stack0x": 1,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "no-mis": {
+     "summary": {
+      "functions": 2,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 0.0
+     },
+     "paired": 2,
+     "better": 0,
+     "worse": 1,
+     "same": 1,
+     "lost_exact": [],
+     "lost_compiled": [
+      "0018c370"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "0018c370"
+     ],
+     "def_on_same_functions": {
+      "functions": 2,
+      "exact": 0,
+      "compiled": 2,
+      "mean_percent": 9.5
+     }
+    }
+   }
+  },
+  {
+   "gate": "m22-003 gh (harness clone)",
+   "off": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 199,
+    "mean_percent": 82.119,
+    "classes": {},
+    "named": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 78,
+      "compiled": 199,
+      "mean_percent": 82.119,
+      "classes": {},
+      "named": {}
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 ff",
+   "off": {
+    "functions": 200,
+    "exact": 20,
+    "compiled": 145,
+    "mean_percent": 49.35,
+    "classes": {
+     "member access on a type the context lacks": 25,
+     "call does not match prototype": 2,
+     "undeclared identifier": 3,
+     "type mismatch (assignment, operand, return, cast)": 22,
+     "conflicting types / redeclaration": 1,
+     "syntax error": 1,
+     "other": 1
+    },
+    "named": {
+     "b: union members (.uN/.whole)": 25,
+     "undeclared `_NAME`/stack0x": 2,
+     "c1: byte-array local value": 4,
+     "syntax: undefinedN": 2,
+     "b: partial member `_o_w_`": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 21,
+      "compiled": 195,
+      "mean_percent": 61.753,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 5
+      },
+      "named": {}
+     },
+     "paired": 200,
+     "better": 58,
+     "worse": 1,
+     "same": 141,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "00147a20"
+     ],
+     "gained_compiled": [
+      "00107818",
+      "0010cc08",
+      "00119f58",
+      "00127e40",
+      "0012c088",
+      "0012cc88",
+      "0016b008",
+      "00174878",
+      "0017e3e0",
+      "00184ef8",
+      "00185dc8",
+      "00186028",
+      "00187990",
+      "001887d8",
+      "00188ae0",
+      "0018c4c8",
+      "0018ca98",
+      "0018d298",
+      "0018dd58",
+      "00190018",
+      "001905f8",
+      "00190f88",
+      "0019c2f0",
+      "0019cae0",
+      "001a2768",
+      "001a81f0",
+      "001ae360",
+      "001b1770",
+      "001b8308",
+      "001ba900",
+      "001bab60",
+      "001bbd28",
+      "001be228",
+      "001c4940",
+      "001c6e18",
+      "001ca3f8",
+      "001cf3e0",
+      "001d1030",
+      "001d6ed8",
+      "001e4b00",
+      "001f9318",
+      "00201220",
+      "00205908",
+      "00208ed8",
+      "00210ae8",
+      "00217458",
+      "0021a1e8",
+      "0021c988",
+      "0021d5c0",
+      "0021e578"
+     ],
+     "better_addresses": [
+      "00107818",
+      "0010cc08",
+      "001212d8",
+      "001233f8",
+      "00127e40",
+      "0012c088",
+      "0012cc88",
+      "00147a20",
+      "00164898",
+      "00166f08",
+      "00167940",
+      "0016b008",
+      "00174878",
+      "00184ef8",
+      "00186028",
+      "00187990",
+      "001887d8",
+      "00188ae0",
+      "0018c4c8",
+      "0018ca98",
+      "0018d298",
+      "0018d618",
+      "0018dd58",
+      "00190018",
+      "001905f8",
+      "00190f88",
+      "00192e60",
+      "001942c0",
+      "00195e20",
+      "0019c2f0",
+      "0019cae0",
+      "001a2768",
+      "001a81f0",
+      "001ae360",
+      "001b1770",
+      "001b8308",
+      "001ba900",
+      "001bab60",
+      "001bbd28",
+      "001be228",
+      "001c6e18",
+      "001ca3f8",
+      "001cbc20",
+      "001cc1b0",
+      "001cf3e0",
+      "001d6ed8",
+      "001f9318",
+      "001fe2b0",
+      "00201220",
+      "00205908",
+      "00208ed8",
+      "00210ae8",
+      "00217458",
+      "0021a1e8",
+      "0021b5b0",
+      "0021c988",
+      "0021d5c0",
+      "0021e578"
+     ],
+     "worse_addresses": [
+      "0021dc20"
+     ]
+    },
+    "only-odd": {
+     "summary": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 26,
+       "call does not match prototype": 2,
+       "undeclared identifier": 2,
+       "type mismatch (assignment, operand, return, cast)": 18,
+       "conflicting types / redeclaration": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 26,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 5,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 0,
+     "same": 65,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "only-loc": {
+     "summary": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 17,
+      "mean_percent": 15.03,
+      "classes": {
+       "member access on a type the context lacks": 27,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 13,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 28,
+       "undeclared `_NAME`/stack0x": 2,
+       "syntax: undefinedN": 2
+      }
+     },
+     "paired": 65,
+     "better": 2,
+     "worse": 0,
+     "same": 63,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0012cc88",
+      "00210ae8"
+     ],
+     "better_addresses": [
+      "0012cc88",
+      "00210ae8"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "only-mis": {
+     "summary": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 27,
+       "call does not match prototype": 2,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "undeclared identifier": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 2
+      }
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 0,
+     "same": 65,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "only-dec": {
+     "summary": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 38,
+      "mean_percent": 29.452,
+      "classes": {
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 19,
+       "conflicting types / redeclaration": 1,
+       "member access on a type the context lacks": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 1,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 1,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 65,
+     "better": 20,
+     "worse": 0,
+     "same": 45,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "00107818",
+      "00127e40",
+      "0012c088",
+      "00174878",
+      "0017e3e0",
+      "00186028",
+      "00187990",
+      "001887d8",
+      "0019c2f0",
+      "0019cae0",
+      "001b1770",
+      "001bab60",
+      "001bbd28",
+      "001c4940",
+      "001c6e18",
+      "001d6ed8",
+      "001e4b00",
+      "001f9318",
+      "00201220",
+      "00205908",
+      "00217458",
+      "0021c988",
+      "0021e578"
+     ],
+     "better_addresses": [
+      "00107818",
+      "00127e40",
+      "0012c088",
+      "00174878",
+      "00186028",
+      "00187990",
+      "001887d8",
+      "0019c2f0",
+      "0019cae0",
+      "001b1770",
+      "001bab60",
+      "001bbd28",
+      "001c6e18",
+      "001d6ed8",
+      "001f9318",
+      "00201220",
+      "00205908",
+      "00217458",
+      "0021c988",
+      "0021e578"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "only-ctx": {
+     "summary": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 16,
+      "mean_percent": 14.378,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 65,
+     "better": 1,
+     "worse": 0,
+     "same": 64,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "00190f88"
+     ],
+     "better_addresses": [
+      "00190f88"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "only-ptr": {
+     "summary": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 0,
+     "same": 65,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "only-flt": {
+     "summary": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 0,
+     "same": 65,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "only-acc": {
+     "summary": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 29,
+      "mean_percent": 27.11,
+      "classes": {
+       "member access on a type the context lacks": 26,
+       "undeclared identifier": 4,
+       "type mismatch (assignment, operand, return, cast)": 4,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 27,
+       "undeclared `_NAME`/stack0x": 3,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 65,
+     "better": 27,
+     "worse": 1,
+     "same": 37,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "00147a20"
+     ],
+     "gained_compiled": [
+      "0010cc08",
+      "0016b008",
+      "00185dc8",
+      "0018c4c8",
+      "0018ca98",
+      "0018d298",
+      "0018dd58",
+      "00190018",
+      "001905f8",
+      "001be228",
+      "001ca3f8",
+      "00208ed8",
+      "0021a1e8",
+      "0021d5c0"
+     ],
+     "better_addresses": [
+      "0010cc08",
+      "001212d8",
+      "001233f8",
+      "00147a20",
+      "00164898",
+      "00166f08",
+      "00167940",
+      "0016b008",
+      "0018c4c8",
+      "0018ca98",
+      "0018d298",
+      "0018d618",
+      "0018dd58",
+      "00190018",
+      "001905f8",
+      "00192e60",
+      "001942c0",
+      "00195e20",
+      "001be228",
+      "001ca3f8",
+      "001cbc20",
+      "001cc1b0",
+      "001fe2b0",
+      "00208ed8",
+      "0021a1e8",
+      "0021b5b0",
+      "0021d5c0"
+     ],
+     "worse_addresses": [
+      "0021dc20"
+     ],
+     "off_on_same_functions": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 15,
+      "mean_percent": 13.445,
+      "classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 17,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 25,
+       "undeclared `_NAME`/stack0x": 2,
+       "c1: byte-array local value": 4,
+       "syntax: undefinedN": 2,
+       "b: partial member `_o_w_`": 1
+      }
+     }
+    },
+    "no-odd": {
+     "summary": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 64,
+      "mean_percent": 50.597
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 3,
+     "same": 62,
+     "lost_exact": [],
+     "lost_compiled": [
+      "001ae360"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00187990",
+      "001a81f0",
+      "001ae360"
+     ],
+     "def_on_same_functions": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.608
+     }
+    },
+    "no-loc": {
+     "summary": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 58,
+      "mean_percent": 46.455
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 8,
+     "same": 57,
+     "lost_exact": [],
+     "lost_compiled": [
+      "0012cc88",
+      "001a2768",
+      "001a81f0",
+      "001ae360",
+      "001b8308",
+      "001ba900",
+      "00210ae8"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "0012cc88",
+      "00187990",
+      "001a2768",
+      "001a81f0",
+      "001ae360",
+      "001b8308",
+      "001ba900",
+      "00210ae8"
+     ],
+     "def_on_same_functions": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.608
+     }
+    },
+    "no-mis": {
+     "summary": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 61,
+      "mean_percent": 49.522
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 5,
+     "same": 60,
+     "lost_exact": [],
+     "lost_compiled": [
+      "00119f58",
+      "00184ef8",
+      "001ae360",
+      "001b8308"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00184ef8",
+      "00187990",
+      "001a81f0",
+      "001ae360",
+      "001b8308"
+     ],
+     "def_on_same_functions": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.608
+     }
+    },
+    "no-dec": {
+     "summary": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 34,
+      "mean_percent": 30.704
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 26,
+     "same": 39,
+     "lost_exact": [],
+     "lost_compiled": [
+      "00107818",
+      "00119f58",
+      "00127e40",
+      "0012c088",
+      "00174878",
+      "0017e3e0",
+      "00186028",
+      "00187990",
+      "001887d8",
+      "00188ae0",
+      "0019c2f0",
+      "0019cae0",
+      "001a2768",
+      "001a81f0",
+      "001ae360",
+      "001b1770",
+      "001ba900",
+      "001bab60",
+      "001bbd28",
+      "001c4940",
+      "001c6e18",
+      "001cf3e0",
+      "001d1030",
+      "001d6ed8",
+      "001e4b00",
+      "001f9318",
+      "00201220",
+      "00205908",
+      "00217458",
+      "0021c988",
+      "0021e578"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00107818",
+      "00127e40",
+      "0012c088",
+      "00174878",
+      "00186028",
+      "00187990",
+      "001887d8",
+      "00188ae0",
+      "0019c2f0",
+      "0019cae0",
+      "001a2768",
+      "001a81f0",
+      "001ae360",
+      "001b1770",
+      "001ba900",
+      "001bab60",
+      "001bbd28",
+      "001c6e18",
+      "001cf3e0",
+      "001d6ed8",
+      "001f9318",
+      "00201220",
+      "00205908",
+      "00217458",
+      "0021c988",
+      "0021e578"
+     ],
+     "def_on_same_functions": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.608
+     }
+    },
+    "no-ctx": {
+     "summary": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 64,
+      "mean_percent": 50.672
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 3,
+     "same": 62,
+     "lost_exact": [],
+     "lost_compiled": [
+      "00190f88"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00187990",
+      "00190f88",
+      "001a81f0"
+     ],
+     "def_on_same_functions": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.608
+     }
+    },
+    "no-ptr": {
+     "summary": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.607
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 2,
+     "same": 63,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00187990",
+      "001a81f0"
+     ],
+     "def_on_same_functions": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.608
+     }
+    },
+    "no-flt": {
+     "summary": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.607
+     },
+     "paired": 65,
+     "better": 0,
+     "worse": 2,
+     "same": 63,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00187990",
+      "001a81f0"
+     ],
+     "def_on_same_functions": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.608
+     }
+    },
+    "no-acc": {
+     "summary": {
+      "functions": 65,
+      "exact": 0,
+      "compiled": 47,
+      "mean_percent": 34.527
+     },
+     "paired": 65,
+     "better": 2,
+     "worse": 36,
+     "same": 27,
+     "lost_exact": [
+      "00147a20"
+     ],
+     "lost_compiled": [
+      "0010cc08",
+      "0016b008",
+      "00184ef8",
+      "00185dc8",
+      "00188ae0",
+      "0018c4c8",
+      "0018ca98",
+      "0018d298",
+      "0018dd58",
+      "00190018",
+      "001905f8",
+      "001be228",
+      "001ca3f8",
+      "001cf3e0",
+      "001d1030",
+      "00208ed8",
+      "0021a1e8",
+      "0021d5c0"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "00217458",
+      "0021dc20"
+     ],
+     "worse_addresses": [
+      "0010cc08",
+      "001212d8",
+      "001233f8",
+      "00147a20",
+      "00164898",
+      "00166f08",
+      "00167940",
+      "0016b008",
+      "00184ef8",
+      "00186028",
+      "00187990",
+      "00188ae0",
+      "0018c4c8",
+      "0018ca98",
+      "0018d298",
+      "0018d618",
+      "0018dd58",
+      "00190018",
+      "001905f8",
+      "00190f88",
+      "00192e60",
+      "001942c0",
+      "00195e20",
+      "001a81f0",
+      "001ae360",
+      "001be228",
+      "001c6e18",
+      "001ca3f8",
+      "001cbc20",
+      "001cc1b0",
+      "001cf3e0",
+      "001fe2b0",
+      "00208ed8",
+      "0021a1e8",
+      "0021b5b0",
+      "0021d5c0"
+     ],
+     "def_on_same_functions": {
+      "functions": 65,
+      "exact": 1,
+      "compiled": 65,
+      "mean_percent": 51.608
+     }
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dc",
+   "off": {
+    "functions": 200,
+    "exact": 38,
+    "compiled": 176,
+    "mean_percent": 66.605,
+    "classes": {
+     "call does not match prototype": 2,
+     "type mismatch (assignment, operand, return, cast)": 8,
+     "syntax error": 11,
+     "unit post-processing rejected the candidate object": 1,
+     "member access on a type the context lacks": 2
+    },
+    "named": {
+     "syntax: undefinedN": 7,
+     "syntax: macro arity": 4,
+     "b: union members (.uN/.whole)": 7
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 38,
+      "compiled": 186,
+      "mean_percent": 69.844,
+      "classes": {
+       "call does not match prototype": 2,
+       "type mismatch (assignment, operand, return, cast)": 10,
+       "undeclared identifier": 1,
+       "unit post-processing rejected the candidate object": 1
+      },
+      "named": {
+       "syntax: undefinedN": 1,
+       "b: union members (.uN/.whole)": 1
+      }
+     },
+     "paired": 200,
+     "better": 10,
+     "worse": 0,
+     "same": 190,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "001496f0",
+      "0015cf50",
+      "00165a20",
+      "001aae70",
+      "001b3110",
+      "002214f0",
+      "0022e390",
+      "0022fd80",
+      "002d6670",
+      "002f6460"
+     ],
+     "better_addresses": [
+      "001496f0",
+      "0015cf50",
+      "00165a20",
+      "001aae70",
+      "001b3110",
+      "002214f0",
+      "0022e390",
+      "0022fd80",
+      "002d6670",
+      "002f6460"
+     ],
+     "worse_addresses": []
+    },
+    "only-sub": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 4,
+      "mean_percent": 23.782,
+      "classes": {
+       "syntax error": 5,
+       "member access on a type the context lacks": 3
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 3,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 10,
+     "better": 2,
+     "worse": 0,
+     "same": 8,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "001aae70",
+      "001b3110"
+     ],
+     "better_addresses": [
+      "001aae70",
+      "001b3110"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     }
+    },
+    "only-odd": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 6,
+      "mean_percent": 36.031,
+      "classes": {
+       "syntax error": 4,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: macro arity": 4,
+       "b: union members (.uN/.whole)": 6
+      }
+     },
+     "paired": 10,
+     "better": 4,
+     "worse": 0,
+     "same": 6,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0015cf50",
+      "00165a20",
+      "002214f0",
+      "0022fd80"
+     ],
+     "better_addresses": [
+      "0015cf50",
+      "00165a20",
+      "002214f0",
+      "0022fd80"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     }
+    },
+    "only-dec": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 3,
+      "mean_percent": 15.981,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 3,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 10,
+     "better": 1,
+     "worse": 0,
+     "same": 9,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "002d6670"
+     ],
+     "better_addresses": [
+      "002d6670"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     }
+    },
+    "only-ptr": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 2,
+      "mean_percent": 10.632,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     },
+     "paired": 10,
+     "better": 0,
+     "worse": 0,
+     "same": 10,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     }
+    },
+    "only-flt": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 2,
+      "mean_percent": 10.632,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     },
+     "paired": 10,
+     "better": 0,
+     "worse": 0,
+     "same": 10,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     }
+    },
+    "only-acc": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 2,
+      "mean_percent": 10.632,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     },
+     "paired": 10,
+     "better": 0,
+     "worse": 0,
+     "same": 10,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 0,
+      "mean_percent": 0.0,
+      "classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 2
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "syntax: macro arity": 3,
+       "b: union members (.uN/.whole)": 5
+      }
+     }
+    },
+    "no-sub": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 8,
+      "mean_percent": 43.829
+     },
+     "paired": 10,
+     "better": 0,
+     "worse": 4,
+     "same": 6,
+     "lost_exact": [],
+     "lost_compiled": [
+      "001496f0",
+      "001aae70",
+      "001b3110",
+      "002f6460"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "001496f0",
+      "001aae70",
+      "001b3110",
+      "002f6460"
+     ],
+     "def_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 10,
+      "mean_percent": 64.783
+     }
+    },
+    "no-odd": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 7,
+      "mean_percent": 34.495
+     },
+     "paired": 10,
+     "better": 0,
+     "worse": 5,
+     "same": 5,
+     "lost_exact": [],
+     "lost_compiled": [
+      "001496f0",
+      "0015cf50",
+      "00165a20",
+      "002214f0",
+      "0022fd80"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "001496f0",
+      "0015cf50",
+      "00165a20",
+      "002214f0",
+      "0022fd80"
+     ],
+     "def_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 10,
+      "mean_percent": 64.783
+     }
+    },
+    "no-dec": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 10,
+      "mean_percent": 56.823
+     },
+     "paired": 10,
+     "better": 0,
+     "worse": 2,
+     "same": 8,
+     "lost_exact": [],
+     "lost_compiled": [
+      "0022e390",
+      "002d6670"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "0022e390",
+      "002d6670"
+     ],
+     "def_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 10,
+      "mean_percent": 64.783
+     }
+    },
+    "no-acc": {
+     "summary": {
+      "functions": 12,
+      "exact": 0,
+      "compiled": 12,
+      "mean_percent": 64.615
+     },
+     "paired": 10,
+     "better": 0,
+     "worse": 1,
+     "same": 9,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "002214f0"
+     ],
+     "def_on_same_functions": {
+      "functions": 10,
+      "exact": 0,
+      "compiled": 10,
+      "mean_percent": 64.783
+     }
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dk",
+   "off": {
+    "functions": 200,
+    "exact": 29,
+    "compiled": 176,
+    "mean_percent": 70.804,
+    "classes": {
+     "syntax error": 8,
+     "member access on a type the context lacks": 6,
+     "type mismatch (assignment, operand, return, cast)": 6,
+     "incomplete type": 1,
+     "undeclared identifier": 2,
+     "illegal or unknown type name": 1
+    },
+    "named": {
+     "syntax: undefinedN": 7,
+     "b: union members (.uN/.whole)": 7,
+     "b: partial member `_o_w_`": 1,
+     "syntax: macro arity": 3
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 29,
+      "compiled": 189,
+      "mean_percent": 75.561,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 6,
+       "undeclared identifier": 2,
+       "illegal or unknown type name": 1,
+       "member access on a type the context lacks": 2
+      },
+      "named": {}
+     },
+     "paired": 200,
+     "better": 14,
+     "worse": 0,
+     "same": 186,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "00130fc0",
+      "0013dea0",
+      "0014eff0",
+      "0015ff50",
+      "00176080",
+      "00188a20",
+      "0019b9a0",
+      "0019f6f0",
+      "001d6760",
+      "0020a860",
+      "00213a00",
+      "00221260",
+      "00221980"
+     ],
+     "better_addresses": [
+      "00130fc0",
+      "0013dea0",
+      "0014eff0",
+      "0015ff50",
+      "00176080",
+      "00188a20",
+      "0019b9a0",
+      "0019f6f0",
+      "001d0e80",
+      "001d6760",
+      "0020a860",
+      "00213a00",
+      "00221260",
+      "00221980"
+     ],
+     "worse_addresses": []
+    },
+    "only-sub": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 2,
+      "mean_percent": 11.266,
+      "classes": {
+       "syntax error": 5,
+       "member access on a type the context lacks": 5,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 5,
+       "b: partial member `_o_w_`": 1
+      }
+     },
+     "paired": 14,
+     "better": 1,
+     "worse": 0,
+     "same": 13,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "001d6760"
+     ],
+     "better_addresses": [
+      "001d6760"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 6.357,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     }
+    },
+    "only-odd": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 3,
+      "mean_percent": 15.839,
+      "classes": {
+       "incomplete type": 2,
+       "member access on a type the context lacks": 5,
+       "syntax error": 3,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "b: union members (.uN/.whole)": 9,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 3
+      }
+     },
+     "paired": 14,
+     "better": 2,
+     "worse": 0,
+     "same": 12,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0015ff50",
+      "00176080"
+     ],
+     "better_addresses": [
+      "0015ff50",
+      "00176080"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 6.357,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     }
+    },
+    "only-dec": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 5,
+      "mean_percent": 29.07,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2,
+       "b: union members (.uN/.whole)": 2
+      }
+     },
+     "paired": 14,
+     "better": 4,
+     "worse": 0,
+     "same": 10,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0013dea0",
+      "0019b9a0",
+      "0020a860",
+      "00221980"
+     ],
+     "better_addresses": [
+      "0013dea0",
+      "0019b9a0",
+      "0020a860",
+      "00221980"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 6.357,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     }
+    },
+    "only-ptr": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 6.357,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     },
+     "paired": 14,
+     "better": 0,
+     "worse": 0,
+     "same": 14,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 6.357,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     }
+    },
+    "only-flt": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 6.357,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     },
+     "paired": 14,
+     "better": 0,
+     "worse": 0,
+     "same": 14,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 6.357,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     }
+    },
+    "only-acc": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 2,
+      "mean_percent": 10.262,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     },
+     "paired": 14,
+     "better": 2,
+     "worse": 0,
+     "same": 12,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0019f6f0"
+     ],
+     "better_addresses": [
+      "0019f6f0",
+      "001d0e80"
+     ],
+     "worse_addresses": [],
+     "off_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 1,
+      "mean_percent": 6.357,
+      "classes": {
+       "syntax error": 7,
+       "member access on a type the context lacks": 4,
+       "incomplete type": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      },
+      "named": {
+       "syntax: undefinedN": 5,
+       "b: union members (.uN/.whole)": 6,
+       "b: partial member `_o_w_`": 1,
+       "syntax: macro arity": 2
+      }
+     }
+    },
+    "no-sub": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 11,
+      "mean_percent": 60.18
+     },
+     "paired": 14,
+     "better": 0,
+     "worse": 3,
+     "same": 11,
+     "lost_exact": [],
+     "lost_compiled": [
+      "00188a20",
+      "001d6760",
+      "00213a00"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00188a20",
+      "001d6760",
+      "00213a00"
+     ],
+     "def_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 14,
+      "mean_percent": 74.314
+     }
+    },
+    "no-odd": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 9,
+      "mean_percent": 48.079
+     },
+     "paired": 14,
+     "better": 0,
+     "worse": 5,
+     "same": 9,
+     "lost_exact": [],
+     "lost_compiled": [
+      "00130fc0",
+      "0015ff50",
+      "00176080",
+      "00213a00",
+      "00221260"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00130fc0",
+      "0015ff50",
+      "00176080",
+      "00213a00",
+      "00221260"
+     ],
+     "def_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 14,
+      "mean_percent": 74.314
+     }
+    },
+    "no-dec": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 7,
+      "mean_percent": 34.331
+     },
+     "paired": 14,
+     "better": 0,
+     "worse": 7,
+     "same": 7,
+     "lost_exact": [],
+     "lost_compiled": [
+      "00130fc0",
+      "0013dea0",
+      "00188a20",
+      "0019b9a0",
+      "0020a860",
+      "00221260",
+      "00221980"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00130fc0",
+      "0013dea0",
+      "00188a20",
+      "0019b9a0",
+      "0020a860",
+      "00221260",
+      "00221980"
+     ],
+     "def_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 14,
+      "mean_percent": 74.314
+     }
+    },
+    "no-acc": {
+     "summary": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 13,
+      "mean_percent": 70.589
+     },
+     "paired": 14,
+     "better": 2,
+     "worse": 2,
+     "same": 10,
+     "lost_exact": [],
+     "lost_compiled": [
+      "0019f6f0"
+     ],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "0015ff50",
+      "0020a860"
+     ],
+     "worse_addresses": [
+      "0019f6f0",
+      "001d0e80"
+     ],
+     "def_on_same_functions": {
+      "functions": 14,
+      "exact": 0,
+      "compiled": 14,
+      "mean_percent": 74.314
+     }
+    }
+   }
+  }
+ ],
+ "extra": {
+  "ps2_decompile_success": {
+   "off": {
+    "ps2-fatal-frame": {
+     "sampled": 942,
+     "decompiled": 942
+    },
+    "ps2-ratchet-clank-pal": {
+     "sampled": 859,
+     "decompiled": 858
+    },
+    "ps2-god-hand": {
+     "sampled": 980,
+     "decompiled": 980
+    },
+    "ps2-digital-devil-saga": {
+     "sampled": 977,
+     "decompiled": 977
+    },
+    "ps2-dark-chronicle": {
+     "sampled": 969,
+     "decompiled": 969
+    },
+    "ps2-ratchet-clank": {
+     "sampled": 861,
+     "decompiled": 859
+    },
+    "ps2-persona-4": {
+     "sampled": 975,
+     "decompiled": 974
+    },
+    "ps2-dark-cloud": {
+     "sampled": 937,
+     "decompiled": 888
+    }
+   },
+   "def": {
+    "ps2-fatal-frame": {
+     "sampled": 942,
+     "decompiled": 942
+    },
+    "ps2-ratchet-clank-pal": {
+     "sampled": 859,
+     "decompiled": 858
+    },
+    "ps2-god-hand": {
+     "sampled": 980,
+     "decompiled": 980
+    },
+    "ps2-digital-devil-saga": {
+     "sampled": 977,
+     "decompiled": 977
+    },
+    "ps2-dark-chronicle": {
+     "sampled": 969,
+     "decompiled": 969
+    },
+    "ps2-ratchet-clank": {
+     "sampled": 861,
+     "decompiled": 859
+    },
+    "ps2-persona-4": {
+     "sampled": 975,
+     "decompiled": 974
+    },
+    "ps2-dark-cloud": {
+     "sampled": 937,
+     "decompiled": 888
+    }
+   }
+  },
+  "ps2_decompile_success_total": {
+   "off [decompiled, sampled]": [
+    7447,
+    7500
+   ],
+   "def [decompiled, sampled]": [
+    7447,
+    7500
+   ],
+   "games that differ": []
+  },
+  "m21-001_off": {
+   "status": "pass",
+   "failures": [],
+   "rows": {
+    "gba-pokeemerald": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "size_exact": 15421
+    },
+    "nds-pokeheartgold-arm9": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "size_exact": 9888
+    },
+    "ps2-capcom-fighting-evolution": {
+     "truth": 8794,
+     "found": 8613,
+     "recall": 0.9741,
+     "precision": 0.9945,
+     "size_exact": 8548
+    },
+    "ps2-dungeon-game": {
+     "truth": 783,
+     "found": 786,
+     "recall": 0.9872,
+     "precision": 0.9835,
+     "size_exact": 751
+    },
+    "psx-darkstalkers-3": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "size_exact": 0
+    },
+    "psv-need-for-speed-most-wanted": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "size_exact": 16304
+    },
+    "x360-black-ops-2": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "size_exact": 0
+    }
+   }
+  },
+  "m21-001_def": {
+   "status": "pass",
+   "failures": [],
+   "rows": {
+    "gba-pokeemerald": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "size_exact": 15421
+    },
+    "nds-pokeheartgold-arm9": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "size_exact": 9888
+    },
+    "ps2-capcom-fighting-evolution": {
+     "truth": 8794,
+     "found": 8613,
+     "recall": 0.9741,
+     "precision": 0.9945,
+     "size_exact": 8548
+    },
+    "ps2-dungeon-game": {
+     "truth": 783,
+     "found": 786,
+     "recall": 0.9872,
+     "precision": 0.9835,
+     "size_exact": 751
+    },
+    "psx-darkstalkers-3": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "size_exact": 0
+    },
+    "psv-need-for-speed-most-wanted": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "size_exact": 16304
+    },
+    "x360-black-ops-2": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "size_exact": 0
+    }
+   }
+  },
+  "printer_differential": {
+   "decompiled": 1800,
+   "identical": 1800,
+   "identical_rate": 1.0
+  },
+  "struct_pointer_fields": {
+   "ps2-dark-chronicle": {
+    "default": {
+     "addresses": 400,
+     "structs_printed": 27,
+     "pointer_fields": {
+      "fields": 497,
+      "void *": 1,
+      "non-pointer fields read through a pointer cast": 15
+     },
+     "scalar_pointee_types": {}
+    },
+    "runs_off": {
+     "structs_printed": 27,
+     "pointer_fields": {
+      "fields": 497,
+      "void *": 1,
+      "non-pointer fields read through a pointer cast": 15
+     },
+     "scalar_pointee_types": {}
+    }
+   },
+   "ps2-digital-devil-saga": {
+    "default": {
+     "addresses": 400,
+     "structs_printed": 28,
+     "pointer_fields": {
+      "fields": 142,
+      "non-pointer fields read through a pointer cast": 19
+     },
+     "scalar_pointee_types": {}
+    },
+    "runs_off": {
+     "structs_printed": 28,
+     "pointer_fields": {
+      "fields": 142,
+      "non-pointer fields read through a pointer cast": 19
+     },
+     "scalar_pointee_types": {}
+    }
+   },
+   "ps2-fatal-frame": {
+    "default": {
+     "addresses": 400,
+     "structs_printed": 20,
+     "pointer_fields": {
+      "fields": 105,
+      "non-pointer fields read through a pointer cast": 7
+     },
+     "scalar_pointee_types": {}
+    },
+    "runs_off": {
+     "structs_printed": 20,
+     "pointer_fields": {
+      "fields": 105,
+      "non-pointer fields read through a pointer cast": 7
+     },
+     "scalar_pointee_types": {}
+    }
+   },
+   "ps2-god-hand": {
+    "default": {
+     "addresses": 400,
+     "structs_printed": 49,
+     "pointer_fields": {
+      "fields": 378,
+      "non-pointer fields read through a pointer cast": 15
+     },
+     "scalar_pointee_types": {}
+    },
+    "runs_off": {
+     "structs_printed": 49,
+     "pointer_fields": {
+      "fields": 378,
+      "non-pointer fields read through a pointer cast": 15
+     },
+     "scalar_pointee_types": {}
+    }
+   },
+   "ps2-persona-4": {
+    "default": {
+     "addresses": 400,
+     "structs_printed": 25,
+     "pointer_fields": {
+      "fields": 186,
+      "failed": 1,
+      "non-pointer fields read through a pointer cast": 17
+     },
+     "scalar_pointee_types": {}
+    },
+    "runs_off": {
+     "structs_printed": 25,
+     "pointer_fields": {
+      "fields": 186,
+      "failed": 1,
+      "non-pointer fields read through a pointer cast": 17
+     },
+     "scalar_pointee_types": {}
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "m5-003",
+  "recorded_at": "2026-10-09T04:54:44.219805+00:00",
+  "thresholds": {
+    "dwarf.fn.recall": 0.98
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "imported psx natively (5 functions, PSX:LE:32:default)",
+  "platform": {
+    "input": "PlayStation PS-EXE",
+    "family": "console",
+    "test": "tests/m5-003_psx.py",
+    "programs": [
+      {
+        "name": "psx",
+        "language": "PSX:LE:32:default",
+        "dwarf.fn.recall": 1.0,
+        "dwarf.functions": 5,
+        "recorded_deficits": []
+      }
+    ]
+  },
+  "metrics": {
+    "dwarf.fn.recall": 1.0,
+    "dwarf.functions": 5,
+    "functions": 5,
+    "unattributed": 0
+  },
+  "entry": "800100f4",
+  "regions": {
+    "psx:text": "80010000",
+    "psx:main-ram": "80000000",
+    "psx:scratchpad": "1f800000",
+    "psx:io": "1f801000"
+  },
+  "decompiled": {
+    "address": "80010000",
+    "text": "int FUN_80010000(int param_1)\n\n{\n  return param_1 * 5 - 3;\n}"
+  }
+}

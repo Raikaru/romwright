@@ -1,0 +1,530 @@
+{
+ "functions": 400,
+ "coverage": {
+  "profiles": 3,
+  "binaries": {
+   "romwright-cli": {
+    "files": 804
+   },
+   "romwright-worker": {
+    "files": 826
+   },
+   "ghidra_opt": {
+    "files": 189
+   }
+  },
+  "cpp_build_matches_tree": true,
+  "by_stage": {
+   "load": {
+    "rust_first_party": {
+     "executable": 12797,
+     "executed": 4083
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 7,
+     "executed": 3
+    },
+    "cpp_vendored": {
+     "executable": 4829,
+     "executed": 2303
+    }
+   },
+   "discovery": {
+    "rust_first_party": {
+     "executable": 10661,
+     "executed": 316
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 32,
+     "executed": 28
+    },
+    "cpp_vendored": {
+     "executable": 0,
+     "executed": 0
+    }
+   },
+   "flow": {
+    "rust_first_party": {
+     "executable": 356,
+     "executed": 0
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 32,
+     "executed": 29
+    },
+    "cpp_vendored": {
+     "executable": 1005,
+     "executed": 706
+    }
+   },
+   "pcode_lift": {
+    "rust_first_party": {
+     "executable": 1261,
+     "executed": 0
+    },
+    "rust_third_party": {
+     "executable": 20801,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 35,
+     "executed": 19
+    },
+    "cpp_vendored": {
+     "executable": 10605,
+     "executed": 3835
+    }
+   },
+   "switch_recovery": {
+    "rust_first_party": {
+     "executable": 4881,
+     "executed": 86
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 191,
+     "executed": 147
+    },
+    "cpp_vendored": {
+     "executable": 2058,
+     "executed": 1212
+    }
+   },
+   "simplification": {
+    "rust_first_party": {
+     "executable": 1000,
+     "executed": 717
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 321,
+     "executed": 270
+    },
+    "cpp_vendored": {
+     "executable": 38027,
+     "executed": 26313
+    }
+   },
+   "type_inference": {
+    "rust_first_party": {
+     "executable": 2713,
+     "executed": 155
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 6036,
+     "executed": 2845
+    }
+   },
+   "prototype": {
+    "rust_first_party": {
+     "executable": 1539,
+     "executed": 263
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 18,
+     "executed": 17
+    },
+    "cpp_vendored": {
+     "executable": 5773,
+     "executed": 2507
+    }
+   },
+   "structuring": {
+    "rust_first_party": {
+     "executable": 5846,
+     "executed": 2407
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 477,
+     "executed": 100
+    },
+    "cpp_vendored": {
+     "executable": 4641,
+     "executed": 3481
+    }
+   },
+   "printing": {
+    "rust_first_party": {
+     "executable": 4628,
+     "executed": 3417
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 1148,
+     "executed": 956
+    },
+    "cpp_vendored": {
+     "executable": 6616,
+     "executed": 2947
+    }
+   },
+   "postprocess": {
+    "rust_first_party": {
+     "executable": 3220,
+     "executed": 2412
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 0,
+     "executed": 0
+    }
+   },
+   "host": {
+    "rust_first_party": {
+     "executable": 28235,
+     "executed": 3001
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 180,
+     "executed": 99
+    },
+    "cpp_vendored": {
+     "executable": 10094,
+     "executed": 3273
+    }
+   }
+  },
+  "totals": {
+   "rust_first_party": {
+    "executable": 77137,
+    "executed": 16857
+   },
+   "rust_third_party": {
+    "executable": 20801,
+    "executed": 0
+   },
+   "cpp_ours": {
+    "executable": 2441,
+    "executed": 1668
+   },
+   "cpp_vendored": {
+    "executable": 89684,
+    "executed": 49422
+   }
+  },
+  "rust_dependencies": {
+   "executable": 95075,
+   "executed": 2902,
+   "note": "other crates and std linked into the Rust binaries; not an owner"
+  },
+  "unassigned_rust_files": {
+   "crates/romwright-worker/src/worker.rs": 493,
+   "crates/romwright-db/src/lib.rs": 342,
+   "crates/romwright-worker/src/wire.rs": 318,
+   "crates/romwright-worker/src/doc.rs": 312,
+   "crates/romwright-core/src/session.rs": 218,
+   "crates/romwright-core/src/lib.rs": 180,
+   "crates/romwright-core/src/exec.rs": 150,
+   "crates/romwright-core/src/artifact.rs": 145,
+   "crates/romwright-worker/src/main.rs": 124,
+   "crates/romwright-core/src/native_runtime.rs": 119,
+   "crates/romwright-core/src/session/snapshot.rs": 105,
+   "crates/romwright-worker/src/printc/ownership.rs": 101,
+   "crates/romwright-core/src/architecture.rs": 83,
+   "crates/romwright-cli/src/main.rs": 72,
+   "crates/romwright-core/src/inputs.rs": 43
+  },
+  "top_executed_vendored": [
+   [
+    "ruleaction.cc",
+    5837,
+    "simplification"
+   ],
+   [
+    "coreaction.cc",
+    3051,
+    "simplification"
+   ],
+   [
+    "subflow.cc",
+    2513,
+    "simplification"
+   ],
+   [
+    "fspec.cc",
+    1918,
+    "prototype"
+   ],
+   [
+    "block.cc",
+    1734,
+    "structuring"
+   ],
+   [
+    "blockaction.cc",
+    1555,
+    "structuring"
+   ],
+   [
+    "heritage.cc",
+    1525,
+    "simplification"
+   ],
+   [
+    "printc.cc",
+    1499,
+    "printing"
+   ],
+   [
+    "double.cc",
+    1464,
+    "simplification"
+   ],
+   [
+    "typeop.cc",
+    1262,
+    "type_inference"
+   ],
+   [
+    "database.cc",
+    1240,
+    "load"
+   ],
+   [
+    "jumptable.cc",
+    1154,
+    "switch_recovery"
+   ],
+   [
+    "type.cc",
+    1103,
+    "type_inference"
+   ],
+   [
+    "funcdata_varnode.cc",
+    1076,
+    "simplification"
+   ],
+   [
+    "rangeutil.cc",
+    1060,
+    "simplification"
+   ],
+   [
+    "merge.cc",
+    937,
+    "simplification"
+   ],
+   [
+    "varmap.cc",
+    903,
+    "simplification"
+   ],
+   [
+    "varnode.cc",
+    802,
+    "simplification"
+   ],
+   [
+    "flow.cc",
+    693,
+    "flow"
+   ],
+   [
+    "prettyprint.cc",
+    674,
+    "printing"
+   ],
+   [
+    "ruleaction.hh",
+    674,
+    "simplification"
+   ],
+   [
+    "funcdata_op.cc",
+    656,
+    "simplification"
+   ],
+   [
+    "variable.cc",
+    654,
+    "simplification"
+   ],
+   [
+    "op.cc",
+    645,
+    "simplification"
+   ],
+   [
+    "marshal.cc",
+    614,
+    "host"
+   ]
+  ],
+  "top_executed_first_party": [
+   [
+    "crates/romwright-worker/src/printc/structure.rs",
+    1477,
+    "structuring"
+   ],
+   [
+    "crates/romwright-worker/src/printc/render.rs",
+    1054,
+    "printing"
+   ],
+   [
+    "crates/romwright-worker/src/provider.rs",
+    938,
+    "load"
+   ],
+   [
+    "crates/romwright-core/src/native/gba/overlays.rs",
+    838,
+    "load"
+   ],
+   [
+    "crates/romwright-worker/src/printc/ir.rs",
+    727,
+    "printing"
+   ],
+   [
+    "crates/romwright-worker/src/printc/pretty.rs",
+    655,
+    "printing"
+   ],
+   [
+    "crates/romwright-core/src/structuring.rs",
+    634,
+    "structuring"
+   ],
+   [
+    "crates/romwright-core/src/emit_m2c/conform.rs",
+    604,
+    "postprocess"
+   ],
+   [
+    "crates/romwright-core/src/emit_m2c.rs",
+    592,
+    "postprocess"
+   ],
+   [
+    "crates/romwright-worker/src/printc/printer.rs",
+    582,
+    "printing"
+   ],
+   [
+    "crates/romwright-worker/src/worker.rs",
+    493,
+    "host"
+   ],
+   [
+    "crates/romwright-core/src/emit_m2c/canonical.rs",
+    442,
+    "postprocess"
+   ],
+   [
+    "crates/romwright-core/src/func_ir.rs",
+    353,
+    "simplification"
+   ],
+   [
+    "crates/romwright-db/src/lib.rs",
+    342,
+    "host"
+   ],
+   [
+    "crates/romwright-worker/src/wire.rs",
+    318,
+    "host"
+   ],
+   [
+    "crates/romwright-worker/src/doc.rs",
+    312,
+    "host"
+   ],
+   [
+    "crates/romwright-worker/src/printc/structure/thread.rs",
+    296,
+    "structuring"
+   ],
+   [
+    "crates/romwright-core/src/native/elf_image.rs",
+    284,
+    "load"
+   ],
+   [
+    "crates/romwright-worker/src/semantic.rs",
+    280,
+    "simplification"
+   ],
+   [
+    "crates/romwright-worker/src/specs.rs",
+    275,
+    "load"
+   ],
+   [
+    "crates/romwright-core/src/native/xex.rs",
+    237,
+    "load"
+   ],
+   [
+    "crates/romwright-worker/src/prototype.rs",
+    221,
+    "prototype"
+   ],
+   [
+    "crates/romwright-core/src/session.rs",
+    218,
+    "host"
+   ],
+   [
+    "crates/romwright-core/src/native/elf.rs",
+    215,
+    "load"
+   ],
+   [
+    "crates/romwright-core/src/emit_m2c/dependencies.rs",
+    196,
+    "postprocess"
+   ]
+  ]
+ }
+}

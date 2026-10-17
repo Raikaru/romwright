@@ -1,0 +1,87 @@
+{
+  "benchmark": "merge_verify",
+  "date": "2026-10-14",
+  "bin": "/home/raikaru/runs/Stage3/bin-f1",
+  "totals": {
+    "decided": 7619,
+    "verified": 7619,
+    "mismatch": 0,
+    "declined": 0
+  },
+  "images": {
+    "ps2-fatal-frame": {
+      "decided": 988,
+      "verified": 988,
+      "mismatch": 0,
+      "declined": 0,
+      "decline_reasons": {},
+      "chunk_failures": [],
+      "examples": []
+    },
+    "ps2-ratchet-clank-pal": {
+      "decided": 893,
+      "verified": 893,
+      "mismatch": 0,
+      "declined": 0,
+      "decline_reasons": {},
+      "chunk_failures": [],
+      "examples": []
+    },
+    "ps2-god-hand": {
+      "decided": 1016,
+      "verified": 1016,
+      "mismatch": 0,
+      "declined": 0,
+      "decline_reasons": {},
+      "chunk_failures": [],
+      "examples": []
+    },
+    "ps2-digital-devil-saga": {
+      "decided": 991,
+      "verified": 991,
+      "mismatch": 0,
+      "declined": 0,
+      "decline_reasons": {},
+      "chunk_failures": [],
+      "examples": []
+    },
+    "ps2-dark-chronicle": {
+      "decided": 981,
+      "verified": 981,
+      "mismatch": 0,
+      "declined": 0,
+      "decline_reasons": {},
+      "chunk_failures": [],
+      "examples": []
+    },
+    "ps2-ratchet-clank": {
+      "decided": 902,
+      "verified": 902,
+      "mismatch": 0,
+      "declined": 0,
+      "decline_reasons": {},
+      "chunk_failures": [],
+      "examples": []
+    },
+    "ps2-persona-4": {
+      "decided": 951,
+      "verified": 951,
+      "mismatch": 0,
+      "declined": 0,
+      "decline_reasons": {},
+      "chunk_failures": [
+        "error: decompiler timed out after 60s\n"
+      ],
+      "examples": []
+    },
+    "ps2-dark-cloud": {
+      "decided": 897,
+      "verified": 897,
+      "mismatch": 0,
+      "declined": 0,
+      "decline_reasons": {},
+      "chunk_failures": [],
+      "examples": []
+    }
+  }
+}

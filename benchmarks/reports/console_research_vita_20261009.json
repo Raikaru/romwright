@@ -1,0 +1,913 @@
+{
+ "schema": "console-research/1",
+ "generated": "2026-10-09T17:11:29+00:00",
+ "tools": "50e639161adfeb6f",
+ "cli": "/home/raikaru/runs/MeasureGaps/target/release/romwright-cli",
+ "n": 200,
+ "seed": 20261006,
+ "thresholds": {
+  "rate": 0.005,
+  "count_relative": 0.01
+ },
+ "configs": {
+  "default": {
+   "name": "default",
+   "env": {},
+   "component": "all research (default vs baseline-off)",
+   "reference": "baseline-off",
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "baseline-off": {
+   "name": "baseline-off",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": "",
+    "ROMWRIGHT_NO_SWITCH_VSA": "1",
+    "ROMWRIGHT_NO_SWITCH_DECOMPILER": "1",
+    "ROMWRIGHT_RUST_STRUCTURING": "none"
+   },
+   "component": "reference",
+   "reference": null,
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "infer-prototypes": {
+   "name": "infer-prototypes",
+   "env": {},
+   "component": "persisted prototypes (infer_prototypes job)",
+   "reference": "default",
+   "sign": 1,
+   "infer_prototypes": true
+  },
+  "inferred-types-off": {
+   "name": "inferred-types-off",
+   "env": {
+    "ROMWRIGHT_INFERRED_TYPES": "0"
+   },
+   "component": "inferred types -> prototypes",
+   "reference": "infer-prototypes",
+   "sign": -1,
+   "infer_prototypes": true
+  }
+ },
+ "images": {
+  "psv-need-for-speed-most-wanted": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 26,
+      "labels": 19,
+      "irregular_functions": 124,
+      "native_warnings": 505,
+      "text_warnings": 32,
+      "lines": 14057,
+      "median_seconds": 1.123,
+      "max_seconds": 4.434,
+      "wall_seconds": 59.0,
+      "recall": 0.9731,
+      "precision": 0.9713,
+      "discovered": 26544
+     },
+     "import": {
+      "seconds": 169.6,
+      "switch_stats": {
+       "vsa_resolved": 436,
+       "vsa_refused": 297,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/MeasureGaps/cache/results/50e639161adfeb6f/psv-need-for-speed-most-wanted/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9697,
+       "to": 0.9731,
+       "delta": 0.0034,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9712,
+       "to": 0.9713,
+       "delta": 0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.99,
+       "to": 1.0,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 46,
+       "to": 26,
+       "delta": -20,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 32,
+       "to": 19,
+       "delta": -13,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 125,
+       "to": 124,
+       "delta": -1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 505,
+       "to": 505,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 32,
+       "to": 32,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 14020,
+       "to": 14043,
+       "delta": 23,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 198
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9697,
+       "to": 0.9731,
+       "delta": 0.0034,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9712,
+       "to": 0.9713,
+       "delta": 0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.99,
+       "to": 1.0,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 46,
+       "to": 26,
+       "delta": -20,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 32,
+       "to": 19,
+       "delta": -13,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 125,
+       "to": 124,
+       "delta": -1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 505,
+       "to": 505,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 32,
+       "to": 32,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 14020,
+       "to": 14043,
+       "delta": 23,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 198
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 198,
+      "success_rate": 0.99,
+      "gotos": 46,
+      "labels": 32,
+      "irregular_functions": 125,
+      "native_warnings": 505,
+      "text_warnings": 32,
+      "lines": 14020,
+      "median_seconds": 1.359,
+      "max_seconds": 2.974,
+      "wall_seconds": 66.9,
+      "recall": 0.9697,
+      "precision": 0.9712,
+      "discovered": 26453
+     },
+     "import": {
+      "seconds": 63.3,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/MeasureGaps/cache/results/50e639161adfeb6f/psv-need-for-speed-most-wanted/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9731,
+       "to": 0.9697,
+       "delta": -0.0034,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9713,
+       "to": 0.9712,
+       "delta": -0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 0.99,
+       "delta": -0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 26,
+       "to": 46,
+       "delta": 20,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 19,
+       "to": 32,
+       "delta": 13,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 124,
+       "to": 125,
+       "delta": 1,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 505,
+       "to": 505,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 32,
+       "to": 32,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 14043,
+       "to": 14020,
+       "delta": -23,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 198
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 24,
+      "labels": 18,
+      "irregular_functions": 73,
+      "native_warnings": 306,
+      "text_warnings": 28,
+      "lines": 13665,
+      "median_seconds": 1.256,
+      "max_seconds": 4.537,
+      "wall_seconds": 64.2
+     },
+     "import": {
+      "seconds": 169.6,
+      "switch_stats": {
+       "vsa_resolved": 436,
+       "vsa_refused": 297,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 11586.5,
+      "report": {
+       "analyzed": 49169,
+       "changed": 34897,
+       "decompiler_failures": 19,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 77
+      }
+     },
+     "results_file": "/home/raikaru/runs/MeasureGaps/cache/results/50e639161adfeb6f/psv-need-for-speed-most-wanted/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 26,
+       "to": 24,
+       "delta": -2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 19,
+       "to": 18,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 124,
+       "to": 73,
+       "delta": -51,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 505,
+       "to": 306,
+       "delta": -199,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 32,
+       "to": 28,
+       "delta": -4,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 14057,
+       "to": 13665,
+       "delta": -392,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.99,
+       "to": 1.0,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 46,
+       "to": 24,
+       "delta": -22,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 32,
+       "to": 18,
+       "delta": -14,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 125,
+       "to": 73,
+       "delta": -52,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 505,
+       "to": 306,
+       "delta": -199,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 32,
+       "to": 28,
+       "delta": -4,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 14020,
+       "to": 13651,
+       "delta": -369,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 198
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 26,
+       "to": 24,
+       "delta": -2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 19,
+       "to": 18,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 124,
+       "to": 73,
+       "delta": -51,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 505,
+       "to": 306,
+       "delta": -199,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 32,
+       "to": 28,
+       "delta": -4,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 14057,
+       "to": 13665,
+       "delta": -392,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "inferred-types-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 24,
+      "labels": 18,
+      "irregular_functions": 73,
+      "native_warnings": 306,
+      "text_warnings": 28,
+      "lines": 13633,
+      "median_seconds": 1.038,
+      "max_seconds": 3.801,
+      "wall_seconds": 53.1
+     },
+     "import": {
+      "seconds": 169.6,
+      "switch_stats": {
+       "vsa_resolved": 436,
+       "vsa_refused": 297,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {
+       "ROMWRIGHT_INFERRED_TYPES": "0"
+      },
+      "seconds": 6801.3,
+      "report": {
+       "analyzed": 48619,
+       "changed": 33606,
+       "decompiler_failures": 19,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 75
+      }
+     },
+     "results_file": "/home/raikaru/runs/MeasureGaps/cache/results/50e639161adfeb6f/psv-need-for-speed-most-wanted/inferred-types-off-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 26,
+       "to": 24,
+       "delta": -2,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 19,
+       "to": 18,
+       "delta": -1,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 124,
+       "to": 73,
+       "delta": -51,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 505,
+       "to": 306,
+       "delta": -199,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 32,
+       "to": 28,
+       "delta": -4,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 14057,
+       "to": 13633,
+       "delta": -424,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.99,
+       "to": 1.0,
+       "delta": 0.01,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 46,
+       "to": 24,
+       "delta": -22,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 32,
+       "to": 18,
+       "delta": -14,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 125,
+       "to": 73,
+       "delta": -52,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 505,
+       "to": 306,
+       "delta": -199,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 32,
+       "to": 28,
+       "delta": -4,
+       "material": true,
+       "direction": -1
+      },
+      "lines": {
+       "from": 14020,
+       "to": 13619,
+       "delta": -401,
+       "material": true,
+       "direction": 0
+      },
+      "common_functions": 198
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 24,
+       "to": 24,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 18,
+       "to": 18,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 73,
+       "to": 73,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 306,
+       "to": 306,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 28,
+       "to": 28,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 13665,
+       "to": 13633,
+       "delta": -32,
+       "material": false,
+       "direction": 0
+      },
+      "common_functions": 200
+     },
+     "verdict": "neutral"
+    }
+   },
+   "status": "ran",
+   "program": "vita",
+   "sample": [
+    "81001f1c",
+    "81007518",
+    "81009c1c",
+    "8100d050",
+    "81015f5a",
+    "8102d3d4",
+    "8102e216",
+    "81035078",
+    "810425be",
+    "8104e846",
+    "8105e7dc",
+    "81067cb2",
+    "810908cc",
+    "810968bc",
+    "810cabea",
+    "810e2a1e",
+    "810e7de0",
+    "810f8c80",
+    "810ff01a",
+    "8111c0d2",
+    "8113ee10",
+    "81144550",
+    "8114925a",
+    "8114c728",
+    "8114fd8a",
+    "8117372e",
+    "81176a04",
+    "81179140",
+    "8117dc84",
+    "8118037a",
+    "81181e08",
+    "811874a6",
+    "811aa4f0",
+    "811adf42",
+    "811bb650",
+    "811bf1ce",
+    "811cacbc",
+    "811cc4d2",
+    "811f070a",
+    "811f0d16",
+    "81207558",
+    "8120cc58",
+    "8120dcb6",
+    "81213046",
+    "8121fd08",
+    "81224d54",
+    "8122b364",
+    "81236298",
+    "8123b8d2",
+    "8123df28",
+    "81254d9a",
+    "8125b5da",
+    "8126ad3a",
+    "8126d996",
+    "81276b8a",
+    "8127fe4a",
+    "8128de40",
+    "81296352",
+    "812968c8",
+    "81299950",
+    "8129ed80",
+    "812a0bd6",
+    "812a3f46",
+    "812a9dde",
+    "812b7dc6",
+    "812bd5f0",
+    "812be104",
+    "812c66ac",
+    "812c69b6",
+    "812cac38",
+    "812d3d5c",
+    "812d4ab2",
+    "812e101a",
+    "812e1686",
+    "812e1e32",
+    "812fb968",
+    "8131a5fa",
+    "813567a8",
+    "813878b0",
+    "8138887a",
+    "8138e9de",
+    "813a945c",
+    "813b73d8",
+    "813c0ac0",
+    "813d4f06",
+    "813e6e9e",
+    "813e769a",
+    "813e919e",
+    "813e95ba",
+    "813f9b8c",
+    "81400fa8",
+    "81402496",
+    "8140c6a2",
+    "8140d76c",
+    "81411382",
+    "81413592",
+    "8141372a",
+    "81419bf6",
+    "81419da2",
+    "8142216a",
+    "8142c5c8",
+    "81434eca",
+    "814351da",
+    "81437674",
+    "814398a0",
+    "8143af0c",
+    "81440a1a",
+    "81442efe",
+    "81444402",
+    "81446582",
+    "81449be4",
+    "8144a934",
+    "8144b348",
+    "8144b6ee",
+    "8144b7f0",
+    "81462194",
+    "81464392",
+    "81475a4c",
+    "81483938",
+    "8148eec2",
+    "81499c8c",
+    "814a305c",
+    "814c5ba4",
+    "814d49cc",
+    "814da274",
+    "814da612",
+    "814db9de",
+    "814e912a",
+    "814ecb0a",
+    "814f1fe8",
+    "814f2e76",
+    "814fbdfa",
+    "81500994",
+    "81503dd4",
+    "815053a8",
+    "81507806",
+    "81508028",
+    "815167d0",
+    "815338ca",
+    "81546694",
+    "8154eb34",
+    "8155f548",
+    "81564fb8",
+    "81566a66",
+    "81573b26",
+    "8158358c",
+    "8158736a",
+    "8158a82a",
+    "81590cec",
+    "8159bf4c",
+    "815a0a5c",
+    "815a4370",
+    "815a66c4",
+    "815a7d88",
+    "815a9820",
+    "815aa2e8",
+    "815aac44",
+    "815c55b4",
+    "815c602c",
+    "815c6b9c",
+    "815d1efc",
+    "815db700",
+    "815dea9c",
+    "815deab0",
+    "815e1408",
+    "815e1ba4",
+    "815e9848",
+    "815f99a4",
+    "8161cda4",
+    "81624a6c",
+    "816263f0",
+    "81626640",
+    "81626b38",
+    "8162737c",
+    "81627870",
+    "8162869c",
+    "8163bcc0",
+    "81642c38",
+    "81647338",
+    "816474a0",
+    "81648e84",
+    "8164ac94",
+    "8164dc88",
+    "8164e2a0",
+    "8164e300",
+    "8164f9a0",
+    "81652908",
+    "81654c14",
+    "81658d10",
+    "8165cc80",
+    "8165d3bc",
+    "8165fab0",
+    "8165ffc8",
+    "81663de0",
+    "81666ae8",
+    "81669aa4",
+    "8166ee64",
+    "81671ee4",
+    "81672bdc",
+    "81678950"
+   ],
+   "sample_in_dwarf": 0
+  }
+ }
+}

@@ -1,0 +1,5815 @@
+{
+ "schema": "m22-003-functions/1",
+ "lane": "dk",
+ "game": "ps2-dark-cloud",
+ "tag": "sl-def",
+ "env": {},
+ "layers": [
+  "romwright"
+ ],
+ "seed": 20261012,
+ "n": 200,
+ "matched_count": 3091,
+ "functions": {
+  "00123560": {
+   "name": "DistVector__FPf",
+   "address": "0x123560",
+   "size": 48,
+   "file": "ps2/src/mathutil.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00123f30": {
+   "name": "Step__7CCameraFi",
+   "address": "0x123f30",
+   "size": 728,
+   "file": "ps2/src/camera.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.7967
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.05495
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.7967
+     }
+    }
+   }
+  },
+  "00124310": {
+   "name": "SetRef__7CCameraFPf",
+   "address": "0x124310",
+   "size": 52,
+   "file": "ps2/src/camera.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.92308
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.92308
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.92308
+     }
+    }
+   }
+  },
+  "00124770": {
+   "name": "__dt__7CCameraFv",
+   "address": "0x124770",
+   "size": 84,
+   "file": "ps2/src/camera.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.38095
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.38095
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.38095
+     }
+    }
+   }
+  },
+  "00124bf0": {
+   "name": "__ct__13CCameraFollowFffff",
+   "address": "0x124bf0",
+   "size": 136,
+   "file": "ps2/src/camerafollow.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.23529
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.23529
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.23529
+     }
+    }
+   }
+  },
+  "001258b0": {
+   "name": "PickUpNearPoly__13CCollisionMDTFP6CCPoly",
+   "address": "0x1258b0",
+   "size": 180,
+   "file": "ps2/src/collisionmdt.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00125e20": {
+   "name": "htoi__FPc",
+   "address": "0x125e20",
+   "size": 196,
+   "file": "ps2/src/dataset.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.12245
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.12245
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.12245
+     }
+    }
+   }
+  },
+  "00125ef0": {
+   "name": "SetFrameAttr__FP6CFramei",
+   "address": "0x125ef0",
+   "size": 956,
+   "file": "ps2/src/dataset.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.98745
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.98745
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.98745
+     }
+    }
+   }
+  },
+  "00128080": {
+   "name": "SetParent__6CFrameFP6CFrame",
+   "address": "0x128080",
+   "size": 68,
+   "file": "ps2/src/frame.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.70588
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.70588
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.70588
+     }
+    }
+   }
+  },
+  "00128b50": {
+   "name": "SetAttr__6CFrameFR10CFrameAttrii",
+   "address": "0x128b50",
+   "size": 524,
+   "file": "ps2/src/frame.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.12214
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.12214
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.12214
+     }
+    }
+   }
+  },
+  "0012b230": {
+   "name": "AxisCalibration__Fi",
+   "address": "0x12b230",
+   "size": 128,
+   "file": "ps2/src/gamepad.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.625
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.625
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.625
+     }
+    }
+   }
+  },
+  "0012b8b0": {
+   "name": "Down2__8CGamePadFi",
+   "address": "0x12b8b0",
+   "size": 56,
+   "file": "ps2/src/gamepad.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.92857
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.92857
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.92857
+     }
+    }
+   }
+  },
+  "0012b8f0": {
+   "name": "AutoRepeatOff__8CGamePadFv",
+   "address": "0x12b8f0",
+   "size": 36,
+   "file": "ps2/src/gamepad.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0012c0c0": {
+   "name": "GetNext__12CSpriteTableFv",
+   "address": "0x12c0c0",
+   "size": 44,
+   "file": "ps2/src/spritetable.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.727272
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.727272
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.727272
+     }
+    }
+   }
+  },
+  "0012c170": {
+   "name": "VSyncCallBack__Fi",
+   "address": "0x12c170",
+   "size": 156,
+   "file": "ps2/src/mglib.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.10256
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.10256
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.10256
+     }
+    }
+   }
+  },
+  "0012df70": {
+   "name": "MGSetViewMatrix__FPA4_f",
+   "address": "0x12df70",
+   "size": 44,
+   "file": "ps2/src/mglib.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 24.272728
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 24.272728
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 24.272728
+     }
+    }
+   }
+  },
+  "00130fc0": {
+   "name": "Initialize__15CTextureManagerFi",
+   "address": "0x130fc0",
+   "size": 360,
+   "file": "ps2/src/texture.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.1
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.1
+     }
+    }
+   }
+  },
+  "001312d0": {
+   "name": "GetTexture__15CTextureManagerFPci",
+   "address": "0x1312d0",
+   "size": 80,
+   "file": "ps2/src/texture.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00139820": {
+   "name": "LoadPackData__10CCharacterFPUiPcP14CDataAlloc2_1_P14CDataAlloc2_1_P14CDataAlloc2_1_",
+   "address": "0x139820",
+   "size": 48,
+   "file": "ps2/src/character.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00139d10": {
+   "name": "ReadInfo__FP10CCharacterPUiPcP14CDataAlloc2_1_P14CDataAlloc2_1_P14CDataAlloc2_1_iP14CDataAlloc2_1_ii",
+   "address": "0x139d10",
+   "size": 600,
+   "file": "ps2/src/chararead.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.42
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.42
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.42
+     }
+    }
+   }
+  },
+  "00139fb0": {
+   "name": "CommandMODEL__FPPv",
+   "address": "0x139fb0",
+   "size": 472,
+   "file": "ps2/src/chararead.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.44068
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.44068
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.44068
+     }
+    }
+   }
+  },
+  "0013a230": {
+   "name": "CommandMOTION__FPPv",
+   "address": "0x13a230",
+   "size": 496,
+   "file": "ps2/src/chararead.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.34677
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.34677
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.34677
+     }
+    }
+   }
+  },
+  "0013a910": {
+   "name": "CommandALLOC_MDT__FPPv",
+   "address": "0x13a910",
+   "size": 80,
+   "file": "ps2/src/chararead.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.75
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.75
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.75
+     }
+    }
+   }
+  },
+  "0013b170": {
+   "name": "SkipSpace__FR9input_str",
+   "address": "0x13b170",
+   "size": 148,
+   "file": "ps2/src/chararead.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 37.37838
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 37.37838
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 37.37838
+     }
+    }
+   }
+  },
+  "0013dea0": {
+   "name": "openGiftag__FP13sceVif1Packet",
+   "address": "0x13dea0",
+   "size": 88,
+   "file": "ps2/src/dispctrl.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.90909
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.90909
+     }
+    }
+   }
+  },
+  "0013eef0": {
+   "name": "search_tree__FP9NAME_TREEPc",
+   "address": "0x13eef0",
+   "size": 144,
+   "file": "ps2/src/dataread.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.833336
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.833336
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.833336
+     }
+    }
+   }
+  },
+  "0013f720": {
+   "name": "GetPackFile__FPUiPcPi",
+   "address": "0x13f720",
+   "size": 216,
+   "file": "ps2/src/dataread.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.81481
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.81481
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.81481
+     }
+    }
+   }
+  },
+  "00140e90": {
+   "name": "LoadSndTxt__Fv",
+   "address": "0x140e90",
+   "size": 144,
+   "file": "ps2/src/main.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.944443
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.944443
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.944443
+     }
+    }
+   }
+  },
+  "00143490": {
+   "name": "Initialize__11CBombEffectFv",
+   "address": "0x143490",
+   "size": 48,
+   "file": "ps2/src/main.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.166664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.166664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.166664
+     }
+    }
+   }
+  },
+  "00143720": {
+   "name": "Alloc__18CDataAlloc_1_6000_Fi",
+   "address": "0x143720",
+   "size": 104,
+   "file": "ps2/src/main.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.88461
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.88461
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.88461
+     }
+    }
+   }
+  },
+  "00143c50": {
+   "name": "SetReverb__6CSoundFiii",
+   "address": "0x143c50",
+   "size": 288,
+   "file": "ps2/src/sound.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.291664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.291664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.291664
+     }
+    }
+   }
+  },
+  "00143d70": {
+   "name": "set_spu__Fiiii",
+   "address": "0x143d70",
+   "size": 360,
+   "file": "ps2/src/sound.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.022224
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.022224
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.022224
+     }
+    }
+   }
+  },
+  "00145820": {
+   "name": "SE_Play__6CSoundFiiiii",
+   "address": "0x145820",
+   "size": 48,
+   "file": "ps2/src/sound.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.666664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.666664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.666664
+     }
+    }
+   }
+  },
+  "00145990": {
+   "name": "SE_SetPan__6CSoundFiiiii",
+   "address": "0x145990",
+   "size": 268,
+   "file": "ps2/src/sound.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.19403
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.19403
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.19403
+     }
+    }
+   }
+  },
+  "00147b70": {
+   "name": "QuatSlerp__FPfPffPf",
+   "address": "0x147b70",
+   "size": 432,
+   "file": "ps2/src/gameutil.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.953705
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.833332
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.953705
+     }
+    }
+   }
+  },
+  "0014cc60": {
+   "name": "GetNameWidth__6ClsMesFi",
+   "address": "0x14cc60",
+   "size": 280,
+   "file": "ps2/src/clsmes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.48572
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.48572
+     }
+    }
+   }
+  },
+  "0014e080": {
+   "name": "State__6ClsMesFv",
+   "address": "0x14e080",
+   "size": 176,
+   "file": "ps2/src/clsmes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.545456
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.545456
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.545456
+     }
+    }
+   }
+  },
+  "0014eff0": {
+   "name": "GetMesLen_system__6ClsMesFi",
+   "address": "0x14eff0",
+   "size": 812,
+   "file": "ps2/src/clsmes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.79803
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.79803
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.79803
+     }
+    }
+   }
+  },
+  "0014f5e0": {
+   "name": "SetMesWinTbl__6ClsMesFiiss",
+   "address": "0x14f5e0",
+   "size": 412,
+   "file": "ps2/src/clsmes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.281555
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.281555
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.281555
+     }
+    }
+   }
+  },
+  "00154b30": {
+   "name": "Initialize__10CActionSeqFP7ACT_SEQi",
+   "address": "0x154b30",
+   "size": 76,
+   "file": "ps2/src/actionseq.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00154de0": {
+   "name": "NextAnimeSeq__10CActionSeqFv",
+   "address": "0x154de0",
+   "size": 104,
+   "file": "ps2/src/actionseq.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00155160": {
+   "name": "ClearRotSeq__10CActionSeqFv",
+   "address": "0x155160",
+   "size": 52,
+   "file": "ps2/src/actionseq.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00157590": {
+   "name": "FrameObjectOnOff__10CMapObjectFPci",
+   "address": "0x157590",
+   "size": 292,
+   "file": "ps2/src/mapobject.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.0137
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.0137
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.0137
+     }
+    }
+   }
+  },
+  "00157a40": {
+   "name": "SetRotation__12CObjectFrameF11CVector3_f_",
+   "address": "0x157a40",
+   "size": 56,
+   "file": "ps2/src/objectframe2.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00157b00": {
+   "name": "SetPosition__7CObjectFPf",
+   "address": "0x157b00",
+   "size": 36,
+   "file": "ps2/src/savedata.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00158280": {
+   "name": "SetGameFlag__9CSaveDataFii",
+   "address": "0x158280",
+   "size": 148,
+   "file": "ps2/src/savedata.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.45946
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.45946
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.45946
+     }
+    }
+   }
+  },
+  "00158940": {
+   "name": "ConvertConfig__9CSaveDataFP13SV_CONFIG_SYS",
+   "address": "0x158940",
+   "size": 184,
+   "file": "ps2/src/savedata.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.23913
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.23913
+     }
+    }
+   }
+  },
+  "00159d20": {
+   "name": "SndSetBgmVol__Fi",
+   "address": "0x159d20",
+   "size": 112,
+   "file": "ps2/src/snd.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.39286
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.39286
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.39286
+     }
+    }
+   }
+  },
+  "0015b3f0": {
+   "name": "SndVoiceLoad__Fi",
+   "address": "0x15b3f0",
+   "size": 144,
+   "file": "ps2/src/snd.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0015b480": {
+   "name": "SndVoiceLoadBG__FiPUiPi",
+   "address": "0x15b480",
+   "size": 172,
+   "file": "ps2/src/snd.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.34884
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.34884
+     }
+    }
+   }
+  },
+  "0015b6d0": {
+   "name": "SndSPSeLoad__Fi",
+   "address": "0x15b6d0",
+   "size": 144,
+   "file": "ps2/src/snd.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0015ff50": {
+   "name": "InitSystemMes__Fv",
+   "address": "0x15ff50",
+   "size": 380,
+   "file": "ps2/src/sysmes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.76842
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.76842
+     }
+    }
+   }
+  },
+  "001640c0": {
+   "name": "Step__7CEffectFi",
+   "address": "0x1640c0",
+   "size": 632,
+   "file": "ps2/src/effect.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.46203
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.341774
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.46203
+     }
+    }
+   }
+  },
+  "00164870": {
+   "name": "Initialize__7CEffectFv",
+   "address": "0x164870",
+   "size": 268,
+   "file": "ps2/src/effect.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.13433
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.13433
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.13433
+     }
+    }
+   }
+  },
+  "00164a60": {
+   "name": "Draw__12CEffectGroupFv",
+   "address": "0x164a60",
+   "size": 96,
+   "file": "ps2/src/effectgroup.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00166e10": {
+   "name": "DrawEditEffect__FP16EDIT_EFFECT_INFOP7CCameraP12CEffectGroup",
+   "address": "0x166e10",
+   "size": 588,
+   "file": "ps2/src/objanime.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.680275
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.67347
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.680275
+     }
+    }
+   }
+  },
+  "001670a0": {
+   "name": "__ct__13CTexAnimeDataFv",
+   "address": "0x1670a0",
+   "size": 48,
+   "file": "ps2/src/textureanime.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00167820": {
+   "name": "Initialize__13CTextureAnimeFP13CTexAnimeDatai",
+   "address": "0x167820",
+   "size": 72,
+   "file": "ps2/src/textureanime.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.44444
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.44444
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.44444
+     }
+    }
+   }
+  },
+  "00169990": {
+   "name": "EdPadDown__Fii",
+   "address": "0x169990",
+   "size": 80,
+   "file": "ps2/src/ebattle.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.05
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.05
+     }
+    }
+   }
+  },
+  "00169ab0": {
+   "name": "GetLYf__Fv",
+   "address": "0x169ab0",
+   "size": 64,
+   "file": "ps2/src/ebattle.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.25
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.25
+     }
+    }
+   }
+  },
+  "0016ef00": {
+   "name": "MakePartsBox__9CEditAreaFv",
+   "address": "0x16ef00",
+   "size": 392,
+   "file": "ps2/src/editarea.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.34694
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.34694
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.34694
+     }
+    }
+   }
+  },
+  "00170350": {
+   "name": "EdOutPutFile__Fv",
+   "address": "0x170350",
+   "size": 124,
+   "file": "ps2/src/edit.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.3871
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.3871
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.3871
+     }
+    }
+   }
+  },
+  "00170450": {
+   "name": "EdDPrintVector__FPcPf",
+   "address": "0x170450",
+   "size": 184,
+   "file": "ps2/src/edit.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.652176
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.652176
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.652176
+     }
+    }
+   }
+  },
+  "00172210": {
+   "name": "EdSetDOFLevel__Fi",
+   "address": "0x172210",
+   "size": 140,
+   "file": "ps2/src/edit.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.42857
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.11429
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.11429
+     }
+    }
+   }
+  },
+  "00172370": {
+   "name": "EdThunderEffect__FiP11CEditGround",
+   "address": "0x172370",
+   "size": 628,
+   "file": "ps2/src/edit.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.242035
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.242035
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.242035
+     }
+    }
+   }
+  },
+  "00173640": {
+   "name": "EdSystemMesCheck__Fv",
+   "address": "0x173640",
+   "size": 32,
+   "file": "ps2/src/edit.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00173ac0": {
+   "name": "EdSetOpenItemBox__FPfPf",
+   "address": "0x173ac0",
+   "size": 112,
+   "file": "ps2/src/edit.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00174b10": {
+   "name": "CommandLIGHT_NO__FPPv",
+   "address": "0x174b10",
+   "size": 72,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.333336
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.333336
+     }
+    }
+   }
+  },
+  "00174b60": {
+   "name": "CommandAMBIENT__FPPv",
+   "address": "0x174b60",
+   "size": 116,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.413795
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.413795
+     }
+    }
+   }
+  },
+  "00176080": {
+   "name": "CommandROAD_PARTS__FPPv",
+   "address": "0x176080",
+   "size": 228,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.508774
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.508774
+     }
+    }
+   }
+  },
+  "00176e20": {
+   "name": "CommandTIME_TABLE__FPPv",
+   "address": "0x176e20",
+   "size": 164,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.48781
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.48781
+     }
+    }
+   }
+  },
+  "00176fb0": {
+   "name": "CommandEDITAREA_RECT__FPPv",
+   "address": "0x176fb0",
+   "size": 168,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 24.071428
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 24.071428
+     }
+    }
+   }
+  },
+  "00177060": {
+   "name": "CommandBGM_NO__FPPv",
+   "address": "0x177060",
+   "size": 64,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.875
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.875
+     }
+    }
+   }
+  },
+  "00177550": {
+   "name": "CommandTALK_DIR__FPPv",
+   "address": "0x177550",
+   "size": 32,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00177570": {
+   "name": "CommandPEOPLE_LIST__FPPv",
+   "address": "0x177570",
+   "size": 72,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.22222
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.22222
+     }
+    }
+   }
+  },
+  "00177760": {
+   "name": "EdSetSoundOffCount__Fi",
+   "address": "0x177760",
+   "size": 40,
+   "file": "ps2/src/editmapscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00178170": {
+   "name": "EdSetClock__Ff",
+   "address": "0x178170",
+   "size": 96,
+   "file": "ps2/src/editloop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.166664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.166664
+     }
+    }
+   }
+  },
+  "00183a10": {
+   "name": "GetNewEventPoint__FP14ED_EVENT_POINTi",
+   "address": "0x183a10",
+   "size": 76,
+   "file": "ps2/src/editloop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.210526
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.210526
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.210526
+     }
+    }
+   }
+  },
+  "00183a60": {
+   "name": "CheckEventPoint__FP14ED_EVENT_POINTf",
+   "address": "0x183a60",
+   "size": 468,
+   "file": "ps2/src/editloop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.50427
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.50427
+     }
+    }
+   }
+  },
+  "001852b0": {
+   "name": "EdInitVillagerControl__Fv",
+   "address": "0x1852b0",
+   "size": 100,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.92
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.92
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.92
+     }
+    }
+   }
+  },
+  "001854c0": {
+   "name": "EdInitVillagerTable__FfP13EDIT_MAP_INFO",
+   "address": "0x1854c0",
+   "size": 148,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.64865
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.54054
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.64865
+     }
+    }
+   }
+  },
+  "00187dd0": {
+   "name": "EdCheckTime__Ffff",
+   "address": "0x187dd0",
+   "size": 132,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.57576
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.57576
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.57576
+     }
+    }
+   }
+  },
+  "00188a20": {
+   "name": "EdDrawLensFlare__FfPP6CFrame",
+   "address": "0x188a20",
+   "size": 812,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.98522
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.98522
+     }
+    }
+   }
+  },
+  "0018a1f0": {
+   "name": "GetObjAnime__Fi",
+   "address": "0x18a1f0",
+   "size": 64,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.375
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.375
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.375
+     }
+    }
+   }
+  },
+  "0018b480": {
+   "name": "GetWorldRotY__Ff",
+   "address": "0x18b480",
+   "size": 80,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.0
+     }
+    }
+   }
+  },
+  "0018c060": {
+   "name": "_GET_OLD_MAPNO__FP12RS_STACKDATAi",
+   "address": "0x18c060",
+   "size": 44,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0018c710": {
+   "name": "_LOAD_CHARA_TEXTURE__FP12RS_STACKDATAi",
+   "address": "0x18c710",
+   "size": 460,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.252174
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.252174
+     }
+    }
+   }
+  },
+  "0018ca50": {
+   "name": "_LOAD_BG_SPRITE_TEXTURE__FP12RS_STACKDATAi",
+   "address": "0x18ca50",
+   "size": 360,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.71111
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.71111
+     }
+    }
+   }
+  },
+  "0018d290": {
+   "name": "_APPEAR_VILLAGER_OUT__FP12RS_STACKDATAi",
+   "address": "0x18d290",
+   "size": 52,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0018dc80": {
+   "name": "_SYNC_CHARA_ITEM__FP12RS_STACKDATAi",
+   "address": "0x18dc80",
+   "size": 216,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.22222
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.22222
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.22222
+     }
+    }
+   }
+  },
+  "0018f890": {
+   "name": "_SGET_NPC_TALK_MES__FP12RS_STACKDATAi",
+   "address": "0x18f890",
+   "size": 128,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.875
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.875
+     }
+    }
+   }
+  },
+  "001905f0": {
+   "name": "_GET_NOW_TIME__FP12RS_STACKDATAi",
+   "address": "0x1905f0",
+   "size": 72,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.888885
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.888885
+     }
+    }
+   }
+  },
+  "001907d0": {
+   "name": "_CHECK_PLACE__FP12RS_STACKDATAi",
+   "address": "0x1907d0",
+   "size": 40,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00190df0": {
+   "name": "_OBJ_DRAW__FP12RS_STACKDATAi",
+   "address": "0x190df0",
+   "size": 164,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.902435
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.902435
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.902435
+     }
+    }
+   }
+  },
+  "00190ea0": {
+   "name": "_SET_OBJ_POS__FP12RS_STACKDATAi",
+   "address": "0x190ea0",
+   "size": 164,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.878048
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.878048
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.878048
+     }
+    }
+   }
+  },
+  "001910e0": {
+   "name": "_GET_OBJ_ROT__FP12RS_STACKDATAi",
+   "address": "0x1910e0",
+   "size": 188,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.68085
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.68085
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.68085
+     }
+    }
+   }
+  },
+  "00191a50": {
+   "name": "_SET_CAMERA__FP12RS_STACKDATAi",
+   "address": "0x191a50",
+   "size": 304,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.0
+     }
+    }
+   }
+  },
+  "00191da0": {
+   "name": "_SET_CAMERA_SPEED__FP12RS_STACKDATAi",
+   "address": "0x191da0",
+   "size": 96,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.125
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.125
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.125
+     }
+    }
+   }
+  },
+  "00192b70": {
+   "name": "_SET_CAMERA_ROLL__FP12RS_STACKDATAi",
+   "address": "0x192b70",
+   "size": 100,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.84
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.84
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.84
+     }
+    }
+   }
+  },
+  "00192ea0": {
+   "name": "_DRAW_SPRITE__FP12RS_STACKDATAi",
+   "address": "0x192ea0",
+   "size": 276,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.478264
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.478264
+     }
+    }
+   }
+  },
+  "001938b0": {
+   "name": "_LOAD_LIGHT__FP12RS_STACKDATAi",
+   "address": "0x1938b0",
+   "size": 232,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.68965
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.68965
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.68965
+     }
+    }
+   }
+  },
+  "001946f0": {
+   "name": "_ASQ_DELAY_ROT__FP12RS_STACKDATAi",
+   "address": "0x1946f0",
+   "size": 120,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.333336
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.333336
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.333336
+     }
+    }
+   }
+  },
+  "001950f0": {
+   "name": "_SITEM_GET__FP12RS_STACKDATAi",
+   "address": "0x1950f0",
+   "size": 104,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.84615
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.84615
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.84615
+     }
+    }
+   }
+  },
+  "00195320": {
+   "name": "_SITEM_CHECK_ALL__FP12RS_STACKDATAi",
+   "address": "0x195320",
+   "size": 76,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.68421
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.68421
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.68421
+     }
+    }
+   }
+  },
+  "00195b90": {
+   "name": "_LOAD_SND_SYNC__FP12RS_STACKDATAi",
+   "address": "0x195b90",
+   "size": 64,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00195d50": {
+   "name": "_SET_BGM_VOL__FP12RS_STACKDATAi",
+   "address": "0x195d50",
+   "size": 48,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00195e90": {
+   "name": "_BGM_FADE_IN__FP12RS_STACKDATAi",
+   "address": "0x195e90",
+   "size": 176,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.931816
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.931816
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.931816
+     }
+    }
+   }
+  },
+  "00196880": {
+   "name": "_EB_DEBUG__FP12RS_STACKDATAi",
+   "address": "0x196880",
+   "size": 48,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00196f00": {
+   "name": "EdInitEventParamSimple__Fv",
+   "address": "0x196f00",
+   "size": 796,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 96.0
+     }
+    }
+   }
+  },
+  "00198f90": {
+   "name": "EdTalkModeInit__FP12CNPCharacteri",
+   "address": "0x198f90",
+   "size": 220,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.34545
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.34545
+     }
+    }
+   }
+  },
+  "0019a140": {
+   "name": "GetRequest__14CEditPartsInfoFi",
+   "address": "0x19a140",
+   "size": 56,
+   "file": "ps2/src/editpartsinfo.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.57143
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.57143
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.57143
+     }
+    }
+   }
+  },
+  "0019a210": {
+   "name": "GetNextParts__14CEditPartsInfoFi",
+   "address": "0x19a210",
+   "size": 112,
+   "file": "ps2/src/editpartsinfo.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.857143
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.857143
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.857143
+     }
+    }
+   }
+  },
+  "0019a570": {
+   "name": "Initialize__14CEditPartsInfoFi",
+   "address": "0x19a570",
+   "size": 456,
+   "file": "ps2/src/editpartsinfo.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.64035
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.64035
+     }
+    }
+   }
+  },
+  "0019a960": {
+   "name": "__ct__9CMapPartsFv",
+   "address": "0x19a960",
+   "size": 72,
+   "file": "ps2/src/mapparts.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0019aa20": {
+   "name": "GetWidth__9CMapPartsFv",
+   "address": "0x19aa20",
+   "size": 88,
+   "file": "ps2/src/mapparts.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.27273
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.27273
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.27273
+     }
+    }
+   }
+  },
+  "0019aec0": {
+   "name": "CheckBox2__9CMapPartsFP7CBoxVu0",
+   "address": "0x19aec0",
+   "size": 472,
+   "file": "ps2/src/mapparts.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.41525
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.40678
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.41525
+     }
+    }
+   }
+  },
+  "0019b9a0": {
+   "name": "LoadScript__Fv__2",
+   "address": "0x19b9a0",
+   "size": 660,
+   "file": "ps2/src/edit_in.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.393936
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 70.393936
+     }
+    }
+   }
+  },
+  "0019f6f0": {
+   "name": "LoadPTS__FP9CMapPartsPUi",
+   "address": "0x19f6f0",
+   "size": 568,
+   "file": "ps2/src/edit_in.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.070423
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.070423
+     }
+    }
+   }
+  },
+  "001a5800": {
+   "name": "Initialize__11CEditGroundFv",
+   "address": "0x1a5800",
+   "size": 424,
+   "file": "ps2/src/editground.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.93396
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.93396
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.93396
+     }
+    }
+   }
+  },
+  "001a87e0": {
+   "name": "FishingLoad__FP14CDataAlloc2_1_i",
+   "address": "0x1a87e0",
+   "size": 272,
+   "file": "ps2/src/fishing.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "001ae380": {
+   "name": "SetWepStatus__12CSHOT_EFFECTFi",
+   "address": "0x1ae380",
+   "size": 52,
+   "file": "ps2/src/shot_effect.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 38.76923
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 38.76923
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 38.76923
+     }
+    }
+   }
+  },
+  "001af3b0": {
+   "name": "CheckHealingWater__Fv",
+   "address": "0x1af3b0",
+   "size": 808,
+   "file": "ps2/src/shot_freefuncs.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.74258
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.74258
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.74258
+     }
+    }
+   }
+  },
+  "001b31a0": {
+   "name": "Draw__8CHitMarkFv",
+   "address": "0x1b31a0",
+   "size": 748,
+   "file": "ps2/src/hitmark.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.69519
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.69519
+     }
+    }
+   }
+  },
+  "001b73b0": {
+   "name": "BtGetWeaponNamePath3__FPcPci",
+   "address": "0x1b73b0",
+   "size": 180,
+   "file": "ps2/src/btmisc.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.111115
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.111115
+     }
+    }
+   }
+  },
+  "001b7530": {
+   "name": "createAttachVolume__Fii",
+   "address": "0x1b7530",
+   "size": 232,
+   "file": "ps2/src/btmisc.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.293106
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.293106
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.293106
+     }
+    }
+   }
+  },
+  "001b7840": {
+   "name": "Set__14CWeaponElementFPA4_fPffif",
+   "address": "0x1b7840",
+   "size": 244,
+   "file": "ps2/src/weaponelement.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.95082
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.95082
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.95082
+     }
+    }
+   }
+  },
+  "001bbbc0": {
+   "name": "_CHECK_EVENT_FLG__FP12RS_STACKDATAi",
+   "address": "0x1bbbc0",
+   "size": 80,
+   "file": "ps2/src/btsysscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.5
+     }
+    }
+   }
+  },
+  "001bce00": {
+   "name": "_USER_WEAPON_DRAW__FP12RS_STACKDATAi",
+   "address": "0x1bce00",
+   "size": 64,
+   "file": "ps2/src/btsysscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.75
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.75
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.75
+     }
+    }
+   }
+  },
+  "001bd090": {
+   "name": "_SET_RES_LIMMIT_ZONE__FP12RS_STACKDATAi",
+   "address": "0x1bd090",
+   "size": 80,
+   "file": "ps2/src/btsysscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.7
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.7
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.7
+     }
+    }
+   }
+  },
+  "001bd230": {
+   "name": "_RESET_ITEM_TRAP__FP12RS_STACKDATAi",
+   "address": "0x1bd230",
+   "size": 52,
+   "file": "ps2/src/btsysscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.846153
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.846153
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.846153
+     }
+    }
+   }
+  },
+  "001be890": {
+   "name": "CheckLife__11CUserStatusFv",
+   "address": "0x1be890",
+   "size": 104,
+   "file": "ps2/src/dngstatusdata.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.73077
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.73077
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.73077
+     }
+    }
+   }
+  },
+  "001bf7f0": {
+   "name": "GetMaxAtraNum__14CDngStatusDataFii",
+   "address": "0x1bf7f0",
+   "size": 116,
+   "file": "ps2/src/dngstatusdata.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.68965
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.68965
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.68965
+     }
+    }
+   }
+  },
+  "001c1ba0": {
+   "name": "initalize__13CDungeonPartsFv",
+   "address": "0x1c1ba0",
+   "size": 92,
+   "file": "ps2/src/dungeonparts.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.565216
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.565216
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.565216
+     }
+    }
+   }
+  },
+  "001c8ed0": {
+   "name": "GetActiveIvent__11CDungeonMapFP9CFrameVu1",
+   "address": "0x1c8ed0",
+   "size": 324,
+   "file": "ps2/src/dungeonmap.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.641975
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.641975
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.641975
+     }
+    }
+   }
+  },
+  "001cc8f0": {
+   "name": "SearchPartsID__16CDungeonEventManFii",
+   "address": "0x1cc8f0",
+   "size": 68,
+   "file": "ps2/src/dungeoneventman.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.94118
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.94118
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.94118
+     }
+    }
+   }
+  },
+  "001ce090": {
+   "name": "TEIGIAnalyz__FPc",
+   "address": "0x1ce090",
+   "size": 948,
+   "file": "ps2/src/itemdata.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.34599
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.34599
+     }
+    }
+   }
+  },
+  "001d0e80": {
+   "name": "GetItemData__Fi",
+   "address": "0x1d0e80",
+   "size": 100,
+   "file": "ps2/src/itemdata.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.6
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.6
+     }
+    }
+   }
+  },
+  "001d4100": {
+   "name": "setShotVector__FPffff",
+   "address": "0x1d4100",
+   "size": 152,
+   "file": "ps2/src/btitem.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.73684
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.23684
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.73684
+     }
+    }
+   }
+  },
+  "001d5b30": {
+   "name": "Draw__15CItemBombEffectFP7CCamera",
+   "address": "0x1d5b30",
+   "size": 884,
+   "file": "ps2/src/itembombeffect.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.918552
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.918552
+     }
+    }
+   }
+  },
+  "001d6760": {
+   "name": "Step__13CWeaponEffectFv",
+   "address": "0x1d6760",
+   "size": 472,
+   "file": "ps2/src/weaponeffect.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.72034
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.72034
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.72034
+     }
+    }
+   }
+  },
+  "001d6940": {
+   "name": "Draw__13CWeaponEffectFv",
+   "address": "0x1d6940",
+   "size": 664,
+   "file": "ps2/src/weaponeffect.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.319275
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.319275
+     }
+    }
+   }
+  },
+  "001d7fc0": {
+   "name": "ArrangementPos__12CMonstorUnitFP11CDungeonMapiii",
+   "address": "0x1d7fc0",
+   "size": 920,
+   "file": "ps2/src/monstorunit.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.58696
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.58696
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.58696
+     }
+    }
+   }
+  },
+  "001d99a0": {
+   "name": "CheckViewLevel__12CMonstorUnitFv",
+   "address": "0x1d99a0",
+   "size": 956,
+   "file": "ps2/src/monstorunit.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.87866
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.87866
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.87866
+     }
+    }
+   }
+  },
+  "001e1ee0": {
+   "name": "_SET_ROTATION__FP12RS_STACKDATAi",
+   "address": "0x1e1ee0",
+   "size": 452,
+   "file": "ps2/src/runscript_opcodes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.76991
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.840706
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.76991
+     }
+    }
+   }
+  },
+  "001e2120": {
+   "name": "_CHK_MOVE__FP12RS_STACKDATAi",
+   "address": "0x1e2120",
+   "size": 252,
+   "file": "ps2/src/runscript_opcodes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.71429
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.71429
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.71429
+     }
+    }
+   }
+  },
+  "001e2220": {
+   "name": "_CHK_USER_INNER_PRODUCT__FP12RS_STACKDATAi",
+   "address": "0x1e2220",
+   "size": 528,
+   "file": "ps2/src/runscript_opcodes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.77272725
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 3.2954545
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 3.2954545
+     }
+    }
+   }
+  },
+  "001e2f50": {
+   "name": "_STATUS_GET_LIFE_RATE__FP12RS_STACKDATAi",
+   "address": "0x1e2f50",
+   "size": 136,
+   "file": "ps2/src/runscript_opcodes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.17647
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.17647
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.17647
+     }
+    }
+   }
+  },
+  "001e3600": {
+   "name": "_STATUS_GET_DMG_ID__FP12RS_STACKDATAi",
+   "address": "0x1e3600",
+   "size": 80,
+   "file": "ps2/src/runscript_opcodes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.9
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.9
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.9
+     }
+    }
+   }
+  },
+  "001e4870": {
+   "name": "_GET_CHR_ID__FP12RS_STACKDATAi",
+   "address": "0x1e4870",
+   "size": 44,
+   "file": "ps2/src/runscript_opcodes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001e5a90": {
+   "name": "_STATUS_SET_LIFE__FP12RS_STACKDATAi",
+   "address": "0x1e5a90",
+   "size": 132,
+   "file": "ps2/src/runscript_opcodes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.030304
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.030304
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.030304
+     }
+    }
+   }
+  },
+  "001e6570": {
+   "name": "_SET_REFERENCE__FP12RS_STACKDATAi",
+   "address": "0x1e6570",
+   "size": 192,
+   "file": "ps2/src/runscript_opcodes.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.291664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.291664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.291664
+     }
+    }
+   }
+  },
+  "001e6f40": {
+   "name": "ShopNoInput__FPiii",
+   "address": "0x1e6f40",
+   "size": 136,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001e7080": {
+   "name": "ShopPolySetInit__Fii",
+   "address": "0x1e7080",
+   "size": 336,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.61905
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.61905
+     }
+    }
+   }
+  },
+  "001e74d0": {
+   "name": "ShopCurDraw__Fiiiiiii",
+   "address": "0x1e74d0",
+   "size": 764,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.219894
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.219894
+     }
+    }
+   }
+  },
+  "001e7840": {
+   "name": "IsEnableCharge__Fi",
+   "address": "0x1e7840",
+   "size": 268,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.37313
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.37313
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.37313
+     }
+    }
+   }
+  },
+  "001e88a0": {
+   "name": "ExitChargeShop__Fv",
+   "address": "0x1e88a0",
+   "size": 32,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001eb600": {
+   "name": "IncludeBuyItem2__Fv",
+   "address": "0x1eb600",
+   "size": 420,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.28571
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.28571
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.28571
+     }
+    }
+   }
+  },
+  "001ec170": {
+   "name": "CheckSideKey2__Fv",
+   "address": "0x1ec170",
+   "size": 500,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.984
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.984
+     }
+    }
+   }
+  },
+  "001f1290": {
+   "name": "SetAlreadyGetMardanWeapon__Fi",
+   "address": "0x1f1290",
+   "size": 44,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001f2db0": {
+   "name": "FishingExchangeLoop__Fv",
+   "address": "0x1f2db0",
+   "size": 84,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.61905
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.61905
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.61905
+     }
+    }
+   }
+  },
+  "001f3d60": {
+   "name": "FishRecordViewLoop__Fv",
+   "address": "0x1f3d60",
+   "size": 56,
+   "file": "ps2/src/shop.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001f6720": {
+   "name": "BattleMenuCursor__Fv",
+   "address": "0x1f6720",
+   "size": 404,
+   "file": "ps2/src/battlemenu.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.53465
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.53465
+     }
+    }
+   }
+  },
+  "001faff0": {
+   "name": "DrawWeaponTagBoard__FiiP11WEAPON_HAVEiii",
+   "address": "0x1faff0",
+   "size": 528,
+   "file": "ps2/src/battlemenu.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.44697
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.44697
+     }
+    }
+   }
+  },
+  "002024b0": {
+   "name": "StartBGReadItemMenuWepIcon__FP1Ri",
+   "address": "0x2024b0",
+   "size": 84,
+   "file": "ps2/src/battlemenu.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.2381
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.2381
+     }
+    }
+   }
+  },
+  "0020a860": {
+   "name": "WorldMapMoveKey__Fv",
+   "address": "0x20a860",
+   "size": 328,
+   "file": "ps2/src/battlemenu.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.98781
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.98781
+     }
+    }
+   }
+  },
+  "0020b5d0": {
+   "name": "SetBuffInfo__10MenuClsMesFPs",
+   "address": "0x20b5d0",
+   "size": 540,
+   "file": "ps2/src/battlemenu.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.44444
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.44444
+     }
+    }
+   }
+  },
+  "0020ee10": {
+   "name": "MonsterNamePosSet__Fii",
+   "address": "0x20ee10",
+   "size": 92,
+   "file": "ps2/src/menu_misc.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.04348
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.04348
+     }
+    }
+   }
+  },
+  "002102e0": {
+   "name": "GetEditMenuMax__Fv",
+   "address": "0x2102e0",
+   "size": 60,
+   "file": "ps2/src/editmenu.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.6
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.6
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.6
+     }
+    }
+   }
+  },
+  "002131e0": {
+   "name": "OptionDraw__Fv",
+   "address": "0x2131e0",
+   "size": 108,
+   "file": "ps2/src/editmenu.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.37037
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.37037
+     }
+    }
+   }
+  },
+  "00213a00": {
+   "name": "MakeMcIconSysInfo__17CMemoryCardAccessFv",
+   "address": "0x213a00",
+   "size": 392,
+   "file": "ps2/src/memorycardaccess.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.163265
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.163265
+     }
+    }
+   }
+  },
+  "00215a30": {
+   "name": "GetAllSaveFileInfo__17CMemoryCardAccessFv",
+   "address": "0x215a30",
+   "size": 216,
+   "file": "ps2/src/memorycardaccess.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.44444
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.44444
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.44444
+     }
+    }
+   }
+  },
+  "00217dc0": {
+   "name": "DrawMenuNumber__FiiiP8CTexture4RECTii",
+   "address": "0x217dc0",
+   "size": 88,
+   "file": "ps2/src/memcard.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.18182
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.18182
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.18182
+     }
+    }
+   }
+  },
+  "00218610": {
+   "name": "AtoraCompOrEvent__FP14EDITPARTS_INFO",
+   "address": "0x218610",
+   "size": 356,
+   "file": "ps2/src/memcard.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.39326
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.39326
+     }
+    }
+   }
+  },
+  "00221260": {
+   "name": "SaveMenuKeyCheckMc__Fv",
+   "address": "0x221260",
+   "size": 584,
+   "file": "ps2/src/memcard.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.73972
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.73972
+     }
+    }
+   }
+  },
+  "00221980": {
+   "name": "SaveMenuKeySave__Fv",
+   "address": "0x221980",
+   "size": 304,
+   "file": "ps2/src/menu_save.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.01316
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.01316
+     }
+    }
+   }
+  },
+  "002223b0": {
+   "name": "SaveMenuKeyEndSaveEnding__Fv",
+   "address": "0x2223b0",
+   "size": 88,
+   "file": "ps2/src/menu_save.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.681816
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.681816
+     }
+    }
+   }
+  },
+  "002240e0": {
+   "name": "EventItemSelectExit__Fv",
+   "address": "0x2240e0",
+   "size": 92,
+   "file": "ps2/src/menu_save.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00224910": {
+   "name": "DrawEventAndFishMenuBoard_Ver__FP8CTexture8CRect_i_iiii",
+   "address": "0x224910",
+   "size": 328,
+   "file": "ps2/src/menu_save.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.353657
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.353657
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.353657
+     }
+    }
+   }
+  },
+  "00225530": {
+   "name": "PlayerAllItemCheck__Fi",
+   "address": "0x225530",
+   "size": 156,
+   "file": "ps2/src/menu_save.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.17949
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.17949
+     }
+    }
+   }
+  },
+  "002260b0": {
+   "name": "GetAttachVolumeForMsg__FP11ATTACH_LIST",
+   "address": "0x2260b0",
+   "size": 96,
+   "file": "ps2/src/menu_dungeon.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.958336
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.958336
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.958336
+     }
+    }
+   }
+  },
+  "0022bbb0": {
+   "name": "BtlMenuBufferSet__Fi",
+   "address": "0x22bbb0",
+   "size": 72,
+   "file": "ps2/src/menu_draw.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 11.111111
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 11.111111
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 11.111111
+     }
+    }
+   }
+  },
+  "00231800": {
+   "name": "CompItem__Fii",
+   "address": "0x231800",
+   "size": 284,
+   "file": "ps2/src/menu_draw.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.521126
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.521126
+     }
+    }
+   }
+  },
+  "00231a40": {
+   "name": "SeitonItemBoard__FP9ITEM_PACK",
+   "address": "0x231a40",
+   "size": 136,
+   "file": "ps2/src/menu_draw.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 21.617647
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 21.617647
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 21.617647
+     }
+    }
+   }
+  },
+  "00232080": {
+   "name": "GetWeaponMaxExp__FP11WEAPON_HAVE",
+   "address": "0x232080",
+   "size": 164,
+   "file": "ps2/src/menu_draw.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.51219
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.51219
+     }
+    }
+   }
+  },
+  "002321c0": {
+   "name": "DeleteItemAfterUseItem__FsP9ITEM_PACK",
+   "address": "0x2321c0",
+   "size": 204,
+   "file": "ps2/src/menu_draw.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.745094
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.745094
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.745094
+     }
+    }
+   }
+  },
+  "00232e00": {
+   "name": "GetPrevEastKingSndVol__Fv",
+   "address": "0x232e00",
+   "size": 36,
+   "file": "ps2/src/eastking.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00233340": {
+   "name": "EastKingEventDraw__Fv",
+   "address": "0x233340",
+   "size": 480,
+   "file": "ps2/src/eastking.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.46667
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.46667
+     }
+    }
+   }
+  },
+  "00233520": {
+   "name": "GetNowManualPartTgaNum__Fv",
+   "address": "0x233520",
+   "size": 56,
+   "file": "ps2/src/menu_manual.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.285713
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.285713
+     }
+    }
+   }
+  },
+  "002356d0": {
+   "name": "LoopStep__13CMenuItemStepFi",
+   "address": "0x2356d0",
+   "size": 76,
+   "file": "ps2/src/menuitemstep.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.47369
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.47369
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.47369
+     }
+    }
+   }
+  },
+  "0023d6c0": {
+   "name": "runerror__FPCc",
+   "address": "0x23d6c0",
+   "size": 68,
+   "file": "ps2/src/runscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.411766
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.411766
+     }
+    }
+   }
+  },
+  "0023d710": {
+   "name": "stkoverflow__Fv",
+   "address": "0x23d710",
+   "size": 40,
+   "file": "ps2/src/runscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0023d980": {
+   "name": "check_stack__10CRunScriptFv",
+   "address": "0x23d980",
+   "size": 52,
+   "file": "ps2/src/runscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.30769
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.30769
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.30769
+     }
+    }
+   }
+  },
+  "0023d9c0": {
+   "name": "push__10CRunScriptF12RS_STACKDATA",
+   "address": "0x23d9c0",
+   "size": 80,
+   "file": "ps2/src/runscript.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.65
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.65
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.65
+     }
+    }
+   }
+  },
+  "0023f6f0": {
+   "name": "GetItemInfo__10CStockItemFiPsPs",
+   "address": "0x23f6f0",
+   "size": 32,
+   "file": "ps2/src/stockitem.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.0
+     }
+    }
+   }
+  },
+  "0023fdf0": {
+   "name": "SeitonAttachBoardSub__FP11ATTACH_LIST",
+   "address": "0x23fdf0",
+   "size": 284,
+   "file": "ps2/src/stockitem.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.56338
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.56338
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.56338
+     }
+    }
+   }
+  },
+  "00240f40": {
+   "name": "SetMotion__5CFishFii",
+   "address": "0x240f40",
+   "size": 36,
+   "file": "ps2/src/fish.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "002410f0": {
+   "name": "DeleteReference__5CFishFv",
+   "address": "0x2410f0",
+   "size": 76,
+   "file": "ps2/src/fish.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.947365
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.947365
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.947365
+     }
+    }
+   }
+  },
+  "002430e0": {
+   "name": "UngagaKey_On__Fv",
+   "address": "0x2430e0",
+   "size": 384,
+   "file": "ps2/src/charakey.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.875
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.875
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 79.875
+     }
+    }
+   }
+  },
+  "0029ff40": {
+   "name": "__sinit_mglib.cpp",
+   "address": "0x29ff40",
+   "size": 268,
+   "file": "ps2/src/mglib.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "002a0750": {
+   "name": "__sinit_editloop3.cpp",
+   "address": "0x2a0750",
+   "size": 480,
+   "file": "ps2/src/editloop3.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  }
+ }
+}

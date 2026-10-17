@@ -1,0 +1,102 @@
+{
+ "build": "bin-f1",
+ "variants": [
+  "default",
+  "datatype-off",
+  "adjoff-typeoff",
+  "maxref1",
+  "maxref4",
+  "maxdup1"
+ ],
+ "lanes": {
+  "ff": {
+   "non_compiling_functions": {
+    "sceVu0ViewClipMatrix": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "incompatible types in assignment"
+    },
+    "GetSmokePartAddr": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "incompatible types in assignment"
+    },
+    "printLMatC": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "incompatible types in assignment"
+    },
+    "SgSortGroupP": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "invalid operands to binary &"
+    },
+    "PSAchk3": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "invalid operands to binary |"
+    }
+   },
+   "compiled_by_variant": {
+    "default": 0,
+    "datatype-off": 0,
+    "adjoff-typeoff": 0,
+    "maxref1": 0,
+    "maxref4": 0,
+    "maxdup1": 0
+   }
+  },
+  "dk": {
+   "non_compiling_functions": {
+    "_LOAD_LIGHT__FP12RS_STACKDATAi": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "cannot convert"
+    },
+    "EdTalkModeInit__FP12CNPCharacteri": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "illegal operand"
+    },
+    "CheckBox2__9CMapPartsFP7CBoxVu0": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "cannot convert"
+    },
+    "FishingLoad__FP14CDataAlloc2_1_i": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "cannot convert"
+    },
+    "setShotVector__FPffff": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "cannot convert"
+    },
+    "Draw__15CItemBombEffectFP7CCamera": {
+     "class": "undeclared identifier",
+     "message": "undefined identifier 'int7'"
+    },
+    "Draw__13CWeaponEffectFv": {
+     "class": "undeclared identifier",
+     "message": "undefined identifier 'int7'"
+    },
+    "_CHK_USER_INNER_PRODUCT__FP12RS_STACKDATAi": {
+     "class": "type mismatch (assignment, operand, return, cast)",
+     "message": "cannot convert"
+    },
+    "MonsterNamePosSet__Fii": {
+     "class": "illegal or unknown type name",
+     "message": "illegal type"
+    },
+    "__sinit_mglib.cpp": {
+     "class": "member access on a type the context lacks",
+     "message": "illegal use of 'void'"
+    },
+    "__sinit_editloop3.cpp": {
+     "class": "member access on a type the context lacks",
+     "message": "illegal use of 'void'"
+    }
+   },
+   "compiled_by_variant": {
+    "default": 0,
+    "datatype-off": 0,
+    "adjoff-typeoff": 0,
+    "maxref1": 0,
+    "maxref4": 0,
+    "maxdup1": 0
+   }
+  }
+ },
+ "conclusion": "no merge variant makes any of the 16 non-compiling functions compile; the failures are type mismatches / undeclared type names (type inference, stage 4)"
+}

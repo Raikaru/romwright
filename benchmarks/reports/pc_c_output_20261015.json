@@ -1,0 +1,956 @@
+{
+ "schema": "pc-c-output-headline/1",
+ "generated": "2026-10-15",
+ "fixtures": {
+  "pc-glquake-msvc42": {
+   "compiler": {
+    "id": "msvc4.2",
+    "cl_banner": "10.20.6166",
+    "flags": [
+     "/O2",
+     "/G5",
+     "/ML",
+     "/DWIN32",
+     "/DNDEBUG",
+     "/D_WINDOWS",
+     "/DGLQUAKE"
+    ],
+    "pin": "7947618912e2c2f48f987631e29e318e56ccda551a7b65364c8a3f743e719ac5"
+   },
+   "sample": {
+    "n": 200,
+    "seed": 20261015,
+    "eligible": 946,
+    "size_window": [
+     16,
+     1024
+    ],
+    "drawn_from": "link map glquake.map"
+   },
+   "arms": {
+    "off": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 198,
+       "compiled": 167,
+       "exact": 42,
+       "mean_percent": 40.574,
+       "mean_percent_compiled": 48.592,
+       "percent_ge_90": 51
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 38,
+        "produced": 37,
+        "compiled": 37,
+        "exact": 22,
+        "mean_percent": 75.807,
+        "mean_percent_compiled": 77.856,
+        "percent_ge_90": 25
+       },
+       "64-255": {
+        "functions": 104,
+        "produced": 104,
+        "compiled": 92,
+        "exact": 17,
+        "mean_percent": 42.663,
+        "mean_percent_compiled": 48.228,
+        "percent_ge_90": 21
+       },
+       "256-1024": {
+        "functions": 58,
+        "produced": 57,
+        "compiled": 38,
+        "exact": 3,
+        "mean_percent": 13.746,
+        "mean_percent_compiled": 20.981,
+        "percent_ge_90": 5
+       }
+      },
+      "compile_errors": {
+       "C2065 '_' : undeclared identifier": 21,
+       "C2100 illegal indirection": 4,
+       "compiler failed": 3,
+       "C2440 '_' : cannot convert from '_' to '_' (new behavior; please see help)": 3,
+       "not produced": 2
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 167
+      }
+     },
+     "env": {
+      "ROMWRIGHT_PE_WINDOWS_SPEC": "off",
+      "ROMWRIGHT_PE_CONVENTIONS": "off",
+      "ROMWRIGHT_PE_IAT_REGIONS": "off",
+      "ROMWRIGHT_EXPORT_LONG_DOUBLE": "off",
+      "ROMWRIGHT_EXPORT_CALLEE_CONVENTIONS": "off"
+     }
+    },
+    "on2": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 199,
+       "compiled": 176,
+       "exact": 42,
+       "mean_percent": 41.373,
+       "mean_percent_compiled": 47.014,
+       "percent_ge_90": 51
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 38,
+        "produced": 37,
+        "compiled": 37,
+        "exact": 22,
+        "mean_percent": 75.807,
+        "mean_percent_compiled": 77.856,
+        "percent_ge_90": 25
+       },
+       "64-255": {
+        "functions": 104,
+        "produced": 104,
+        "compiled": 96,
+        "exact": 17,
+        "mean_percent": 43.397,
+        "mean_percent_compiled": 47.013,
+        "percent_ge_90": 21
+       },
+       "256-1024": {
+        "functions": 58,
+        "produced": 58,
+        "compiled": 43,
+        "exact": 3,
+        "mean_percent": 15.183,
+        "mean_percent_compiled": 20.479,
+        "percent_ge_90": 5
+       }
+      },
+      "compile_errors": {
+       "C2065 '_' : undeclared identifier": 15,
+       "C2440 '_' : cannot convert from '_' to '_' (new behavior; please see help)": 5,
+       "compiler failed": 3,
+       "not produced": 1
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 175,
+       "stdcall -> stdcall": 1
+      }
+     },
+     "env": {}
+    },
+    "on": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 198,
+       "compiled": 175,
+       "exact": 42,
+       "mean_percent": 41.267,
+       "mean_percent_compiled": 47.162,
+       "percent_ge_90": 51
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 38,
+        "produced": 37,
+        "compiled": 37,
+        "exact": 22,
+        "mean_percent": 75.807,
+        "mean_percent_compiled": 77.856,
+        "percent_ge_90": 25
+       },
+       "64-255": {
+        "functions": 104,
+        "produced": 104,
+        "compiled": 96,
+        "exact": 17,
+        "mean_percent": 43.397,
+        "mean_percent_compiled": 47.013,
+        "percent_ge_90": 21
+       },
+       "256-1024": {
+        "functions": 58,
+        "produced": 57,
+        "compiled": 42,
+        "exact": 3,
+        "mean_percent": 14.818,
+        "mean_percent_compiled": 20.463,
+        "percent_ge_90": 5
+       }
+      },
+      "compile_errors": {
+       "C2065 '_' : undeclared identifier": 15,
+       "C2440 '_' : cannot convert from '_' to '_' (new behavior; please see help)": 5,
+       "compiler failed": 3,
+       "not produced": 2
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 174,
+       "stdcall -> stdcall": 1
+      }
+     },
+     "env": {}
+    }
+   },
+   "paired_on2_vs_off": {
+    "better": 8,
+    "worse": 3,
+    "same": 189,
+    "p_two_sided": 0.2265625
+   }
+  },
+  "pc-ioq3-ded-mingw32": {
+   "compiler": {
+    "id": "mingw-gcc",
+    "cl_banner": "i686-w64-mingw32-gcc (GCC) 16.2.1 20260819 (Fedora MinGW 16.2.1-1.fc44)",
+    "flags": [
+     "-O2",
+     "-DNDEBUG",
+     "-fno-lto",
+     "-msse",
+     "-mfpmath=387",
+     "-std=gnu99",
+     "-w",
+     "-fpermissive",
+     "-Wno-int-conversion",
+     "-Wno-incompatible-pointer-types"
+    ],
+    "pin": "f007df489b5a6da29d0bf89b366db7375ee8ffbedf6fcea93e5848f75b355ffd"
+   },
+   "sample": {
+    "n": 200,
+    "seed": 20261015,
+    "eligible": 1534,
+    "size_window": [
+     16,
+     1024
+    ],
+    "drawn_from": "all truth functions (no link map and no readable PDB)"
+   },
+   "arms": {
+    "off": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 152,
+       "compiled": 124,
+       "exact": 20,
+       "mean_percent": 21.793,
+       "mean_percent_compiled": 35.151,
+       "percent_ge_90": 23
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 45,
+        "produced": 28,
+        "compiled": 26,
+        "exact": 8,
+        "mean_percent": 30.305,
+        "mean_percent_compiled": 52.451,
+        "percent_ge_90": 8
+       },
+       "64-255": {
+        "functions": 97,
+        "produced": 75,
+        "compiled": 63,
+        "exact": 10,
+        "mean_percent": 26.193,
+        "mean_percent_compiled": 40.33,
+        "percent_ge_90": 13
+       },
+       "256-1024": {
+        "functions": 58,
+        "produced": 49,
+        "compiled": 35,
+        "exact": 2,
+        "mean_percent": 7.831,
+        "mean_percent_compiled": 12.977,
+        "percent_ge_90": 2
+       }
+      },
+      "compile_errors": {
+       "not produced": 48,
+       "error expected '_', '_', '_', '_' or '_' before '_'": 8,
+       "error '_' undeclared (first use in this function)": 7,
+       "error too few arguments to function '_'; expected N, have N": 3,
+       "error invalid type argument of unary '_' (have '_')": 3,
+       "error too many arguments to function '_'; expected N, have N": 2,
+       "error conflicting types for '_'; have '_'": 2,
+       "error cannot convert to a pointer type": 1,
+       "error request for member '_' in something not a structure or union": 1,
+       "error expected identifier or '_' before '_'": 1
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 124
+      }
+     },
+     "env": {
+      "ROMWRIGHT_PE_WINDOWS_SPEC": "off",
+      "ROMWRIGHT_PE_CONVENTIONS": "off",
+      "ROMWRIGHT_PE_IAT_REGIONS": "off",
+      "ROMWRIGHT_EXPORT_LONG_DOUBLE": "off",
+      "ROMWRIGHT_EXPORT_CALLEE_CONVENTIONS": "off"
+     }
+    },
+    "on2": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 152,
+       "compiled": 137,
+       "exact": 20,
+       "mean_percent": 22.704,
+       "mean_percent_compiled": 33.145,
+       "percent_ge_90": 23
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 45,
+        "produced": 28,
+        "compiled": 27,
+        "exact": 8,
+        "mean_percent": 30.377,
+        "mean_percent_compiled": 50.628,
+        "percent_ge_90": 8
+       },
+       "64-255": {
+        "functions": 97,
+        "produced": 75,
+        "compiled": 69,
+        "exact": 10,
+        "mean_percent": 28.161,
+        "mean_percent_compiled": 39.589,
+        "percent_ge_90": 13
+       },
+       "256-1024": {
+        "functions": 58,
+        "produced": 49,
+        "compiled": 41,
+        "exact": 2,
+        "mean_percent": 7.626,
+        "mean_percent_compiled": 10.788,
+        "percent_ge_90": 2
+       }
+      },
+      "compile_errors": {
+       "not produced": 48,
+       "error '_' undeclared (first use in this function)": 6,
+       "error too many arguments to function '_'; expected N, have N": 3,
+       "error conflicting types for '_'; have '_'": 2,
+       "error cannot convert to a pointer type": 1,
+       "error too few arguments to function '_'; expected N, have N": 1,
+       "error request for member '_' in something not a structure or union": 1,
+       "error expected identifier or '_' before '_'": 1
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 135,
+       "cdecl -> fastcall": 2
+      }
+     },
+     "env": {}
+    }
+   },
+   "paired_on2_vs_off": {
+    "better": 13,
+    "worse": 7,
+    "same": 180,
+    "p_two_sided": 0.26317596435546875
+   }
+  },
+  "pc-quake2-msvc8": {
+   "compiler": {
+    "id": "msvc8.0",
+    "cl_banner": "14.00.50727.42",
+    "flags": [
+     "/O2",
+     "/MT",
+     "/DWIN32",
+     "/DNDEBUG",
+     "/D_WINDOWS"
+    ],
+    "pin": "51c33ecf8a340f39b97ee722e35634a064fc72ca7c246d7d5b307e80e1981def"
+   },
+   "sample": {
+    "n": 200,
+    "seed": 20261015,
+    "eligible": 885,
+    "size_window": [
+     16,
+     1024
+    ],
+    "drawn_from": "llvm-pdbutil on quake2.pdb"
+   },
+   "arms": {
+    "no_EXPORT_CALLEE_CONVENTIONS": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 173,
+       "compiled": 165,
+       "exact": 19,
+       "mean_percent": 25.091,
+       "mean_percent_compiled": 30.413,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 46,
+        "produced": 34,
+        "compiled": 34,
+        "exact": 13,
+        "mean_percent": 42.021,
+        "mean_percent_compiled": 56.852,
+        "percent_ge_90": 14
+       },
+       "64-255": {
+        "functions": 93,
+        "produced": 81,
+        "compiled": 78,
+        "exact": 5,
+        "mean_percent": 28.115,
+        "mean_percent_compiled": 33.522,
+        "percent_ge_90": 10
+       },
+       "256-1024": {
+        "functions": 61,
+        "produced": 58,
+        "compiled": 53,
+        "exact": 1,
+        "mean_percent": 7.714,
+        "mean_percent_compiled": 8.879,
+        "percent_ge_90": 1
+       }
+      },
+      "compile_errors": {
+       "not produced": 27,
+       "C2065 '_' : undeclared identifier": 8
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 159,
+       "cdecl -> fastcall": 6
+      }
+     },
+     "env": {
+      "ROMWRIGHT_EXPORT_CALLEE_CONVENTIONS": "off"
+     }
+    },
+    "no_EXPORT_LONG_DOUBLE": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 173,
+       "compiled": 163,
+       "exact": 19,
+       "mean_percent": 25.091,
+       "mean_percent_compiled": 30.787,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 46,
+        "produced": 34,
+        "compiled": 34,
+        "exact": 13,
+        "mean_percent": 42.021,
+        "mean_percent_compiled": 56.852,
+        "percent_ge_90": 14
+       },
+       "64-255": {
+        "functions": 93,
+        "produced": 81,
+        "compiled": 78,
+        "exact": 5,
+        "mean_percent": 28.115,
+        "mean_percent_compiled": 33.522,
+        "percent_ge_90": 10
+       },
+       "256-1024": {
+        "functions": 61,
+        "produced": 58,
+        "compiled": 51,
+        "exact": 1,
+        "mean_percent": 7.714,
+        "mean_percent_compiled": 9.227,
+        "percent_ge_90": 1
+       }
+      },
+      "compile_errors": {
+       "not produced": 27,
+       "C2065 '_' : undeclared identifier": 8,
+       "C2100 illegal indirection": 2
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 158,
+       "cdecl -> fastcall": 5
+      }
+     },
+     "env": {
+      "ROMWRIGHT_EXPORT_LONG_DOUBLE": "off"
+     }
+    },
+    "no_PE_CONVENTIONS": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 173,
+       "compiled": 165,
+       "exact": 19,
+       "mean_percent": 25.091,
+       "mean_percent_compiled": 30.413,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 46,
+        "produced": 34,
+        "compiled": 34,
+        "exact": 13,
+        "mean_percent": 42.021,
+        "mean_percent_compiled": 56.852,
+        "percent_ge_90": 14
+       },
+       "64-255": {
+        "functions": 93,
+        "produced": 81,
+        "compiled": 78,
+        "exact": 5,
+        "mean_percent": 28.115,
+        "mean_percent_compiled": 33.522,
+        "percent_ge_90": 10
+       },
+       "256-1024": {
+        "functions": 61,
+        "produced": 58,
+        "compiled": 53,
+        "exact": 1,
+        "mean_percent": 7.714,
+        "mean_percent_compiled": 8.879,
+        "percent_ge_90": 1
+       }
+      },
+      "compile_errors": {
+       "not produced": 27,
+       "C2065 '_' : undeclared identifier": 8
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 159,
+       "cdecl -> fastcall": 6
+      }
+     },
+     "env": {
+      "ROMWRIGHT_PE_CONVENTIONS": "off"
+     }
+    },
+    "no_PE_IAT_REGIONS": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 173,
+       "compiled": 165,
+       "exact": 19,
+       "mean_percent": 25.401,
+       "mean_percent_compiled": 30.789,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 46,
+        "produced": 34,
+        "compiled": 34,
+        "exact": 13,
+        "mean_percent": 41.67,
+        "mean_percent_compiled": 56.377,
+        "percent_ge_90": 14
+       },
+       "64-255": {
+        "functions": 93,
+        "produced": 81,
+        "compiled": 78,
+        "exact": 5,
+        "mean_percent": 28.955,
+        "mean_percent_compiled": 34.524,
+        "percent_ge_90": 10
+       },
+       "256-1024": {
+        "functions": 61,
+        "produced": 58,
+        "compiled": 53,
+        "exact": 1,
+        "mean_percent": 7.714,
+        "mean_percent_compiled": 8.879,
+        "percent_ge_90": 1
+       }
+      },
+      "compile_errors": {
+       "not produced": 27,
+       "C2065 '_' : undeclared identifier": 8
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 159,
+       "cdecl -> fastcall": 6
+      }
+     },
+     "env": {
+      "ROMWRIGHT_PE_IAT_REGIONS": "off"
+     }
+    },
+    "no_PE_WINDOWS_SPEC": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 173,
+       "compiled": 162,
+       "exact": 19,
+       "mean_percent": 25.303,
+       "mean_percent_compiled": 31.238,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 46,
+        "produced": 34,
+        "compiled": 34,
+        "exact": 13,
+        "mean_percent": 42.343,
+        "mean_percent_compiled": 57.288,
+        "percent_ge_90": 14
+       },
+       "64-255": {
+        "functions": 93,
+        "produced": 81,
+        "compiled": 77,
+        "exact": 5,
+        "mean_percent": 28.448,
+        "mean_percent_compiled": 34.359,
+        "percent_ge_90": 10
+       },
+       "256-1024": {
+        "functions": 61,
+        "produced": 58,
+        "compiled": 51,
+        "exact": 1,
+        "mean_percent": 7.659,
+        "mean_percent_compiled": 9.161,
+        "percent_ge_90": 1
+       }
+      },
+      "compile_errors": {
+       "not produced": 27,
+       "C2065 '_' : undeclared identifier": 11
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 162
+      }
+     },
+     "env": {
+      "ROMWRIGHT_PE_WINDOWS_SPEC": "off"
+     }
+    },
+    "off": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 173,
+       "compiled": 160,
+       "exact": 19,
+       "mean_percent": 25.511,
+       "mean_percent_compiled": 31.889,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 46,
+        "produced": 34,
+        "compiled": 34,
+        "exact": 13,
+        "mean_percent": 41.992,
+        "mean_percent_compiled": 56.812,
+        "percent_ge_90": 14
+       },
+       "64-255": {
+        "functions": 93,
+        "produced": 81,
+        "compiled": 77,
+        "exact": 5,
+        "mean_percent": 29.069,
+        "mean_percent_compiled": 35.109,
+        "percent_ge_90": 10
+       },
+       "256-1024": {
+        "functions": 61,
+        "produced": 58,
+        "compiled": 49,
+        "exact": 1,
+        "mean_percent": 7.659,
+        "mean_percent_compiled": 9.534,
+        "percent_ge_90": 1
+       }
+      },
+      "compile_errors": {
+       "not produced": 27,
+       "C2065 '_' : undeclared identifier": 11,
+       "C2100 illegal indirection": 2
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 160
+      }
+     },
+     "env": {
+      "ROMWRIGHT_PE_WINDOWS_SPEC": "off",
+      "ROMWRIGHT_PE_CONVENTIONS": "off",
+      "ROMWRIGHT_PE_IAT_REGIONS": "off",
+      "ROMWRIGHT_EXPORT_LONG_DOUBLE": "off",
+      "ROMWRIGHT_EXPORT_CALLEE_CONVENTIONS": "off"
+     }
+    },
+    "on2": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 173,
+       "compiled": 165,
+       "exact": 19,
+       "mean_percent": 25.699,
+       "mean_percent_compiled": 31.15,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 46,
+        "produced": 34,
+        "compiled": 34,
+        "exact": 13,
+        "mean_percent": 42.673,
+        "mean_percent_compiled": 57.734,
+        "percent_ge_90": 14
+       },
+       "64-255": {
+        "functions": 93,
+        "produced": 81,
+        "compiled": 78,
+        "exact": 5,
+        "mean_percent": 28.959,
+        "mean_percent_compiled": 34.528,
+        "percent_ge_90": 10
+       },
+       "256-1024": {
+        "functions": 61,
+        "produced": 58,
+        "compiled": 53,
+        "exact": 1,
+        "mean_percent": 7.929,
+        "mean_percent_compiled": 9.125,
+        "percent_ge_90": 1
+       }
+      },
+      "compile_errors": {
+       "not produced": 27,
+       "C2065 '_' : undeclared identifier": 8
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 165
+      }
+     },
+     "env": {}
+    },
+    "on": {
+     "summary": {
+      "overall": {
+       "functions": 200,
+       "produced": 173,
+       "compiled": 165,
+       "exact": 19,
+       "mean_percent": 25.091,
+       "mean_percent_compiled": 30.413,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 46,
+        "produced": 34,
+        "compiled": 34,
+        "exact": 13,
+        "mean_percent": 42.021,
+        "mean_percent_compiled": 56.852,
+        "percent_ge_90": 14
+       },
+       "64-255": {
+        "functions": 93,
+        "produced": 81,
+        "compiled": 78,
+        "exact": 5,
+        "mean_percent": 28.115,
+        "mean_percent_compiled": 33.522,
+        "percent_ge_90": 10
+       },
+       "256-1024": {
+        "functions": 61,
+        "produced": 58,
+        "compiled": 53,
+        "exact": 1,
+        "mean_percent": 7.714,
+        "mean_percent_compiled": 8.879,
+        "percent_ge_90": 1
+       }
+      },
+      "compile_errors": {
+       "not produced": 27,
+       "C2065 '_' : undeclared identifier": 8
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 159,
+       "cdecl -> fastcall": 6
+      }
+     },
+     "env": {}
+    }
+   },
+   "paired_on2_vs_off": {
+    "better": 5,
+    "worse": 4,
+    "same": 191,
+    "p_two_sided": 1.0
+   }
+  },
+  "pc-pcproject-mini": {
+   "compiler": {
+    "id": "msvc6.0",
+    "cl_banner": "12.00.8168",
+    "flags": [
+     "/O2",
+     "/Gd"
+    ],
+    "pin": "5c81e9c2ab0ac5545022c1418a23392cb514db950cf6dcb1f48327270403fcd3"
+   },
+   "sample": {
+    "n": 50,
+    "seed": 20261015,
+    "eligible": 50,
+    "size_window": [
+     16,
+     1024
+    ],
+    "drawn_from": "all truth functions (no link map and no readable PDB)"
+   },
+   "arms": {
+    "off": {
+     "summary": {
+      "overall": {
+       "functions": 50,
+       "produced": 48,
+       "compiled": 45,
+       "exact": 17,
+       "mean_percent": 68.547,
+       "mean_percent_compiled": 76.163,
+       "percent_ge_90": 22
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 38,
+        "produced": 36,
+        "compiled": 33,
+        "exact": 15,
+        "mean_percent": 72.998,
+        "mean_percent_compiled": 84.058,
+        "percent_ge_90": 18
+       },
+       "64-255": {
+        "functions": 11,
+        "produced": 11,
+        "compiled": 11,
+        "exact": 2,
+        "mean_percent": 59.403,
+        "mean_percent_compiled": 59.403,
+        "percent_ge_90": 4
+       },
+       "256-1024": {
+        "functions": 1,
+        "produced": 1,
+        "compiled": 1,
+        "exact": 0,
+        "mean_percent": 0.0,
+        "mean_percent_compiled": 0.0,
+        "percent_ge_90": 0
+       }
+      },
+      "compile_errors": {
+       "C2100 illegal indirection": 2,
+       "not produced": 2,
+       "C2061 syntax error : identifier '_'": 1
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 42,
+       "stdcall -> cdecl": 3
+      }
+     },
+     "env": {
+      "ROMWRIGHT_PE_WINDOWS_SPEC": "off",
+      "ROMWRIGHT_PE_CONVENTIONS": "off",
+      "ROMWRIGHT_PE_IAT_REGIONS": "off",
+      "ROMWRIGHT_EXPORT_LONG_DOUBLE": "off",
+      "ROMWRIGHT_EXPORT_CALLEE_CONVENTIONS": "off"
+     }
+    },
+    "on2": {
+     "summary": {
+      "overall": {
+       "functions": 50,
+       "produced": 48,
+       "compiled": 48,
+       "exact": 19,
+       "mean_percent": 74.721,
+       "mean_percent_compiled": 77.835,
+       "percent_ge_90": 25
+      },
+      "by_size": {
+       "16-63": {
+        "functions": 38,
+        "produced": 36,
+        "compiled": 36,
+        "exact": 17,
+        "mean_percent": 80.17,
+        "mean_percent_compiled": 84.624,
+        "percent_ge_90": 21
+       },
+       "64-255": {
+        "functions": 11,
+        "produced": 11,
+        "compiled": 11,
+        "exact": 2,
+        "mean_percent": 62.69,
+        "mean_percent_compiled": 62.69,
+        "percent_ge_90": 4
+       },
+       "256-1024": {
+        "functions": 1,
+        "produced": 1,
+        "compiled": 1,
+        "exact": 0,
+        "mean_percent": 0.0,
+        "mean_percent_compiled": 0.0,
+        "percent_ge_90": 0
+       }
+      },
+      "compile_errors": {
+       "not produced": 2
+      },
+      "calling_convention_truth_to_candidate": {
+       "cdecl -> cdecl": 44,
+       "stdcall -> stdcall": 3,
+       "fastcall -> fastcall": 1
+      }
+     },
+     "env": {}
+    }
+   },
+   "paired_on2_vs_off": {
+    "better": 6,
+    "worse": 0,
+    "same": 44,
+    "p_two_sided": 0.03125
+   }
+  }
+ }
+}

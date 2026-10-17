@@ -1,0 +1,565 @@
+{
+ "generated": "2026-10-12T02:05:09+00:00",
+ "totals": {
+  "functions": 200,
+  "base_ok": 200,
+  "master_ok": 200,
+  "identical": 182,
+  "changed": 18,
+  "better": 1,
+  "worse": 1,
+  "neutral": 16,
+  "base_timeouts": 0,
+  "master_timeouts": 0
+ },
+ "games": {
+  "n64-super-mario-64": {
+   "functions": 200,
+   "base_ok": 200,
+   "master_ok": 200,
+   "identical": 182,
+   "changed": 18,
+   "better": 1,
+   "worse": 1,
+   "neutral": 16,
+   "base_timeouts": 0,
+   "master_timeouts": 0,
+   "reasons": {
+    "better:address_literals": 1,
+    "better:casts": 1,
+    "worse:casts": 1,
+    "worse:irregular": 1
+   },
+   "failure_classes": {},
+   "median_seconds": {
+    "base": 1.546,
+    "master": 1.574
+   },
+   "total_seconds": {
+    "base": 313.8,
+    "master": 315.0
+   },
+   "median_pair_ratio": 1.008
+  }
+ },
+ "timing": {
+  "pairs": 200,
+  "median_pair_ratio": 1.008,
+  "master_slower_pairs": 101,
+  "load1_median": 25.27,
+  "load1_max": 26.63,
+  "note": "one process per function and arm; the arm order alternates; seconds include process start, project open and the decompile"
+ },
+ "changed": [
+  {
+   "game": "n64-super-mario-64",
+   "address": "8024dbf0",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 5,
+    "address_literals": 0,
+    "symbol_names": 0,
+    "lines": 5
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 5,
+    "address_literals": 0,
+    "symbol_names": 0,
+    "lines": 6
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "8025177c",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 3,
+    "labels": 2,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 14,
+    "address_literals": 3,
+    "symbol_names": 4,
+    "lines": 62
+   },
+   "master": {
+    "gotos": 3,
+    "labels": 2,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 14,
+    "address_literals": 3,
+    "symbol_names": 4,
+    "lines": 62
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "8026aa48",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 49,
+    "address_literals": 9,
+    "symbol_names": 2,
+    "lines": 53
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 49,
+    "address_literals": 9,
+    "symbol_names": 2,
+    "lines": 53
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "80279f80",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 0,
+    "address_literals": 0,
+    "symbol_names": 1,
+    "lines": 18
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 0,
+    "address_literals": 0,
+    "symbol_names": 1,
+    "lines": 18
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "8027ad74",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 4,
+    "address_literals": 3,
+    "symbol_names": 5,
+    "lines": 18
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 4,
+    "address_literals": 3,
+    "symbol_names": 5,
+    "lines": 18
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "8029fb68",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 2,
+    "address_literals": 0,
+    "symbol_names": 0,
+    "lines": 10
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 2,
+    "address_literals": 0,
+    "symbol_names": 0,
+    "lines": 10
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802a10f0",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 0,
+    "address_literals": 1,
+    "symbol_names": 0,
+    "lines": 7
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 0,
+    "address_literals": 1,
+    "symbol_names": 0,
+    "lines": 7
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802a390c",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 2,
+    "address_literals": 0,
+    "symbol_names": 1,
+    "lines": 12
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 2,
+    "address_literals": 0,
+    "symbol_names": 1,
+    "lines": 12
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802ace80",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 30,
+    "address_literals": 4,
+    "symbol_names": 0,
+    "lines": 43
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 30,
+    "address_literals": 4,
+    "symbol_names": 0,
+    "lines": 43
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802b2494",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 21,
+    "address_literals": 2,
+    "symbol_names": 4,
+    "lines": 28
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 21,
+    "address_literals": 2,
+    "symbol_names": 4,
+    "lines": 28
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802b3df4",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 43,
+    "address_literals": 5,
+    "symbol_names": 3,
+    "lines": 36
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 43,
+    "address_literals": 5,
+    "symbol_names": 3,
+    "lines": 36
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802c2ce8",
+   "verdict": "better",
+   "reasons": [
+    "casts 50->49",
+    "address_literals 8->6"
+   ],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 50,
+    "address_literals": 8,
+    "symbol_names": 3,
+    "lines": 28
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 49,
+    "address_literals": 6,
+    "symbol_names": 3,
+    "lines": 30
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802cf080",
+   "verdict": "worse",
+   "reasons": [
+    "irregular 0->1",
+    "casts 8->20"
+   ],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 8,
+    "address_literals": 0,
+    "symbol_names": 4,
+    "lines": 36
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 20,
+    "address_literals": 0,
+    "symbol_names": 4,
+    "lines": 44
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802db6e8",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 4,
+    "address_literals": 1,
+    "symbol_names": 1,
+    "lines": 14
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 4,
+    "address_literals": 1,
+    "symbol_names": 1,
+    "lines": 14
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802f4b78",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 6,
+    "address_literals": 3,
+    "symbol_names": 3,
+    "lines": 19
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 6,
+    "address_literals": 3,
+    "symbol_names": 3,
+    "lines": 19
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802f4ce0",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 8,
+    "address_literals": 1,
+    "symbol_names": 1,
+    "lines": 11
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 0,
+    "halt_baddata": 0,
+    "casts": 8,
+    "address_literals": 1,
+    "symbol_names": 1,
+    "lines": 11
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "802fa428",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 1,
+    "address_literals": 0,
+    "symbol_names": 3,
+    "lines": 23
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 1,
+    "address_literals": 0,
+    "symbol_names": 3,
+    "lines": 23
+   },
+   "base_ok": true,
+   "master_ok": true
+  },
+  {
+   "game": "n64-super-mario-64",
+   "address": "8031427c",
+   "verdict": "neutral",
+   "reasons": [],
+   "base": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 51,
+    "address_literals": 6,
+    "symbol_names": 13,
+    "lines": 65
+   },
+   "master": {
+    "gotos": 0,
+    "labels": 0,
+    "irregular": 1,
+    "halt_baddata": 0,
+    "casts": 51,
+    "address_literals": 6,
+    "symbol_names": 13,
+    "lines": 65
+   },
+   "base_ok": true,
+   "master_ok": true
+  }
+ ]
+}

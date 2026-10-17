@@ -1,0 +1,1587 @@
+{
+ "schema": "console-research/1",
+ "generated": "2026-10-09T19:14:13+00:00",
+ "tools": "61a108d4b6fc3e88",
+ "cli": "/home/raikaru/runs/PspImport/tools/release/romwright-cli",
+ "n": 200,
+ "seed": 20261006,
+ "thresholds": {
+  "rate": 0.005,
+  "count_relative": 0.01
+ },
+ "configs": {
+  "default": {
+   "name": "default",
+   "env": {},
+   "component": "all research (default vs baseline-off)",
+   "reference": "baseline-off",
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "baseline-off": {
+   "name": "baseline-off",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": "",
+    "ROMWRIGHT_NO_SWITCH_VSA": "1",
+    "ROMWRIGHT_NO_SWITCH_DECOMPILER": "1",
+    "ROMWRIGHT_RUST_STRUCTURING": "none"
+   },
+   "component": "reference",
+   "reference": null,
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "infer-prototypes": {
+   "name": "infer-prototypes",
+   "env": {},
+   "component": "persisted prototypes (infer_prototypes job)",
+   "reference": "default",
+   "sign": 1,
+   "infer_prototypes": true
+  }
+ },
+ "images": {
+  "ps2-capcom-fighting-evolution": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 2,
+      "labels": 1,
+      "irregular_functions": 159,
+      "native_warnings": 548,
+      "text_warnings": 55,
+      "lines": 9720,
+      "median_seconds": 0.408,
+      "max_seconds": 1.066,
+      "wall_seconds": 46.0,
+      "recall": 0.9418,
+      "precision": 0.9964,
+      "discovered": 8312,
+      "dwarf_functions": 200,
+      "arity_accuracy": 1.0,
+      "type_slots": 408,
+      "type_exact": 208,
+      "type_partial": 0,
+      "type_wrong": 200,
+      "type_exact_rate": 0.5098
+     },
+     "import": {
+      "seconds": 105.8,
+      "switch_stats": {
+       "vsa_resolved": 126,
+       "vsa_refused": 360,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/ps2-capcom-fighting-evolution/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9435,
+       "to": 0.9418,
+       "delta": -0.0017,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9867,
+       "to": 0.9964,
+       "delta": 0.0097,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 9,
+       "to": 2,
+       "delta": -7,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 5,
+       "to": 1,
+       "delta": -4,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 159,
+       "to": 159,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 548,
+       "to": 548,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 55,
+       "to": 55,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9718,
+       "to": 9720,
+       "delta": 2,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5098,
+       "to": 0.5098,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9435,
+       "to": 0.9418,
+       "delta": -0.0017,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9867,
+       "to": 0.9964,
+       "delta": 0.0097,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 9,
+       "to": 2,
+       "delta": -7,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 5,
+       "to": 1,
+       "delta": -4,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 159,
+       "to": 159,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 548,
+       "to": 548,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 55,
+       "to": 55,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9718,
+       "to": 9720,
+       "delta": 2,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5098,
+       "to": 0.5098,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 9,
+      "labels": 5,
+      "irregular_functions": 159,
+      "native_warnings": 548,
+      "text_warnings": 55,
+      "lines": 9718,
+      "median_seconds": 0.544,
+      "max_seconds": 1.502,
+      "wall_seconds": 58.7,
+      "recall": 0.9435,
+      "precision": 0.9867,
+      "discovered": 8409,
+      "dwarf_functions": 200,
+      "arity_accuracy": 1.0,
+      "type_slots": 408,
+      "type_exact": 208,
+      "type_partial": 0,
+      "type_wrong": 200,
+      "type_exact_rate": 0.5098
+     },
+     "import": {
+      "seconds": 18.2,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/ps2-capcom-fighting-evolution/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9418,
+       "to": 0.9435,
+       "delta": 0.0017,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9964,
+       "to": 0.9867,
+       "delta": -0.0097,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 2,
+       "to": 9,
+       "delta": 7,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 1,
+       "to": 5,
+       "delta": 4,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 159,
+       "to": 159,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 548,
+       "to": 548,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 55,
+       "to": 55,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9720,
+       "to": 9718,
+       "delta": -2,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5098,
+       "to": 0.5098,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 2,
+      "labels": 1,
+      "irregular_functions": 34,
+      "native_warnings": 48,
+      "text_warnings": 55,
+      "lines": 9498,
+      "median_seconds": 0.464,
+      "max_seconds": 1.584,
+      "wall_seconds": 50.7,
+      "dwarf_functions": 200,
+      "arity_accuracy": 1.0,
+      "type_slots": 408,
+      "type_exact": 371,
+      "type_partial": 0,
+      "type_wrong": 37,
+      "type_exact_rate": 0.9093
+     },
+     "import": {
+      "seconds": 105.8,
+      "switch_stats": {
+       "vsa_resolved": 126,
+       "vsa_refused": 360,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 634.6,
+      "report": {
+       "analyzed": 18353,
+       "changed": 12973,
+       "decompiler_failures": 18,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 20
+      }
+     },
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/ps2-capcom-fighting-evolution/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 2,
+       "to": 2,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 1,
+       "to": 1,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 159,
+       "to": 34,
+       "delta": -125,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 548,
+       "to": 48,
+       "delta": -500,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 55,
+       "to": 55,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9720,
+       "to": 9498,
+       "delta": -222,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5098,
+       "to": 0.9093,
+       "delta": 0.3995,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 9,
+       "to": 2,
+       "delta": -7,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 5,
+       "to": 1,
+       "delta": -4,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 159,
+       "to": 34,
+       "delta": -125,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 548,
+       "to": 48,
+       "delta": -500,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 55,
+       "to": 55,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9718,
+       "to": 9498,
+       "delta": -220,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5098,
+       "to": 0.9093,
+       "delta": 0.3995,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 2,
+       "to": 2,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 1,
+       "to": 1,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 159,
+       "to": 34,
+       "delta": -125,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 548,
+       "to": 48,
+       "delta": -500,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 55,
+       "to": 55,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 9720,
+       "to": 9498,
+       "delta": -222,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5098,
+       "to": 0.9093,
+       "delta": 0.3995,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "dwarf1-python",
+    "functions": 5221,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "capcom",
+   "sample": [
+    "00129bd0",
+    "0012d070",
+    "0012d860",
+    "0012dba0",
+    "0012fa40",
+    "0012fcd0",
+    "00130170",
+    "00130a70",
+    "00130f00",
+    "001314d0",
+    "00131db0",
+    "00133fd0",
+    "001349b0",
+    "00135720",
+    "00136080",
+    "00136750",
+    "00137130",
+    "00137ed0",
+    "0013a880",
+    "0013e130",
+    "00140330",
+    "00141080",
+    "00141360",
+    "00141dc0",
+    "001438b0",
+    "00144770",
+    "001449b0",
+    "00144bf0",
+    "00145c30",
+    "00146e70",
+    "00147a00",
+    "00148910",
+    "00149d20",
+    "0014a520",
+    "0014cd20",
+    "0014e200",
+    "0014e630",
+    "0014fe80",
+    "0014ff00",
+    "00150690",
+    "00150c20",
+    "00153010",
+    "001542b0",
+    "00154760",
+    "00154820",
+    "001548d0",
+    "00155fb0",
+    "00156200",
+    "00157520",
+    "001580d0",
+    "00158b90",
+    "00158e70",
+    "0015a570",
+    "0015a990",
+    "0015bf00",
+    "0015c150",
+    "0015fb80",
+    "001607a0",
+    "00160c30",
+    "001611c0",
+    "00162580",
+    "00164220",
+    "00164440",
+    "00166320",
+    "00166db0",
+    "00168130",
+    "0016b040",
+    "0016b500",
+    "0016c160",
+    "0016f600",
+    "0016fd10",
+    "00170d20",
+    "001713e0",
+    "00173c50",
+    "00173cd0",
+    "00174a30",
+    "001752d0",
+    "0017a570",
+    "0017af80",
+    "0017c650",
+    "0017c760",
+    "0017cf80",
+    "00181de0",
+    "001831e0",
+    "00187ca0",
+    "00188eb0",
+    "0018a030",
+    "0018b770",
+    "00190b60",
+    "00191bd0",
+    "00192030",
+    "00194ed0",
+    "00195b80",
+    "00196080",
+    "001973f0",
+    "00199f60",
+    "0019b540",
+    "0019e330",
+    "001a7c90",
+    "001a9330",
+    "001a9530",
+    "001aa090",
+    "001abdf0",
+    "001ac870",
+    "001ad140",
+    "001ad4e0",
+    "001aff20",
+    "001b02d0",
+    "001b0490",
+    "001b2840",
+    "001b5530",
+    "001b5eb0",
+    "001b7b40",
+    "001b7d60",
+    "001bcd90",
+    "001bd9f0",
+    "001bdd50",
+    "001bdeb0",
+    "001bf4c0",
+    "001c0370",
+    "001c04b0",
+    "001c9560",
+    "001ca090",
+    "001cb8d0",
+    "001ce5e0",
+    "001ce710",
+    "001ceb60",
+    "001cf230",
+    "001cf2c0",
+    "001d2450",
+    "001d2e10",
+    "001d4860",
+    "001d4a60",
+    "001d9960",
+    "001d9bd0",
+    "001dc240",
+    "001dffb0",
+    "001e61c0",
+    "001e7360",
+    "001e8100",
+    "001e9360",
+    "001ebdc0",
+    "001ebf60",
+    "001f0ea0",
+    "001f2410",
+    "001f4810",
+    "001fa1b0",
+    "001fa7a0",
+    "00203fc0",
+    "00204140",
+    "00205e10",
+    "0020c050",
+    "0020ebf0",
+    "002112d0",
+    "002118c0",
+    "002129e0",
+    "00212a10",
+    "00213fe0",
+    "00217890",
+    "0021a150",
+    "0021ac90",
+    "0021b180",
+    "0021c710",
+    "00257160",
+    "00257260",
+    "002579e0",
+    "00258e20",
+    "0027c0b0",
+    "00280190",
+    "002842b0",
+    "00287ed0",
+    "00288f50",
+    "00289770",
+    "00289f70",
+    "0028c560",
+    "0028ee20",
+    "0028fdb0",
+    "00291680",
+    "002916d0",
+    "002926c0",
+    "00292e20",
+    "00293840",
+    "002957d0",
+    "002963a0",
+    "00298530",
+    "0029a1c0",
+    "0029a6f0",
+    "0029a830",
+    "0029b210",
+    "0029b570",
+    "0029bdb0",
+    "0029c7c0",
+    "0029d200",
+    "0029e7f0",
+    "0029f780",
+    "002a0ba0",
+    "002a1f90",
+    "002a43c0",
+    "002a7200",
+    "002a8f30"
+   ],
+   "sample_in_dwarf": 200
+  },
+  "ps2-dungeon-game": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 42,
+      "labels": 22,
+      "irregular_functions": 123,
+      "native_warnings": 359,
+      "text_warnings": 23,
+      "lines": 11440,
+      "median_seconds": 0.169,
+      "max_seconds": 5.437,
+      "wall_seconds": 23.0,
+      "recall": 0.9438,
+      "precision": 0.988,
+      "discovered": 748,
+      "dwarf_functions": 20,
+      "arity_accuracy": 1.0,
+      "type_slots": 61,
+      "type_exact": 26,
+      "type_partial": 0,
+      "type_wrong": 35,
+      "type_exact_rate": 0.4262
+     },
+     "import": {
+      "seconds": 3.2,
+      "switch_stats": {
+       "vsa_resolved": 4,
+       "vsa_refused": 7,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/ps2-dungeon-game/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9438,
+       "to": 0.9438,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9192,
+       "to": 0.988,
+       "delta": 0.0688,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 142,
+       "to": 42,
+       "delta": -100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 91,
+       "to": 22,
+       "delta": -69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 129,
+       "to": 123,
+       "delta": -6,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 359,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11337,
+       "to": 11440,
+       "delta": 103,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4262,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9438,
+       "to": 0.9438,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9192,
+       "to": 0.988,
+       "delta": 0.0688,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 142,
+       "to": 42,
+       "delta": -100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 91,
+       "to": 22,
+       "delta": -69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 129,
+       "to": 123,
+       "delta": -6,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 359,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11337,
+       "to": 11440,
+       "delta": 103,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4262,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 142,
+      "labels": 91,
+      "irregular_functions": 129,
+      "native_warnings": 359,
+      "text_warnings": 23,
+      "lines": 11337,
+      "median_seconds": 0.172,
+      "max_seconds": 2.53,
+      "wall_seconds": 21.0,
+      "recall": 0.9438,
+      "precision": 0.9192,
+      "discovered": 804,
+      "dwarf_functions": 20,
+      "arity_accuracy": 1.0,
+      "type_slots": 61,
+      "type_exact": 26,
+      "type_partial": 0,
+      "type_wrong": 35,
+      "type_exact_rate": 0.4262
+     },
+     "import": {
+      "seconds": 3.1,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/ps2-dungeon-game/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9438,
+       "to": 0.9438,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.988,
+       "to": 0.9192,
+       "delta": -0.0688,
+       "material": true,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 42,
+       "to": 142,
+       "delta": 100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 22,
+       "to": 91,
+       "delta": 69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 123,
+       "to": 129,
+       "delta": 6,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 359,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11440,
+       "to": 11337,
+       "delta": -103,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4262,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 42,
+      "labels": 22,
+      "irregular_functions": 61,
+      "native_warnings": 157,
+      "text_warnings": 23,
+      "lines": 11475,
+      "median_seconds": 0.177,
+      "max_seconds": 10.228,
+      "wall_seconds": 29.2,
+      "dwarf_functions": 20,
+      "arity_accuracy": 1.0,
+      "type_slots": 61,
+      "type_exact": 27,
+      "type_partial": 0,
+      "type_wrong": 34,
+      "type_exact_rate": 0.4426
+     },
+     "import": {
+      "seconds": 3.2,
+      "switch_stats": {
+       "vsa_resolved": 4,
+       "vsa_refused": 7,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 65.4,
+      "report": {
+       "analyzed": 1398,
+       "changed": 948,
+       "decompiler_failures": 0,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 0
+      }
+     },
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/ps2-dungeon-game/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 42,
+       "to": 42,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 123,
+       "to": 61,
+       "delta": -62,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 157,
+       "delta": -202,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11440,
+       "to": 11475,
+       "delta": 35,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4426,
+       "delta": 0.0164,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 142,
+       "to": 42,
+       "delta": -100,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 91,
+       "to": 22,
+       "delta": -69,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 129,
+       "to": 61,
+       "delta": -68,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 157,
+       "delta": -202,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11337,
+       "to": 11475,
+       "delta": 138,
+       "material": true,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4426,
+       "delta": 0.0164,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 42,
+       "to": 42,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 22,
+       "to": 22,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 123,
+       "to": 61,
+       "delta": -62,
+       "material": true,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 359,
+       "to": 157,
+       "delta": -202,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 23,
+       "to": 23,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 11440,
+       "to": 11475,
+       "delta": 35,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.4262,
+       "to": 0.4426,
+       "delta": 0.0164,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "readelf",
+    "functions": 20,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "dungeon",
+   "sample": [
+    "00100430",
+    "001007b0",
+    "00100a30",
+    "00101158",
+    "00101ad8",
+    "00101d58",
+    "001020a8",
+    "00102a58",
+    "00102cc0",
+    "00102cd0",
+    "00102dc0",
+    "00102ef8",
+    "00103060",
+    "00104548",
+    "00104828",
+    "00104d50",
+    "001063c0",
+    "00106a68",
+    "00106fe0",
+    "00107f18",
+    "00109d78",
+    "0010af70",
+    "0010b120",
+    "0010b558",
+    "0010ba58",
+    "0010c3f0",
+    "0010e698",
+    "0010e6b8",
+    "0010e8d8",
+    "0010e9d0",
+    "0010f000",
+    "0010f840",
+    "0010f888",
+    "0010f978",
+    "0010fc18",
+    "0010fc40",
+    "0010fc70",
+    "0010fcb0",
+    "0010fcd8",
+    "0010fe60",
+    "00111860",
+    "00112148",
+    "00112918",
+    "00113110",
+    "00113298",
+    "00113688",
+    "00113710",
+    "00113b30",
+    "001140b8",
+    "00114850",
+    "00114880",
+    "001148e0",
+    "00114b90",
+    "00114bf0",
+    "00114c70",
+    "001156d8",
+    "001157c0",
+    "00115848",
+    "00115860",
+    "00115a30",
+    "00115a58",
+    "00115aa8",
+    "00116a00",
+    "00117168",
+    "00117488",
+    "00117498",
+    "001174a0",
+    "001174b8",
+    "001174c0",
+    "00117530",
+    "00117c28",
+    "00117e98",
+    "00118270",
+    "00118318",
+    "001192a8",
+    "001195d0",
+    "0011a160",
+    "0011b2a8",
+    "0011b790",
+    "0011b850",
+    "0011bb88",
+    "0011bd20",
+    "0011d1e0",
+    "0011de20",
+    "0011e560",
+    "0011f190",
+    "0011f1b8",
+    "0011f2e0",
+    "0011f320",
+    "0011f368",
+    "0011f450",
+    "0011f490",
+    "0011f680",
+    "0011f778",
+    "001203d0",
+    "00120548",
+    "001205a0",
+    "00120780",
+    "001215c8",
+    "00121a40",
+    "001222c8",
+    "00124058",
+    "00125750",
+    "001264b8",
+    "001265b8",
+    "00126b80",
+    "00126c90",
+    "00126fe0",
+    "00127048",
+    "00127200",
+    "00127230",
+    "00128740",
+    "00128778",
+    "001288f8",
+    "00128ba0",
+    "00128bc0",
+    "00128c58",
+    "00128d58",
+    "00128de8",
+    "00129198",
+    "00129c38",
+    "00129c90",
+    "00129ca0",
+    "0012aac0",
+    "0012aaf8",
+    "0012b3e8",
+    "0012c468",
+    "0012c598",
+    "0012c890",
+    "0012ca78",
+    "0012d7a8",
+    "0012d7f0",
+    "0012d8e0",
+    "0012da20",
+    "0012de48",
+    "0012e038",
+    "0012e088",
+    "0012e200",
+    "0012e420",
+    "0012e448",
+    "0012e4a8",
+    "0012e508",
+    "0012e548",
+    "0012eb20",
+    "0012f510",
+    "0012f8f0",
+    "0012f930",
+    "0012f960",
+    "0012f9a0",
+    "0012fa20",
+    "0012fe90",
+    "001303b0",
+    "00130a68",
+    "00130d90",
+    "00130ec0",
+    "00131018",
+    "001311c8",
+    "001311f0",
+    "001313d0",
+    "00131508",
+    "00131700",
+    "00131710",
+    "00131730",
+    "00131780",
+    "001317b0",
+    "001318a0",
+    "00131948",
+    "00131a78",
+    "00131ff8",
+    "00132260",
+    "001322d8",
+    "001322f8",
+    "001329a0",
+    "001329c0",
+    "00133068",
+    "00133100",
+    "00133140",
+    "00133378",
+    "001333d8",
+    "00133448",
+    "001334a8",
+    "00133718",
+    "00133770",
+    "00133830",
+    "001338d0",
+    "00133900",
+    "001339e0",
+    "00133b70",
+    "00133c58",
+    "00133e90",
+    "00134a30",
+    "00134af0",
+    "00134bb8",
+    "00134c30",
+    "00134e08",
+    "00134e38",
+    "00134ec0",
+    "001357b8",
+    "00135ce0",
+    "00135dbc"
+   ],
+   "sample_in_dwarf": 20
+  }
+ }
+}

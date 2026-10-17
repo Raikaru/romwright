@@ -1,0 +1,30 @@
+{
+ "id": "m10-002",
+ "recorded_at": "2026-10-09T04:57:07.431575+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "`locate --follow` printed the facts each of 2 images holds at 00401000 and every number matched the service; desktop run skipped (no desktop app found; pass --app or set ROMWRIGHT_DESKTOP_APP)",
+ "metrics": {
+  "images.followed_programs": 2,
+  "images.follow_facts_compared": 8,
+  "images.ui_programs": -1,
+  "images.ui_switch_functions": -1
+ },
+ "followed": {
+  "tiny": {
+   "function": "-",
+   "symbols": 0,
+   "xrefs_to": 0,
+   "xrefs_from": 0
+  },
+  "win": {
+   "function": "FUN_00401000",
+   "symbols": 0,
+   "xrefs_to": 2,
+   "xrefs_from": 0
+  }
+ },
+ "desktop": {
+  "skipped": "no desktop app found; pass --app or set ROMWRIGHT_DESKTOP_APP"
+ }
+}

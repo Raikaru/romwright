@@ -1,0 +1,816 @@
+{
+ "schema": "console-research/1",
+ "generated": "2026-10-09T19:32:32+00:00",
+ "tools": "61a108d4b6fc3e88",
+ "cli": "/home/raikaru/runs/PspImport/tools/release/romwright-cli",
+ "n": 200,
+ "seed": 20261006,
+ "thresholds": {
+  "rate": 0.005,
+  "count_relative": 0.01
+ },
+ "configs": {
+  "default": {
+   "name": "default",
+   "env": {},
+   "component": "all research (default vs baseline-off)",
+   "reference": "baseline-off",
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "baseline-off": {
+   "name": "baseline-off",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": "",
+    "ROMWRIGHT_NO_SWITCH_VSA": "1",
+    "ROMWRIGHT_NO_SWITCH_DECOMPILER": "1",
+    "ROMWRIGHT_RUST_STRUCTURING": "none"
+   },
+   "component": "reference",
+   "reference": null,
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "infer-prototypes": {
+   "name": "infer-prototypes",
+   "env": {},
+   "component": "persisted prototypes (infer_prototypes job)",
+   "reference": "default",
+   "sign": 1,
+   "infer_prototypes": true
+  }
+ },
+ "images": {
+  "gba-pokeemerald": {
+   "configs": {
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 4,
+      "labels": 2,
+      "irregular_functions": 189,
+      "native_warnings": 570,
+      "text_warnings": 190,
+      "lines": 5713,
+      "median_seconds": 1.206,
+      "max_seconds": 2.033,
+      "wall_seconds": 123.7,
+      "recall": 0.9736,
+      "precision": 0.9971,
+      "discovered": 15482,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.97,
+      "type_slots": 375,
+      "type_exact": 231,
+      "type_partial": 0,
+      "type_wrong": 144,
+      "type_exact_rate": 0.616
+     },
+     "import": {
+      "seconds": 54.0,
+      "switch_stats": {
+       "vsa_resolved": 528,
+       "vsa_refused": 126,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/gba-pokeemerald/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9503,
+       "to": 0.9736,
+       "delta": 0.0233,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.997,
+       "to": 0.9971,
+       "delta": 0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.965,
+       "to": 1.0,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 54,
+       "to": 4,
+       "delta": -50,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 23,
+       "to": 2,
+       "delta": -21,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 544,
+       "to": 544,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5581,
+       "to": 5594,
+       "delta": 13,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.935,
+       "to": 0.97,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5973,
+       "to": 0.616,
+       "delta": 0.0187,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9503,
+       "to": 0.9736,
+       "delta": 0.0233,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.997,
+       "to": 0.9971,
+       "delta": 0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.965,
+       "to": 1.0,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 54,
+       "to": 4,
+       "delta": -50,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 23,
+       "to": 2,
+       "delta": -21,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 544,
+       "to": 544,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5581,
+       "to": 5594,
+       "delta": 13,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.935,
+       "to": 0.97,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5973,
+       "to": 0.616,
+       "delta": 0.0187,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     },
+     "verdict": "helps"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 193,
+      "success_rate": 0.965,
+      "gotos": 54,
+      "labels": 23,
+      "irregular_functions": 183,
+      "native_warnings": 544,
+      "text_warnings": 184,
+      "lines": 5581,
+      "median_seconds": 1.056,
+      "max_seconds": 1.609,
+      "wall_seconds": 103.5,
+      "recall": 0.9503,
+      "precision": 0.997,
+      "discovered": 15114,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.935,
+      "type_slots": 375,
+      "type_exact": 224,
+      "type_partial": 0,
+      "type_wrong": 151,
+      "type_exact_rate": 0.5973
+     },
+     "import": {
+      "seconds": 34.1,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 0,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/gba-pokeemerald/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9736,
+       "to": 0.9503,
+       "delta": -0.0233,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9971,
+       "to": 0.997,
+       "delta": -0.0001,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 0.965,
+       "delta": -0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 54,
+       "delta": 50,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 2,
+       "to": 23,
+       "delta": 21,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 544,
+       "to": 544,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5594,
+       "to": 5581,
+       "delta": -13,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.97,
+       "to": 0.935,
+       "delta": -0.035,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.616,
+       "to": 0.5973,
+       "delta": -0.0187,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     }
+    },
+    "infer-prototypes": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 4,
+      "labels": 2,
+      "irregular_functions": 189,
+      "native_warnings": 198,
+      "text_warnings": 190,
+      "lines": 5680,
+      "median_seconds": 0.989,
+      "max_seconds": 1.749,
+      "wall_seconds": 101.8,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.975,
+      "type_slots": 375,
+      "type_exact": 261,
+      "type_partial": 0,
+      "type_wrong": 114,
+      "type_exact_rate": 0.696
+     },
+     "import": {
+      "seconds": 54.0,
+      "switch_stats": {
+       "vsa_resolved": 528,
+       "vsa_refused": 126,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": {
+      "env": {},
+      "seconds": 481.3,
+      "report": {
+       "analyzed": 34759,
+       "changed": 20695,
+       "decompiler_failures": 3,
+       "rounds": 3,
+       "stop_reason": "round_limit",
+       "worker_deaths": 0,
+       "worker_recycles": 3
+      }
+     },
+     "results_file": "/home/raikaru/runs/PspImport/cacheH/results/61a108d4b6fc3e88/gba-pokeemerald/infer-prototypes-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 2,
+       "to": 2,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 189,
+       "to": 189,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 570,
+       "to": 198,
+       "delta": -372,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 190,
+       "to": 190,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5713,
+       "to": 5680,
+       "delta": -33,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.97,
+       "to": 0.975,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.616,
+       "to": 0.696,
+       "delta": 0.08,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.965,
+       "to": 1.0,
+       "delta": 0.035,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 54,
+       "to": 4,
+       "delta": -50,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 23,
+       "to": 2,
+       "delta": -21,
+       "material": true,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 183,
+       "to": 183,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 544,
+       "to": 192,
+       "delta": -352,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 184,
+       "to": 184,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5581,
+       "to": 5561,
+       "delta": -20,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.935,
+       "to": 0.975,
+       "delta": 0.04,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.5973,
+       "to": 0.696,
+       "delta": 0.0987,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 193
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 4,
+       "to": 4,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 2,
+       "to": 2,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 189,
+       "to": 189,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 570,
+       "to": 198,
+       "delta": -372,
+       "material": true,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 190,
+       "to": 190,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 5713,
+       "to": 5680,
+       "delta": -33,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.97,
+       "to": 0.975,
+       "delta": 0.005,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.616,
+       "to": 0.696,
+       "delta": 0.08,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "helps"
+    }
+   },
+   "dwarf": {
+    "reader": "pyelftools-tolerant",
+    "functions": 15678,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "gba",
+   "sample": [
+    "08000814",
+    "08001324",
+    "080023d4",
+    "080040a8",
+    "08006a58",
+    "08007a90",
+    "08007f80",
+    "0800883c",
+    "080099e0",
+    "0800a620",
+    "0800a6b0",
+    "0800b1a0",
+    "0800cf34",
+    "0800d158",
+    "0800e94c",
+    "080124e8",
+    "0801b6a0",
+    "0801f18c",
+    "08021608",
+    "0802385c",
+    "08024048",
+    "080259fc",
+    "080284cc",
+    "08028fcc",
+    "0802c7a0",
+    "0802f2b8",
+    "080315bc",
+    "08034530",
+    "08037adc",
+    "0803849c",
+    "0803d2e8",
+    "0803f3cc",
+    "080400c8",
+    "080423f4",
+    "08044498",
+    "0804643c",
+    "0804a154",
+    "0804ffe4",
+    "080504a8",
+    "0805c710",
+    "0806268c",
+    "08062ba4",
+    "08064b04",
+    "08064d60",
+    "080678c4",
+    "0806b960",
+    "08077100",
+    "0807b140",
+    "0807f19c",
+    "08080fd0",
+    "080849a8",
+    "08084e2c",
+    "080880e0",
+    "08089618",
+    "080897f8",
+    "0808a8ac",
+    "0808bd8c",
+    "0808c9b0",
+    "0808f7cc",
+    "08090508",
+    "0809115c",
+    "080922cc",
+    "080936a0",
+    "08093ce4",
+    "08094ea8",
+    "080950f4",
+    "08095228",
+    "08095fe8",
+    "08096140",
+    "08099770",
+    "0809b674",
+    "0809d908",
+    "0809f440",
+    "080a0aa8",
+    "080a3ce4",
+    "080a791c",
+    "080ac928",
+    "080ae958",
+    "080b1234",
+    "080b236c",
+    "080b3194",
+    "080b550c",
+    "080b5e10",
+    "080bd8d0",
+    "080c0460",
+    "080c3548",
+    "080c4904",
+    "080c9be8",
+    "080ca230",
+    "080cb6f0",
+    "080d1080",
+    "080d140c",
+    "080d20d0",
+    "080d439c",
+    "080db2bc",
+    "080dbd34",
+    "080e1ca4",
+    "080e756c",
+    "080ed718",
+    "080ef704",
+    "080eff6c",
+    "080f0020",
+    "080f0e58",
+    "080f9160",
+    "080fe820",
+    "08104938",
+    "08108c94",
+    "08109afc",
+    "08111444",
+    "081136e8",
+    "08118ac0",
+    "08119dbc",
+    "0811e64c",
+    "081221ac",
+    "081230c4",
+    "08126e44",
+    "0812764c",
+    "081277e8",
+    "0812de94",
+    "0812e7cc",
+    "0812ec94",
+    "08131acc",
+    "08135e2c",
+    "08136edc",
+    "08137f90",
+    "081382a0",
+    "08145218",
+    "08147688",
+    "0814a228",
+    "0814d2a0",
+    "08153ed4",
+    "081565d8",
+    "08157808",
+    "081586d0",
+    "08159c20",
+    "08161b34",
+    "08167420",
+    "08168af8",
+    "081693cc",
+    "0816acfc",
+    "0816baf8",
+    "0816bb48",
+    "0816f9d4",
+    "081701c4",
+    "081713d0",
+    "081731b0",
+    "081738bc",
+    "08175bd8",
+    "08178974",
+    "08178fdc",
+    "0817ad40",
+    "0817c000",
+    "0817c3a0",
+    "0818100c",
+    "081811e0",
+    "081850dc",
+    "0818c15c",
+    "08196694",
+    "081972c4",
+    "08198f58",
+    "0819bd70",
+    "0819fbc8",
+    "081a0990",
+    "081a2ba0",
+    "081a6bf4",
+    "081adc70",
+    "081af724",
+    "081b04bc",
+    "081b22d8",
+    "081b2b40",
+    "081b3e60",
+    "081b4134",
+    "081b452c",
+    "081b64d0",
+    "081b6afc",
+    "081b6bec",
+    "081b9df8",
+    "081bd5c8",
+    "081bd760",
+    "081bdaa0",
+    "081bdabc",
+    "081c33cc",
+    "081c48f0",
+    "081c4f84",
+    "081c7e14",
+    "081cb02c",
+    "081cc158",
+    "081ccd70",
+    "081d1448",
+    "081d189c",
+    "081d1ec0",
+    "081d4a90",
+    "081d6120",
+    "081d84ec",
+    "082e02b4",
+    "082e15a0",
+    "082e2c60",
+    "082e2f54",
+    "082e4210",
+    "082e4874"
+   ],
+   "sample_in_dwarf": 200
+  }
+ }
+}

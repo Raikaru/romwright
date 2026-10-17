@@ -1,0 +1,21 @@
+{
+  "id": "m18-003",
+  "passed": true,
+  "results": {
+    "scale10": {
+      "outcome": "exact",
+      "markers": 3
+    },
+    "scale100": {
+      "outcome": "exact",
+      "markers": 3
+    },
+    "scale": {
+      "outcome": "bounded",
+      "wall_s_10mb": 0.35,
+      "wall_s_100mb": 1.34,
+      "rss_kb_100mb": 1104212,
+      "wall_ratio": 3.83
+    }
+  }
+}

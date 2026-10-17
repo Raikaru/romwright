@@ -1,0 +1,255 @@
+{
+  "benchmark": "types_port_measure",
+  "date": "2026-10-15",
+  "ghidra_opt": "/home/raikaru/runs/Stage4Types/bin-fin/ghidra_opt",
+  "images": [
+    {
+      "image": "gba-pokeemerald",
+      "functions_logged": 200,
+      "cast_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "worker_cast_operators": {
+        "bare_constants": 0,
+        "casts": 983,
+        "casts_replaced": 2,
+        "constants_retyped": 0,
+        "long_marked": 0,
+        "ptrsubs": 0,
+        "unsigned_marked": 10,
+        "warnings": 0
+      },
+      "decompiler_cast_ops_in_declined_functions": 0,
+      "infer": {
+        "functions": 201,
+        "calls_total": 553,
+        "calls_per_function_mean": 2.75,
+        "calls_per_function_max": 9,
+        "ops_per_call_mean": 68.0,
+        "varnodes_per_call_mean": 119.2,
+        "microseconds_total": 18928,
+        "microseconds_per_function_mean": 94.2,
+        "decompile_wall_seconds": 18.5,
+        "infer_share_of_wall": 0.001
+      }
+    },
+    {
+      "image": "gc-animal-crossing",
+      "functions_logged": 200,
+      "cast_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "worker_cast_operators": {
+        "bare_constants": 0,
+        "casts": 1856,
+        "casts_replaced": 1,
+        "constants_retyped": 0,
+        "long_marked": 0,
+        "ptrsubs": 0,
+        "unsigned_marked": 31,
+        "warnings": 0
+      },
+      "decompiler_cast_ops_in_declined_functions": 0,
+      "infer": {
+        "functions": 206,
+        "calls_total": 485,
+        "calls_per_function_mean": 2.35,
+        "calls_per_function_max": 8,
+        "ops_per_call_mean": 226.0,
+        "varnodes_per_call_mean": 386.7,
+        "microseconds_total": 68679,
+        "microseconds_per_function_mean": 333.4,
+        "decompile_wall_seconds": 12.0,
+        "infer_share_of_wall": 0.0057
+      }
+    },
+    {
+      "image": "nds-pokeheartgold-arm9",
+      "functions_logged": 200,
+      "cast_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "worker_cast_operators": {
+        "bare_constants": 0,
+        "casts": 696,
+        "casts_replaced": 0,
+        "constants_retyped": 0,
+        "long_marked": 0,
+        "ptrsubs": 0,
+        "unsigned_marked": 5,
+        "warnings": 0
+      },
+      "decompiler_cast_ops_in_declined_functions": 0,
+      "infer": {
+        "functions": 200,
+        "calls_total": 369,
+        "calls_per_function_mean": 1.84,
+        "calls_per_function_max": 6,
+        "ops_per_call_mean": 68.9,
+        "varnodes_per_call_mean": 122.2,
+        "microseconds_total": 16300,
+        "microseconds_per_function_mean": 81.5,
+        "decompile_wall_seconds": 14.0,
+        "infer_share_of_wall": 0.0012
+      }
+    },
+    {
+      "image": "ps2-capcom-fighting-evolution",
+      "functions_logged": 200,
+      "cast_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "worker_cast_operators": {
+        "bare_constants": 0,
+        "casts": 1977,
+        "casts_replaced": 8,
+        "constants_retyped": 0,
+        "long_marked": 38,
+        "ptrsubs": 0,
+        "unsigned_marked": 102,
+        "warnings": 0
+      },
+      "decompiler_cast_ops_in_declined_functions": 0,
+      "infer": {
+        "functions": 202,
+        "calls_total": 369,
+        "calls_per_function_mean": 1.83,
+        "calls_per_function_max": 6,
+        "ops_per_call_mean": 80.2,
+        "varnodes_per_call_mean": 140.4,
+        "microseconds_total": 19763,
+        "microseconds_per_function_mean": 97.8,
+        "decompile_wall_seconds": 10.1,
+        "infer_share_of_wall": 0.002
+      }
+    },
+    {
+      "image": "ps2-dungeon-game",
+      "functions_logged": 200,
+      "cast_functions": {
+        "worker": 197,
+        "decompiler": 3
+      },
+      "worker_cast_operators": {
+        "bare_constants": 2,
+        "casts": 1559,
+        "casts_replaced": 0,
+        "constants_retyped": 2,
+        "long_marked": 23,
+        "ptrsubs": 0,
+        "unsigned_marked": 127,
+        "warnings": 0
+      },
+      "decompiler_cast_ops_in_declined_functions": 87,
+      "infer": {
+        "functions": 207,
+        "calls_total": 606,
+        "calls_per_function_mean": 2.93,
+        "calls_per_function_max": 11,
+        "ops_per_call_mean": 609.6,
+        "varnodes_per_call_mean": 1134.9,
+        "microseconds_total": 875664,
+        "microseconds_per_function_mean": 4230.3,
+        "decompile_wall_seconds": 24.3,
+        "infer_share_of_wall": 0.036
+      }
+    },
+    {
+      "image": "psv-need-for-speed-most-wanted",
+      "functions_logged": 200,
+      "cast_functions": {
+        "worker": 190,
+        "decompiler": 10
+      },
+      "worker_cast_operators": {
+        "bare_constants": 34,
+        "casts": 2431,
+        "casts_replaced": 0,
+        "constants_retyped": 5,
+        "long_marked": 0,
+        "ptrsubs": 0,
+        "unsigned_marked": 20,
+        "warnings": 0
+      },
+      "decompiler_cast_ops_in_declined_functions": 510,
+      "infer": {
+        "functions": 205,
+        "calls_total": 627,
+        "calls_per_function_mean": 3.06,
+        "calls_per_function_max": 12,
+        "ops_per_call_mean": 278.7,
+        "varnodes_per_call_mean": 514.5,
+        "microseconds_total": 146923,
+        "microseconds_per_function_mean": 716.7,
+        "decompile_wall_seconds": 36.2,
+        "infer_share_of_wall": 0.0041
+      }
+    },
+    {
+      "image": "psx-darkstalkers-3",
+      "functions_logged": 200,
+      "cast_functions": {
+        "worker": 200,
+        "decompiler": 0
+      },
+      "worker_cast_operators": {
+        "bare_constants": 0,
+        "casts": 1696,
+        "casts_replaced": 0,
+        "constants_retyped": 0,
+        "long_marked": 0,
+        "ptrsubs": 0,
+        "unsigned_marked": 191,
+        "warnings": 0
+      },
+      "decompiler_cast_ops_in_declined_functions": 0,
+      "infer": {
+        "functions": 204,
+        "calls_total": 391,
+        "calls_per_function_mean": 1.92,
+        "calls_per_function_max": 9,
+        "ops_per_call_mean": 174.1,
+        "varnodes_per_call_mean": 299.5,
+        "microseconds_total": 49049,
+        "microseconds_per_function_mean": 240.4,
+        "decompile_wall_seconds": 6.9,
+        "infer_share_of_wall": 0.0071
+      }
+    },
+    {
+      "image": "x360-black-ops-2",
+      "functions_logged": 200,
+      "cast_functions": {
+        "worker": 198,
+        "decompiler": 2
+      },
+      "worker_cast_operators": {
+        "bare_constants": 0,
+        "casts": 1424,
+        "casts_replaced": 2,
+        "constants_retyped": 0,
+        "long_marked": 0,
+        "ptrsubs": 0,
+        "unsigned_marked": 34,
+        "warnings": 0
+      },
+      "decompiler_cast_ops_in_declined_functions": 10,
+      "infer": {
+        "functions": 205,
+        "calls_total": 593,
+        "calls_per_function_mean": 2.89,
+        "calls_per_function_max": 7,
+        "ops_per_call_mean": 133.7,
+        "varnodes_per_call_mean": 227.9,
+        "microseconds_total": 49835,
+        "microseconds_per_function_mean": 243.1,
+        "decompile_wall_seconds": 27.6,
+        "infer_share_of_wall": 0.0018
+      }
+    }
+  ]
+}

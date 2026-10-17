@@ -1,0 +1,16 @@
+{
+  "id": "m20-001",
+  "recorded_at": "2026-10-09T04:54:44.677868+00:00",
+  "thresholds": {
+    "named_recall": 0.95
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "11096 functions, named recall 0.9946 over 11019 ELF symbols, MAP/ELF agreement 0.9946 over 11019 shared rows",
+  "metrics": {
+    "named_recall": 0.9945548597876396,
+    "elf_symbols": 11019,
+    "map_rows": 12062,
+    "agreement": 0.9945548597876396
+  }
+}

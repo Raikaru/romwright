@@ -1,0 +1,126 @@
+{
+ "wave": "benchmarks/reports/console_research_wave_20261011_ps2.json",
+ "bin": "/home/raikaru/runs/GhidraMaster/bin-base",
+ "games": {
+  "ps2-dark-chronicle": {
+   "sampled": 969,
+   "decompiled": 969,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 713.2
+  },
+  "ps2-dark-cloud": {
+   "sampled": 937,
+   "decompiled": 936,
+   "success_rate": 0.9989,
+   "wave_success_rate": 0.9979,
+   "classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "failures": [
+    {
+     "address": "01db08a0",
+     "success": false,
+     "seconds": 60.1,
+     "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+     "class": "native runtime: native runtime: execution deadline exceeded"
+    }
+   ],
+   "wall_seconds": 357.1
+  },
+  "ps2-digital-devil-saga": {
+   "sampled": 977,
+   "decompiled": 977,
+   "success_rate": 1.0,
+   "wave_success_rate": 1.0,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 629.8
+  },
+  "ps2-fatal-frame": {
+   "sampled": 942,
+   "decompiled": 942,
+   "success_rate": 1.0,
+   "wave_success_rate": 0.9724,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 329.1
+  },
+  "ps2-god-hand": {
+   "sampled": 980,
+   "decompiled": 980,
+   "success_rate": 1.0,
+   "wave_success_rate": 0.999,
+   "classes": {},
+   "failures": [],
+   "wall_seconds": 706.3
+  },
+  "ps2-persona-4": {
+   "sampled": 975,
+   "decompiled": 974,
+   "success_rate": 0.999,
+   "wave_success_rate": 0.999,
+   "classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "failures": [
+    {
+     "address": "002be530",
+     "success": false,
+     "seconds": 60.08,
+     "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+     "class": "native runtime: native runtime: execution deadline exceeded"
+    }
+   ],
+   "wall_seconds": 631.0
+  },
+  "ps2-ratchet-clank": {
+   "sampled": 861,
+   "decompiled": 859,
+   "success_rate": 0.9977,
+   "wave_success_rate": 0.9988,
+   "classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1,
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "failures": [
+    {
+     "address": "00228be8",
+     "success": false,
+     "seconds": 60.2,
+     "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+     "class": "native runtime: native runtime: execution deadline exceeded"
+    },
+    {
+     "address": "00239780",
+     "success": false,
+     "seconds": 1.85,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+    }
+   ],
+   "wall_seconds": 196.5
+  },
+  "ps2-ratchet-clank-pal": {
+   "sampled": 859,
+   "decompiled": 858,
+   "success_rate": 0.9988,
+   "wave_success_rate": 0.9988,
+   "classes": {
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "failures": [
+    {
+     "address": "0023aa38",
+     "success": false,
+     "seconds": 1.99,
+     "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+     "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+    }
+   ],
+   "wall_seconds": 298.0
+  }
+ }
+}

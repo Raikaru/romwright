@@ -1,0 +1,193 @@
+{
+  "benchmark": "merge_diff",
+  "date": "2026-10-14",
+  "ghidra_opt": "/home/raikaru/runs/Stage3/bin-f1/ghidra_opt",
+  "decompiled": 1600,
+  "identical": 1600,
+  "images": [
+    {
+      "image": "gba-pokeemerald",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_merge_functions": 201,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "merges": 4170,
+        "speculative": 193,
+        "explicit": 5078,
+        "implied": 3342,
+        "new_ops": 47,
+        "entries": 13335
+      },
+      "one_arm_failed": [],
+      "differences": [],
+      "verify_mismatches": 0,
+      "verify_verified": 201,
+      "verify_examples": []
+    },
+    {
+      "image": "gc-animal-crossing",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_merge_functions": 206,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "merges": 11751,
+        "speculative": 601,
+        "explicit": 13257,
+        "implied": 7999,
+        "new_ops": 394,
+        "entries": 36456
+      },
+      "one_arm_failed": [],
+      "differences": [],
+      "verify_mismatches": 0,
+      "verify_verified": 206,
+      "verify_examples": []
+    },
+    {
+      "image": "nds-pokeheartgold-arm9",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_merge_functions": 200,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "merges": 3282,
+        "speculative": 150,
+        "explicit": 4279,
+        "implied": 2974,
+        "new_ops": 87,
+        "entries": 11558
+      },
+      "one_arm_failed": [],
+      "differences": [],
+      "verify_mismatches": 0,
+      "verify_verified": 200,
+      "verify_examples": []
+    },
+    {
+      "image": "ps2-capcom-fighting-evolution",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_merge_functions": 202,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "merges": 2895,
+        "speculative": 265,
+        "explicit": 3962,
+        "implied": 5164,
+        "new_ops": 120,
+        "entries": 13133
+      },
+      "one_arm_failed": [],
+      "differences": [],
+      "verify_mismatches": 0,
+      "verify_verified": 202,
+      "verify_examples": []
+    },
+    {
+      "image": "ps2-dungeon-game",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_merge_functions": 207,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "merges": 41576,
+        "speculative": 1120,
+        "explicit": 43556,
+        "implied": 9785,
+        "new_ops": 463,
+        "entries": 98950
+      },
+      "one_arm_failed": [],
+      "differences": [],
+      "verify_mismatches": 0,
+      "verify_verified": 207,
+      "verify_examples": []
+    },
+    {
+      "image": "psv-need-for-speed-most-wanted",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_merge_functions": 220,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "merges": 29539,
+        "speculative": 2281,
+        "explicit": 33738,
+        "implied": 12018,
+        "new_ops": 758,
+        "entries": 82277
+      },
+      "one_arm_failed": [],
+      "differences": [],
+      "verify_mismatches": 0,
+      "verify_verified": 220,
+      "verify_examples": []
+    },
+    {
+      "image": "psx-darkstalkers-3",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_merge_functions": 204,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "merges": 8644,
+        "speculative": 458,
+        "explicit": 9794,
+        "implied": 6288,
+        "new_ops": 205,
+        "entries": 26807
+      },
+      "one_arm_failed": [],
+      "differences": [],
+      "verify_mismatches": 0,
+      "verify_verified": 204,
+      "verify_examples": []
+    },
+    {
+      "image": "x360-black-ops-2",
+      "sampled": 200,
+      "decompiled": 200,
+      "identical": 200,
+      "different": 0,
+      "worker_merge_functions": 207,
+      "declined_functions": 0,
+      "decline_reasons": {},
+      "worker_did": {
+        "merges": 7910,
+        "speculative": 492,
+        "explicit": 9881,
+        "implied": 6871,
+        "new_ops": 418,
+        "entries": 28253
+      },
+      "one_arm_failed": [],
+      "differences": [],
+      "verify_mismatches": 0,
+      "verify_verified": 207,
+      "verify_examples": []
+    }
+  ]
+}

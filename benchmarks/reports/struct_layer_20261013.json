@@ -1,0 +1,1165 @@
+{
+ "generated": "2026-10-13",
+ "tag": "struct-layer",
+ "default_mode": "all",
+ "binaries": {
+  "m22-002 default lanes": "final-bin3",
+  "m22-003 dk default": "final-bin4",
+  "print measures, success": "final-bin4",
+  "m22-003 other lanes default": "final-bin3"
+ },
+ "notes": [
+  "ghidra_opt unchanged (sha256 4561fbea...), IR version unchanged: no C++ change.",
+  "off runs of m22-002 and m22-003 used the earlier build (final-bin/final-bin2): the off path is byte-identical to the tree before the struct layer."
+ ],
+ "m22-002": {
+  "mwcc-20261010": {
+   "off": {
+    "context": {
+     "exact": 55,
+     "compiled": 193,
+     "mean_percent": 76.987
+    },
+    "standalone": {
+     "exact": 42,
+     "compiled": 148,
+     "mean_percent": 56.978
+    },
+    "best": {
+     "exact": 56,
+     "compiled": 196,
+     "mean_percent": 78.156
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 55,
+     "compiled": 193,
+     "mean_percent": 76.987
+    },
+    "standalone": {
+     "exact": 42,
+     "compiled": 148,
+     "mean_percent": 56.978
+    },
+    "best": {
+     "exact": 56,
+     "compiled": 196,
+     "mean_percent": 78.156
+    }
+   },
+   "paired_context": {
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "field_agreement": {
+    "off": {
+     "functions": 200,
+     "with_truth": 1,
+     "with_candidate": 1,
+     "truth_accesses": 6,
+     "agreed": 0,
+     "printed": 0,
+     "printed_wrong": 0,
+     "printing_functions": 0,
+     "field_agreement": 0.0,
+     "functions_printing_members": 0.0
+    },
+    "default": {
+     "functions": 200,
+     "with_truth": 1,
+     "with_candidate": 1,
+     "truth_accesses": 6,
+     "agreed": 0,
+     "printed": 0,
+     "printed_wrong": 0,
+     "printing_functions": 0,
+     "field_agreement": 0.0,
+     "functions_printing_members": 0.0
+    }
+   }
+  },
+  "mwcc-20261011": {
+   "off": {
+    "context": {
+     "exact": 57,
+     "compiled": 194,
+     "mean_percent": 78.321
+    },
+    "standalone": {
+     "exact": 38,
+     "compiled": 148,
+     "mean_percent": 56.463
+    },
+    "best": {
+     "exact": 57,
+     "compiled": 198,
+     "mean_percent": 79.501
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 57,
+     "compiled": 194,
+     "mean_percent": 78.321
+    },
+    "standalone": {
+     "exact": 38,
+     "compiled": 148,
+     "mean_percent": 56.463
+    },
+    "best": {
+     "exact": 57,
+     "compiled": 198,
+     "mean_percent": 79.501
+    }
+   },
+   "paired_context": {
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "field_agreement": {
+    "off": {
+     "functions": 200,
+     "with_truth": 4,
+     "with_candidate": 4,
+     "truth_accesses": 9,
+     "agreed": 0,
+     "printed": 0,
+     "printed_wrong": 0,
+     "printing_functions": 0,
+     "field_agreement": 0.0,
+     "functions_printing_members": 0.0
+    },
+    "default": {
+     "functions": 200,
+     "with_truth": 4,
+     "with_candidate": 4,
+     "truth_accesses": 9,
+     "agreed": 7,
+     "printed": 7,
+     "printed_wrong": 0,
+     "printing_functions": 2,
+     "field_agreement": 0.7778,
+     "functions_printing_members": 0.5
+    }
+   }
+  },
+  "eegcc": {
+   "off": {
+    "context": {
+     "exact": 107,
+     "compiled": 199,
+     "mean_percent": 87.18
+    },
+    "standalone": {
+     "exact": 101,
+     "compiled": 184,
+     "mean_percent": 80.423
+    },
+    "best": {
+     "exact": 111,
+     "compiled": 199,
+     "mean_percent": 87.527
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 107,
+     "compiled": 199,
+     "mean_percent": 87.177
+    },
+    "standalone": {
+     "exact": 101,
+     "compiled": 184,
+     "mean_percent": 80.725
+    },
+    "best": {
+     "exact": 111,
+     "compiled": 199,
+     "mean_percent": 87.557
+    }
+   },
+   "paired_context": {
+    "better": 1,
+    "worse": 1,
+    "same": 198,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "field_agreement": {
+    "off": {
+     "functions": 200,
+     "with_truth": 5,
+     "with_candidate": 5,
+     "truth_accesses": 14,
+     "agreed": 0,
+     "printed": 0,
+     "printed_wrong": 0,
+     "printing_functions": 0,
+     "field_agreement": 0.0,
+     "functions_printing_members": 0.0
+    },
+    "default": {
+     "functions": 200,
+     "with_truth": 5,
+     "with_candidate": 5,
+     "truth_accesses": 14,
+     "agreed": 7,
+     "printed": 7,
+     "printed_wrong": 0,
+     "printing_functions": 1,
+     "field_agreement": 0.5,
+     "functions_printing_members": 0.2
+    }
+   }
+  }
+ },
+ "m22-003": {
+  "dds": {
+   "off": {
+    "context": {
+     "exact": 48,
+     "compiled": 161,
+     "mean_percent": 61.997
+    },
+    "standalone": {
+     "exact": 45,
+     "compiled": 191,
+     "mean_percent": 72.737
+    },
+    "best": {
+     "exact": 52,
+     "compiled": 196,
+     "mean_percent": 75.992
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 48,
+     "compiled": 161,
+     "mean_percent": 61.869
+    },
+    "standalone": {
+     "exact": 45,
+     "compiled": 191,
+     "mean_percent": 72.618
+    },
+    "best": {
+     "exact": 52,
+     "compiled": 196,
+     "mean_percent": 75.874
+    }
+   },
+   "default_binary_tag": "def3",
+   "paired_context": {
+    "better": 1,
+    "worse": 2,
+    "same": 197,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "paired_standalone": {
+    "better": 1,
+    "worse": 2,
+    "same": 197,
+    "exact_gained": 0,
+    "exact_lost": 0
+   }
+  },
+  "ff": {
+   "off": {
+    "context": {
+     "exact": 19,
+     "compiled": 125,
+     "mean_percent": 43.18
+    },
+    "standalone": {
+     "exact": 16,
+     "compiled": 96,
+     "mean_percent": 32.068
+    },
+    "best": {
+     "exact": 21,
+     "compiled": 141,
+     "mean_percent": 48.056
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 19,
+     "compiled": 125,
+     "mean_percent": 43.258
+    },
+    "standalone": {
+     "exact": 16,
+     "compiled": 97,
+     "mean_percent": 32.352
+    },
+    "best": {
+     "exact": 21,
+     "compiled": 141,
+     "mean_percent": 48.11
+    }
+   },
+   "default_binary_tag": "def3",
+   "paired_context": {
+    "better": 3,
+    "worse": 1,
+    "same": 196,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "paired_standalone": {
+    "better": 4,
+    "worse": 2,
+    "same": 194,
+    "exact_gained": 0,
+    "exact_lost": 0
+   }
+  },
+  "gh": {
+   "off": {
+    "context": {
+     "exact": 67,
+     "compiled": 154,
+     "mean_percent": 62.087
+    },
+    "standalone": {
+     "exact": 70,
+     "compiled": 181,
+     "mean_percent": 72.602
+    },
+    "best": {
+     "exact": 74,
+     "compiled": 181,
+     "mean_percent": 72.906
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 67,
+     "compiled": 154,
+     "mean_percent": 62.156
+    },
+    "standalone": {
+     "exact": 70,
+     "compiled": 181,
+     "mean_percent": 72.662
+    },
+    "best": {
+     "exact": 74,
+     "compiled": 181,
+     "mean_percent": 72.966
+    }
+   },
+   "default_binary_tag": "def3",
+   "paired_context": {
+    "better": 1,
+    "worse": 0,
+    "same": 199,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "paired_standalone": {
+    "better": 1,
+    "worse": 1,
+    "same": 198,
+    "exact_gained": 0,
+    "exact_lost": 0
+   }
+  },
+  "dc": {
+   "off": {
+    "context": {
+     "exact": 33,
+     "compiled": 159,
+     "mean_percent": 60.521
+    },
+    "standalone": {
+     "exact": 28,
+     "compiled": 142,
+     "mean_percent": 53.7
+    },
+    "best": {
+     "exact": 33,
+     "compiled": 168,
+     "mean_percent": 64.108
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 33,
+     "compiled": 159,
+     "mean_percent": 60.551
+    },
+    "standalone": {
+     "exact": 28,
+     "compiled": 142,
+     "mean_percent": 53.774
+    },
+    "best": {
+     "exact": 33,
+     "compiled": 168,
+     "mean_percent": 64.162
+    }
+   },
+   "default_binary_tag": "def3",
+   "paired_context": {
+    "better": 1,
+    "worse": 2,
+    "same": 197,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "paired_standalone": {
+    "better": 3,
+    "worse": 0,
+    "same": 197,
+    "exact_gained": 0,
+    "exact_lost": 0
+   }
+  },
+  "dk": {
+   "off": {
+    "context": {
+     "exact": 0,
+     "compiled": 0,
+     "mean_percent": 0.0
+    },
+    "standalone": {
+     "exact": 22,
+     "compiled": 133,
+     "mean_percent": 51.386
+    },
+    "best": {
+     "exact": 22,
+     "compiled": 133,
+     "mean_percent": 51.386
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 0,
+     "compiled": 0,
+     "mean_percent": 0.0
+    },
+    "standalone": {
+     "exact": 22,
+     "compiled": 132,
+     "mean_percent": 50.957
+    },
+    "best": {
+     "exact": 22,
+     "compiled": 132,
+     "mean_percent": 50.957
+    }
+   },
+   "default_binary_tag": "def4",
+   "paired_context": {
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "paired_standalone": {
+    "better": 1,
+    "worse": 1,
+    "same": 198,
+    "exact_gained": 0,
+    "exact_lost": 0
+   }
+  },
+  "p4": {
+   "off": {
+    "context": {
+     "exact": 49,
+     "compiled": 167,
+     "mean_percent": 66.434
+    },
+    "standalone": {
+     "exact": 39,
+     "compiled": 153,
+     "mean_percent": 59.18
+    },
+    "best": {
+     "exact": 52,
+     "compiled": 191,
+     "mean_percent": 75.765
+    }
+   },
+   "default": {
+    "context": {
+     "exact": 49,
+     "compiled": 167,
+     "mean_percent": 66.434
+    },
+    "standalone": {
+     "exact": 39,
+     "compiled": 153,
+     "mean_percent": 59.187
+    },
+    "best": {
+     "exact": 52,
+     "compiled": 191,
+     "mean_percent": 75.772
+    }
+   },
+   "default_binary_tag": "def3",
+   "paired_context": {
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": 0,
+    "exact_lost": 0
+   },
+   "paired_standalone": {
+    "better": 1,
+    "worse": 0,
+    "same": 199,
+    "exact_gained": 0,
+    "exact_lost": 0
+   }
+  }
+ },
+ "print_measure": {
+  "capcom": {
+   "addresses": 1000,
+   "off_inferred_all": {
+    "off": {
+     "functions": 1000,
+     "ok": 999,
+     "member_accesses": 564,
+     "offset_accesses": 16898,
+     "member_share": 0.0323,
+     "functions_with_members": 64,
+     "functions_with_structs": 10,
+     "seconds": 676.6,
+     "fail_where_off_succeeds": [],
+     "succeed_where_off_fails": []
+    },
+    "inferred": {
+     "functions": 1000,
+     "ok": 999,
+     "member_accesses": 7612,
+     "offset_accesses": 9844,
+     "member_share": 0.4361,
+     "functions_with_members": 515,
+     "functions_with_structs": 483,
+     "seconds": 715.5,
+     "fail_where_off_succeeds": [],
+     "succeed_where_off_fails": []
+    },
+    "all": {
+     "functions": 1000,
+     "ok": 999,
+     "member_accesses": 17284,
+     "offset_accesses": 757,
+     "member_share": 0.958,
+     "functions_with_members": 753,
+     "functions_with_structs": 746,
+     "seconds": 574.8,
+     "fail_where_off_succeeds": [],
+     "succeed_where_off_fails": []
+    }
+   },
+   "debug": {
+    "functions": 1000,
+    "ok": 999,
+    "member_accesses": 17111,
+    "offset_accesses": 914,
+    "member_share": 0.9493,
+    "functions_with_members": 739,
+    "functions_with_structs": 732,
+    "seconds": 1415.7,
+    "fail_where_off_succeeds": [],
+    "succeed_where_off_fails": []
+   },
+   "failed_in_every_mode": [
+    "001aa860"
+   ]
+  },
+  "dungeon": {
+   "addresses": 324,
+   "modes": {
+    "off": {
+     "functions": 324,
+     "ok": 324,
+     "member_accesses": 266,
+     "offset_accesses": 1920,
+     "member_share": 0.1217,
+     "functions_with_members": 34,
+     "functions_with_structs": 0,
+     "seconds": 63.7,
+     "fail_where_off_succeeds": [],
+     "succeed_where_off_fails": []
+    },
+    "debug": {
+     "functions": 324,
+     "ok": 324,
+     "member_accesses": 266,
+     "offset_accesses": 1920,
+     "member_share": 0.1217,
+     "functions_with_members": 34,
+     "functions_with_structs": 0,
+     "seconds": 63.9,
+     "fail_where_off_succeeds": [],
+     "succeed_where_off_fails": []
+    },
+    "all": {
+     "functions": 324,
+     "ok": 324,
+     "member_accesses": 650,
+     "offset_accesses": 1566,
+     "member_share": 0.2933,
+     "functions_with_members": 53,
+     "functions_with_structs": 20,
+     "seconds": 92.3,
+     "fail_where_off_succeeds": [],
+     "succeed_where_off_fails": []
+    }
+   },
+   "note": "debug is a no-op: no DWARF 2 reader; the 176 of 500 sampled addresses that fail in every mode (off included) are dropped"
+  }
+ },
+ "ps2_success_first_250_per_image": {
+  "off": {
+   "decompiled": 2750,
+   "sampled": 2750,
+   "per_game": {
+    "ps2-dark-chronicle": [
+     250,
+     250
+    ],
+    "ps2-dark-chronicle-symtab": [
+     250,
+     250
+    ],
+    "ps2-dark-cloud": [
+     250,
+     250
+    ],
+    "ps2-dark-cloud-symtab": [
+     250,
+     250
+    ],
+    "ps2-digital-devil-saga": [
+     250,
+     250
+    ],
+    "ps2-fatal-frame": [
+     250,
+     250
+    ],
+    "ps2-fatal-frame-symtab": [
+     250,
+     250
+    ],
+    "ps2-god-hand": [
+     250,
+     250
+    ],
+    "ps2-persona-4": [
+     250,
+     250
+    ],
+    "ps2-ratchet-clank": [
+     250,
+     250
+    ],
+    "ps2-ratchet-clank-pal": [
+     250,
+     250
+    ]
+   }
+  },
+  "default": {
+   "decompiled": 2750,
+   "sampled": 2750,
+   "per_game": {
+    "ps2-dark-chronicle": [
+     250,
+     250
+    ],
+    "ps2-dark-chronicle-symtab": [
+     250,
+     250
+    ],
+    "ps2-dark-cloud": [
+     250,
+     250
+    ],
+    "ps2-dark-cloud-symtab": [
+     250,
+     250
+    ],
+    "ps2-digital-devil-saga": [
+     250,
+     250
+    ],
+    "ps2-fatal-frame": [
+     250,
+     250
+    ],
+    "ps2-fatal-frame-symtab": [
+     250,
+     250
+    ],
+    "ps2-god-hand": [
+     250,
+     250
+    ],
+    "ps2-persona-4": [
+     250,
+     250
+    ],
+    "ps2-ratchet-clank": [
+     250,
+     250
+    ],
+    "ps2-ratchet-clank-pal": [
+     250,
+     250
+    ]
+   }
+  }
+ },
+ "m21": {
+  "status": "pass",
+  "failures": [],
+  "rows": {
+   "gba-pokeemerald": {
+    "truth": 15856,
+    "found": 15520,
+    "recall": 0.9761,
+    "precision": 0.9972,
+    "invented": 43,
+    "sizes_compared": 15475,
+    "size_exact": 15421,
+    "size_short": 53,
+    "size_long": 1,
+    "missed_sample": [
+     "0x8000708 SetVCountCallback",
+     "0x8001354 Unused_ResetBgControlStruct",
+     "0x8001e40 GetBgX",
+     "0x8002170 Unused_AdjustBgMosaic",
+     "0x800425c DummyWindowBgTilemap8Bit",
+     "0x8004d58 GetLastTextColor",
+     "0x8006338 GetKeypadIconTileOffset",
+     "0x8006358 GetKeypadIconHeight",
+     "0x80073b8 SpriteTileAllocBitmapOp",
+     "0x800a44c GetBerryBlenderKeySendAttempts"
+    ],
+    "invented_sample": [
+     "0x8000000",
+     "0x8000204",
+     "0x8000254",
+     "0x803be9c",
+     "0x803cd12",
+     "0x8040968",
+     "0x804132e",
+     "0x8041338",
+     "0x8060604",
+     "0x8060708"
+    ],
+    "seconds": 15.7,
+    "peak_rss_mb": null,
+    "diagnostics": [
+     {
+      "severity": "info",
+      "stage": "loader",
+      "message": "RAM image at 0x02000000 (multiboot): cartridge header with logo, fixed byte and complement check at ROM offset 0x9a6550; entry branch to 0x9a6650; 1 words in the ROM point at its entries"
+     },
+     {
+      "severity": "info",
+      "stage": "loader",
+      "message": "RAM image at 0x03001aa8 (bios-copy): BIOS CpuSet copies 0x800 bytes from ROM 0x82df0e0 to 0x3001aa8; 62% of them decode as Thumb code; 2 words in the ROM point at its entries"
+     },
+     {
+      "severity": "info",
+      "stage": "compiler",
+      "message": "compiler agbcc (detected, Medium confidence): 14638 Thumb `pop {rX}; bx rX` returns against 11400 `pop {..,pc}` (share 0.562)"
+     }
+    ],
+    "status": "pass",
+    "failures": []
+   },
+   "nds-pokeheartgold-arm9": {
+    "truth": 11078,
+    "found": 10801,
+    "recall": 0.9735,
+    "precision": 0.9984,
+    "invented": 17,
+    "sizes_compared": 10741,
+    "size_exact": 9888,
+    "size_short": 852,
+    "size_long": 1,
+    "missed_sample": [
+     "0x1ff8000 OS_IrqHandler",
+     "0x1ff8058 OS_IrqHandler_ThreadSwitch",
+     "0x1ff81b4 OSi_DoResetSystem",
+     "0x1ff81e8 OSi_DoBoot",
+     "0x1ff82b4 OSi_CpuClear32",
+     "0x1ff82c8 OSi_ReloadRomData",
+     "0x1ff8370 OSi_ReadCardRom32",
+     "0x1ff8448 MIi_DmaSetParams",
+     "0x1ff8488 MIi_DmaSetParams_wait",
+     "0x1ff84f8 MIi_DmaSetParams_noInt"
+    ],
+    "invented_sample": [
+     "0x20001ba",
+     "0x20002d0",
+     "0x200079e",
+     "0x201e4ac",
+     "0x20e8104",
+     "0x20ed8f8",
+     "0x20f1cc0",
+     "0x2111860",
+     "0x2111a14",
+     "0x2111a48"
+    ],
+    "seconds": 20.0,
+    "peak_rss_mb": null,
+    "diagnostics": [
+     {
+      "severity": "info",
+      "stage": "compiler",
+      "message": "compiler mwcc-arm (detected, Medium confidence): NitroSDK banner `[SDK+NINTENDO:...]` (SDK libraries are built with CodeWarrior)"
+     }
+    ],
+    "status": "pass",
+    "failures": []
+   },
+   "ps2-capcom-fighting-evolution": {
+    "truth": 8794,
+    "found": 8613,
+    "recall": 0.9741,
+    "precision": 0.9945,
+    "invented": 47,
+    "sizes_compared": 8566,
+    "size_exact": 8548,
+    "size_short": 7,
+    "size_long": 11,
+    "missed_sample": [
+     "0x1133c0 _kExitTLBHandler",
+     "0x12c190 pl2d_special",
+     "0x12c1b0 em2d_special",
+     "0x12dfb0 pls2d_fr2_mov2",
+     "0x12ee50 pshl2d_00_die1",
+     "0x131f70 pl2c_special",
+     "0x131f90 em2c_special",
+     "0x133a10 pl2c_win3",
+     "0x133a20 pl2c_win2",
+     "0x133a50 pl2c_win1"
+    ],
+    "invented_sample": [
+     "0x100008",
+     "0x100178",
+     "0x10cffc",
+     "0x149438",
+     "0x149450",
+     "0x149468",
+     "0x149480",
+     "0x149498",
+     "0x1494b0",
+     "0x1494c8"
+    ],
+    "seconds": 33.0,
+    "peak_rss_mb": null,
+    "diagnostics": [
+     {
+      "severity": "info",
+      "stage": "compiler",
+      "message": "compiler mwcc-ps2 (detected, Medium confidence): section names `main` + `heap` (mwldps2 output layout)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x182fa0: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x182ab0: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aa860: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aaae0: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aabf0: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aad00: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aad20: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aae00: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1ab430: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     }
+    ],
+    "status": "pass",
+    "failures": []
+   },
+   "ps2-dungeon-game": {
+    "truth": 783,
+    "found": 786,
+    "recall": 0.9872,
+    "precision": 0.9835,
+    "invented": 13,
+    "sizes_compared": 771,
+    "size_exact": 751,
+    "size_short": 9,
+    "size_long": 11,
+    "missed_sample": [
+     "0x10021c _root",
+     "0x100228 _ZN7ps2math3modEff",
+     "0x103720 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb23stbi__resample_row_hv_2EPhS0_S0_ii",
+     "0x1079b0 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb22stbi__resample_row_h_2EPhS0_S0_ii",
+     "0x107c28 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb26stbi__resample_row_genericEPhS0_S0_ii",
+     "0x110660 _ZN8Renderer20drawIndexedTrianglesEPKtjPK10DrawVertexj",
+     "0x11b020 _ZN17FirstPersonCamera5pitchEf",
+     "0x11b3d0 _ZNK17FirstPersonCamera15getCameraTargetEv",
+     "0x12ea28 audsrv_on_cdda_stop",
+     "0x134ba8 _ZN17ThirdPersonCameraD1Ev"
+    ],
+    "invented_sample": [
+     "0x100000",
+     "0x100068",
+     "0x100080",
+     "0x1000c0",
+     "0x1038a8",
+     "0x107b80",
+     "0x107e34",
+     "0x1133d8",
+     "0x1134f0",
+     "0x117250"
+    ],
+    "seconds": 1.3,
+    "peak_rss_mb": null,
+    "diagnostics": [
+     {
+      "severity": "info",
+      "stage": "compiler",
+      "message": "compiler unknown (detected, Low confidence): no detector found evidence in this image"
+     }
+    ],
+    "status": "pass",
+    "failures": []
+   },
+   "psx-darkstalkers-3": {
+    "truth": 818,
+    "found": 2206,
+    "recall": 0.9878,
+    "precision": 0.3663,
+    "invented": 1398,
+    "sizes_compared": 0,
+    "size_exact": 0,
+    "size_short": 0,
+    "size_long": 0,
+    "missed_sample": [
+     "0x8014f634 pl_nige_check",
+     "0x8016e478 type01_demi_kubi",
+     "0x8016e4c0 type02_demi_kubi",
+     "0x8016fa2c pl06_to_pshl",
+     "0x801727c0 direction_all",
+     "0x80172aa0 nogi_dir32",
+     "0x8017a570 stup1",
+     "0x8017a5ec stup0",
+     "0x8017dd4c _spu_pitch2note",
+     "0x8017eab4 SetAutoPan"
+    ],
+    "invented_sample": [
+     "0x80139cd8",
+     "0x80139d18",
+     "0x80139d9c",
+     "0x8013a0e4",
+     "0x8013b314",
+     "0x8013b390",
+     "0x8013b3cc",
+     "0x8013bc70",
+     "0x8013c3a4",
+     "0x80140f90"
+    ],
+    "precision_corroborated": 0.9968,
+    "invented_corroborated": 1391,
+    "invented_corroborated_by": {
+     "frame+address-taken": 43,
+     "jal": 545,
+     "table": 803
+    },
+    "invented_uncorroborated": 7,
+    "uncorroborated_sample": [
+     "0x8014102c",
+     "0x801632dc",
+     "0x8016d4d8",
+     "0x801835d0",
+     "0x801837f8",
+     "0x801838cc",
+     "0x80189858"
+    ],
+    "corroborated_unfound": 52,
+    "seconds": 1.1,
+    "peak_rss_mb": null,
+    "diagnostics": [
+     {
+      "severity": "info",
+      "stage": "compiler",
+      "message": "compiler unknown (detected, Low confidence): PlayStation 1: Psy-Q GCC and CodeWarrior images share the Sony library strings and the `move` spelling; no byte-level tell is measured"
+     }
+    ],
+    "status": "pass",
+    "failures": []
+   },
+   "psv-need-for-speed-most-wanted": {
+    "truth": 26495,
+    "found": 26535,
+    "recall": 0.9734,
+    "precision": 0.9719,
+    "invented": 746,
+    "sizes_compared": 25789,
+    "size_exact": 16304,
+    "size_short": 9479,
+    "size_long": 6,
+    "missed_sample": [
+     "0x81000000 CgsAnimation::Qtn_EndSwap128",
+     "0x81000012 CgsAnimation::Qtn_EndSwap32",
+     "0x81000018 CgsAnimation::Qtn_PackNoPack",
+     "0x8100001a CgsAnimation::Qtn_PackSmallest3",
+     "0x8100001c CgsAnimation::Qtn_PackPolarEncoded",
+     "0x8100001e CgsAnimation::Qtn_PackPolarEncodedGPG3",
+     "0x81000020 CgsAnimation::Qtn_UnpackNoPack",
+     "0x81001ddc CgsGraphics::GXMDispatchCommands::InvalidCmdFunc",
+     "0x810027cc CgsGraphics::GXMDispatchCommands::SetIndexBufferFunc",
+     "0x810027f0 CgsGraphics::GXMDispatchCommands::SetVertexBufferFunc"
+    ],
+    "invented_sample": [
+     "0x810015a2",
+     "0x81001c16",
+     "0x81003f5e",
+     "0x81005214",
+     "0x81007c66",
+     "0x8100bf5a",
+     "0x8100ccee",
+     "0x8100d3fa",
+     "0x8100d82c",
+     "0x8100e280"
+    ],
+    "seconds": 84.0,
+    "peak_rss_mb": null,
+    "diagnostics": [
+     {
+      "severity": "info",
+      "stage": "compiler",
+      "message": "compiler unknown (detected, Low confidence): no detector found evidence in this image"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811cd8be: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811d10c4: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811d113e: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811e99c0: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x81428f64: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x814e180a: decompiler exception: WorkBudgetExceeded: decompiler work budget of 75000000 units exceeded (switch decompile budget 75000000 units)"
+     }
+    ],
+    "status": "pass",
+    "failures": []
+   },
+   "x360-black-ops-2": {
+    "truth": 27730,
+    "found": 27364,
+    "recall": 0.9833,
+    "precision": 0.9964,
+    "invented": 98,
+    "sizes_compared": 0,
+    "size_exact": 0,
+    "size_short": 0,
+    "size_long": 0,
+    "missed_sample": [
+     "0x8214fc70 ?KickOffWorkerThreadDpc@D3D@@YAXPAU_KDPC@@PAX11@Z",
+     "0x82157d68 ?DriverCleanup@D3D@@YAXPAX@Z",
+     "0x8215a4e0 ?XMScalarSin@@YAMM@Z",
+     "0x8215abe0 ?Bessi0@D3D@@YAMM@Z",
+     "0x8217ddb0 ?AimAssist_GetScreenTargetCount@@YAHW4LocalClientNum_t@@@Z",
+     "0x8217ddc8 ?AimAssist_GetScreenTargetEntity@@YAHW4LocalClientNum_t@@H@Z",
+     "0x8217fe00 ??0jqBatchGroup@@QAA@XZ",
+     "0x82180010 ?AimTarget_CompareTargets@@YA_NABUAimTarget@@0@Z",
+     "0x82199108 ?CG_SensorGrenadePingPlayer@@YAXW4LocalClientNum_t@@PBUclientInfo_t@@H_N@Z",
+     "0x821a1928 ?compareEntityDist@@YAHPBX0@Z"
+    ],
+    "invented_sample": [
+     "0x824044ac",
+     "0x82712fec",
+     "0x82713880",
+     "0x827138a8",
+     "0x82713b74",
+     "0x82713b9c",
+     "0x82714438",
+     "0x82714458",
+     "0x8271449c",
+     "0x827144c0"
+    ],
+    "seconds": 31.1,
+    "peak_rss_mb": null,
+    "diagnostics": [
+     {
+      "severity": "info",
+      "stage": "compiler",
+      "message": "compiler msvc-16 (detected, Medium confidence): PE optional header linker version 10.0 (compiler 16.x)"
+     }
+    ],
+    "status": "pass",
+    "failures": []
+   }
+  }
+ }
+}

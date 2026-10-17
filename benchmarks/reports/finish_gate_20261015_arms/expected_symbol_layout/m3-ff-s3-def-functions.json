@@ -1,0 +1,5815 @@
+{
+ "schema": "m22-003-functions/1",
+ "lane": "ff",
+ "game": "ps2-fatal-frame",
+ "tag": "s3-def",
+ "env": {},
+ "layers": [
+  "romwright"
+ ],
+ "seed": 20261012,
+ "n": 200,
+ "matched_count": 3436,
+ "functions": {
+  "00101d08": {
+   "name": "ModeSlctDspBak",
+   "address": "0x101d08",
+   "size": 312,
+   "file": "src/outgame/mode_slct.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.307693
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.179485
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.307693
+     }
+    }
+   }
+  },
+  "00107080": {
+   "name": "PasteCtrl",
+   "address": "0x107080",
+   "size": 656,
+   "file": "src/outgame/memory_album.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.536587
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.243904
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.536587
+     }
+    }
+   }
+  },
+  "00107818": {
+   "name": "BuffPadMnu",
+   "address": "0x107818",
+   "size": 836,
+   "file": "src/outgame/memory_album.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.85646
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.85646
+     }
+    }
+   }
+  },
+  "0010b2f8": {
+   "name": "InitSystem",
+   "address": "0x10b2f8",
+   "size": 140,
+   "file": "src/os/system.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0010b938": {
+   "name": "FileLoadInit",
+   "address": "0x10b938",
+   "size": 212,
+   "file": "src/os/fileload.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.64151
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.64151
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.64151
+     }
+    }
+   }
+  },
+  "0010ca68": {
+   "name": "EiInit",
+   "address": "0x10ca68",
+   "size": 32,
+   "file": "src/os/eeiop/eeiop.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0010cc08": {
+   "name": "EiInitIopDev",
+   "address": "0x10cc08",
+   "size": 84,
+   "file": "src/os/eeiop/eeiop.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.14286
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.14286
+     }
+    }
+   }
+  },
+  "0010cc60": {
+   "name": "InitIopCmd",
+   "address": "0x10cc60",
+   "size": 36,
+   "file": "src/os/eeiop/eeiop.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.111115
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.111115
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.111115
+     }
+    }
+   }
+  },
+  "0010dee0": {
+   "name": "EAdpcmCmdPlay",
+   "address": "0x10dee0",
+   "size": 188,
+   "file": "src/os/eeiop/adpcm/ea_cmd.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.276596
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.276596
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.276596
+     }
+    }
+   }
+  },
+  "0010e070": {
+   "name": "EAdpcmCmdPause",
+   "address": "0x10e070",
+   "size": 32,
+   "file": "src/os/eeiop/adpcm/ea_cmd.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0010e560": {
+   "name": "AdpcmBtlmodePreLoadEndPlay",
+   "address": "0x10e560",
+   "size": 88,
+   "file": "src/os/eeiop/adpcm/ea_btlmode.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.86364
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.77273
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 78.86364
+     }
+    }
+   }
+  },
+  "0010f318": {
+   "name": "IsPreLoadEndAdpcmPuzzle",
+   "address": "0x10f318",
+   "size": 100,
+   "file": "src/os/eeiop/adpcm/ea_puzzle.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.16
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.16
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.16
+     }
+    }
+   }
+  },
+  "00110958": {
+   "name": "AdpcmPlayHiso",
+   "address": "0x110958",
+   "size": 308,
+   "file": "src/os/eeiop/adpcm/ea_hiso.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.74026
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.74026
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 77.74026
+     }
+    }
+   }
+  },
+  "001111c0": {
+   "name": "AdpcmStopFurn",
+   "address": "0x1111c0",
+   "size": 88,
+   "file": "src/os/eeiop/adpcm/ea_furn.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.045456
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 47.5
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.045456
+     }
+    }
+   }
+  },
+  "001113e0": {
+   "name": "EAGetNowMapFileNo",
+   "address": "0x1113e0",
+   "size": 60,
+   "file": "src/os/eeiop/adpcm/ea_map.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.6
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.6
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.6
+     }
+    }
+   }
+  },
+  "001119b0": {
+   "name": "SeStartFix",
+   "address": "0x1119b0",
+   "size": 208,
+   "file": "src/os/eeiop/eese.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.346153
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 41.51923
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 43.346153
+     }
+    }
+   }
+  },
+  "00112e20": {
+   "name": "SeGetSeWrk",
+   "address": "0x112e20",
+   "size": 36,
+   "file": "src/os/eeiop/eese.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001130d8": {
+   "name": "SeChkReqMode",
+   "address": "0x1130d8",
+   "size": 32,
+   "file": "src/os/eeiop/eese.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001136b8": {
+   "name": "SeCmdFdOut",
+   "address": "0x1136b8",
+   "size": 116,
+   "file": "src/os/eeiop/se_cmd.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.93104
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.93104
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.93104
+     }
+    }
+   }
+  },
+  "00113c88": {
+   "name": "SeEvInit",
+   "address": "0x113c88",
+   "size": 72,
+   "file": "src/os/eeiop/se_ev.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00114ef8": {
+   "name": "SEventSetLoadTbl",
+   "address": "0x114ef8",
+   "size": 144,
+   "file": "src/os/eeiop/se_event.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.30556
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.30556
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.30556
+     }
+    }
+   }
+  },
+  "00115458": {
+   "name": "SSrundGetSeNo",
+   "address": "0x115458",
+   "size": 56,
+   "file": "src/os/eeiop/se_srund.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.35714
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.35714
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.35714
+     }
+    }
+   }
+  },
+  "001170d8": {
+   "name": "ForwardDCT",
+   "address": "0x1170d8",
+   "size": 356,
+   "file": "src/graphics/graph2d/compress.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.7191
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.7191
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.7191
+     }
+    }
+   }
+  },
+  "00117918": {
+   "name": "OutputBits",
+   "address": "0x117918",
+   "size": 116,
+   "file": "src/graphics/graph2d/compress.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.31035
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.31035
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.31035
+     }
+    }
+   }
+  },
+  "00117990": {
+   "name": "InputBits",
+   "address": "0x117990",
+   "size": 116,
+   "file": "src/graphics/graph2d/compress.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.689655
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.689655
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.689655
+     }
+    }
+   }
+  },
+  "00118cb0": {
+   "name": "SearchEmptyEffectBuf",
+   "address": "0x118cb0",
+   "size": 92,
+   "file": "src/graphics/graph2d/effect.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.91304
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.91304
+     }
+    }
+   }
+  },
+  "00119f58": {
+   "name": "tes_p20",
+   "address": "0x119f58",
+   "size": 504,
+   "file": "src/graphics/graph2d/effect.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "0011e740": {
+   "name": "DrawScreen",
+   "address": "0x11e740",
+   "size": 328,
+   "file": "src/graphics/graph2d/effect_sub.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 14.134147
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 14.134147
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 14.134147
+     }
+    }
+   }
+  },
+  "0011ff10": {
+   "name": "LocalCopyBZtoZ",
+   "address": "0x11ff10",
+   "size": 100,
+   "file": "src/graphics/graph2d/effect_sub.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.8
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.8
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.8
+     }
+    }
+   }
+  },
+  "00120078": {
+   "name": "CallVibrate",
+   "address": "0x120078",
+   "size": 92,
+   "file": "src/graphics/graph2d/effect_sub.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.0
+     }
+    }
+   }
+  },
+  "001212d8": {
+   "name": "FallObjWind",
+   "address": "0x1212d8",
+   "size": 80,
+   "file": "src/graphics/graph2d/effect_sub2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.05
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.05
+     }
+    }
+   }
+  },
+  "001220b0": {
+   "name": "GusAlpha",
+   "address": "0x1220b0",
+   "size": 128,
+   "file": "src/graphics/graph2d/effect_sub2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 14.375
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 14.375
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 14.375
+     }
+    }
+   }
+  },
+  "001233f8": {
+   "name": "LineGusInitAll",
+   "address": "0x1233f8",
+   "size": 428,
+   "file": "src/graphics/graph2d/effect_sub2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.747665
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.747665
+     }
+    }
+   }
+  },
+  "001278f0": {
+   "name": "DispSprt2",
+   "address": "0x1278f0",
+   "size": 392,
+   "file": "src/graphics/graph2d/effect_sub2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 25.561224
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 24.561224
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 25.561224
+     }
+    }
+   }
+  },
+  "00127e40": {
+   "name": "InitEffectScr",
+   "address": "0x127e40",
+   "size": 236,
+   "file": "src/graphics/graph2d/effect_scr.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.169495
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.169495
+     }
+    }
+   }
+  },
+  "0012c088": {
+   "name": "SubContrast2",
+   "address": "0x12c088",
+   "size": 296,
+   "file": "src/graphics/graph2d/effect_scr.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 28.283783
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 28.283783
+     }
+    }
+   }
+  },
+  "0012cc88": {
+   "name": "SetForcusDepth2",
+   "address": "0x12cc88",
+   "size": 124,
+   "file": "src/graphics/graph2d/effect_scr.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.258064
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.258064
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.258064
+     }
+    }
+   }
+  },
+  "00134f80": {
+   "name": "GetCornHitCheck",
+   "address": "0x134f80",
+   "size": 32,
+   "file": "src/graphics/graph2d/effect_obj.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 22.75
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00138ff8": {
+   "name": "sceVu0ViewClipMatrix",
+   "address": "0x138ff8",
+   "size": 204,
+   "file": "src/graphics/graph2d/effect_oth.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.76471
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.76471
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.76471
+     }
+    }
+   }
+  },
+  "0013a010": {
+   "name": "GetAmuPartAddr",
+   "address": "0x13a010",
+   "size": 160,
+   "file": "src/graphics/graph2d/effect_oth.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.725
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.725
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.725
+     }
+    }
+   }
+  },
+  "0013a170": {
+   "name": "GetSmokePartAddr",
+   "address": "0x13a170",
+   "size": 212,
+   "file": "src/graphics/graph2d/effect_oth.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00141988": {
+   "name": "SetCanal",
+   "address": "0x141988",
+   "size": 96,
+   "file": "src/graphics/graph2d/effect_oth.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.5
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 97.5
+     }
+    }
+   }
+  },
+  "00147a20": {
+   "name": "SetRDPFire2",
+   "address": "0x147a20",
+   "size": 64,
+   "file": "src/graphics/graph2d/effect_rdr.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00155078": {
+   "name": "InitMessageEF",
+   "address": "0x155078",
+   "size": 40,
+   "file": "src/graphics/graph2d/message.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.0
+     }
+    }
+   }
+  },
+  "0015a088": {
+   "name": "Tim2GetMipMapPictureSize",
+   "address": "0x15a088",
+   "size": 136,
+   "file": "src/graphics/graph2d/tim2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 33.882355
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 33.882355
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 33.882355
+     }
+    }
+   }
+  },
+  "0015a4d0": {
+   "name": "Tim2SetClutColor",
+   "address": "0x15a4d0",
+   "size": 616,
+   "file": "src/graphics/graph2d/tim2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.18182
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.18182
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.18182
+     }
+    }
+   }
+  },
+  "0015ac28": {
+   "name": "Tim2LoadImage2",
+   "address": "0x15ac28",
+   "size": 848,
+   "file": "src/graphics/graph2d/tim2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.009434
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.009434
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.009434
+     }
+    }
+   }
+  },
+  "0015bb70": {
+   "name": "GetTex0Reg",
+   "address": "0x15bb70",
+   "size": 176,
+   "file": "src/graphics/graph2d/tim2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 34.522728
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 34.522728
+     }
+    }
+   }
+  },
+  "0015bfb8": {
+   "name": "DrawOne2D_P2",
+   "address": "0x15bfb8",
+   "size": 132,
+   "file": "src/graphics/graph2d/tim2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.242424
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.242424
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.242424
+     }
+    }
+   }
+  },
+  "0015c040": {
+   "name": "DrawAll2D_P2",
+   "address": "0x15c040",
+   "size": 408,
+   "file": "src/graphics/graph2d/tim2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.911766
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.911766
+     }
+    }
+   }
+  },
+  "0015c408": {
+   "name": "SetETIM2File",
+   "address": "0x15c408",
+   "size": 108,
+   "file": "src/graphics/graph2d/tim2.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.333332
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.333332
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.333332
+     }
+    }
+   }
+  },
+  "001612f0": {
+   "name": "SetMyLight",
+   "address": "0x1612f0",
+   "size": 560,
+   "file": "src/graphics/graph3d/gra3d.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00164898": {
+   "name": "SaveLightData",
+   "address": "0x164898",
+   "size": 436,
+   "file": "src/graphics/graph3d/leditor.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.41284
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 93.41284
+     }
+    }
+   }
+  },
+  "00166f08": {
+   "name": "ReleaseEneTexture",
+   "address": "0x166f08",
+   "size": 288,
+   "file": "src/graphics/motion/mdlwork.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.819443
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.819443
+     }
+    }
+   }
+  },
+  "00167100": {
+   "name": "SetTextureAfterScene",
+   "address": "0x167100",
+   "size": 88,
+   "file": "src/graphics/motion/mdlwork.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00167360": {
+   "name": "SgdAddTexOffset",
+   "address": "0x167360",
+   "size": 172,
+   "file": "src/graphics/motion/mdlwork.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.813953
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.813953
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 56.813953
+     }
+    }
+   }
+  },
+  "00167760": {
+   "name": "motInitAniMdlBuf",
+   "address": "0x167760",
+   "size": 72,
+   "file": "src/graphics/motion/mdlwork.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.111115
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.111115
+     }
+    }
+   }
+  },
+  "00167940": {
+   "name": "motGetAniMdl",
+   "address": "0x167940",
+   "size": 220,
+   "file": "src/graphics/motion/mdlwork.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 31.89091
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 31.89091
+     }
+    }
+   }
+  },
+  "00168390": {
+   "name": "motPlyrActSowasowa",
+   "address": "0x168390",
+   "size": 240,
+   "file": "src/graphics/motion/mdlact.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.383335
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 19.183332
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.383335
+     }
+    }
+   }
+  },
+  "00168cc0": {
+   "name": "mimInitMimeCtrl",
+   "address": "0x168cc0",
+   "size": 448,
+   "file": "src/graphics/motion/mime.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.16964
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 73.94643
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.16964
+     }
+    }
+   }
+  },
+  "00169168": {
+   "name": "mimRequestLastFrame",
+   "address": "0x169168",
+   "size": 88,
+   "file": "src/graphics/motion/mime.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001691c0": {
+   "name": "mimMepatiReq",
+   "address": "0x1691c0",
+   "size": 108,
+   "file": "src/graphics/motion/mime.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.62963
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.62963
+     }
+    }
+   }
+  },
+  "00169978": {
+   "name": "mimAddFrame",
+   "address": "0x169978",
+   "size": 256,
+   "file": "src/graphics/motion/mime.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 8.90625
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 8.90625
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 8.90625
+     }
+    }
+   }
+  },
+  "0016a448": {
+   "name": "mimGetKeymdlTop",
+   "address": "0x16a448",
+   "size": 32,
+   "file": "src/graphics/motion/mime.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.375
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.375
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.375
+     }
+    }
+   }
+  },
+  "0016b008": {
+   "name": "acsRopeMoveRequest",
+   "address": "0x16b008",
+   "size": 76,
+   "file": "src/graphics/motion/accessory.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.31579
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.31579
+     }
+    }
+   }
+  },
+  "0016b4c0": {
+   "name": "acsRopeMoveCtrl",
+   "address": "0x16b4c0",
+   "size": 84,
+   "file": "src/graphics/motion/accessory.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 30.428572
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 30.428572
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 30.428572
+     }
+    }
+   }
+  },
+  "0016f160": {
+   "name": "motAddFrame",
+   "address": "0x16f160",
+   "size": 104,
+   "file": "src/graphics/motion/motion.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.57692
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.57692
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.57692
+     }
+    }
+   }
+  },
+  "0016f1c8": {
+   "name": "motGetNowFrame",
+   "address": "0x16f1c8",
+   "size": 64,
+   "file": "src/graphics/motion/motion.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.375
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.375
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.375
+     }
+    }
+   }
+  },
+  "001710a0": {
+   "name": "motSetCoordFrame",
+   "address": "0x1710a0",
+   "size": 204,
+   "file": "src/graphics/motion/motion.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.882355
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.882355
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 94.882355
+     }
+    }
+   }
+  },
+  "00172178": {
+   "name": "MappingTYPE0",
+   "address": "0x172178",
+   "size": 56,
+   "file": "src/graphics/graph3d/sgsgd.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.42857
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.42857
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.42857
+     }
+    }
+   }
+  },
+  "00172750": {
+   "name": "GetEndPacketAddr",
+   "address": "0x172750",
+   "size": 108,
+   "file": "src/graphics/graph3d/sgsgd.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.77778
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.77778
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 62.77778
+     }
+    }
+   }
+  },
+  "00172cc0": {
+   "name": "printLMatC",
+   "address": "0x172cc0",
+   "size": 160,
+   "file": "src/graphics/graph3d/sglib.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 60.575
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 60.575
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 60.575
+     }
+    }
+   }
+  },
+  "00174878": {
+   "name": "SgSortUnitPrimPost",
+   "address": "0x174878",
+   "size": 212,
+   "file": "src/graphics/graph3d/sgsu.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.49056
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 92.49056
+     }
+    }
+   }
+  },
+  "00175970": {
+   "name": "LoadTextureAnimation",
+   "address": "0x175970",
+   "size": 304,
+   "file": "src/graphics/graph3d/sgdma.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.01316
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.01316
+     }
+    }
+   }
+  },
+  "00175f68": {
+   "name": "SetBWLight",
+   "address": "0x175f68",
+   "size": 72,
+   "file": "src/graphics/graph3d/sglight.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.833336
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.833336
+     }
+    }
+   }
+  },
+  "00177538": {
+   "name": "CalcSpotLight",
+   "address": "0x177538",
+   "size": 348,
+   "file": "src/graphics/graph3d/sglight.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 2.2988505
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 2.2988505
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 2.2988505
+     }
+    }
+   }
+  },
+  "00178cd8": {
+   "name": "DispVUMemory",
+   "address": "0x178cd8",
+   "size": 432,
+   "file": "src/graphics/graph3d/sgsup.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.537037
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.537037
+     }
+    }
+   }
+  },
+  "00179860": {
+   "name": "SgSortGroupP",
+   "address": "0x179860",
+   "size": 360,
+   "file": "src/graphics/graph3d/sgsup.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 33.655556
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 33.655556
+     }
+    }
+   }
+  },
+  "0017b8c8": {
+   "name": "DrawShadowModel",
+   "address": "0x17b8c8",
+   "size": 232,
+   "file": "src/graphics/graph3d/shadow.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.62069
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.62069
+     }
+    }
+   }
+  },
+  "0017e3e0": {
+   "name": "CalcMirrorMatrix",
+   "address": "0x17e3e0",
+   "size": 860,
+   "file": "src/graphics/graph3d/mirror.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "0017feb8": {
+   "name": "audioDecCreate",
+   "address": "0x17feb8",
+   "size": 256,
+   "file": "src/graphics/mov/movie.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.640625
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 84.640625
+     }
+    }
+   }
+  },
+  "00180078": {
+   "name": "audioDecResume",
+   "address": "0x180078",
+   "size": 108,
+   "file": "src/graphics/mov/movie.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.59259
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.59259
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.59259
+     }
+    }
+   }
+  },
+  "00181130": {
+   "name": "copy2area",
+   "address": "0x181130",
+   "size": 312,
+   "file": "src/graphics/mov/movie.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.60256
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.60256
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.60256
+     }
+    }
+   }
+  },
+  "00181288": {
+   "name": "readBufBeginPut",
+   "address": "0x181288",
+   "size": 48,
+   "file": "src/graphics/mov/movie.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00181718": {
+   "name": "setD4_CHCR",
+   "address": "0x181718",
+   "size": 100,
+   "file": "src/graphics/mov/movie.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.92
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.92
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.92
+     }
+    }
+   }
+  },
+  "00181aa0": {
+   "name": "viBufAddDMA",
+   "address": "0x181aa0",
+   "size": 496,
+   "file": "src/graphics/mov/movie.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.33064
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.20968
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.33064
+     }
+    }
+   }
+  },
+  "00181d90": {
+   "name": "viBufRestartDMA",
+   "address": "0x181d90",
+   "size": 800,
+   "file": "src/graphics/mov/movie.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.235
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.645
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.645
+     }
+    }
+   }
+  },
+  "001826e0": {
+   "name": "videoDecSetStream",
+   "address": "0x1826e0",
+   "size": 32,
+   "file": "src/graphics/mov/movie.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00184ef8": {
+   "name": "SceneInitEnvironment",
+   "address": "0x184ef8",
+   "size": 260,
+   "file": "src/graphics/scene/scene.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.846153
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.846153
+     }
+    }
+   }
+  },
+  "00185dc8": {
+   "name": "SceneIsEnd",
+   "address": "0x185dc8",
+   "size": 512,
+   "file": "src/graphics/scene/scene.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "00186028": {
+   "name": "SceneScenePrerender",
+   "address": "0x186028",
+   "size": 564,
+   "file": "src/graphics/scene/scene.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.82269
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.82269
+     }
+    }
+   }
+  },
+  "00186948": {
+   "name": "SceneDrawManMdl",
+   "address": "0x186948",
+   "size": 508,
+   "file": "src/graphics/scene/scene.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.338585
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.14173
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 90.338585
+     }
+    }
+   }
+  },
+  "00187250": {
+   "name": "SceneGetMotAddr",
+   "address": "0x187250",
+   "size": 100,
+   "file": "src/graphics/scene/scene.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00187430": {
+   "name": "GetPrefixNo",
+   "address": "0x187430",
+   "size": 92,
+   "file": "src/graphics/scene/scene.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.08696
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.08696
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.08696
+     }
+    }
+   }
+  },
+  "00187990": {
+   "name": "InGameFirstLoad",
+   "address": "0x187990",
+   "size": 660,
+   "file": "src/ingame/ingame.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.454544
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.454544
+     }
+    }
+   }
+  },
+  "00188738": {
+   "name": "InitEnemy",
+   "address": "0x188738",
+   "size": 48,
+   "file": "src/ingame/ig_init.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001887d8": {
+   "name": "LoadStartDataInit",
+   "address": "0x1887d8",
+   "size": 84,
+   "file": "src/ingame/ig_init.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.61905
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.61905
+     }
+    }
+   }
+  },
+  "00188ae0": {
+   "name": "CameraMain",
+   "address": "0x188ae0",
+   "size": 760,
+   "file": "src/ingame/camera/camera.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.094738
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.094738
+     }
+    }
+   }
+  },
+  "00189718": {
+   "name": "SetCamPos2",
+   "address": "0x189718",
+   "size": 464,
+   "file": "src/ingame/camera/camera.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.672413
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.577587
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.672413
+     }
+    }
+   }
+  },
+  "00189b20": {
+   "name": "SetCamPos4",
+   "address": "0x189b20",
+   "size": 544,
+   "file": "src/ingame/camera/camera.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.117645
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.97059
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.117645
+     }
+    }
+   }
+  },
+  "0018b228": {
+   "name": "SetFinderRot",
+   "address": "0x18b228",
+   "size": 1012,
+   "file": "src/ingame/camera/camera.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.920948
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 40.6166
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.920948
+     }
+    }
+   }
+  },
+  "0018c4c8": {
+   "name": "SetMapCamDat2",
+   "address": "0x18c4c8",
+   "size": 784,
+   "file": "src/ingame/camera/camera.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 40.959183
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 40.959183
+     }
+    }
+   }
+  },
+  "0018ca98": {
+   "name": "SetMapCamDat4",
+   "address": "0x18ca98",
+   "size": 908,
+   "file": "src/ingame/camera/camera.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 47.229076
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 47.229076
+     }
+    }
+   }
+  },
+  "0018d298": {
+   "name": "PlyrDmgCameraCtrl",
+   "address": "0x18d298",
+   "size": 372,
+   "file": "src/ingame/camera/camera.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.35484
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 57.35484
+     }
+    }
+   }
+  },
+  "0018d618": {
+   "name": "EneCtrlMain",
+   "address": "0x18d618",
+   "size": 400,
+   "file": "src/ingame/enemy/ene_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.59
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.59
+     }
+    }
+   }
+  },
+  "0018dd58": {
+   "name": "AEneEntry",
+   "address": "0x18dd58",
+   "size": 420,
+   "file": "src/ingame/enemy/ene_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 32.70476
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 32.70476
+     }
+    }
+   }
+  },
+  "00190018": {
+   "name": "EneBlinkPosSet",
+   "address": "0x190018",
+   "size": 196,
+   "file": "src/ingame/enemy/ene_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.10204
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.10204
+     }
+    }
+   }
+  },
+  "001905f8": {
+   "name": "EneMinDmgCtrl",
+   "address": "0x1905f8",
+   "size": 372,
+   "file": "src/ingame/enemy/ene_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 42.35484
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 42.35484
+     }
+    }
+   }
+  },
+  "00190f88": {
+   "name": "EneBlinkCtrl",
+   "address": "0x190f88",
+   "size": 204,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 60.7451
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 60.7451
+     }
+    }
+   }
+  },
+  "00192038": {
+   "name": "EJob00C",
+   "address": "0x192038",
+   "size": 272,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.22059
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.632355
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.22059
+     }
+    }
+   }
+  },
+  "00192e60": {
+   "name": "EJob011",
+   "address": "0x192e60",
+   "size": 48,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.833336
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.833336
+     }
+    }
+   }
+  },
+  "00193950": {
+   "name": "EJob01C",
+   "address": "0x193950",
+   "size": 76,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.89474
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.94737
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.89474
+     }
+    }
+   }
+  },
+  "001942c0": {
+   "name": "EJob029",
+   "address": "0x1942c0",
+   "size": 92,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.434784
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 76.434784
+     }
+    }
+   }
+  },
+  "001945f8": {
+   "name": "EJob02E",
+   "address": "0x1945f8",
+   "size": 136,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 10.705882
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 10.705882
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 10.705882
+     }
+    }
+   }
+  },
+  "00194b68": {
+   "name": "EJob036",
+   "address": "0x194b68",
+   "size": 176,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 54.522728
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 12.545455
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 54.522728
+     }
+    }
+   }
+  },
+  "00195e20": {
+   "name": "EJob04C",
+   "address": "0x195e20",
+   "size": 192,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 42.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 42.0
+     }
+    }
+   }
+  },
+  "00196530": {
+   "name": "EJob059",
+   "address": "0x196530",
+   "size": 72,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.666664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.666664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.666664
+     }
+    }
+   }
+  },
+  "00197880": {
+   "name": "EJob072",
+   "address": "0x197880",
+   "size": 216,
+   "file": "src/ingame/enemy/move_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.44444
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 54.537037
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.44444
+     }
+    }
+   }
+  },
+  "00198950": {
+   "name": "GameTimeCtrl",
+   "address": "0x198950",
+   "size": 108,
+   "file": "src/ingame/plyr/time_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.55556
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.55556
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.55556
+     }
+    }
+   }
+  },
+  "00198be8": {
+   "name": "EntryTimeCtrl",
+   "address": "0x198be8",
+   "size": 200,
+   "file": "src/ingame/plyr/time_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.2
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.2
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.2
+     }
+    }
+   }
+  },
+  "00199a88": {
+   "name": "FloatGhostAppearPosSet",
+   "address": "0x199a88",
+   "size": 632,
+   "file": "src/ingame/entry/ap_fgost.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.05064
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 65.13291
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.05064
+     }
+    }
+   }
+  },
+  "00199f90": {
+   "name": "GetFloatGhostModelLoad",
+   "address": "0x199f90",
+   "size": 88,
+   "file": "src/ingame/entry/ap_fgost.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0019c190": {
+   "name": "SettleGhostLoadTwoSize",
+   "address": "0x19c190",
+   "size": 348,
+   "file": "src/ingame/entry/ap_sgost.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.83908
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.83908
+     }
+    }
+   }
+  },
+  "0019c2f0": {
+   "name": "SettleGhostBattleSet",
+   "address": "0x19c2f0",
+   "size": 208,
+   "file": "src/ingame/entry/ap_sgost.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 13.25
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 13.25
+     }
+    }
+   }
+  },
+  "0019cae0": {
+   "name": "SettleGhostBattleEnd",
+   "address": "0x19cae0",
+   "size": 44,
+   "file": "src/ingame/entry/ap_sgost.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0019f8c0": {
+   "name": "SimpleDispSprt",
+   "address": "0x19f8c0",
+   "size": 408,
+   "file": "src/ingame/event/ev_spcl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 29.205883
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 29.205883
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 29.205883
+     }
+    }
+   }
+  },
+  "001a0130": {
+   "name": "CsrDeclease",
+   "address": "0x1a0130",
+   "size": 60,
+   "file": "src/ingame/event/ev_spcl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.333332
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.333332
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.333332
+     }
+    }
+   }
+  },
+  "001a2768": {
+   "name": "StarPuzzleMSGMain",
+   "address": "0x1a2768",
+   "size": 728,
+   "file": "src/ingame/event/ev_spcl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.37912
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.37912
+     }
+    }
+   }
+  },
+  "001a81f0": {
+   "name": "ButsuzoMSGDisp",
+   "address": "0x1a81f0",
+   "size": 600,
+   "file": "src/ingame/event/ev_spcl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.41333
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 74.41333
+     }
+    }
+   }
+  },
+  "001ad118": {
+   "name": "ZushiBonjiInit",
+   "address": "0x1ad118",
+   "size": 236,
+   "file": "src/ingame/event/ev_spcl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.16949
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.16949
+     }
+    }
+   }
+  },
+  "001ae360": {
+   "name": "ZushiBonjiAfterDisp",
+   "address": "0x1ae360",
+   "size": 604,
+   "file": "src/ingame/event/ev_spcl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.364235
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.364235
+     }
+    }
+   }
+  },
+  "001b1770": {
+   "name": "DelDataLoadWrk",
+   "address": "0x1b1770",
+   "size": 200,
+   "file": "src/ingame/event/ev_load.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 11.24
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 11.24
+     }
+    }
+   }
+  },
+  "001b7ed8": {
+   "name": "ZanzoLS",
+   "address": "0x1b7ed8",
+   "size": 52,
+   "file": "src/ingame/info/inf_disp.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.07692
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.07692
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.07692
+     }
+    }
+   }
+  },
+  "001b8308": {
+   "name": "PhotoScoreDisp",
+   "address": "0x1b8308",
+   "size": 860,
+   "file": "src/ingame/info/inf_disp.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 13.883721
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 13.023255
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 13.883721
+     }
+    }
+   }
+  },
+  "001ba900": {
+   "name": "CameraGetDoramaCameraNo",
+   "address": "0x1ba900",
+   "size": 604,
+   "file": "src/ingame/map/map_ctrl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 30.165564
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 30.165564
+     }
+    }
+   }
+  },
+  "001bab60": {
+   "name": "CameraGetDoorCameraNo",
+   "address": "0x1bab60",
+   "size": 424,
+   "file": "src/ingame/map/map_ctrl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.056602
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.056602
+     }
+    }
+   }
+  },
+  "001bbd28": {
+   "name": "PosInAreaJudge0",
+   "address": "0x1bbd28",
+   "size": 268,
+   "file": "src/ingame/map/map_ctrl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.895523
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.895523
+     }
+    }
+   }
+  },
+  "001bcd60": {
+   "name": "GetNowPlayerMoveMotion",
+   "address": "0x1bcd60",
+   "size": 52,
+   "file": "src/ingame/map/map_ctrl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 8.692307
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 8.692307
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 8.692307
+     }
+    }
+   }
+  },
+  "001bd0d8": {
+   "name": "NakasuHazeSet",
+   "address": "0x1bd0d8",
+   "size": 92,
+   "file": "src/ingame/map/map_ctrl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 23.130434
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 23.130434
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 23.130434
+     }
+    }
+   }
+  },
+  "001be228": {
+   "name": "DoorPassSetTouch",
+   "address": "0x1be228",
+   "size": 88,
+   "file": "src/ingame/map/door_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.86364
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 89.86364
+     }
+    }
+   }
+  },
+  "001c20c0": {
+   "name": "DoorKeyLock",
+   "address": "0x1c20c0",
+   "size": 72,
+   "file": "src/ingame/map/door_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.05556
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.05556
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.05556
+     }
+    }
+   }
+  },
+  "001c3310": {
+   "name": "GetFusumaHitVertex2",
+   "address": "0x1c3310",
+   "size": 480,
+   "file": "src/ingame/map/door_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "001c34f0": {
+   "name": "GetDoorHitVertex",
+   "address": "0x1c34f0",
+   "size": 552,
+   "file": "src/ingame/map/door_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.659424
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.427536
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.659424
+     }
+    }
+   }
+  },
+  "001c39c8": {
+   "name": "DoorDataRenewNow",
+   "address": "0x1c39c8",
+   "size": 120,
+   "file": "src/ingame/map/door_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.1
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 98.1
+     }
+    }
+   }
+  },
+  "001c4940": {
+   "name": "TmpMapHit",
+   "address": "0x1c4940",
+   "size": 152,
+   "file": "src/ingame/map/door_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "001c5700": {
+   "name": "GetDoorTypeDat",
+   "address": "0x1c5700",
+   "size": 56,
+   "file": "src/ingame/map/doortype.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "001c6170": {
+   "name": "ChkFurnGetAlready",
+   "address": "0x1c6170",
+   "size": 84,
+   "file": "src/ingame/map/furn_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.666668
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 36.666668
+     }
+    }
+   }
+  },
+  "001c61c8": {
+   "name": "FurnSetWrkNoUse",
+   "address": "0x1c61c8",
+   "size": 148,
+   "file": "src/ingame/map/furn_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.89189
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.89189
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.89189
+     }
+    }
+   }
+  },
+  "001c6e18": {
+   "name": "FurnDataRenewNext",
+   "address": "0x1c6e18",
+   "size": 472,
+   "file": "src/ingame/map/furn_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.050846
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.050846
+     }
+    }
+   }
+  },
+  "001c8ca8": {
+   "name": "PosInAreaJudgeSub",
+   "address": "0x1c8ca8",
+   "size": 440,
+   "file": "src/ingame/map/map_htck.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 17.172728
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 17.172728
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 17.172728
+     }
+    }
+   }
+  },
+  "001c9dd8": {
+   "name": "AddRotVector",
+   "address": "0x1c9dd8",
+   "size": 64,
+   "file": "src/ingame/map/furn_spe/furn_spe.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001ca008": {
+   "name": "ForwardActionPointer",
+   "address": "0x1ca008",
+   "size": 340,
+   "file": "src/ingame/map/furn_spe/furn_spe.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.70588
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.70588
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 99.70588
+     }
+    }
+   }
+  },
+  "001ca3f8": {
+   "name": "RegisterFW2FAW",
+   "address": "0x1ca3f8",
+   "size": 176,
+   "file": "src/ingame/map/furn_spe/furn_spe.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.25
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 69.25
+     }
+    }
+   }
+  },
+  "001cbc20": {
+   "name": "FACheckDirect",
+   "address": "0x1cbc20",
+   "size": 324,
+   "file": "src/ingame/map/furn_spe/furn_spe.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.580246
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 91.580246
+     }
+    }
+   }
+  },
+  "001cbd68": {
+   "name": "RotCheck",
+   "address": "0x1cbd68",
+   "size": 216,
+   "file": "src/ingame/map/furn_spe/furn_spe.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.333336
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.296295
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 85.333336
+     }
+    }
+   }
+  },
+  "001cc1b0": {
+   "name": "FACheckSquareArea",
+   "address": "0x1cc1b0",
+   "size": 508,
+   "file": "src/ingame/map/furn_spe/furn_spe.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.031498
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 59.031498
+     }
+    }
+   }
+  },
+  "001cde78": {
+   "name": "ReleaseAdjValG",
+   "address": "0x1cde78",
+   "size": 60,
+   "file": "src/ingame/map/furn_spe/adj_valg.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.666664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.666664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.666664
+     }
+    }
+   }
+  },
+  "001ce378": {
+   "name": "ItemInitAtMenuOpen",
+   "address": "0x1ce378",
+   "size": 56,
+   "file": "src/ingame/menu/item.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.785713
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.785713
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 61.785713
+     }
+    }
+   }
+  },
+  "001cf3e0": {
+   "name": "IngameMenuItemEventOpenJudge",
+   "address": "0x1cf3e0",
+   "size": 148,
+   "file": "src/ingame/menu/item.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 54.027027
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 54.027027
+     }
+    }
+   }
+  },
+  "001d00d8": {
+   "name": "FilmAnime",
+   "address": "0x1d00d8",
+   "size": 712,
+   "file": "src/ingame/menu/item.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.58427
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 82.58427
+     }
+    }
+   }
+  },
+  "001d1030": {
+   "name": "MessageWindow",
+   "address": "0x1d1030",
+   "size": 884,
+   "file": "src/ingame/menu/item.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "001d6ed8": {
+   "name": "IngameAlbumDisp",
+   "address": "0x1d6ed8",
+   "size": 692,
+   "file": "src/ingame/menu/ig_album.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.6474
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 51.6474
+     }
+    }
+   }
+  },
+  "001d8ad8": {
+   "name": "DspMainMenu",
+   "address": "0x1d8ad8",
+   "size": 524,
+   "file": "src/ingame/menu/ig_album.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.58778
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 63.59542
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.58778
+     }
+    }
+   }
+  },
+  "001e4b00": {
+   "name": "SpdOptMain",
+   "address": "0x1e4b00",
+   "size": 268,
+   "file": "src/ingame/menu/ig_spd_menu.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     }
+    }
+   }
+  },
+  "001e59c0": {
+   "name": "ItemGetPad",
+   "address": "0x1e59c0",
+   "size": 348,
+   "file": "src/ingame/menu/item_get.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.770115
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.770115
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.770115
+     }
+    }
+   }
+  },
+  "001e7e98": {
+   "name": "DspFileOut",
+   "address": "0x1e7e98",
+   "size": 148,
+   "file": "src/ingame/menu/ig_file.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.16216
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001eef48": {
+   "name": "SrankCHK",
+   "address": "0x1eef48",
+   "size": 76,
+   "file": "src/ingame/menu/ig_rank.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.52631
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.52631
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 81.52631
+     }
+    }
+   }
+  },
+  "001f2d88": {
+   "name": "StartMapModeInit",
+   "address": "0x1f2d88",
+   "size": 112,
+   "file": "src/ingame/menu/ig_map.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 38.82143
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 38.82143
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 38.82143
+     }
+    }
+   }
+  },
+  "001f30f8": {
+   "name": "MapCntRenew",
+   "address": "0x1f30f8",
+   "size": 60,
+   "file": "src/ingame/menu/ig_map.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.933334
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.933334
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.933334
+     }
+    }
+   }
+  },
+  "001f91d8": {
+   "name": "SavePointMenuOpen",
+   "address": "0x1f91d8",
+   "size": 44,
+   "file": "src/ingame/menu/sp_menu.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "001f9318": {
+   "name": "BtlModSaveInit",
+   "address": "0x1f9318",
+   "size": 196,
+   "file": "src/ingame/menu/sp_menu.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.81633
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 67.81633
+     }
+    }
+   }
+  },
+  "001fe2b0": {
+   "name": "OpenBook",
+   "address": "0x1fe2b0",
+   "size": 472,
+   "file": "src/ingame/menu/sp_menu.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 18.152542
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 18.152542
+     }
+    }
+   }
+  },
+  "00201220": {
+   "name": "UncompressData",
+   "address": "0x201220",
+   "size": 144,
+   "file": "src/ingame/photo/pht_make.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 28.833334
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 28.833334
+     }
+    }
+   }
+  },
+  "00201648": {
+   "name": "CopyPhoto",
+   "address": "0x201648",
+   "size": 60,
+   "file": "src/ingame/photo/pht_make.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.666664
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.666664
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.666664
+     }
+    }
+   }
+  },
+  "00204898": {
+   "name": "DrawPicture",
+   "address": "0x204898",
+   "size": 52,
+   "file": "src/ingame/photo/pht_make.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00204b78": {
+   "name": "PlyrCondChk",
+   "address": "0x204b78",
+   "size": 332,
+   "file": "src/ingame/plyr/plyr_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 35.614456
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 35.614456
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 35.614456
+     }
+    }
+   }
+  },
+  "00205908": {
+   "name": "PlyrCamRotCngChk",
+   "address": "0x205908",
+   "size": 84,
+   "file": "src/ingame/plyr/plyr_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.42857
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 71.42857
+     }
+    }
+   }
+  },
+  "00205a60": {
+   "name": "FModeScreenEffect",
+   "address": "0x205a60",
+   "size": 488,
+   "file": "src/ingame/plyr/plyr_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.86885
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 68.86885
+     }
+    }
+   }
+  },
+  "002071c8": {
+   "name": "PSAchk3",
+   "address": "0x2071c8",
+   "size": 344,
+   "file": "src/ingame/plyr/plyr_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.802326
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.802326
+     }
+    }
+   }
+  },
+  "00208ed8": {
+   "name": "PhotoPointChkRare",
+   "address": "0x208ed8",
+   "size": 184,
+   "file": "src/ingame/plyr/plyr_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.32609
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 88.32609
+     }
+    }
+   }
+  },
+  "00209690": {
+   "name": "PhotoPointCulcRare",
+   "address": "0x209690",
+   "size": 344,
+   "file": "src/ingame/plyr/plyr_ctl.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.98837
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 66.98837
+     }
+    }
+   }
+  },
+  "0020e028": {
+   "name": "SceneTestMain",
+   "address": "0x20e028",
+   "size": 132,
+   "file": "src/outgame/scn_test.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.69697
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.69697
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.69697
+     }
+    }
+   }
+  },
+  "0020f5a0": {
+   "name": "RotVectorY",
+   "address": "0x20f5a0",
+   "size": 180,
+   "file": "src/outgame/scn_test.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 30.51111
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "00210ae8": {
+   "name": "SceneTestEneEffFire",
+   "address": "0x210ae8",
+   "size": 1016,
+   "file": "src/outgame/scn_test.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.1063
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 52.53937
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.1063
+     }
+    }
+   }
+  },
+  "00211370": {
+   "name": "SceneTestEneEffOthers",
+   "address": "0x211370",
+   "size": 792,
+   "file": "src/outgame/scn_test.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.19192
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 64.19192
+     }
+    }
+   }
+  },
+  "00215e48": {
+   "name": "SetPrePEImage",
+   "address": "0x215e48",
+   "size": 192,
+   "file": "src/graphics/graph2d/takep_pe.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.229164
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.229164
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.229164
+     }
+    }
+   }
+  },
+  "00217458": {
+   "name": "mcCtrlCheck",
+   "address": "0x217458",
+   "size": 556,
+   "file": "src/mc/mc_main.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 30.84892
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 30.84892
+     }
+    }
+   }
+  },
+  "0021a1e8": {
+   "name": "mcAcsFileReq",
+   "address": "0x21a1e8",
+   "size": 372,
+   "file": "src/mc/mc_exec.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.462364
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 50.462364
+     }
+    }
+   }
+  },
+  "0021ab48": {
+   "name": "strindex",
+   "address": "0x21ab48",
+   "size": 152,
+   "file": "src/mc/mc_exec.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.81579
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.81579
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 83.81579
+     }
+    }
+   }
+  },
+  "0021abe0": {
+   "name": "mcMakeSaveFile",
+   "address": "0x21abe0",
+   "size": 280,
+   "file": "src/mc/mc_exec.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.28571
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 87.28571
+     }
+    }
+   }
+  },
+  "0021b5b0": {
+   "name": "mcStartCheckSet",
+   "address": "0x21b5b0",
+   "size": 96,
+   "file": "src/mc/mc_start.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.833332
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 55.833332
+     }
+    }
+   }
+  },
+  "0021baf8": {
+   "name": "McAtSaveChk",
+   "address": "0x21baf8",
+   "size": 64,
+   "file": "src/mc/mc_at.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 48.75
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.9375
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.9375
+     }
+    }
+   }
+  },
+  "0021c988": {
+   "name": "FreeModeMain",
+   "address": "0x21c988",
+   "size": 784,
+   "file": "src/outgame/btl_mode/btl_menu.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.316326
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 49.316326
+     }
+    }
+   }
+  },
+  "0021d5c0": {
+   "name": "StageTitleLoad",
+   "address": "0x21d5c0",
+   "size": 544,
+   "file": "src/outgame/btl_mode/btl_menu.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.33088
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 72.33088
+     }
+    }
+   }
+  },
+  "0021dc20": {
+   "name": "LoadStoryWrk",
+   "address": "0x21dc20",
+   "size": 228,
+   "file": "src/outgame/btl_mode/btl_menu.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 23.350878
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 23.350878
+     }
+    }
+   }
+  },
+  "0021e510": {
+   "name": "BattleModeScoreRecord",
+   "address": "0x21e510",
+   "size": 32,
+   "file": "src/outgame/btl_mode/btl_mode.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 75.0
+     }
+    }
+   }
+  },
+  "0021e578": {
+   "name": "CheckClearAll",
+   "address": "0x21e578",
+   "size": 68,
+   "file": "src/outgame/btl_mode/btl_mode.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.64706
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 39.64706
+     }
+    }
+   }
+  },
+  "0021e8f0": {
+   "name": "ReviveWanderSoul",
+   "address": "0x21e8f0",
+   "size": 112,
+   "file": "src/ingame/event/wan_soul.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 80.0
+     }
+    }
+   }
+  },
+  "0021ea98": {
+   "name": "RegisterWansoEffect",
+   "address": "0x21ea98",
+   "size": 96,
+   "file": "src/ingame/event/wan_soul.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   }
+  },
+  "0021ec58": {
+   "name": "WanSoTouchJudge",
+   "address": "0x21ec58",
+   "size": 96,
+   "file": "src/ingame/event/wan_soul.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.0
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 86.458336
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 95.0
+     }
+    }
+   }
+  }
+ }
+}

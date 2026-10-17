@@ -1,0 +1,833 @@
+{
+ "schema": "locals-truth/1",
+ "reports": [
+  {
+   "image": "ps2-capcom-fighting-evolution",
+   "reader": "dwarf1-python",
+   "truth_functions": 5221,
+   "tools": {
+    "ours:default": {
+     "all_scored": {
+      "functions": 199,
+      "truth_locals": 130,
+      "printed_locals": 574,
+      "count_exact": 0.3065,
+      "over": 0.6734,
+      "under": 0.0201,
+      "mean_abs_error": 2.281,
+      "class_recall": 0.4692,
+      "class_exact_recall": 0.4692,
+      "class_precision": 0.1063,
+      "stack": {
+       "functions": 199,
+       "truth_slots": 11,
+       "printed_slots": 125,
+       "matched": 11,
+       "recall": 1.0,
+       "precision": 0.088,
+       "pairs": 7,
+       "pairs_class_exact": 1
+      },
+      "returns": {
+       "exact": 178,
+       "partial": 0,
+       "wrong": 21,
+       "unscored": 0,
+       "exact_rate": 0.8945
+      }
+     },
+     "common": {
+      "functions": 146,
+      "truth_locals": 117,
+      "printed_locals": 495,
+      "count_exact": 0.2534,
+      "over": 0.7329,
+      "under": 0.0137,
+      "mean_abs_error": 2.616,
+      "class_recall": 0.4872,
+      "class_exact_recall": 0.4872,
+      "class_precision": 0.1152,
+      "stack": {
+       "functions": 146,
+       "truth_slots": 11,
+       "printed_slots": 125,
+       "matched": 11,
+       "recall": 1.0,
+       "precision": 0.088,
+       "pairs": 7,
+       "pairs_class_exact": 1
+      },
+      "returns": {
+       "exact": 129,
+       "partial": 0,
+       "wrong": 17,
+       "unscored": 0,
+       "exact_rate": 0.8836
+      }
+     }
+    },
+    "ours:infer-prototypes": {
+     "all_scored": {
+      "functions": 199,
+      "truth_locals": 130,
+      "printed_locals": 496,
+      "count_exact": 0.402,
+      "over": 0.5779,
+      "under": 0.0201,
+      "mean_abs_error": 1.889,
+      "class_recall": 0.5385,
+      "class_exact_recall": 0.5385,
+      "class_precision": 0.1411,
+      "stack": {
+       "functions": 199,
+       "truth_slots": 11,
+       "printed_slots": 118,
+       "matched": 11,
+       "recall": 1.0,
+       "precision": 0.0932,
+       "pairs": 7,
+       "pairs_class_exact": 1
+      },
+      "returns": {
+       "exact": 166,
+       "partial": 0,
+       "wrong": 33,
+       "unscored": 0,
+       "exact_rate": 0.8342
+      }
+     },
+     "common": {
+      "functions": 146,
+      "truth_locals": 117,
+      "printed_locals": 424,
+      "count_exact": 0.3767,
+      "over": 0.6027,
+      "under": 0.0205,
+      "mean_abs_error": 2.144,
+      "class_recall": 0.5641,
+      "class_exact_recall": 0.5641,
+      "class_precision": 0.1557,
+      "stack": {
+       "functions": 146,
+       "truth_slots": 11,
+       "printed_slots": 118,
+       "matched": 11,
+       "recall": 1.0,
+       "precision": 0.0932,
+       "pairs": 7,
+       "pairs_class_exact": 1
+      },
+      "returns": {
+       "exact": 121,
+       "partial": 0,
+       "wrong": 25,
+       "unscored": 0,
+       "exact_rate": 0.8288
+      }
+     }
+    },
+    "stock": {
+     "all_scored": {
+      "functions": 147,
+      "truth_locals": 121,
+      "printed_locals": 506,
+      "count_exact": 0.2517,
+      "over": 0.7347,
+      "under": 0.0136,
+      "mean_abs_error": 2.646,
+      "class_recall": 0.4959,
+      "class_exact_recall": 0.4876,
+      "class_precision": 0.1186,
+      "stack": {
+       "functions": 147,
+       "truth_slots": 11,
+       "printed_slots": 125,
+       "matched": 11,
+       "recall": 1.0,
+       "precision": 0.088,
+       "pairs": 11,
+       "pairs_class_exact": 5
+      },
+      "returns": {
+       "exact": 90,
+       "partial": 7,
+       "wrong": 50,
+       "unscored": 0,
+       "exact_rate": 0.6122
+      }
+     },
+     "common": {
+      "functions": 146,
+      "truth_locals": 117,
+      "printed_locals": 498,
+      "count_exact": 0.2534,
+      "over": 0.7329,
+      "under": 0.0137,
+      "mean_abs_error": 2.637,
+      "class_recall": 0.5128,
+      "class_exact_recall": 0.5043,
+      "class_precision": 0.1205,
+      "stack": {
+       "functions": 146,
+       "truth_slots": 11,
+       "printed_slots": 125,
+       "matched": 11,
+       "recall": 1.0,
+       "precision": 0.088,
+       "pairs": 11,
+       "pairs_class_exact": 5
+      },
+      "returns": {
+       "exact": 89,
+       "partial": 7,
+       "wrong": 50,
+       "unscored": 0,
+       "exact_rate": 0.6096
+      }
+     }
+    }
+   },
+   "common_functions": 146
+  },
+  {
+   "image": "ps2-dungeon-game",
+   "reader": "readelf",
+   "truth_functions": 20,
+   "tools": {
+    "ours:default": {
+     "all_scored": {
+      "functions": 20,
+      "truth_locals": 156,
+      "printed_locals": 128,
+      "count_exact": 0.3,
+      "over": 0.5,
+      "under": 0.2,
+      "mean_abs_error": 4.4,
+      "class_recall": 0.3269,
+      "class_exact_recall": 0.3269,
+      "class_precision": 0.3984,
+      "stack": {
+       "functions": 20,
+       "truth_slots": 28,
+       "printed_slots": 44,
+       "matched": 28,
+       "recall": 1.0,
+       "precision": 0.6364,
+       "pairs": 13,
+       "pairs_class_exact": 0
+      },
+      "returns": {
+       "exact": 8,
+       "partial": 0,
+       "wrong": 12,
+       "unscored": 0,
+       "exact_rate": 0.4
+      }
+     },
+     "common": {
+      "functions": 20,
+      "truth_locals": 156,
+      "printed_locals": 128,
+      "count_exact": 0.3,
+      "over": 0.5,
+      "under": 0.2,
+      "mean_abs_error": 4.4,
+      "class_recall": 0.3269,
+      "class_exact_recall": 0.3269,
+      "class_precision": 0.3984,
+      "stack": {
+       "functions": 20,
+       "truth_slots": 28,
+       "printed_slots": 44,
+       "matched": 28,
+       "recall": 1.0,
+       "precision": 0.6364,
+       "pairs": 13,
+       "pairs_class_exact": 0
+      },
+      "returns": {
+       "exact": 8,
+       "partial": 0,
+       "wrong": 12,
+       "unscored": 0,
+       "exact_rate": 0.4
+      }
+     }
+    },
+    "ours:infer-prototypes": {
+     "all_scored": {
+      "functions": 20,
+      "truth_locals": 156,
+      "printed_locals": 129,
+      "count_exact": 0.25,
+      "over": 0.55,
+      "under": 0.2,
+      "mean_abs_error": 4.45,
+      "class_recall": 0.3333,
+      "class_exact_recall": 0.3333,
+      "class_precision": 0.4031,
+      "stack": {
+       "functions": 20,
+       "truth_slots": 28,
+       "printed_slots": 44,
+       "matched": 28,
+       "recall": 1.0,
+       "precision": 0.6364,
+       "pairs": 16,
+       "pairs_class_exact": 2
+      },
+      "returns": {
+       "exact": 9,
+       "partial": 0,
+       "wrong": 11,
+       "unscored": 0,
+       "exact_rate": 0.45
+      }
+     },
+     "common": {
+      "functions": 20,
+      "truth_locals": 156,
+      "printed_locals": 129,
+      "count_exact": 0.25,
+      "over": 0.55,
+      "under": 0.2,
+      "mean_abs_error": 4.45,
+      "class_recall": 0.3333,
+      "class_exact_recall": 0.3333,
+      "class_precision": 0.4031,
+      "stack": {
+       "functions": 20,
+       "truth_slots": 28,
+       "printed_slots": 44,
+       "matched": 28,
+       "recall": 1.0,
+       "precision": 0.6364,
+       "pairs": 16,
+       "pairs_class_exact": 2
+      },
+      "returns": {
+       "exact": 9,
+       "partial": 0,
+       "wrong": 11,
+       "unscored": 0,
+       "exact_rate": 0.45
+      }
+     }
+    },
+    "stock": {
+     "all_scored": {
+      "functions": 20,
+      "truth_locals": 156,
+      "printed_locals": 128,
+      "count_exact": 0.3,
+      "over": 0.5,
+      "under": 0.2,
+      "mean_abs_error": 4.4,
+      "class_recall": 0.3526,
+      "class_exact_recall": 0.3462,
+      "class_precision": 0.4297,
+      "stack": {
+       "functions": 20,
+       "truth_slots": 28,
+       "printed_slots": 44,
+       "matched": 28,
+       "recall": 1.0,
+       "precision": 0.6364,
+       "pairs": 28,
+       "pairs_class_exact": 14
+      },
+      "returns": {
+       "exact": 5,
+       "partial": 1,
+       "wrong": 14,
+       "unscored": 0,
+       "exact_rate": 0.25
+      }
+     },
+     "common": {
+      "functions": 20,
+      "truth_locals": 156,
+      "printed_locals": 128,
+      "count_exact": 0.3,
+      "over": 0.5,
+      "under": 0.2,
+      "mean_abs_error": 4.4,
+      "class_recall": 0.3526,
+      "class_exact_recall": 0.3462,
+      "class_precision": 0.4297,
+      "stack": {
+       "functions": 20,
+       "truth_slots": 28,
+       "printed_slots": 44,
+       "matched": 28,
+       "recall": 1.0,
+       "precision": 0.6364,
+       "pairs": 28,
+       "pairs_class_exact": 14
+      },
+      "returns": {
+       "exact": 5,
+       "partial": 1,
+       "wrong": 14,
+       "unscored": 0,
+       "exact_rate": 0.25
+      }
+     }
+    }
+   },
+   "common_functions": 20
+  },
+  {
+   "image": "psp-puzzle-bobble-pocket",
+   "reader": "readelf",
+   "truth_functions": 145,
+   "tools": {
+    "ours:default": {
+     "all_scored": {
+      "functions": 144,
+      "truth_locals": 647,
+      "printed_locals": 875,
+      "count_exact": 0.3333,
+      "over": 0.4444,
+      "under": 0.2222,
+      "mean_abs_error": 3.194,
+      "class_recall": 0.5348,
+      "class_exact_recall": 0.5348,
+      "class_precision": 0.3954,
+      "stack": {
+       "functions": 144,
+       "truth_slots": 138,
+       "printed_slots": 782,
+       "matched": 133,
+       "recall": 0.9638,
+       "precision": 0.1701,
+       "pairs": 4,
+       "pairs_class_exact": 3
+      },
+      "returns": {
+       "exact": 56,
+       "partial": 0,
+       "wrong": 88,
+       "unscored": 0,
+       "exact_rate": 0.3889
+      }
+     },
+     "common": {
+      "functions": 144,
+      "truth_locals": 647,
+      "printed_locals": 875,
+      "count_exact": 0.3333,
+      "over": 0.4444,
+      "under": 0.2222,
+      "mean_abs_error": 3.194,
+      "class_recall": 0.5348,
+      "class_exact_recall": 0.5348,
+      "class_precision": 0.3954,
+      "stack": {
+       "functions": 144,
+       "truth_slots": 138,
+       "printed_slots": 782,
+       "matched": 133,
+       "recall": 0.9638,
+       "precision": 0.1701,
+       "pairs": 4,
+       "pairs_class_exact": 3
+      },
+      "returns": {
+       "exact": 56,
+       "partial": 0,
+       "wrong": 88,
+       "unscored": 0,
+       "exact_rate": 0.3889
+      }
+     }
+    },
+    "ours:infer-prototypes": {
+     "all_scored": {
+      "functions": 144,
+      "truth_locals": 647,
+      "printed_locals": 881,
+      "count_exact": 0.3264,
+      "over": 0.4514,
+      "under": 0.2222,
+      "mean_abs_error": 3.319,
+      "class_recall": 0.5301,
+      "class_exact_recall": 0.5301,
+      "class_precision": 0.3893,
+      "stack": {
+       "functions": 144,
+       "truth_slots": 138,
+       "printed_slots": 783,
+       "matched": 135,
+       "recall": 0.9783,
+       "precision": 0.1724,
+       "pairs": 8,
+       "pairs_class_exact": 4
+      },
+      "returns": {
+       "exact": 68,
+       "partial": 0,
+       "wrong": 76,
+       "unscored": 0,
+       "exact_rate": 0.4722
+      }
+     },
+     "common": {
+      "functions": 144,
+      "truth_locals": 647,
+      "printed_locals": 881,
+      "count_exact": 0.3264,
+      "over": 0.4514,
+      "under": 0.2222,
+      "mean_abs_error": 3.319,
+      "class_recall": 0.5301,
+      "class_exact_recall": 0.5301,
+      "class_precision": 0.3893,
+      "stack": {
+       "functions": 144,
+       "truth_slots": 138,
+       "printed_slots": 783,
+       "matched": 135,
+       "recall": 0.9783,
+       "precision": 0.1724,
+       "pairs": 8,
+       "pairs_class_exact": 4
+      },
+      "returns": {
+       "exact": 68,
+       "partial": 0,
+       "wrong": 76,
+       "unscored": 0,
+       "exact_rate": 0.4722
+      }
+     }
+    }
+   },
+   "common_functions": 144
+  },
+  {
+   "image": "psp-puzzle-bobble-pocket-symtab",
+   "reader": "readelf",
+   "truth_functions": 145,
+   "tools": {
+    "ours:default": {
+     "all_scored": {
+      "functions": 130,
+      "truth_locals": 631,
+      "printed_locals": 852,
+      "count_exact": 0.2923,
+      "over": 0.4538,
+      "under": 0.2538,
+      "mean_abs_error": 3.5,
+      "class_recall": 0.5325,
+      "class_exact_recall": 0.5325,
+      "class_precision": 0.3944,
+      "stack": {
+       "functions": 130,
+       "truth_slots": 135,
+       "printed_slots": 738,
+       "matched": 130,
+       "recall": 0.963,
+       "precision": 0.1762,
+       "pairs": 15,
+       "pairs_class_exact": 8
+      },
+      "returns": {
+       "exact": 48,
+       "partial": 0,
+       "wrong": 82,
+       "unscored": 0,
+       "exact_rate": 0.3692
+      }
+     },
+     "common": {
+      "functions": 130,
+      "truth_locals": 631,
+      "printed_locals": 852,
+      "count_exact": 0.2923,
+      "over": 0.4538,
+      "under": 0.2538,
+      "mean_abs_error": 3.5,
+      "class_recall": 0.5325,
+      "class_exact_recall": 0.5325,
+      "class_precision": 0.3944,
+      "stack": {
+       "functions": 130,
+       "truth_slots": 135,
+       "printed_slots": 738,
+       "matched": 130,
+       "recall": 0.963,
+       "precision": 0.1762,
+       "pairs": 15,
+       "pairs_class_exact": 8
+      },
+      "returns": {
+       "exact": 48,
+       "partial": 0,
+       "wrong": 82,
+       "unscored": 0,
+       "exact_rate": 0.3692
+      }
+     }
+    },
+    "ours:infer-prototypes": {
+     "all_scored": {
+      "functions": 130,
+      "truth_locals": 631,
+      "printed_locals": 949,
+      "count_exact": 0.2846,
+      "over": 0.4923,
+      "under": 0.2231,
+      "mean_abs_error": 4.246,
+      "class_recall": 0.5341,
+      "class_exact_recall": 0.5341,
+      "class_precision": 0.3551,
+      "stack": {
+       "functions": 130,
+       "truth_slots": 135,
+       "printed_slots": 739,
+       "matched": 132,
+       "recall": 0.9778,
+       "precision": 0.1786,
+       "pairs": 19,
+       "pairs_class_exact": 9
+      },
+      "returns": {
+       "exact": 59,
+       "partial": 0,
+       "wrong": 71,
+       "unscored": 0,
+       "exact_rate": 0.4538
+      }
+     },
+     "common": {
+      "functions": 130,
+      "truth_locals": 631,
+      "printed_locals": 949,
+      "count_exact": 0.2846,
+      "over": 0.4923,
+      "under": 0.2231,
+      "mean_abs_error": 4.246,
+      "class_recall": 0.5341,
+      "class_exact_recall": 0.5341,
+      "class_precision": 0.3551,
+      "stack": {
+       "functions": 130,
+       "truth_slots": 135,
+       "printed_slots": 739,
+       "matched": 132,
+       "recall": 0.9778,
+       "precision": 0.1786,
+       "pairs": 19,
+       "pairs_class_exact": 9
+      },
+      "returns": {
+       "exact": 59,
+       "partial": 0,
+       "wrong": 71,
+       "unscored": 0,
+       "exact_rate": 0.4538
+      }
+     }
+    }
+   },
+   "common_functions": 130
+  },
+  {
+   "image": "gba-pokeemerald",
+   "reader": "pyelftools-tolerant",
+   "truth_functions": 15678,
+   "tools": {
+    "ours:default": {
+     "all_scored": {
+      "functions": 200,
+      "truth_locals": 184,
+      "printed_locals": 455,
+      "count_exact": 0.34,
+      "over": 0.625,
+      "under": 0.035,
+      "mean_abs_error": 1.475,
+      "class_recall": 0.4946,
+      "class_exact_recall": 0.4946,
+      "class_precision": 0.2,
+      "stack": {
+       "functions": 182,
+       "truth_slots": 0,
+       "printed_slots": 42,
+       "matched": 0,
+       "recall": null,
+       "precision": 0.0,
+       "pairs": 0,
+       "pairs_class_exact": 0
+      },
+      "returns": {
+       "exact": 167,
+       "partial": 0,
+       "wrong": 33,
+       "unscored": 0,
+       "exact_rate": 0.835
+      }
+     },
+     "common": {
+      "functions": 200,
+      "truth_locals": 184,
+      "printed_locals": 455,
+      "count_exact": 0.34,
+      "over": 0.625,
+      "under": 0.035,
+      "mean_abs_error": 1.475,
+      "class_recall": 0.4946,
+      "class_exact_recall": 0.4946,
+      "class_precision": 0.2,
+      "stack": {
+       "functions": 182,
+       "truth_slots": 0,
+       "printed_slots": 42,
+       "matched": 0,
+       "recall": null,
+       "precision": 0.0,
+       "pairs": 0,
+       "pairs_class_exact": 0
+      },
+      "returns": {
+       "exact": 167,
+       "partial": 0,
+       "wrong": 33,
+       "unscored": 0,
+       "exact_rate": 0.835
+      }
+     }
+    }
+   },
+   "common_functions": 200
+  },
+  {
+   "image": "nds-pokeheartgold-arm9",
+   "reader": "readelf",
+   "truth_functions": 9530,
+   "tools": {
+    "ours:default": {
+     "all_scored": {
+      "functions": 200,
+      "truth_locals": 253,
+      "printed_locals": 443,
+      "count_exact": 0.47,
+      "over": 0.495,
+      "under": 0.035,
+      "mean_abs_error": 1.06,
+      "class_recall": 0.4348,
+      "class_exact_recall": 0.4348,
+      "class_precision": 0.2483,
+      "stack": {
+       "functions": 175,
+       "truth_slots": 0,
+       "printed_slots": 56,
+       "matched": 0,
+       "recall": null,
+       "precision": 0.0,
+       "pairs": 0,
+       "pairs_class_exact": 0
+      },
+      "returns": {
+       "exact": 112,
+       "partial": 0,
+       "wrong": 88,
+       "unscored": 0,
+       "exact_rate": 0.56
+      }
+     },
+     "common": {
+      "functions": 175,
+      "truth_locals": 214,
+      "printed_locals": 382,
+      "count_exact": 0.48,
+      "over": 0.4857,
+      "under": 0.0343,
+      "mean_abs_error": 1.063,
+      "class_recall": 0.4346,
+      "class_exact_recall": 0.4346,
+      "class_precision": 0.2435,
+      "stack": {
+       "functions": 153,
+       "truth_slots": 0,
+       "printed_slots": 53,
+       "matched": 0,
+       "recall": null,
+       "precision": 0.0,
+       "pairs": 0,
+       "pairs_class_exact": 0
+      },
+      "returns": {
+       "exact": 106,
+       "partial": 0,
+       "wrong": 69,
+       "unscored": 0,
+       "exact_rate": 0.6057
+      }
+     }
+    },
+    "stock": {
+     "all_scored": {
+      "functions": 175,
+      "truth_locals": 214,
+      "printed_locals": 386,
+      "count_exact": 0.4914,
+      "over": 0.4914,
+      "under": 0.0171,
+      "mean_abs_error": 1.051,
+      "class_recall": 0.4579,
+      "class_exact_recall": 0.3692,
+      "class_precision": 0.2539,
+      "stack": {
+       "functions": 153,
+       "truth_slots": 0,
+       "printed_slots": 0,
+       "matched": 0,
+       "recall": null,
+       "precision": null,
+       "pairs": 0,
+       "pairs_class_exact": 0
+      },
+      "returns": {
+       "exact": 90,
+       "partial": 43,
+       "wrong": 42,
+       "unscored": 0,
+       "exact_rate": 0.5143
+      }
+     },
+     "common": {
+      "functions": 175,
+      "truth_locals": 214,
+      "printed_locals": 386,
+      "count_exact": 0.4914,
+      "over": 0.4914,
+      "under": 0.0171,
+      "mean_abs_error": 1.051,
+      "class_recall": 0.4579,
+      "class_exact_recall": 0.3692,
+      "class_precision": 0.2539,
+      "stack": {
+       "functions": 153,
+       "truth_slots": 0,
+       "printed_slots": 0,
+       "matched": 0,
+       "recall": null,
+       "precision": null,
+       "pairs": 0,
+       "pairs_class_exact": 0
+      },
+      "returns": {
+       "exact": 90,
+       "partial": 43,
+       "wrong": 42,
+       "unscored": 0,
+       "exact_rate": 0.5143
+      }
+     }
+    }
+   },
+   "common_functions": 175
+  }
+ ]
+}

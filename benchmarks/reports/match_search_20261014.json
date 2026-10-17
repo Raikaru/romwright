@@ -1,0 +1,4155 @@
+{
+ "schema": "match-search/1",
+ "generated": "2026-10-14T19:34:46Z",
+ "budget": 24,
+ "tag": "m1",
+ "ghidra_opt_sha256": "486ace43c12ed3017508f527344dd06552b7ee62304c861566430ca18074ff94",
+ "lanes": [
+  {
+   "lane": "dds",
+   "harness": "m22-003",
+   "game": "ps2-digital-devil-saga",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.224
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.224
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 64,
+    "compiled": 200,
+    "mean_percent": 78.792
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 51,
+    "compiled": 192,
+    "mean_percent": 73.827
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 48,
+    "compiled": 192,
+    "mean_percent": 72.476
+   },
+   "functions_searched": 139,
+   "functions_improved": 37,
+   "newly_exact": 3,
+   "improved_percent_points": 313.624,
+   "winners": {
+    "datatype=off": 13,
+    "structuring=none": 10,
+    "maxref=1": 6,
+    "structuring=none+datatype=off": 2,
+    "maxref=1+datatype=off": 2,
+    "structuring=none+adjacent=off+datatype=off": 1,
+    "maxref=3": 1,
+    "datatype=off+structuring=none": 1,
+    "adjacent=off": 1
+   },
+   "searched_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 58,
+    "length differs: control flow (branches, calls)": 38,
+    "same length, many instructions differ": 24,
+    "same instructions, different order (scheduling)": 4,
+    "single instruction": 3,
+    "register allocation and stack layout": 3,
+    "few instructions differ (<= 4)": 3,
+    "length differs: memory accesses (temporaries, spills, widths)": 2,
+    "register allocation": 2,
+    "length differs: floating-point or vector sequence": 1,
+    "length differs: few instructions (<= 4)": 1
+   },
+   "improved_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 20,
+    "length differs: control flow (branches, calls)": 11,
+    "same length, many instructions differ": 4,
+    "same instructions, different order (scheduling)": 1,
+    "register allocation": 1
+   },
+   "decompiles": 2051,
+   "compiles": 310,
+   "search_seconds_sum": 515.3,
+   "wall_seconds_default_arm": 221,
+   "wall_seconds_search_arm": 787,
+   "improved": [
+    {
+     "name": "ptyAnyUnitFlagMatch",
+     "address": "0x119e88",
+     "variant": "structuring=none",
+     "from": 65.714,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 112
+    },
+    {
+     "name": "sndAddSourceReferences",
+     "address": "0x1f1c78",
+     "variant": "maxref=1",
+     "from": 88.842,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 76
+    },
+    {
+     "name": "btlReleaseModelEntry",
+     "address": "0x211390",
+     "variant": "datatype=off",
+     "from": 99.646,
+     "to": 99.958,
+     "exact_gained": true,
+     "size": 192
+    },
+    {
+     "name": "fldReleaseTextureSlots",
+     "address": "0x147580",
+     "variant": "maxref=1",
+     "from": 30.622,
+     "to": 58.444,
+     "exact_gained": false,
+     "size": 180
+    },
+    {
+     "name": "func_00205EF8",
+     "address": "0x205ef8",
+     "variant": "structuring=none+datatype=off",
+     "from": 1.295,
+     "to": 26.734,
+     "exact_gained": false,
+     "size": 556
+    },
+    {
+     "name": "btlAverageCurrentValueForMask",
+     "address": "0x1a92e8",
+     "variant": "structuring=none+adjacent=off+datatype=off",
+     "from": 65.444,
+     "to": 85.667,
+     "exact_gained": false,
+     "size": 180
+    },
+    {
+     "name": "effFlashOrbitArcSetParticleColors",
+     "address": "0x16c3c0",
+     "variant": "datatype=off",
+     "from": 72.75,
+     "to": 92.333,
+     "exact_gained": false,
+     "size": 240
+    },
+    {
+     "name": "effCreateSurfaceNodeForGrid",
+     "address": "0x2a5a58",
+     "variant": "structuring=none",
+     "from": 46.286,
+     "to": 64.5,
+     "exact_gained": false,
+     "size": 56
+    },
+    {
+     "name": "evtUpdateMessageValueDialog",
+     "address": "0x239148",
+     "variant": "structuring=none",
+     "from": 49.154,
+     "to": 65.015,
+     "exact_gained": false,
+     "size": 520
+    },
+    {
+     "name": "evtDrawHeapUsageOverlay",
+     "address": "0x10b428",
+     "variant": "maxref=1",
+     "from": 46.461,
+     "to": 60.947,
+     "exact_gained": false,
+     "size": 304
+    },
+    {
+     "name": "fileSlotSelectPollClear",
+     "address": "0x28b9f8",
+     "variant": "structuring=none",
+     "from": 21.796,
+     "to": 36.265,
+     "exact_gained": false,
+     "size": 196
+    },
+    {
+     "name": "sndApplyToActiveActors",
+     "address": "0x1f1b28",
+     "variant": "structuring=none",
+     "from": 60.788,
+     "to": 73.455,
+     "exact_gained": false,
+     "size": 132
+    },
+    {
+     "name": "btlCommandTaskStartEffects",
+     "address": "0x1ceb80",
+     "variant": "structuring=none",
+     "from": 39.017,
+     "to": 51.59,
+     "exact_gained": false,
+     "size": 468
+    },
+    {
+     "name": "scrFindSlot",
+     "address": "0x2cdc40",
+     "variant": "maxref=1",
+     "from": 47.438,
+     "to": 58.688,
+     "exact_gained": false,
+     "size": 64
+    },
+    {
+     "name": "effInitExpandRingPacketSchedule",
+     "address": "0x1565e0",
+     "variant": "structuring=none",
+     "from": 1.321,
+     "to": 12.107,
+     "exact_gained": false,
+     "size": 112
+    },
+    {
+     "name": "func_00195CD8",
+     "address": "0x195cd8",
+     "variant": "maxref=1",
+     "from": 53.85,
+     "to": 62.833,
+     "exact_gained": false,
+     "size": 240
+    },
+    {
+     "name": "itfPanelStartEntry",
+     "address": "0x19ad50",
+     "variant": "structuring=none",
+     "from": 63.103,
+     "to": 72.077,
+     "exact_gained": false,
+     "size": 156
+    },
+    {
+     "name": "func_002738A0",
+     "address": "0x2738a0",
+     "variant": "structuring=none+datatype=off",
+     "from": 82.0,
+     "to": 88.646,
+     "exact_gained": false,
+     "size": 396
+    },
+    {
+     "name": "sdfTexCreateFromFileHeader",
+     "address": "0x2d30c8",
+     "variant": "datatype=off",
+     "from": 74.786,
+     "to": 81.188,
+     "exact_gained": false,
+     "size": 448
+    },
+    {
+     "name": "func_002D1D80",
+     "address": "0x2d1d80",
+     "variant": "maxref=1+datatype=off",
+     "from": 49.032,
+     "to": 53.859,
+     "exact_gained": false,
+     "size": 624
+    },
+    {
+     "name": "func_0020FC48",
+     "address": "0x20fc48",
+     "variant": "datatype=off+structuring=none",
+     "from": 78.948,
+     "to": 82.881,
+     "exact_gained": false,
+     "size": 776
+    },
+    {
+     "name": "func_001E6260",
+     "address": "0x1e6260",
+     "variant": "maxref=3",
+     "from": 69.424,
+     "to": 73.136,
+     "exact_gained": false,
+     "size": 264
+    },
+    {
+     "name": "effSeedParticleSpanParameters",
+     "address": "0x2b11a8",
+     "variant": "maxref=1+datatype=off",
+     "from": 84.88,
+     "to": 88.547,
+     "exact_gained": false,
+     "size": 300
+    },
+    {
+     "name": "mnuInitializePanelGroupGridSlots",
+     "address": "0x2848e0",
+     "variant": "datatype=off",
+     "from": 71.657,
+     "to": 75.259,
+     "exact_gained": false,
+     "size": 432
+    },
+    {
+     "name": "func_00243BF0",
+     "address": "0x243bf0",
+     "variant": "datatype=off",
+     "from": 89.962,
+     "to": 93.019,
+     "exact_gained": false,
+     "size": 212
+    },
+    {
+     "name": "parDecreaseSymmetricCellAlpha",
+     "address": "0x15ccd0",
+     "variant": "maxref=1",
+     "from": 6.127,
+     "to": 8.225,
+     "exact_gained": false,
+     "size": 284
+    },
+    {
+     "name": "itfReleasePoolNode",
+     "address": "0x198528",
+     "variant": "datatype=off",
+     "from": 94.667,
+     "to": 96.571,
+     "exact_gained": false,
+     "size": 84
+    },
+    {
+     "name": "sdfParseAssetParameterFlags",
+     "address": "0x2da830",
+     "variant": "datatype=off",
+     "from": 0.0,
+     "to": 1.661,
+     "exact_gained": false,
+     "size": 460
+    },
+    {
+     "name": "func_0016F7B0",
+     "address": "0x16f7b0",
+     "variant": "datatype=off",
+     "from": 65.023,
+     "to": 66.308,
+     "exact_gained": false,
+     "size": 856
+    },
+    {
+     "name": "brsApplyPartyRewards",
+     "address": "0x262148",
+     "variant": "datatype=off",
+     "from": 82.556,
+     "to": 83.6,
+     "exact_gained": false,
+     "size": 360
+    },
+    {
+     "name": "itfBuildPanelBorderVertexGrid",
+     "address": "0x199b80",
+     "variant": "datatype=off",
+     "from": 74.813,
+     "to": 75.473,
+     "exact_gained": false,
+     "size": 364
+    },
+    {
+     "name": "sdfInitializeVuWorkParameters",
+     "address": "0x2ddf58",
+     "variant": "adjacent=off",
+     "from": 87.045,
+     "to": 87.5,
+     "exact_gained": false,
+     "size": 88
+    },
+    {
+     "name": "sdfRemoveAndReindexListNode",
+     "address": "0x2caec8",
+     "variant": "structuring=none",
+     "from": 72.767,
+     "to": 73.14,
+     "exact_gained": false,
+     "size": 172
+    },
+    {
+     "name": "func_00239E30",
+     "address": "0x239e30",
+     "variant": "structuring=none",
+     "from": 9.473,
+     "to": 9.832,
+     "exact_gained": false,
+     "size": 668
+    },
+    {
+     "name": "mnuDrawTimedPrompt",
+     "address": "0x23b8f8",
+     "variant": "datatype=off",
+     "from": 86.875,
+     "to": 87.232,
+     "exact_gained": false,
+     "size": 224
+    },
+    {
+     "name": "dds3AdminActivateRequestedMode",
+     "address": "0x102ae0",
+     "variant": "datatype=off",
+     "from": 92.074,
+     "to": 92.34,
+     "exact_gained": false,
+     "size": 376
+    },
+    {
+     "name": "func_0024EC08",
+     "address": "0x24ec08",
+     "variant": "datatype=off",
+     "from": 39.229,
+     "to": 39.459,
+     "exact_gained": false,
+     "size": 436
+    }
+   ],
+   "tools": [
+    "ee-gcc2.96"
+   ]
+  },
+  {
+   "lane": "rc",
+   "harness": "m22-003",
+   "game": "ps2-ratchet-clank",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 26,
+    "compiled": 200,
+    "mean_percent": 68.158
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 26,
+    "compiled": 200,
+    "mean_percent": 68.158
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 27,
+    "compiled": 200,
+    "mean_percent": 70.38
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 24,
+    "compiled": 192,
+    "mean_percent": 67.384
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 23,
+    "compiled": 192,
+    "mean_percent": 65.262
+   },
+   "functions_searched": 174,
+   "functions_improved": 52,
+   "newly_exact": 1,
+   "improved_percent_points": 444.504,
+   "winners": {
+    "structuring=none": 13,
+    "datatype=off": 9,
+    "maxref=1": 8,
+    "maxref=1+datatype=off": 3,
+    "maxref=3": 3,
+    "calls=cast": 2,
+    "structuring=none+maxref=1": 1,
+    "structuring=none+maxref=4": 1,
+    "maxdup=3": 1,
+    "maxref=1+adjacent=off": 1,
+    "structuring=no_arm_order+maxref=1": 1,
+    "structuring=none+copy=off": 1,
+    "copy=off+datatype=off": 1,
+    "maxdup=4+structuring=none": 1,
+    "maxref=1+calls=cast": 1,
+    "structuring=none+maxdup=3+datatype=off": 1,
+    "structuring=none+dominant=off": 1,
+    "maxdup=4": 1,
+    "structuring=none+datatype=off": 1,
+    "adjacent=off": 1
+   },
+   "searched_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 107,
+    "length differs: control flow (branches, calls)": 23,
+    "same length, many instructions differ": 22,
+    "length differs: memory accesses (temporaries, spills, widths)": 12,
+    "same instructions, different order (scheduling)": 4,
+    "register allocation": 2,
+    "single instruction": 1,
+    "length differs: extension instructions (type or cast)": 1,
+    "register allocation and stack layout": 1,
+    "length differs: nops or register copies (allocation or scheduling)": 1
+   },
+   "improved_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 36,
+    "length differs: control flow (branches, calls)": 7,
+    "same length, many instructions differ": 6,
+    "length differs: memory accesses (temporaries, spills, widths)": 2,
+    "register allocation": 1
+   },
+   "decompiles": 2552,
+   "compiles": 351,
+   "search_seconds_sum": 180.8,
+   "wall_seconds_default_arm": 76,
+   "wall_seconds_search_arm": 259,
+   "improved": [
+    {
+     "name": "read",
+     "address": "0x118d88",
+     "variant": "structuring=none",
+     "from": 91.0,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 116
+    },
+    {
+     "name": "sceIpuSync",
+     "address": "0x12ce58",
+     "variant": "structuring=none",
+     "from": 1.346,
+     "to": 56.731,
+     "exact_gained": false,
+     "size": 104
+    },
+    {
+     "name": "_sysbitJump",
+     "address": "0x12aab8",
+     "variant": "maxdup=4",
+     "from": 45.857,
+     "to": 88.571,
+     "exact_gained": false,
+     "size": 84
+    },
+    {
+     "name": "ConvertMultibyteCharacter",
+     "address": "0x115098",
+     "variant": "structuring=none",
+     "from": 28.333,
+     "to": 67.333,
+     "exact_gained": false,
+     "size": 60
+    },
+    {
+     "name": "__pack_d",
+     "address": "0x11f738",
+     "variant": "structuring=none+copy=off",
+     "from": 15.053,
+     "to": 42.867,
+     "exact_gained": false,
+     "size": 300
+    },
+    {
+     "name": "sceClose",
+     "address": "0x11bf08",
+     "variant": "structuring=none",
+     "from": 37.726,
+     "to": 61.0,
+     "exact_gained": false,
+     "size": 380
+    },
+    {
+     "name": "UpdateTempTrackData",
+     "address": "0x129088",
+     "variant": "structuring=none+dominant=off",
+     "from": 52.414,
+     "to": 71.724,
+     "exact_gained": false,
+     "size": 116
+    },
+    {
+     "name": "dptoli",
+     "address": "0x120238",
+     "variant": "maxdup=4+structuring=none",
+     "from": 23.865,
+     "to": 40.73,
+     "exact_gained": false,
+     "size": 148
+    },
+    {
+     "name": "_skipMB0",
+     "address": "0x127b40",
+     "variant": "structuring=none+maxdup=3+datatype=off",
+     "from": 44.894,
+     "to": 61.085,
+     "exact_gained": false,
+     "size": 188
+    },
+    {
+     "name": "InitThread",
+     "address": "0x1192a0",
+     "variant": "datatype=off",
+     "from": 34.717,
+     "to": 49.717,
+     "exact_gained": false,
+     "size": 212
+    },
+    {
+     "name": "_pack_header",
+     "address": "0x12afc0",
+     "variant": "structuring=none",
+     "from": 87.179,
+     "to": 99.202,
+     "exact_gained": false,
+     "size": 336
+    },
+    {
+     "name": "dptoul",
+     "address": "0x1202d0",
+     "variant": "structuring=none",
+     "from": 9.425,
+     "to": 20.05,
+     "exact_gained": false,
+     "size": 160
+    },
+    {
+     "name": "fflush",
+     "address": "0x113968",
+     "variant": "structuring=none+maxref=1",
+     "from": 39.415,
+     "to": 49.754,
+     "exact_gained": false,
+     "size": 260
+    },
+    {
+     "name": "_decPicture",
+     "address": "0x1293f0",
+     "variant": "structuring=none",
+     "from": 56.412,
+     "to": 66.529,
+     "exact_gained": false,
+     "size": 204
+    },
+    {
+     "name": "_dualPrimeVector",
+     "address": "0x127480",
+     "variant": "maxref=3",
+     "from": 16.278,
+     "to": 26.392,
+     "exact_gained": false,
+     "size": 388
+    },
+    {
+     "name": "Dcmp",
+     "address": "0x115ce8",
+     "variant": "maxref=1+datatype=off",
+     "from": 74.923,
+     "to": 84.885,
+     "exact_gained": false,
+     "size": 104
+    },
+    {
+     "name": "_free_r",
+     "address": "0x113b70",
+     "variant": "structuring=none+maxref=4",
+     "from": 56.628,
+     "to": 66.377,
+     "exact_gained": false,
+     "size": 796
+    },
+    {
+     "name": "write",
+     "address": "0x118d08",
+     "variant": "structuring=none",
+     "from": 88.29,
+     "to": 96.71,
+     "exact_gained": false,
+     "size": 124
+    },
+    {
+     "name": "scePad2LinkDriver",
+     "address": "0x124ee0",
+     "variant": "maxref=1",
+     "from": 72.429,
+     "to": 79.381,
+     "exact_gained": false,
+     "size": 84
+    },
+    {
+     "name": "_decodeOrSkipField",
+     "address": "0x12bf60",
+     "variant": "structuring=none+datatype=off",
+     "from": 84.138,
+     "to": 89.885,
+     "exact_gained": false,
+     "size": 348
+    },
+    {
+     "name": "sceGsExecLoadImage",
+     "address": "0x122658",
+     "variant": "structuring=none",
+     "from": 29.158,
+     "to": 34.716,
+     "exact_gained": false,
+     "size": 380
+    },
+    {
+     "name": "mceStorePwd",
+     "address": "0x124038",
+     "variant": "structuring=none",
+     "from": 61.97,
+     "to": 67.455,
+     "exact_gained": false,
+     "size": 132
+    },
+    {
+     "name": "litodp",
+     "address": "0x120180",
+     "variant": "maxref=3",
+     "from": 50.674,
+     "to": 55.891,
+     "exact_gained": false,
+     "size": 184
+    },
+    {
+     "name": "__smakebuf",
+     "address": "0x114578",
+     "variant": "maxref=1+datatype=off",
+     "from": 68.19,
+     "to": 73.202,
+     "exact_gained": false,
+     "size": 336
+    },
+    {
+     "name": "__fixunsdfdi",
+     "address": "0x11e3d8",
+     "variant": "maxref=3",
+     "from": 66.288,
+     "to": 71.186,
+     "exact_gained": false,
+     "size": 236
+    },
+    {
+     "name": "_request_bind",
+     "address": "0x11af48",
+     "variant": "structuring=none",
+     "from": 77.227,
+     "to": 81.864,
+     "exact_gained": false,
+     "size": 176
+    },
+    {
+     "name": "sceWrite",
+     "address": "0x11c520",
+     "variant": "datatype=off",
+     "from": 60.42,
+     "to": 65.034,
+     "exact_gained": false,
+     "size": 704
+    },
+    {
+     "name": "FindKernelAddress",
+     "address": "0x11d740",
+     "variant": "structuring=none",
+     "from": 54.375,
+     "to": 58.75,
+     "exact_gained": false,
+     "size": 64
+    },
+    {
+     "name": "_malloc_trim_r",
+     "address": "0x113e90",
+     "variant": "calls=cast",
+     "from": 34.945,
+     "to": 39.121,
+     "exact_gained": false,
+     "size": 364
+    },
+    {
+     "name": "malloc_extend_top",
+     "address": "0x1146c8",
+     "variant": "maxdup=3",
+     "from": 69.785,
+     "to": 73.725,
+     "exact_gained": false,
+     "size": 596
+    },
+    {
+     "name": "sceMpegDemuxPssRing",
+     "address": "0x12abd0",
+     "variant": "maxref=1",
+     "from": 42.874,
+     "to": 46.547,
+     "exact_gained": false,
+     "size": 760
+    },
+    {
+     "name": "_strtol_r",
+     "address": "0x116a38",
+     "variant": "structuring=no_arm_order+maxref=1",
+     "from": 39.176,
+     "to": 42.634,
+     "exact_gained": false,
+     "size": 568
+    },
+    {
+     "name": "_fpadd_parts",
+     "address": "0x11f908",
+     "variant": "copy=off+datatype=off",
+     "from": 59.861,
+     "to": 63.201,
+     "exact_gained": false,
+     "size": 576
+    },
+    {
+     "name": "_multiply",
+     "address": "0x115840",
+     "variant": "maxref=1+adjacent=off",
+     "from": 76.705,
+     "to": 79.827,
+     "exact_gained": false,
+     "size": 556
+    },
+    {
+     "name": "sceCdReadClock",
+     "address": "0x121780",
+     "variant": "maxref=1+calls=cast",
+     "from": 35.726,
+     "to": 38.71,
+     "exact_gained": false,
+     "size": 248
+    },
+    {
+     "name": "quorem",
+     "address": "0x1124c0",
+     "variant": "maxref=1",
+     "from": 55.338,
+     "to": 58.195,
+     "exact_gained": false,
+     "size": 532
+    },
+    {
+     "name": "AddMpegCallback",
+     "address": "0x12bb10",
+     "variant": "maxref=1",
+     "from": 73.889,
+     "to": 76.667,
+     "exact_gained": false,
+     "size": 36
+    },
+    {
+     "name": "_sceSifSendCmd",
+     "address": "0x11a790",
+     "variant": "datatype=off",
+     "from": 81.208,
+     "to": 83.961,
+     "exact_gained": false,
+     "size": 308
+    },
+    {
+     "name": "__sfvwrite",
+     "address": "0x114060",
+     "variant": "maxref=1+datatype=off",
+     "from": 52.817,
+     "to": 55.472,
+     "exact_gained": false,
+     "size": 984
+    },
+    {
+     "name": "sceOpen",
+     "address": "0x11bc80",
+     "variant": "structuring=none",
+     "from": 49.255,
+     "to": 51.528,
+     "exact_gained": false,
+     "size": 644
+    },
+    {
+     "name": "checkModelVersion",
+     "address": "0x121a18",
+     "variant": "datatype=off",
+     "from": 73.725,
+     "to": 75.825,
+     "exact_gained": false,
+     "size": 160
+    },
+    {
+     "name": "sceCdMmode",
+     "address": "0x121388",
+     "variant": "calls=cast",
+     "from": 59.02,
+     "to": 60.653,
+     "exact_gained": false,
+     "size": 196
+    },
+    {
+     "name": "scePad2CheckDma",
+     "address": "0x124fa0",
+     "variant": "maxref=1",
+     "from": 61.125,
+     "to": 62.375,
+     "exact_gained": false,
+     "size": 128
+    },
+    {
+     "name": "_sysbitFlush",
+     "address": "0x12a988",
+     "variant": "datatype=off",
+     "from": 35.5,
+     "to": 36.421,
+     "exact_gained": false,
+     "size": 152
+    },
+    {
+     "name": "sceDbcInit",
+     "address": "0x124510",
+     "variant": "datatype=off",
+     "from": 72.663,
+     "to": 73.406,
+     "exact_gained": false,
+     "size": 404
+    },
+    {
+     "name": "__mdiff",
+     "address": "0x115d50",
+     "variant": "maxref=1",
+     "from": 73.04,
+     "to": 73.45,
+     "exact_gained": false,
+     "size": 400
+    },
+    {
+     "name": "__swsetup",
+     "address": "0x118630",
+     "variant": "datatype=off",
+     "from": 56.149,
+     "to": 56.522,
+     "exact_gained": false,
+     "size": 268
+    },
+    {
+     "name": "_dispatchMpegCallback",
+     "address": "0x12bb38",
+     "variant": "maxref=1",
+     "from": 91.75,
+     "to": 92.0,
+     "exact_gained": false,
+     "size": 80
+    },
+    {
+     "name": "_nextBit",
+     "address": "0x128918",
+     "variant": "datatype=off",
+     "from": 40.929,
+     "to": 41.107,
+     "exact_gained": false,
+     "size": 336
+    },
+    {
+     "name": "AdjustTime",
+     "address": "0x12d648",
+     "variant": "adjacent=off",
+     "from": 99.571,
+     "to": 99.714,
+     "exact_gained": false,
+     "size": 140
+    },
+    {
+     "name": "_extensionAndUserData",
+     "address": "0x128d28",
+     "variant": "datatype=off",
+     "from": 8.878,
+     "to": 8.946,
+     "exact_gained": false,
+     "size": 296
+    },
+    {
+     "name": "_cpr8",
+     "address": "0x1298a8",
+     "variant": "maxref=1",
+     "from": 47.689,
+     "to": 47.72,
+     "exact_gained": false,
+     "size": 656
+    }
+   ],
+   "tools": [
+    "ee-gcc2.9-991111-01"
+   ]
+  },
+  {
+   "lane": "p4",
+   "harness": "m22-003",
+   "game": "ps2-persona-4",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 60,
+    "compiled": 193,
+    "mean_percent": 79.4
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 60,
+    "compiled": 193,
+    "mean_percent": 79.4
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 60,
+    "compiled": 193,
+    "mean_percent": 80.007
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 45,
+    "compiled": 144,
+    "mean_percent": 57.056
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 45,
+    "compiled": 145,
+    "mean_percent": 56.856
+   },
+   "functions_searched": 133,
+   "functions_improved": 32,
+   "newly_exact": 0,
+   "improved_percent_points": 121.496,
+   "winners": {
+    "maxref=1": 14,
+    "datatype=off": 7,
+    "structuring=none": 6,
+    "adjacent=off": 2,
+    "maxref=1+adjacent=off": 1,
+    "dominant=off": 1,
+    "maxdup=3": 1
+   },
+   "searched_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 58,
+    "length differs: control flow (branches, calls)": 34,
+    "same length, many instructions differ": 13,
+    "length differs: memory accesses (temporaries, spills, widths)": 8,
+    "register allocation": 6,
+    "single instruction": 4,
+    "same instructions, different order (scheduling)": 3,
+    "length differs: floating-point or vector sequence": 3,
+    "length differs: few instructions (<= 4)": 1,
+    "register allocation and stack layout": 1,
+    "stack layout": 1,
+    "few instructions differ (<= 4)": 1
+   },
+   "improved_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 21,
+    "length differs: control flow (branches, calls)": 8,
+    "same length, many instructions differ": 1,
+    "length differs: floating-point or vector sequence": 1,
+    "length differs: memory accesses (temporaries, spills, widths)": 1
+   },
+   "decompiles": 1940,
+   "compiles": 271,
+   "search_seconds_sum": 460.8,
+   "wall_seconds_default_arm": 434,
+   "wall_seconds_search_arm": 793,
+   "improved": [
+    {
+     "name": "func_00466280",
+     "address": "0x466280",
+     "variant": "structuring=none",
+     "from": 0.0,
+     "to": 26.27,
+     "exact_gained": false,
+     "size": 756
+    },
+    {
+     "name": "func_00356820",
+     "address": "0x356820",
+     "variant": "maxref=1",
+     "from": 54.706,
+     "to": 66.471,
+     "exact_gained": false,
+     "size": 68
+    },
+    {
+     "name": "func_00383c40",
+     "address": "0x383c40",
+     "variant": "structuring=none",
+     "from": 70.608,
+     "to": 81.757,
+     "exact_gained": false,
+     "size": 296
+    },
+    {
+     "name": "CameraUpdateZShiftScale",
+     "address": "0x3e6db0",
+     "variant": "structuring=none",
+     "from": 0.0,
+     "to": 10.696,
+     "exact_gained": false,
+     "size": 184
+    },
+    {
+     "name": "func_00121de0",
+     "address": "0x121de0",
+     "variant": "maxref=1+adjacent=off",
+     "from": 73.425,
+     "to": 81.638,
+     "exact_gained": false,
+     "size": 320
+    },
+    {
+     "name": "func_001bc3a0",
+     "address": "0x1bc3a0",
+     "variant": "maxref=1",
+     "from": 48.946,
+     "to": 56.559,
+     "exact_gained": false,
+     "size": 444
+    },
+    {
+     "name": "func_004d2080",
+     "address": "0x4d2080",
+     "variant": "maxref=1",
+     "from": 33.625,
+     "to": 39.25,
+     "exact_gained": false,
+     "size": 32
+    },
+    {
+     "name": "func_0011ac70",
+     "address": "0x11ac70",
+     "variant": "structuring=none",
+     "from": 85.015,
+     "to": 89.977,
+     "exact_gained": false,
+     "size": 532
+    },
+    {
+     "name": "func_001bb790",
+     "address": "0x1bb790",
+     "variant": "maxref=1",
+     "from": 53.473,
+     "to": 58.405,
+     "exact_gained": false,
+     "size": 296
+    },
+    {
+     "name": "_rwFrameListStreamGetSize",
+     "address": "0x3e5a30",
+     "variant": "maxref=1",
+     "from": 79.381,
+     "to": 83.667,
+     "exact_gained": false,
+     "size": 168
+    },
+    {
+     "name": "func_001e6dc0",
+     "address": "0x1e6dc0",
+     "variant": "maxref=1",
+     "from": 95.804,
+     "to": 99.464,
+     "exact_gained": false,
+     "size": 224
+    },
+    {
+     "name": "func_0016b540",
+     "address": "0x16b540",
+     "variant": "maxref=1",
+     "from": 69.65,
+     "to": 72.471,
+     "exact_gained": false,
+     "size": 560
+    },
+    {
+     "name": "func_001e85c0",
+     "address": "0x1e85c0",
+     "variant": "maxref=1",
+     "from": 96.2,
+     "to": 98.933,
+     "exact_gained": false,
+     "size": 300
+    },
+    {
+     "name": "TextureImageReadAndSize",
+     "address": "0x3ede50",
+     "variant": "structuring=none",
+     "from": 78.342,
+     "to": 80.698,
+     "exact_gained": false,
+     "size": 888
+    },
+    {
+     "name": "func_001e1620",
+     "address": "0x1e1620",
+     "variant": "datatype=off",
+     "from": 67.667,
+     "to": 69.5,
+     "exact_gained": false,
+     "size": 240
+    },
+    {
+     "name": "func_00276630",
+     "address": "0x276630",
+     "variant": "datatype=off",
+     "from": 98.164,
+     "to": 99.967,
+     "exact_gained": false,
+     "size": 244
+    },
+    {
+     "name": "func_00115380",
+     "address": "0x115380",
+     "variant": "maxref=1",
+     "from": 19.103,
+     "to": 20.897,
+     "exact_gained": false,
+     "size": 156
+    },
+    {
+     "name": "func_001dea90",
+     "address": "0x1dea90",
+     "variant": "datatype=off",
+     "from": 75.0,
+     "to": 76.458,
+     "exact_gained": false,
+     "size": 288
+    },
+    {
+     "name": "func_00354660",
+     "address": "0x354660",
+     "variant": "maxref=1",
+     "from": 88.471,
+     "to": 89.882,
+     "exact_gained": false,
+     "size": 340
+    },
+    {
+     "name": "func_0012ff60",
+     "address": "0x12ff60",
+     "variant": "datatype=off",
+     "from": 73.917,
+     "to": 75.184,
+     "exact_gained": false,
+     "size": 868
+    },
+    {
+     "name": "func_001664a0",
+     "address": "0x1664a0",
+     "variant": "maxref=1",
+     "from": 81.207,
+     "to": 82.402,
+     "exact_gained": false,
+     "size": 348
+    },
+    {
+     "name": "func_0038d890",
+     "address": "0x38d890",
+     "variant": "maxdup=3",
+     "from": 88.821,
+     "to": 89.821,
+     "exact_gained": false,
+     "size": 224
+    },
+    {
+     "name": "func_0035bc10",
+     "address": "0x35bc10",
+     "variant": "structuring=none",
+     "from": 81.896,
+     "to": 82.881,
+     "exact_gained": false,
+     "size": 268
+    },
+    {
+     "name": "func_0010c750",
+     "address": "0x10c750",
+     "variant": "maxref=1",
+     "from": 59.871,
+     "to": 60.317,
+     "exact_gained": false,
+     "size": 556
+    },
+    {
+     "name": "func_003040d0",
+     "address": "0x3040d0",
+     "variant": "datatype=off",
+     "from": 46.654,
+     "to": 46.917,
+     "exact_gained": false,
+     "size": 532
+    },
+    {
+     "name": "func_00202480",
+     "address": "0x202480",
+     "variant": "maxref=1",
+     "from": 82.672,
+     "to": 82.931,
+     "exact_gained": false,
+     "size": 232
+    },
+    {
+     "name": "func_001e2a80",
+     "address": "0x1e2a80",
+     "variant": "datatype=off",
+     "from": 59.031,
+     "to": 59.235,
+     "exact_gained": false,
+     "size": 392
+    },
+    {
+     "name": "func_004555d0",
+     "address": "0x4555d0",
+     "variant": "adjacent=off",
+     "from": 33.564,
+     "to": 33.745,
+     "exact_gained": false,
+     "size": 220
+    },
+    {
+     "name": "func_00228a80",
+     "address": "0x228a80",
+     "variant": "datatype=off",
+     "from": 78.025,
+     "to": 78.119,
+     "exact_gained": false,
+     "size": 640
+    },
+    {
+     "name": "func_004667d0",
+     "address": "0x4667d0",
+     "variant": "maxref=1",
+     "from": 52.93,
+     "to": 53.008,
+     "exact_gained": false,
+     "size": 512
+    },
+    {
+     "name": "func_001ece50",
+     "address": "0x1ece50",
+     "variant": "dominant=off",
+     "from": 68.662,
+     "to": 68.738,
+     "exact_gained": false,
+     "size": 520
+    },
+    {
+     "name": "func_00244540",
+     "address": "0x244540",
+     "variant": "adjacent=off",
+     "from": 63.418,
+     "to": 63.481,
+     "exact_gained": false,
+     "size": 632
+    }
+   ],
+   "tools": [
+    "mwcps2-3.0.1b119-040914",
+    "mwcps2-3.0.1b210-060308"
+   ]
+  },
+  {
+   "lane": "gh",
+   "harness": "m22-003",
+   "game": "ps2-god-hand",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 199,
+    "mean_percent": 82.119
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 199,
+    "mean_percent": 82.119
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 80,
+    "compiled": 199,
+    "mean_percent": 83.869
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 198,
+    "mean_percent": 82.487
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 76,
+    "compiled": 198,
+    "mean_percent": 81.107
+   },
+   "functions_searched": 121,
+   "functions_improved": 28,
+   "newly_exact": 2,
+   "improved_percent_points": 349.946,
+   "winners": {
+    "structuring=none": 10,
+    "datatype=off": 9,
+    "maxref=1": 4,
+    "datatype=off+maxref=1": 2,
+    "maxref=3": 1,
+    "structuring=none+maxref=1": 1,
+    "structuring=none+datatype=off": 1
+   },
+   "searched_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 32,
+    "length differs: control flow (branches, calls)": 29,
+    "same length, many instructions differ": 19,
+    "few instructions differ (<= 4)": 13,
+    "length differs: memory accesses (temporaries, spills, widths)": 12,
+    "same instructions, different order (scheduling)": 4,
+    "register allocation and stack layout": 3,
+    "register allocation": 3,
+    "single instruction": 3,
+    "length differs: floating-point or vector sequence": 1,
+    "length differs: few instructions (<= 4)": 1,
+    "length differs: nops and register copies": 1
+   },
+   "improved_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 10,
+    "length differs: control flow (branches, calls)": 9,
+    "same length, many instructions differ": 5,
+    "length differs: memory accesses (temporaries, spills, widths)": 3,
+    "length differs: floating-point or vector sequence": 1
+   },
+   "decompiles": 1747,
+   "compiles": 232,
+   "search_seconds_sum": 502.6,
+   "wall_seconds_default_arm": 373,
+   "wall_seconds_search_arm": 915,
+   "improved": [
+    {
+     "name": "func_0037C6A0",
+     "address": "0x37c6a0",
+     "variant": "datatype=off",
+     "from": 82.71,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 124
+    },
+    {
+     "name": "cCoreSave_useGodItem",
+     "address": "0x1fac00",
+     "variant": "maxref=1",
+     "from": 93.545,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 88
+    },
+    {
+     "name": "func_003BACA0",
+     "address": "0x3baca0",
+     "variant": "structuring=none",
+     "from": 1.346,
+     "to": 56.731,
+     "exact_gained": false,
+     "size": 104
+    },
+    {
+     "name": "lo0bits",
+     "address": "0x38f8c0",
+     "variant": "maxref=1",
+     "from": 0.0,
+     "to": 44.562,
+     "exact_gained": false,
+     "size": 192
+    },
+    {
+     "name": "func_0018C4A8",
+     "address": "0x18c4a8",
+     "variant": "structuring=none",
+     "from": 63.172,
+     "to": 99.793,
+     "exact_gained": false,
+     "size": 116
+    },
+    {
+     "name": "BankTable_isKeyFree",
+     "address": "0x2d2ee8",
+     "variant": "datatype=off+maxref=1",
+     "from": 41.229,
+     "to": 74.371,
+     "exact_gained": false,
+     "size": 140
+    },
+    {
+     "name": "ColiseumBattle_spawnWave",
+     "address": "0x1f05f8",
+     "variant": "structuring=none",
+     "from": 52.884,
+     "to": 82.326,
+     "exact_gained": false,
+     "size": 172
+    },
+    {
+     "name": "__srefill",
+     "address": "0x3a6aa8",
+     "variant": "structuring=none+datatype=off",
+     "from": 62.067,
+     "to": 84.722,
+     "exact_gained": false,
+     "size": 360
+    },
+    {
+     "name": "StreamBuf_startRead",
+     "address": "0x2d3278",
+     "variant": "structuring=none+maxref=1",
+     "from": 65.657,
+     "to": 85.045,
+     "exact_gained": false,
+     "size": 268
+    },
+    {
+     "name": "_IO_file_setbuf",
+     "address": "0x392a30",
+     "variant": "structuring=none",
+     "from": 69.95,
+     "to": 87.45,
+     "exact_gained": false,
+     "size": 80
+    },
+    {
+     "name": "func_00146190",
+     "address": "0x146190",
+     "variant": "structuring=none",
+     "from": 2.186,
+     "to": 14.48,
+     "exact_gained": false,
+     "size": 408
+    },
+    {
+     "name": "func_00202058",
+     "address": "0x202058",
+     "variant": "structuring=none",
+     "from": 61.885,
+     "to": 71.777,
+     "exact_gained": false,
+     "size": 628
+    },
+    {
+     "name": "func_00115F60",
+     "address": "0x115f60",
+     "variant": "structuring=none",
+     "from": 55.861,
+     "to": 63.076,
+     "exact_gained": false,
+     "size": 316
+    },
+    {
+     "name": "func_00281D10",
+     "address": "0x281d10",
+     "variant": "maxref=1",
+     "from": 81.324,
+     "to": 87.794,
+     "exact_gained": false,
+     "size": 136
+    },
+    {
+     "name": "func_001BBB48",
+     "address": "0x1bbb48",
+     "variant": "datatype=off",
+     "from": 81.213,
+     "to": 85.787,
+     "exact_gained": false,
+     "size": 188
+    },
+    {
+     "name": "SpawnCylinderDamageAndFlagPartsA",
+     "address": "0x18a680",
+     "variant": "datatype=off",
+     "from": 49.789,
+     "to": 53.846,
+     "exact_gained": false,
+     "size": 492
+    },
+    {
+     "name": "cDataManager_loadSeWait",
+     "address": "0x1feaa0",
+     "variant": "structuring=none",
+     "from": 81.429,
+     "to": 84.941,
+     "exact_gained": false,
+     "size": 476
+    },
+    {
+     "name": "func_003288E0",
+     "address": "0x3288e0",
+     "variant": "datatype=off",
+     "from": 91.618,
+     "to": 95.006,
+     "exact_gained": false,
+     "size": 680
+    },
+    {
+     "name": "UpdateBetAdjustScreenB",
+     "address": "0x1d8120",
+     "variant": "datatype=off",
+     "from": 85.796,
+     "to": 89.083,
+     "exact_gained": false,
+     "size": 864
+    },
+    {
+     "name": "func_00274238",
+     "address": "0x274238",
+     "variant": "structuring=none",
+     "from": 49.195,
+     "to": 52.403,
+     "exact_gained": false,
+     "size": 636
+    },
+    {
+     "name": "CasinoWork_ResetWarmUpRoom",
+     "address": "0x1f6d38",
+     "variant": "datatype=off+maxref=1",
+     "from": 79.714,
+     "to": 82.375,
+     "exact_gained": false,
+     "size": 224
+    },
+    {
+     "name": "BlackJack_UpdateClearTable",
+     "address": "0x1d4258",
+     "variant": "datatype=off",
+     "from": 87.08,
+     "to": 89.413,
+     "exact_gained": false,
+     "size": 552
+    },
+    {
+     "name": "func_00102DE8",
+     "address": "0x102de8",
+     "variant": "structuring=none",
+     "from": 76.803,
+     "to": 78.803,
+     "exact_gained": false,
+     "size": 244
+    },
+    {
+     "name": "func_001C2378",
+     "address": "0x1c2378",
+     "variant": "datatype=off",
+     "from": 43.114,
+     "to": 43.971,
+     "exact_gained": false,
+     "size": 140
+    },
+    {
+     "name": "cSndMemHeap_FindUnusedBlk",
+     "address": "0x2cd930",
+     "variant": "maxref=1",
+     "from": 81.0,
+     "to": 81.714,
+     "exact_gained": false,
+     "size": 56
+    },
+    {
+     "name": "func_0014FF00",
+     "address": "0x14ff00",
+     "variant": "maxref=3",
+     "from": 61.773,
+     "to": 62.455,
+     "exact_gained": false,
+     "size": 88
+    },
+    {
+     "name": "func_00247320",
+     "address": "0x247320",
+     "variant": "datatype=off",
+     "from": 95.545,
+     "to": 95.838,
+     "exact_gained": false,
+     "size": 616
+    },
+    {
+     "name": "Quaternion_SetVectorRotation",
+     "address": "0x15a878",
+     "variant": "datatype=off",
+     "from": 20.541,
+     "to": 20.608,
+     "exact_gained": false,
+     "size": 296
+    }
+   ],
+   "tools": [
+    "ee-gcc2.9-991111-01",
+    "ee-gcc2.95.3-136",
+    "ee-gcc2.96"
+   ]
+  },
+  {
+   "lane": "ff",
+   "harness": "m22-003",
+   "game": "ps2-fatal-frame",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 21,
+    "compiled": 195,
+    "mean_percent": 61.753
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 21,
+    "compiled": 195,
+    "mean_percent": 61.753
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 24,
+    "compiled": 195,
+    "mean_percent": 64.178
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 16,
+    "compiled": 107,
+    "mean_percent": 34.592
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 13,
+    "compiled": 107,
+    "mean_percent": 33.546
+   },
+   "functions_searched": 174,
+   "functions_improved": 53,
+   "newly_exact": 3,
+   "improved_percent_points": 484.967,
+   "winners": {
+    "datatype=off": 13,
+    "structuring=none": 11,
+    "maxref=1": 9,
+    "maxref=4": 3,
+    "maxref=3+datatype=off": 2,
+    "structuring=none+maxref=1": 2,
+    "maxref=3": 2,
+    "structuring=none+datatype=off": 2,
+    "maxdup=3": 1,
+    "adjacent=off+datatype=off": 1,
+    "adjacent=off": 1,
+    "datatype=off+maxdup=1+structuring=no_arm_order": 1,
+    "dominant=off+datatype=off": 1,
+    "calls=cast": 1,
+    "maxdup=1": 1,
+    "maxref=1+datatype=off": 1,
+    "dominant=off": 1
+   },
+   "searched_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 110,
+    "same length, many instructions differ": 19,
+    "length differs: control flow (branches, calls)": 15,
+    "length differs: memory accesses (temporaries, spills, widths)": 12,
+    "same instructions, different order (scheduling)": 8,
+    "few instructions differ (<= 4)": 2,
+    "single instruction": 2,
+    "register allocation": 2,
+    "register allocation and stack layout": 2,
+    "length differs: floating-point or vector sequence": 1,
+    "length differs: few instructions (<= 4)": 1
+   },
+   "improved_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 37,
+    "same length, many instructions differ": 6,
+    "length differs: control flow (branches, calls)": 5,
+    "length differs: memory accesses (temporaries, spills, widths)": 3,
+    "register allocation": 1,
+    "length differs: few instructions (<= 4)": 1
+   },
+   "decompiles": 2578,
+   "compiles": 437,
+   "search_seconds_sum": 538.9,
+   "wall_seconds_default_arm": 172,
+   "wall_seconds_search_arm": 736,
+   "improved": [
+    {
+     "name": "mimGetKeymdlTop",
+     "address": "0x16a448",
+     "variant": "maxref=1",
+     "from": 59.375,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 32
+    },
+    {
+     "name": "DoorKeyLock",
+     "address": "0x1c20c0",
+     "variant": "datatype=off",
+     "from": 83.056,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 72
+    },
+    {
+     "name": "DrawOne2D_P2",
+     "address": "0x15bfb8",
+     "variant": "maxref=1",
+     "from": 99.242,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 132
+    },
+    {
+     "name": "DelDataLoadWrk",
+     "address": "0x1b1770",
+     "variant": "structuring=none+maxref=1",
+     "from": 11.24,
+     "to": 76.54,
+     "exact_gained": false,
+     "size": 200
+    },
+    {
+     "name": "mimAddFrame",
+     "address": "0x169978",
+     "variant": "structuring=none",
+     "from": 8.906,
+     "to": 58.578,
+     "exact_gained": false,
+     "size": 256
+    },
+    {
+     "name": "NakasuHazeSet",
+     "address": "0x1bd0d8",
+     "variant": "structuring=none",
+     "from": 23.13,
+     "to": 67.696,
+     "exact_gained": false,
+     "size": 92
+    },
+    {
+     "name": "SceneIsEnd",
+     "address": "0x185dc8",
+     "variant": "structuring=none+maxref=1",
+     "from": 0.0,
+     "to": 42.758,
+     "exact_gained": false,
+     "size": 512
+    },
+    {
+     "name": "motGetAniMdl",
+     "address": "0x167940",
+     "variant": "structuring=none",
+     "from": 31.891,
+     "to": 49.091,
+     "exact_gained": false,
+     "size": 220
+    },
+    {
+     "name": "PosInAreaJudge0",
+     "address": "0x1bbd28",
+     "variant": "structuring=none",
+     "from": 39.896,
+     "to": 56.985,
+     "exact_gained": false,
+     "size": 268
+    },
+    {
+     "name": "PlyrCondChk",
+     "address": "0x204b78",
+     "variant": "structuring=none",
+     "from": 35.614,
+     "to": 52.494,
+     "exact_gained": false,
+     "size": 332
+    },
+    {
+     "name": "AEneEntry",
+     "address": "0x18dd58",
+     "variant": "structuring=none",
+     "from": 32.705,
+     "to": 48.419,
+     "exact_gained": false,
+     "size": 420
+    },
+    {
+     "name": "motPlyrActSowasowa",
+     "address": "0x168390",
+     "variant": "maxref=1",
+     "from": 50.383,
+     "to": 61.617,
+     "exact_gained": false,
+     "size": 240
+    },
+    {
+     "name": "LoadStoryWrk",
+     "address": "0x21dc20",
+     "variant": "dominant=off",
+     "from": 23.351,
+     "to": 34.386,
+     "exact_gained": false,
+     "size": 228
+    },
+    {
+     "name": "EJob04C",
+     "address": "0x195e20",
+     "variant": "structuring=none",
+     "from": 42.0,
+     "to": 50.375,
+     "exact_gained": false,
+     "size": 192
+    },
+    {
+     "name": "SceneInitEnvironment",
+     "address": "0x184ef8",
+     "variant": "datatype=off",
+     "from": 49.846,
+     "to": 58.154,
+     "exact_gained": false,
+     "size": 260
+    },
+    {
+     "name": "Tim2LoadImage2",
+     "address": "0x15ac28",
+     "variant": "maxref=3+datatype=off",
+     "from": 56.009,
+     "to": 64.316,
+     "exact_gained": false,
+     "size": 848
+    },
+    {
+     "name": "UncompressData",
+     "address": "0x201220",
+     "variant": "structuring=none",
+     "from": 28.833,
+     "to": 35.972,
+     "exact_gained": false,
+     "size": 144
+    },
+    {
+     "name": "PhotoPointCulcRare",
+     "address": "0x209690",
+     "variant": "maxref=3",
+     "from": 66.988,
+     "to": 74.07,
+     "exact_gained": false,
+     "size": 344
+    },
+    {
+     "name": "SetMapCamDat2",
+     "address": "0x18c4c8",
+     "variant": "datatype=off",
+     "from": 40.959,
+     "to": 47.949,
+     "exact_gained": false,
+     "size": 784
+    },
+    {
+     "name": "viBufRestartDMA",
+     "address": "0x181d90",
+     "variant": "maxref=4",
+     "from": 49.235,
+     "to": 56.155,
+     "exact_gained": false,
+     "size": 800
+    },
+    {
+     "name": "SetPrePEImage",
+     "address": "0x215e48",
+     "variant": "maxref=1+datatype=off",
+     "from": 83.229,
+     "to": 90.104,
+     "exact_gained": false,
+     "size": 192
+    },
+    {
+     "name": "CameraGetDoorCameraNo",
+     "address": "0x1bab60",
+     "variant": "maxref=3+datatype=off",
+     "from": 36.057,
+     "to": 42.821,
+     "exact_gained": false,
+     "size": 424
+    },
+    {
+     "name": "FACheckSquareArea",
+     "address": "0x1cc1b0",
+     "variant": "maxref=1",
+     "from": 59.031,
+     "to": 65.748,
+     "exact_gained": false,
+     "size": 508
+    },
+    {
+     "name": "StageTitleLoad",
+     "address": "0x21d5c0",
+     "variant": "maxref=1",
+     "from": 72.331,
+     "to": 78.765,
+     "exact_gained": false,
+     "size": 544
+    },
+    {
+     "name": "viBufAddDMA",
+     "address": "0x181aa0",
+     "variant": "adjacent=off+datatype=off",
+     "from": 72.331,
+     "to": 78.661,
+     "exact_gained": false,
+     "size": 496
+    },
+    {
+     "name": "CameraGetDoramaCameraNo",
+     "address": "0x1ba900",
+     "variant": "datatype=off+maxdup=1+structuring=no_arm_order",
+     "from": 25.026,
+     "to": 30.887,
+     "exact_gained": false,
+     "size": 604
+    },
+    {
+     "name": "StarPuzzleMSGMain",
+     "address": "0x1a2768",
+     "variant": "structuring=none",
+     "from": 50.819,
+     "to": 56.516,
+     "exact_gained": false,
+     "size": 728
+    },
+    {
+     "name": "EJob072",
+     "address": "0x197880",
+     "variant": "structuring=none",
+     "from": 66.444,
+     "to": 71.278,
+     "exact_gained": false,
+     "size": 216
+    },
+    {
+     "name": "EneMinDmgCtrl",
+     "address": "0x1905f8",
+     "variant": "structuring=none+datatype=off",
+     "from": 42.355,
+     "to": 47.0,
+     "exact_gained": false,
+     "size": 372
+    },
+    {
+     "name": "ReleaseEneTexture",
+     "address": "0x166f08",
+     "variant": "datatype=off",
+     "from": 62.819,
+     "to": 67.194,
+     "exact_gained": false,
+     "size": 288
+    },
+    {
+     "name": "ZushiBonjiAfterDisp",
+     "address": "0x1ae360",
+     "variant": "maxref=1",
+     "from": 65.649,
+     "to": 69.185,
+     "exact_gained": false,
+     "size": 604
+    },
+    {
+     "name": "Tim2SetClutColor",
+     "address": "0x15a4d0",
+     "variant": "maxdup=3",
+     "from": 50.182,
+     "to": 53.597,
+     "exact_gained": false,
+     "size": 616
+    },
+    {
+     "name": "GetDoorHitVertex",
+     "address": "0x1c34f0",
+     "variant": "dominant=off+datatype=off",
+     "from": 69.659,
+     "to": 72.377,
+     "exact_gained": false,
+     "size": 552
+    },
+    {
+     "name": "PasteCtrl",
+     "address": "0x107080",
+     "variant": "structuring=none",
+     "from": 43.537,
+     "to": 45.933,
+     "exact_gained": false,
+     "size": 656
+    },
+    {
+     "name": "motAddFrame",
+     "address": "0x16f160",
+     "variant": "datatype=off",
+     "from": 90.577,
+     "to": 92.308,
+     "exact_gained": false,
+     "size": 104
+    },
+    {
+     "name": "EntryTimeCtrl",
+     "address": "0x198be8",
+     "variant": "maxref=1",
+     "from": 66.2,
+     "to": 67.84,
+     "exact_gained": false,
+     "size": 200
+    },
+    {
+     "name": "RotCheck",
+     "address": "0x1cbd68",
+     "variant": "calls=cast",
+     "from": 85.333,
+     "to": 86.815,
+     "exact_gained": false,
+     "size": 216
+    },
+    {
+     "name": "DrawAll2D_P2",
+     "address": "0x15c040",
+     "variant": "maxref=1",
+     "from": 69.912,
+     "to": 71.088,
+     "exact_gained": false,
+     "size": 408
+    },
+    {
+     "name": "CameraMain",
+     "address": "0x188ae0",
+     "variant": "maxref=4",
+     "from": 39.095,
+     "to": 40.2,
+     "exact_gained": false,
+     "size": 760
+    },
+    {
+     "name": "SetCamPos4",
+     "address": "0x189b20",
+     "variant": "datatype=off",
+     "from": 59.118,
+     "to": 60.14,
+     "exact_gained": false,
+     "size": 544
+    },
+    {
+     "name": "ButsuzoMSGDisp",
+     "address": "0x1a81f0",
+     "variant": "datatype=off",
+     "from": 70.4,
+     "to": 71.2,
+     "exact_gained": false,
+     "size": 600
+    },
+    {
+     "name": "GetFusumaHitVertex2",
+     "address": "0x1c3310",
+     "variant": "structuring=none+datatype=off",
+     "from": 0.0,
+     "to": 0.733,
+     "exact_gained": false,
+     "size": 480
+    },
+    {
+     "name": "CallVibrate",
+     "address": "0x120078",
+     "variant": "datatype=off",
+     "from": 90.0,
+     "to": 90.435,
+     "exact_gained": false,
+     "size": 92
+    },
+    {
+     "name": "SetCamPos2",
+     "address": "0x189718",
+     "variant": "datatype=off",
+     "from": 58.672,
+     "to": 59.009,
+     "exact_gained": false,
+     "size": 464
+    },
+    {
+     "name": "FurnDataRenewNext",
+     "address": "0x1c6e18",
+     "variant": "datatype=off",
+     "from": 58.051,
+     "to": 58.305,
+     "exact_gained": false,
+     "size": 472
+    },
+    {
+     "name": "EneBlinkCtrl",
+     "address": "0x190f88",
+     "variant": "maxref=1",
+     "from": 60.745,
+     "to": 60.941,
+     "exact_gained": false,
+     "size": 204
+    },
+    {
+     "name": "SceneDrawManMdl",
+     "address": "0x186948",
+     "variant": "maxref=3",
+     "from": 90.339,
+     "to": 90.488,
+     "exact_gained": false,
+     "size": 508
+    },
+    {
+     "name": "SceneTestEneEffFire",
+     "address": "0x210ae8",
+     "variant": "datatype=off",
+     "from": 80.114,
+     "to": 80.236,
+     "exact_gained": false,
+     "size": 1016
+    },
+    {
+     "name": "PosInAreaJudgeSub",
+     "address": "0x1c8ca8",
+     "variant": "maxref=4",
+     "from": 17.173,
+     "to": 17.282,
+     "exact_gained": false,
+     "size": 440
+    },
+    {
+     "name": "SceneScenePrerender",
+     "address": "0x186028",
+     "variant": "datatype=off",
+     "from": 72.823,
+     "to": 72.894,
+     "exact_gained": false,
+     "size": 564
+    },
+    {
+     "name": "SetMapCamDat4",
+     "address": "0x18ca98",
+     "variant": "datatype=off",
+     "from": 47.229,
+     "to": 47.295,
+     "exact_gained": false,
+     "size": 908
+    },
+    {
+     "name": "FilmAnime",
+     "address": "0x1d00d8",
+     "variant": "maxdup=1",
+     "from": 82.584,
+     "to": 82.612,
+     "exact_gained": false,
+     "size": 712
+    },
+    {
+     "name": "SetFinderRot",
+     "address": "0x18b228",
+     "variant": "adjacent=off",
+     "from": 51.921,
+     "to": 51.941,
+     "exact_gained": false,
+     "size": 1012
+    }
+   ],
+   "tools": [
+    "ee-gcc2.9-991111-01"
+   ]
+  },
+  {
+   "lane": "dc",
+   "harness": "m22-003",
+   "game": "ps2-dark-chronicle",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 38,
+    "compiled": 186,
+    "mean_percent": 69.844
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 38,
+    "compiled": 186,
+    "mean_percent": 69.844
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 40,
+    "compiled": 186,
+    "mean_percent": 70.719
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 32,
+    "compiled": 147,
+    "mean_percent": 55.515
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 30,
+    "compiled": 147,
+    "mean_percent": 54.851
+   },
+   "functions_searched": 148,
+   "functions_improved": 30,
+   "newly_exact": 2,
+   "improved_percent_points": 174.984,
+   "winners": {
+    "maxref=1": 14,
+    "datatype=off": 5,
+    "calls=cast": 3,
+    "adjacent=off": 2,
+    "maxref=4": 1,
+    "calls=cast+datatype=off": 1,
+    "structuring=none": 1,
+    "maxdup=1": 1,
+    "maxdup=4": 1,
+    "maxref=1+datatype=off": 1
+   },
+   "searched_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 63,
+    "length differs: control flow (branches, calls)": 40,
+    "same length, many instructions differ": 13,
+    "length differs: memory accesses (temporaries, spills, widths)": 12,
+    "length differs: floating-point or vector sequence": 4,
+    "register allocation": 4,
+    "few instructions differ (<= 4)": 4,
+    "length differs: few instructions (<= 4)": 3,
+    "single instruction": 2,
+    "length differs: nops and register copies": 1,
+    "length differs: nops or register copies (allocation or scheduling)": 1,
+    "register allocation and stack layout": 1
+   },
+   "improved_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 16,
+    "length differs: control flow (branches, calls)": 7,
+    "same length, many instructions differ": 3,
+    "length differs: nops and register copies": 1,
+    "length differs: memory accesses (temporaries, spills, widths)": 1,
+    "single instruction": 1,
+    "length differs: floating-point or vector sequence": 1
+   },
+   "decompiles": 2120,
+   "compiles": 271,
+   "search_seconds_sum": 1563.0,
+   "wall_seconds_default_arm": 635,
+   "wall_seconds_search_arm": 2991,
+   "improved": [
+    {
+     "name": "GetMdsList__11CMdsListSetFi",
+     "address": "0x16a030",
+     "variant": "adjacent=off",
+     "from": 78.077,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 52
+    },
+    {
+     "name": "IsBurn__10CEditPartsFv",
+     "address": "0x1b6f20",
+     "variant": "maxref=1",
+     "from": 94.0,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 40
+    },
+    {
+     "name": "_SET_NEXT_ROT__FP12RS_STACKDATAi",
+     "address": "0x1e55d0",
+     "variant": "maxref=1",
+     "from": 23.611,
+     "to": 42.278,
+     "exact_gained": false,
+     "size": 72
+    },
+    {
+     "name": "_GET_CHARA_WEIGHT__FP12RS_STACKDATAi",
+     "address": "0x26fc10",
+     "variant": "maxref=1",
+     "from": 44.158,
+     "to": 59.684,
+     "exact_gained": false,
+     "size": 76
+    },
+    {
+     "name": "UpDateMapInfo__6CSceneFv",
+     "address": "0x2cc360",
+     "variant": "maxref=1",
+     "from": 38.182,
+     "to": 50.739,
+     "exact_gained": false,
+     "size": 352
+    },
+    {
+     "name": "_MES_CLOSE__FP12RS_STACKDATAi",
+     "address": "0x270480",
+     "variant": "calls=cast",
+     "from": 63.846,
+     "to": 75.385,
+     "exact_gained": false,
+     "size": 104
+    },
+    {
+     "name": "GetTextureBlock__17mgCTextureManagerFi",
+     "address": "0x12cf80",
+     "variant": "adjacent=off",
+     "from": 69.75,
+     "to": 81.0,
+     "exact_gained": false,
+     "size": 80
+    },
+    {
+     "name": "Draw__15CHitEffectImageFv",
+     "address": "0x1c3e40",
+     "variant": "structuring=none",
+     "from": 17.656,
+     "to": 28.438,
+     "exact_gained": false,
+     "size": 128
+    },
+    {
+     "name": "__TEX_NAME__FP9SPI_STACKi",
+     "address": "0x183f50",
+     "variant": "calls=cast",
+     "from": 23.333,
+     "to": 33.0,
+     "exact_gained": false,
+     "size": 72
+    },
+    {
+     "name": "__REPEAT__FP9SPI_STACKi",
+     "address": "0x1832f0",
+     "variant": "maxref=1",
+     "from": 72.76,
+     "to": 80.96,
+     "exact_gained": false,
+     "size": 100
+    },
+    {
+     "name": "mapPARTS_GROUP__FP9SPI_STACKi",
+     "address": "0x164050",
+     "variant": "maxref=1",
+     "from": 54.067,
+     "to": 61.067,
+     "exact_gained": false,
+     "size": 60
+    },
+    {
+     "name": "ReCalcBox__FP9mgVu0FBOX9mgVu0FBOX",
+     "address": "0x252d60",
+     "variant": "maxref=1",
+     "from": 55.973,
+     "to": 61.622,
+     "exact_gained": false,
+     "size": 148
+    },
+    {
+     "name": "_OBJS_ATTACH_CAMERA__FP12RS_STACKDATAi",
+     "address": "0x275160",
+     "variant": "maxref=1",
+     "from": 44.967,
+     "to": 50.467,
+     "exact_gained": false,
+     "size": 120
+    },
+    {
+     "name": "AddHp_Rate__16CUserDataManagerFif",
+     "address": "0x19cac0",
+     "variant": "calls=cast",
+     "from": 63.5,
+     "to": 68.833,
+     "exact_gained": false,
+     "size": 120
+    },
+    {
+     "name": "GetParts__4CMapFPc",
+     "address": "0x15e170",
+     "variant": "maxref=1",
+     "from": 81.568,
+     "to": 86.73,
+     "exact_gained": false,
+     "size": 148
+    },
+    {
+     "name": "GetLine__FPPcPcPc__2",
+     "address": "0x2ac650",
+     "variant": "maxref=1+datatype=off",
+     "from": 92.481,
+     "to": 97.048,
+     "exact_gained": false,
+     "size": 416
+    },
+    {
+     "name": "CheckEventItem__5CShopFv",
+     "address": "0x295370",
+     "variant": "maxdup=4",
+     "from": 84.393,
+     "to": 88.112,
+     "exact_gained": false,
+     "size": 824
+    },
+    {
+     "name": "_GET_STS_ATTR__FP12RS_STACKDATAi",
+     "address": "0x1e89b0",
+     "variant": "maxref=1",
+     "from": 44.421,
+     "to": 46.526,
+     "exact_gained": false,
+     "size": 76
+    },
+    {
+     "name": "CreatePacket__12mgCVisualMDTFP14mgCDrawManager",
+     "address": "0x13fd10",
+     "variant": "maxref=4",
+     "from": 75.289,
+     "to": 77.082,
+     "exact_gained": false,
+     "size": 636
+    },
+    {
+     "name": "_SCALE_VECTOR__FP12RS_STACKDATAi",
+     "address": "0x2e8600",
+     "variant": "maxref=1",
+     "from": 24.429,
+     "to": 26.036,
+     "exact_gained": false,
+     "size": 112
+    },
+    {
+     "name": "CheckEnableCharaChange__16CUserDataManagerFiPi",
+     "address": "0x19d050",
+     "variant": "calls=cast+datatype=off",
+     "from": 67.205,
+     "to": 68.744,
+     "exact_gained": false,
+     "size": 468
+    },
+    {
+     "name": "_MES_MAKE__FP12RS_STACKDATAi",
+     "address": "0x2702b0",
+     "variant": "maxref=1",
+     "from": 78.448,
+     "to": 79.802,
+     "exact_gained": false,
+     "size": 464
+    },
+    {
+     "name": "FalseLoop__FP6CSceneP11CPadControl",
+     "address": "0x306a00",
+     "variant": "maxref=1",
+     "from": 65.462,
+     "to": 66.62,
+     "exact_gained": false,
+     "size": 632
+    },
+    {
+     "name": "DeleteKanketuParts__FP6CSceneP8CEditMapPfi",
+     "address": "0x2def60",
+     "variant": "datatype=off",
+     "from": 31.399,
+     "to": 31.933,
+     "exact_gained": false,
+     "size": 712
+    },
+    {
+     "name": "Birth__9CRainDropFi",
+     "address": "0x285af0",
+     "variant": "datatype=off",
+     "from": 87.945,
+     "to": 88.44,
+     "exact_gained": false,
+     "size": 364
+    },
+    {
+     "name": "BurnEditParts__8CEditMapFPQ28CEditMap10RemoveInfo",
+     "address": "0x1b3110",
+     "variant": "datatype=off",
+     "from": 84.538,
+     "to": 84.987,
+     "exact_gained": false,
+     "size": 624
+    },
+    {
+     "name": "DrawWakuCircle__FP11mgCDrawPrimP10mgCTexture9mgRect_f_9mgRect_i_ffiiii",
+     "address": "0x2277f0",
+     "variant": "maxdup=1",
+     "from": 53.102,
+     "to": 53.512,
+     "exact_gained": false,
+     "size": 508
+    },
+    {
+     "name": "GetePlacePartsAtInfoID__8CEditMapFiPii",
+     "address": "0x2f3770",
+     "variant": "maxref=1",
+     "from": 74.794,
+     "to": 75.15,
+     "exact_gained": false,
+     "size": 428
+    },
+    {
+     "name": "DrawEffect__4CMapFv",
+     "address": "0x15f800",
+     "variant": "datatype=off",
+     "from": 80.175,
+     "to": 80.258,
+     "exact_gained": false,
+     "size": 480
+    },
+    {
+     "name": "CopyMDTDataPointer__12mgCVisualMDTFP10MDT_HEADERP9mgCMemory",
+     "address": "0x13f490",
+     "variant": "datatype=off",
+     "from": 84.286,
+     "to": 84.351,
+     "exact_gained": false,
+     "size": 308
+    }
+   ],
+   "tools": [
+    "mwcps2-3.0-011126"
+   ]
+  },
+  {
+   "lane": "dk",
+   "harness": "m22-003",
+   "game": "ps2-dark-cloud",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 29,
+    "compiled": 189,
+    "mean_percent": 75.561
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 29,
+    "compiled": 189,
+    "mean_percent": 75.561
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 31,
+    "compiled": 189,
+    "mean_percent": 76.387
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 24,
+    "compiled": 137,
+    "mean_percent": 53.695
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 22,
+    "compiled": 137,
+    "mean_percent": 53.217
+   },
+   "functions_searched": 160,
+   "functions_improved": 46,
+   "newly_exact": 2,
+   "improved_percent_points": 165.236,
+   "winners": {
+    "datatype=off": 18,
+    "maxref=1": 8,
+    "calls=cast": 3,
+    "maxref=3": 3,
+    "maxref=1+datatype=off": 2,
+    "maxdup=3": 2,
+    "adjacent=off+datatype=off": 2,
+    "maxdup=3+datatype=off": 2,
+    "dominant=off": 1,
+    "adjacent=off": 1,
+    "maxref=4+datatype=off": 1,
+    "calls=cast+datatype=off": 1,
+    "maxref=4": 1,
+    "maxdup=1": 1
+   },
+   "searched_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 75,
+    "same length, many instructions differ": 25,
+    "length differs: control flow (branches, calls)": 24,
+    "length differs: memory accesses (temporaries, spills, widths)": 10,
+    "few instructions differ (<= 4)": 8,
+    "register allocation": 6,
+    "single instruction": 5,
+    "register allocation and stack layout": 4,
+    "length differs: floating-point or vector sequence": 1,
+    "same instructions, different order (scheduling)": 1,
+    "access width or signedness (type or cast)": 1
+   },
+   "improved_by_default_failure_class": {
+    "length differs: mixed arithmetic (expression shape)": 30,
+    "length differs: control flow (branches, calls)": 8,
+    "same length, many instructions differ": 6,
+    "length differs: floating-point or vector sequence": 1,
+    "register allocation": 1
+   },
+   "decompiles": 2309,
+   "compiles": 289,
+   "search_seconds_sum": 677.9,
+   "wall_seconds_default_arm": 235,
+   "wall_seconds_search_arm": 1036,
+   "improved": [
+    {
+     "name": "SetParent__6CFrameFP6CFrame",
+     "address": "0x128080",
+     "variant": "maxref=1",
+     "from": 81.706,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 68
+    },
+    {
+     "name": "GetWidth__9CMapPartsFv",
+     "address": "0x19aa20",
+     "variant": "maxref=3",
+     "from": 97.273,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 88
+    },
+    {
+     "name": "CommandEDITAREA_RECT__FPPv",
+     "address": "0x176fb0",
+     "variant": "maxdup=3",
+     "from": 24.071,
+     "to": 63.524,
+     "exact_gained": false,
+     "size": 168
+    },
+    {
+     "name": "_SYNC_CHARA_ITEM__FP12RS_STACKDATAi",
+     "address": "0x18dc80",
+     "variant": "datatype=off",
+     "from": 78.222,
+     "to": 89.352,
+     "exact_gained": false,
+     "size": 216
+    },
+    {
+     "name": "Step__7CEffectFi",
+     "address": "0x1640c0",
+     "variant": "maxref=1+datatype=off",
+     "from": 72.462,
+     "to": 82.937,
+     "exact_gained": false,
+     "size": 632
+    },
+    {
+     "name": "BtGetWeaponNamePath3__FPcPci",
+     "address": "0x1b73b0",
+     "variant": "maxref=1",
+     "from": 85.111,
+     "to": 94.222,
+     "exact_gained": false,
+     "size": 180
+    },
+    {
+     "name": "EdInitVillagerTable__FfP13EDIT_MAP_INFO",
+     "address": "0x1854c0",
+     "variant": "maxref=1",
+     "from": 83.649,
+     "to": 90.486,
+     "exact_gained": false,
+     "size": 148
+    },
+    {
+     "name": "GetNextParts__14CEditPartsInfoFi",
+     "address": "0x19a210",
+     "variant": "calls=cast+datatype=off",
+     "from": 57.857,
+     "to": 64.286,
+     "exact_gained": false,
+     "size": 112
+    },
+    {
+     "name": "GetPackFile__FPUiPcPi",
+     "address": "0x13f720",
+     "variant": "maxref=1",
+     "from": 74.815,
+     "to": 81.111,
+     "exact_gained": false,
+     "size": 216
+    },
+    {
+     "name": "FrameObjectOnOff__10CMapObjectFPci",
+     "address": "0x157590",
+     "variant": "maxref=3",
+     "from": 94.014,
+     "to": 99.863,
+     "exact_gained": false,
+     "size": 292
+    },
+    {
+     "name": "createAttachVolume__Fii",
+     "address": "0x1b7530",
+     "variant": "maxref=1",
+     "from": 76.293,
+     "to": 81.897,
+     "exact_gained": false,
+     "size": 232
+    },
+    {
+     "name": "EdDrawLensFlare__FfPP6CFrame",
+     "address": "0x188a20",
+     "variant": "maxref=4+datatype=off",
+     "from": 67.985,
+     "to": 72.69,
+     "exact_gained": false,
+     "size": 812
+    },
+    {
+     "name": "QuatSlerp__FPfPffPf",
+     "address": "0x147b70",
+     "variant": "adjacent=off+datatype=off",
+     "from": 82.954,
+     "to": 87.583,
+     "exact_gained": false,
+     "size": 432
+    },
+    {
+     "name": "set_spu__Fiiii",
+     "address": "0x143d70",
+     "variant": "datatype=off",
+     "from": 82.022,
+     "to": 85.578,
+     "exact_gained": false,
+     "size": 360
+    },
+    {
+     "name": "SetReverb__6CSoundFiii",
+     "address": "0x143c50",
+     "variant": "maxdup=3",
+     "from": 76.292,
+     "to": 79.069,
+     "exact_gained": false,
+     "size": 288
+    },
+    {
+     "name": "ShopCurDraw__Fiiiiiii",
+     "address": "0x1e74d0",
+     "variant": "adjacent=off+datatype=off",
+     "from": 85.22,
+     "to": 87.497,
+     "exact_gained": false,
+     "size": 764
+    },
+    {
+     "name": "GetAllSaveFileInfo__17CMemoryCardAccessFv",
+     "address": "0x215a30",
+     "variant": "datatype=off",
+     "from": 79.444,
+     "to": 81.667,
+     "exact_gained": false,
+     "size": 216
+    },
+    {
+     "name": "SkipSpace__FR9input_str",
+     "address": "0x13b170",
+     "variant": "calls=cast",
+     "from": 37.378,
+     "to": 39.541,
+     "exact_gained": false,
+     "size": 148
+    },
+    {
+     "name": "ArrangementPos__12CMonstorUnitFP11CDungeonMapiii",
+     "address": "0x1d7fc0",
+     "variant": "maxdup=3+datatype=off",
+     "from": 81.587,
+     "to": 83.5,
+     "exact_gained": false,
+     "size": 920
+    },
+    {
+     "name": "SetBuffInfo__10MenuClsMesFPs",
+     "address": "0x20b5d0",
+     "variant": "maxdup=3+datatype=off",
+     "from": 95.444,
+     "to": 97.296,
+     "exact_gained": false,
+     "size": 540
+    },
+    {
+     "name": "Initialize__14CEditPartsInfoFi",
+     "address": "0x19a570",
+     "variant": "maxref=1",
+     "from": 86.64,
+     "to": 88.307,
+     "exact_gained": false,
+     "size": 456
+    },
+    {
+     "name": "Step__7CCameraFi",
+     "address": "0x123f30",
+     "variant": "maxref=1+datatype=off",
+     "from": 80.797,
+     "to": 82.319,
+     "exact_gained": false,
+     "size": 728
+    },
+    {
+     "name": "Step__13CWeaponEffectFv",
+     "address": "0x1d6760",
+     "variant": "maxdup=1",
+     "from": 68.72,
+     "to": 70.229,
+     "exact_gained": false,
+     "size": 472
+    },
+    {
+     "name": "_OBJ_DRAW__FP12RS_STACKDATAi",
+     "address": "0x190df0",
+     "variant": "calls=cast",
+     "from": 87.902,
+     "to": 89.244,
+     "exact_gained": false,
+     "size": 164
+    },
+    {
+     "name": "AtoraCompOrEvent__FP14EDITPARTS_INFO",
+     "address": "0x218610",
+     "variant": "datatype=off",
+     "from": 91.393,
+     "to": 92.629,
+     "exact_gained": false,
+     "size": 356
+    },
+    {
+     "name": "GetMesLen_system__6ClsMesFi",
+     "address": "0x14eff0",
+     "variant": "datatype=off",
+     "from": 75.798,
+     "to": 77.03,
+     "exact_gained": false,
+     "size": 812
+    },
+    {
+     "name": "EdInitVillagerControl__Fv",
+     "address": "0x1852b0",
+     "variant": "maxref=3",
+     "from": 72.92,
+     "to": 74.12,
+     "exact_gained": false,
+     "size": 100
+    },
+    {
+     "name": "EdThunderEffect__FiP11CEditGround",
+     "address": "0x172370",
+     "variant": "datatype=off",
+     "from": 93.242,
+     "to": 94.357,
+     "exact_gained": false,
+     "size": 628
+    },
+    {
+     "name": "SetGameFlag__9CSaveDataFii",
+     "address": "0x158280",
+     "variant": "datatype=off",
+     "from": 94.459,
+     "to": 95.27,
+     "exact_gained": false,
+     "size": 148
+    },
+    {
+     "name": "_LOAD_CHARA_TEXTURE__FP12RS_STACKDATAi",
+     "address": "0x18c710",
+     "variant": "datatype=off",
+     "from": 92.252,
+     "to": 92.904,
+     "exact_gained": false,
+     "size": 460
+    },
+    {
+     "name": "IncludeBuyItem2__Fv",
+     "address": "0x1eb600",
+     "variant": "datatype=off",
+     "from": 92.286,
+     "to": 92.905,
+     "exact_gained": false,
+     "size": 420
+    },
+    {
+     "name": "SearchPartsID__16CDungeonEventManFii",
+     "address": "0x1cc8f0",
+     "variant": "maxref=1",
+     "from": 92.941,
+     "to": 93.529,
+     "exact_gained": false,
+     "size": 68
+    },
+    {
+     "name": "ShopPolySetInit__Fii",
+     "address": "0x1e7080",
+     "variant": "datatype=off",
+     "from": 41.619,
+     "to": 42.155,
+     "exact_gained": false,
+     "size": 336
+    },
+    {
+     "name": "TEIGIAnalyz__FPc",
+     "address": "0x1ce090",
+     "variant": "maxref=4",
+     "from": 88.346,
+     "to": 88.857,
+     "exact_gained": false,
+     "size": 948
+    },
+    {
+     "name": "CheckHealingWater__Fv",
+     "address": "0x1af3b0",
+     "variant": "datatype=off",
+     "from": 73.743,
+     "to": 74.238,
+     "exact_gained": false,
+     "size": 808
+    },
+    {
+     "name": "SeitonAttachBoardSub__FP11ATTACH_LIST",
+     "address": "0x23fdf0",
+     "variant": "datatype=off",
+     "from": 90.563,
+     "to": 90.915,
+     "exact_gained": false,
+     "size": 284
+    },
+    {
+     "name": "Initialize__11CEditGroundFv",
+     "address": "0x1a5800",
+     "variant": "datatype=off",
+     "from": 93.934,
+     "to": 94.17,
+     "exact_gained": false,
+     "size": 424
+    },
+    {
+     "name": "SetFrameAttr__FP6CFramei",
+     "address": "0x125ef0",
+     "variant": "dominant=off",
+     "from": 76.987,
+     "to": 77.218,
+     "exact_gained": false,
+     "size": 956
+    },
+    {
+     "name": "EdInitEventParamSimple__Fv",
+     "address": "0x196f00",
+     "variant": "calls=cast",
+     "from": 96.0,
+     "to": 96.201,
+     "exact_gained": false,
+     "size": 796
+    },
+    {
+     "name": "ReadInfo__FP10CCharacterPUiPcP14CDataAlloc2_1_P14CDataAlloc2_1_P14CDataAlloc2_1_iP14CDataAlloc2_1_ii",
+     "address": "0x139d10",
+     "variant": "datatype=off",
+     "from": 82.42,
+     "to": 82.62,
+     "exact_gained": false,
+     "size": 600
+    },
+    {
+     "name": "SaveMenuKeyCheckMc__Fv",
+     "address": "0x221260",
+     "variant": "datatype=off",
+     "from": 91.74,
+     "to": 91.911,
+     "exact_gained": false,
+     "size": 584
+    },
+    {
+     "name": "DrawEditEffect__FP16EDIT_EFFECT_INFOP7CCameraP12CEffectGroup",
+     "address": "0x166e10",
+     "variant": "datatype=off",
+     "from": 75.68,
+     "to": 75.85,
+     "exact_gained": false,
+     "size": 588
+    },
+    {
+     "name": "LoadPTS__FP9CMapPartsPUi",
+     "address": "0x19f6f0",
+     "variant": "datatype=off",
+     "from": 46.07,
+     "to": 46.176,
+     "exact_gained": false,
+     "size": 568
+    },
+    {
+     "name": "SetMesWinTbl__6ClsMesFiiss",
+     "address": "0x14f5e0",
+     "variant": "adjacent=off",
+     "from": 95.282,
+     "to": 95.379,
+     "exact_gained": false,
+     "size": 412
+    },
+    {
+     "name": "Draw__8CHitMarkFv",
+     "address": "0x1b31a0",
+     "variant": "datatype=off",
+     "from": 74.695,
+     "to": 74.775,
+     "exact_gained": false,
+     "size": 748
+    },
+    {
+     "name": "GetActiveIvent__11CDungeonMapFP9CFrameVu1",
+     "address": "0x1c8ed0",
+     "variant": "maxref=1",
+     "from": 56.642,
+     "to": 56.704,
+     "exact_gained": false,
+     "size": 324
+    }
+   ],
+   "tools": [
+    "mwcps2-2.3.3-000906"
+   ]
+  },
+  {
+   "lane": "m22-002 MWCC seed 20261010",
+   "harness": "m22-002",
+   "game": "ps2-persona-4",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 55,
+    "compiled": 193,
+    "mean_percent": 76.968
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 55,
+    "compiled": 193,
+    "mean_percent": 76.968
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 58,
+    "compiled": 193,
+    "mean_percent": 77.562
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 44,
+    "compiled": 147,
+    "mean_percent": 57.067
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 42,
+    "compiled": 148,
+    "mean_percent": 56.916
+   },
+   "functions_searched": 138,
+   "functions_improved": 38,
+   "newly_exact": 3,
+   "improved_percent_points": 118.755,
+   "winners": {
+    "maxref=1": 9,
+    "datatype=off": 9,
+    "maxref=1+datatype=off": 3,
+    "maxdup=3": 3,
+    "structuring=none": 2,
+    "maxref=4": 2,
+    "maxref=3": 1,
+    "structuring=none+maxref=1": 1,
+    "calls=cast": 1,
+    "datatype=off+maxref=1": 1,
+    "maxdup=1+datatype=off": 1,
+    "maxref=3+datatype=off": 1,
+    "maxdup=3+datatype=off": 1,
+    "maxdup=4": 1,
+    "adjacent=off+datatype=off": 1,
+    "maxdup=3+maxref=3": 1
+   },
+   "searched_by_default_failure_class": {
+    "unclassified": 138
+   },
+   "improved_by_default_failure_class": {
+    "unclassified": 38
+   },
+   "decompiles": 2026,
+   "compiles": 264,
+   "search_seconds_sum": 459.9,
+   "wall_seconds_default_arm": 364,
+   "wall_seconds_search_arm": 863,
+   "improved": [
+    {
+     "name": "func_002214d0",
+     "address": "0x2214d0",
+     "variant": "maxdup=3+datatype=off",
+     "from": 94.707,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 232
+    },
+    {
+     "name": "func_00175ea0",
+     "address": "0x175ea0",
+     "variant": "maxref=3",
+     "from": 95.7,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 200
+    },
+    {
+     "name": "func_0035e820",
+     "address": "0x35e820",
+     "variant": "maxdup=3",
+     "from": 96.829,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 140
+    },
+    {
+     "name": "func_00199350",
+     "address": "0x199350",
+     "variant": "structuring=none",
+     "from": 62.143,
+     "to": 80.857,
+     "exact_gained": false,
+     "size": 420
+    },
+    {
+     "name": "func_002bb9e0",
+     "address": "0x2bb9e0",
+     "variant": "maxdup=3+maxref=3",
+     "from": 79.454,
+     "to": 89.126,
+     "exact_gained": false,
+     "size": 732
+    },
+    {
+     "name": "func_001999f0",
+     "address": "0x1999f0",
+     "variant": "structuring=none+maxref=1",
+     "from": 64.17,
+     "to": 73.057,
+     "exact_gained": false,
+     "size": 776
+    },
+    {
+     "name": "func_002e6b20",
+     "address": "0x2e6b20",
+     "variant": "maxref=1",
+     "from": 90.278,
+     "to": 96.767,
+     "exact_gained": false,
+     "size": 360
+    },
+    {
+     "name": "func_002bab80",
+     "address": "0x2bab80",
+     "variant": "maxref=1",
+     "from": 79.32,
+     "to": 84.853,
+     "exact_gained": false,
+     "size": 300
+    },
+    {
+     "name": "func_0011ac70",
+     "address": "0x11ac70",
+     "variant": "structuring=none",
+     "from": 85.015,
+     "to": 89.977,
+     "exact_gained": false,
+     "size": 532
+    },
+    {
+     "name": "func_0047fbf0",
+     "address": "0x47fbf0",
+     "variant": "maxref=4",
+     "from": 76.855,
+     "to": 81.275,
+     "exact_gained": false,
+     "size": 276
+    },
+    {
+     "name": "func_0022cc90",
+     "address": "0x22cc90",
+     "variant": "maxdup=4",
+     "from": 88.31,
+     "to": 92.535,
+     "exact_gained": false,
+     "size": 284
+    },
+    {
+     "name": "func_001bd620",
+     "address": "0x1bd620",
+     "variant": "maxref=1",
+     "from": 61.395,
+     "to": 65.465,
+     "exact_gained": false,
+     "size": 344
+    },
+    {
+     "name": "func_001e6dc0",
+     "address": "0x1e6dc0",
+     "variant": "maxref=1",
+     "from": 95.804,
+     "to": 99.464,
+     "exact_gained": false,
+     "size": 224
+    },
+    {
+     "name": "func_0024acf0",
+     "address": "0x24acf0",
+     "variant": "datatype=off",
+     "from": 75.345,
+     "to": 78.966,
+     "exact_gained": false,
+     "size": 116
+    },
+    {
+     "name": "func_00279780",
+     "address": "0x279780",
+     "variant": "maxref=1+datatype=off",
+     "from": 80.318,
+     "to": 83.307,
+     "exact_gained": false,
+     "size": 768
+    },
+    {
+     "name": "func_0024ba60",
+     "address": "0x24ba60",
+     "variant": "maxdup=3",
+     "from": 96.975,
+     "to": 99.75,
+     "exact_gained": false,
+     "size": 160
+    },
+    {
+     "name": "func_00205950",
+     "address": "0x205950",
+     "variant": "maxdup=1+datatype=off",
+     "from": 93.966,
+     "to": 96.607,
+     "exact_gained": false,
+     "size": 712
+    },
+    {
+     "name": "func_0045a570",
+     "address": "0x45a570",
+     "variant": "maxref=4",
+     "from": 86.759,
+     "to": 89.08,
+     "exact_gained": false,
+     "size": 448
+    },
+    {
+     "name": "func_00174c20",
+     "address": "0x174c20",
+     "variant": "maxref=1",
+     "from": 80.244,
+     "to": 82.154,
+     "exact_gained": false,
+     "size": 492
+    },
+    {
+     "name": "func_001e1cc0",
+     "address": "0x1e1cc0",
+     "variant": "datatype=off",
+     "from": 67.667,
+     "to": 69.5,
+     "exact_gained": false,
+     "size": 240
+    },
+    {
+     "name": "func_00115380",
+     "address": "0x115380",
+     "variant": "maxref=1",
+     "from": 19.103,
+     "to": 20.897,
+     "exact_gained": false,
+     "size": 156
+    },
+    {
+     "name": "func_00202890",
+     "address": "0x202890",
+     "variant": "maxref=1+datatype=off",
+     "from": 89.257,
+     "to": 90.961,
+     "exact_gained": false,
+     "size": 716
+    },
+    {
+     "name": "func_001de370",
+     "address": "0x1de370",
+     "variant": "datatype=off",
+     "from": 96.167,
+     "to": 97.833,
+     "exact_gained": false,
+     "size": 720
+    },
+    {
+     "name": "func_00207140",
+     "address": "0x207140",
+     "variant": "datatype=off",
+     "from": 88.966,
+     "to": 90.492,
+     "exact_gained": false,
+     "size": 472
+    },
+    {
+     "name": "func_001dea90",
+     "address": "0x1dea90",
+     "variant": "datatype=off",
+     "from": 75.0,
+     "to": 76.458,
+     "exact_gained": false,
+     "size": 288
+    },
+    {
+     "name": "func_001f2cc0",
+     "address": "0x1f2cc0",
+     "variant": "datatype=off+maxref=1",
+     "from": 91.0,
+     "to": 92.452,
+     "exact_gained": false,
+     "size": 496
+    },
+    {
+     "name": "func_00231af0",
+     "address": "0x231af0",
+     "variant": "datatype=off",
+     "from": 85.956,
+     "to": 87.371,
+     "exact_gained": false,
+     "size": 636
+    },
+    {
+     "name": "func_0026c960",
+     "address": "0x26c960",
+     "variant": "maxref=1",
+     "from": 33.5,
+     "to": 34.841,
+     "exact_gained": false,
+     "size": 176
+    },
+    {
+     "name": "_rwPluginRegistryAddPlugin",
+     "address": "0x3e3870",
+     "variant": "maxref=1+datatype=off",
+     "from": 36.057,
+     "to": 37.036,
+     "exact_gained": false,
+     "size": 768
+    },
+    {
+     "name": "func_0021ed10",
+     "address": "0x21ed10",
+     "variant": "maxref=3+datatype=off",
+     "from": 85.795,
+     "to": 86.623,
+     "exact_gained": false,
+     "size": 604
+    },
+    {
+     "name": "func_004c1b18",
+     "address": "0x4c1b18",
+     "variant": "maxdup=3",
+     "from": 33.045,
+     "to": 33.636,
+     "exact_gained": false,
+     "size": 176
+    },
+    {
+     "name": "func_001d94d0",
+     "address": "0x1d94d0",
+     "variant": "calls=cast",
+     "from": 61.779,
+     "to": 62.364,
+     "exact_gained": false,
+     "size": 616
+    },
+    {
+     "name": "func_001b7520",
+     "address": "0x1b7520",
+     "variant": "maxref=1",
+     "from": 48.386,
+     "to": 48.851,
+     "exact_gained": false,
+     "size": 860
+    },
+    {
+     "name": "func_0010c750",
+     "address": "0x10c750",
+     "variant": "maxref=1",
+     "from": 59.871,
+     "to": 60.317,
+     "exact_gained": false,
+     "size": 556
+    },
+    {
+     "name": "func_00244870",
+     "address": "0x244870",
+     "variant": "adjacent=off+datatype=off",
+     "from": 82.976,
+     "to": 83.402,
+     "exact_gained": false,
+     "size": 328
+    },
+    {
+     "name": "func_001e26c0",
+     "address": "0x1e26c0",
+     "variant": "datatype=off",
+     "from": 64.082,
+     "to": 64.388,
+     "exact_gained": false,
+     "size": 392
+    },
+    {
+     "name": "func_002736d0",
+     "address": "0x2736d0",
+     "variant": "datatype=off",
+     "from": 87.422,
+     "to": 87.638,
+     "exact_gained": false,
+     "size": 464
+    },
+    {
+     "name": "func_00222d20",
+     "address": "0x222d20",
+     "variant": "datatype=off",
+     "from": 53.629,
+     "to": 53.696,
+     "exact_gained": false,
+     "size": 896
+    }
+   ],
+   "tools": null
+  },
+  {
+   "lane": "m22-002 MWCC seed 20261011",
+   "harness": "m22-002",
+   "game": "ps2-persona-4",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.316
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.316
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.767
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 38,
+    "compiled": 147,
+    "mean_percent": 56.489
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 38,
+    "compiled": 148,
+    "mean_percent": 56.458
+   },
+   "functions_searched": 137,
+   "functions_improved": 30,
+   "newly_exact": 0,
+   "improved_percent_points": 90.325,
+   "winners": {
+    "datatype=off": 11,
+    "maxref=1": 7,
+    "structuring=none": 5,
+    "adjacent=off+datatype=off": 2,
+    "structuring=none+calls=cast": 1,
+    "maxref=3": 1,
+    "maxdup=4": 1,
+    "maxref=4": 1,
+    "maxdup=3": 1
+   },
+   "searched_by_default_failure_class": {
+    "unclassified": 137
+   },
+   "improved_by_default_failure_class": {
+    "unclassified": 30
+   },
+   "decompiles": 1988,
+   "compiles": 243,
+   "search_seconds_sum": 445.7,
+   "wall_seconds_default_arm": 364,
+   "wall_seconds_search_arm": 848,
+   "improved": [
+    {
+     "name": "func_004da5b8",
+     "address": "0x4da5b8",
+     "variant": "structuring=none",
+     "from": 5.6,
+     "to": 26.3,
+     "exact_gained": false,
+     "size": 120
+    },
+    {
+     "name": "func_00159a60",
+     "address": "0x159a60",
+     "variant": "structuring=none+calls=cast",
+     "from": 70.77,
+     "to": 81.369,
+     "exact_gained": false,
+     "size": 748
+    },
+    {
+     "name": "func_001e3fd0",
+     "address": "0x1e3fd0",
+     "variant": "maxref=1",
+     "from": 83.587,
+     "to": 91.63,
+     "exact_gained": false,
+     "size": 184
+    },
+    {
+     "name": "func_003d3460",
+     "address": "0x3d3460",
+     "variant": "structuring=none",
+     "from": 50.918,
+     "to": 56.939,
+     "exact_gained": false,
+     "size": 392
+    },
+    {
+     "name": "func_00380d80",
+     "address": "0x380d80",
+     "variant": "maxref=4",
+     "from": 93.696,
+     "to": 98.261,
+     "exact_gained": false,
+     "size": 276
+    },
+    {
+     "name": "func_0034bea0",
+     "address": "0x34bea0",
+     "variant": "datatype=off",
+     "from": 66.138,
+     "to": 70.132,
+     "exact_gained": false,
+     "size": 636
+    },
+    {
+     "name": "func_0027b230",
+     "address": "0x27b230",
+     "variant": "datatype=off",
+     "from": 50.556,
+     "to": 54.352,
+     "exact_gained": false,
+     "size": 216
+    },
+    {
+     "name": "func_00247dd0",
+     "address": "0x247dd0",
+     "variant": "maxref=1",
+     "from": 62.456,
+     "to": 66.228,
+     "exact_gained": false,
+     "size": 228
+    },
+    {
+     "name": "func_0024acf0",
+     "address": "0x24acf0",
+     "variant": "datatype=off",
+     "from": 75.345,
+     "to": 78.966,
+     "exact_gained": false,
+     "size": 116
+    },
+    {
+     "name": "func_001db360",
+     "address": "0x1db360",
+     "variant": "maxref=3",
+     "from": 91.213,
+     "to": 94.522,
+     "exact_gained": false,
+     "size": 544
+    },
+    {
+     "name": "func_00155bf0",
+     "address": "0x155bf0",
+     "variant": "maxref=1",
+     "from": 95.607,
+     "to": 98.881,
+     "exact_gained": false,
+     "size": 540
+    },
+    {
+     "name": "func_00248b80",
+     "address": "0x248b80",
+     "variant": "structuring=none",
+     "from": 74.032,
+     "to": 77.277,
+     "exact_gained": false,
+     "size": 376
+    },
+    {
+     "name": "func_00273cc0",
+     "address": "0x273cc0",
+     "variant": "datatype=off",
+     "from": 81.136,
+     "to": 84.243,
+     "exact_gained": false,
+     "size": 676
+    },
+    {
+     "name": "func_00255b90",
+     "address": "0x255b90",
+     "variant": "datatype=off",
+     "from": 91.844,
+     "to": 94.332,
+     "exact_gained": false,
+     "size": 820
+    },
+    {
+     "name": "func_001e3050",
+     "address": "0x1e3050",
+     "variant": "datatype=off",
+     "from": 55.385,
+     "to": 57.077,
+     "exact_gained": false,
+     "size": 260
+    },
+    {
+     "name": "func_0044ef70",
+     "address": "0x44ef70",
+     "variant": "maxref=1",
+     "from": 83.159,
+     "to": 84.487,
+     "exact_gained": false,
+     "size": 452
+    },
+    {
+     "name": "func_00291900",
+     "address": "0x291900",
+     "variant": "maxdup=4",
+     "from": 95.172,
+     "to": 96.379,
+     "exact_gained": false,
+     "size": 116
+    },
+    {
+     "name": "func_0027d800",
+     "address": "0x27d800",
+     "variant": "maxref=1",
+     "from": 61.967,
+     "to": 62.967,
+     "exact_gained": false,
+     "size": 364
+    },
+    {
+     "name": "func_0035bc10",
+     "address": "0x35bc10",
+     "variant": "structuring=none",
+     "from": 81.896,
+     "to": 82.881,
+     "exact_gained": false,
+     "size": 268
+    },
+    {
+     "name": "func_00477810",
+     "address": "0x477810",
+     "variant": "maxdup=3",
+     "from": 50.542,
+     "to": 51.322,
+     "exact_gained": false,
+     "size": 236
+    },
+    {
+     "name": "func_001ef5f0",
+     "address": "0x1ef5f0",
+     "variant": "adjacent=off+datatype=off",
+     "from": 85.733,
+     "to": 86.32,
+     "exact_gained": false,
+     "size": 300
+    },
+    {
+     "name": "func_003b6cc0",
+     "address": "0x3b6cc0",
+     "variant": "maxref=1",
+     "from": 71.057,
+     "to": 71.509,
+     "exact_gained": false,
+     "size": 212
+    },
+    {
+     "name": "func_0029d2f0",
+     "address": "0x29d2f0",
+     "variant": "datatype=off",
+     "from": 95.114,
+     "to": 95.525,
+     "exact_gained": false,
+     "size": 876
+    },
+    {
+     "name": "func_001e26c0",
+     "address": "0x1e26c0",
+     "variant": "datatype=off",
+     "from": 64.082,
+     "to": 64.388,
+     "exact_gained": false,
+     "size": 392
+    },
+    {
+     "name": "func_00370290",
+     "address": "0x370290",
+     "variant": "maxref=1",
+     "from": 61.064,
+     "to": 61.362,
+     "exact_gained": false,
+     "size": 376
+    },
+    {
+     "name": "func_001e2550",
+     "address": "0x1e2550",
+     "variant": "datatype=off",
+     "from": 71.868,
+     "to": 72.143,
+     "exact_gained": false,
+     "size": 364
+    },
+    {
+     "name": "func_0045e6a0",
+     "address": "0x45e6a0",
+     "variant": "datatype=off",
+     "from": 94.894,
+     "to": 95.106,
+     "exact_gained": false,
+     "size": 568
+    },
+    {
+     "name": "func_00480aa0",
+     "address": "0x480aa0",
+     "variant": "adjacent=off+datatype=off",
+     "from": 80.493,
+     "to": 80.638,
+     "exact_gained": false,
+     "size": 552
+    },
+    {
+     "name": "func_00164570",
+     "address": "0x164570",
+     "variant": "datatype=off",
+     "from": 90.031,
+     "to": 90.107,
+     "exact_gained": false,
+     "size": 784
+    },
+    {
+     "name": "func_0037d630",
+     "address": "0x37d630",
+     "variant": "structuring=none",
+     "from": 60.202,
+     "to": 60.24,
+     "exact_gained": false,
+     "size": 516
+    }
+   ],
+   "tools": null
+  },
+  {
+   "lane": "m22-002 ee-gcc",
+   "harness": "m22-002",
+   "game": "ps2-persona-4",
+   "functions": 200,
+   "default": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.403
+   },
+   "default_in_search_run": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.403
+   },
+   "default_equals_baseline_table": true,
+   "default_arms_agree": true,
+   "searched": {
+    "functions": 200,
+    "exact": 107,
+    "compiled": 197,
+    "mean_percent": 87.736
+   },
+   "searched_standalone": {
+    "functions": 200,
+    "exact": 101,
+    "compiled": 182,
+    "mean_percent": 81.102
+   },
+   "default_standalone": {
+    "functions": 200,
+    "exact": 100,
+    "compiled": 182,
+    "mean_percent": 79.951
+   },
+   "functions_searched": 91,
+   "functions_improved": 16,
+   "newly_exact": 1,
+   "improved_percent_points": 266.566,
+   "winners": {
+    "datatype=off": 7,
+    "structuring=none": 3,
+    "structuring=none+datatype=off": 3,
+    "maxref=1": 3
+   },
+   "searched_by_default_failure_class": {
+    "unclassified": 91
+   },
+   "improved_by_default_failure_class": {
+    "unclassified": 16
+   },
+   "decompiles": 1304,
+   "compiles": 137,
+   "search_seconds_sum": 282.5,
+   "wall_seconds_default_arm": 333,
+   "wall_seconds_search_arm": 751,
+   "improved": [
+    {
+     "name": "ACSSND_GetStatPause",
+     "address": "0x4bedf0",
+     "variant": "structuring=none",
+     "from": 29.389,
+     "to": 100.0,
+     "exact_gained": true,
+     "size": 72
+    },
+    {
+     "name": "ADXB_GetOutBps",
+     "address": "0x4c3c08",
+     "variant": "datatype=off",
+     "from": 25.75,
+     "to": 73.25,
+     "exact_gained": false,
+     "size": 96
+    },
+    {
+     "name": "LSC_GetStmStat",
+     "address": "0x4e95a8",
+     "variant": "structuring=none+datatype=off",
+     "from": 34.676,
+     "to": 71.162,
+     "exact_gained": false,
+     "size": 148
+    },
+    {
+     "name": "SJRBF_GetNumData",
+     "address": "0x4ee2c0",
+     "variant": "structuring=none",
+     "from": 62.632,
+     "to": 96.316,
+     "exact_gained": false,
+     "size": 76
+    },
+    {
+     "name": "SFCON_IsVideoEndcodeSkip",
+     "address": "0x515cc8",
+     "variant": "datatype=off",
+     "from": 64.778,
+     "to": 90.556,
+     "exact_gained": false,
+     "size": 72
+    },
+    {
+     "name": "ADXERR_ItoA",
+     "address": "0x4c6b60",
+     "variant": "maxref=1",
+     "from": 45.815,
+     "to": 57.815,
+     "exact_gained": false,
+     "size": 260
+    },
+    {
+     "name": "ACSSBADX_CreateHndl",
+     "address": "0x4bde38",
+     "variant": "structuring=none",
+     "from": 65.212,
+     "to": 77.182,
+     "exact_gained": false,
+     "size": 132
+    },
+    {
+     "name": "ADXB_EntryData",
+     "address": "0x4c3f58",
+     "variant": "maxref=1",
+     "from": 11.742,
+     "to": 20.968,
+     "exact_gained": false,
+     "size": 124
+    },
+    {
+     "name": "SFD_GetOutVol",
+     "address": "0x513f80",
+     "variant": "datatype=off",
+     "from": 77.259,
+     "to": 82.222,
+     "exact_gained": false,
+     "size": 108
+    },
+    {
+     "name": "sfply_IsTermAny",
+     "address": "0x522350",
+     "variant": "datatype=off",
+     "from": 90.256,
+     "to": 93.846,
+     "exact_gained": false,
+     "size": 156
+    },
+    {
+     "name": "ADXT_ExecErrChk",
+     "address": "0x4d8300",
+     "variant": "structuring=none+datatype=off",
+     "from": 79.816,
+     "to": 82.707,
+     "exact_gained": false,
+     "size": 588
+    },
+    {
+     "name": "MPV_GoNextDelimSj",
+     "address": "0x5068f8",
+     "variant": "datatype=off",
+     "from": 16.791,
+     "to": 19.488,
+     "exact_gained": false,
+     "size": 344
+    },
+    {
+     "name": "func_004be9c0",
+     "address": "0x4be9c0",
+     "variant": "structuring=none+datatype=off",
+     "from": 88.296,
+     "to": 90.648,
+     "exact_gained": false,
+     "size": 216
+    },
+    {
+     "name": "ADXSJE_Create",
+     "address": "0x4d0e98",
+     "variant": "datatype=off",
+     "from": 4.06,
+     "to": 5.784,
+     "exact_gained": false,
+     "size": 464
+    },
+    {
+     "name": "adxt_nlp_trap_entry",
+     "address": "0x4d7680",
+     "variant": "maxref=1",
+     "from": 69.081,
+     "to": 70.054,
+     "exact_gained": false,
+     "size": 740
+    },
+    {
+     "name": "ADXT_GetTimeSfreq",
+     "address": "0x4d4518",
+     "variant": "datatype=off",
+     "from": 74.84,
+     "to": 74.96,
+     "exact_gained": false,
+     "size": 200
+    }
+   ],
+   "tools": null
+  }
+ ],
+ "total": {
+  "m22-003": {
+   "functions": 1400,
+   "default_exact": 313,
+   "searched_exact": 326,
+   "functions_searched": 1049,
+   "functions_improved": 278,
+   "decompiles": 15297,
+   "compiles": 2161,
+   "winners": {
+    "datatype=off": 74,
+    "maxref=1": 63,
+    "structuring=none": 51,
+    "maxref=3": 10,
+    "maxref=1+datatype=off": 9,
+    "calls=cast": 9,
+    "adjacent=off": 8,
+    "structuring=none+datatype=off": 6,
+    "maxdup=3": 5,
+    "maxref=4": 5,
+    "structuring=none+maxref=1": 4,
+    "dominant=off": 3,
+    "adjacent=off+datatype=off": 3,
+    "maxdup=1": 3,
+    "maxref=1+adjacent=off": 2,
+    "maxdup=4": 2,
+    "datatype=off+maxref=1": 2,
+    "maxref=3+datatype=off": 2,
+    "calls=cast+datatype=off": 2,
+    "maxdup=3+datatype=off": 2,
+    "structuring=none+adjacent=off+datatype=off": 1,
+    "datatype=off+structuring=none": 1,
+    "structuring=none+maxref=4": 1,
+    "structuring=no_arm_order+maxref=1": 1,
+    "structuring=none+copy=off": 1,
+    "copy=off+datatype=off": 1,
+    "maxdup=4+structuring=none": 1,
+    "maxref=1+calls=cast": 1,
+    "structuring=none+maxdup=3+datatype=off": 1,
+    "structuring=none+dominant=off": 1,
+    "datatype=off+maxdup=1+structuring=no_arm_order": 1,
+    "dominant=off+datatype=off": 1,
+    "maxref=4+datatype=off": 1
+   }
+  },
+  "m22-002": {
+   "functions": 600,
+   "default_exact": 218,
+   "searched_exact": 222,
+   "functions_searched": 366,
+   "functions_improved": 84,
+   "decompiles": 5318,
+   "compiles": 644,
+   "winners": {
+    "datatype=off": 27,
+    "maxref=1": 19,
+    "structuring=none": 10,
+    "maxdup=3": 4,
+    "maxref=1+datatype=off": 3,
+    "maxref=4": 3,
+    "adjacent=off+datatype=off": 3,
+    "structuring=none+datatype=off": 3,
+    "maxref=3": 2,
+    "maxdup=4": 2,
+    "structuring=none+maxref=1": 1,
+    "calls=cast": 1,
+    "datatype=off+maxref=1": 1,
+    "maxdup=1+datatype=off": 1,
+    "maxref=3+datatype=off": 1,
+    "maxdup=3+datatype=off": 1,
+    "maxdup=3+maxref=3": 1,
+    "structuring=none+calls=cast": 1
+   }
+  }
+ }
+}

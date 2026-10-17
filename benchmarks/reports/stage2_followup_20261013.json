@@ -1,0 +1,174 @@
+{
+ "benchmark": "stage2_followup",
+ "date": "20261013",
+ "tag": "f1",
+ "m22-002 ee-gcc": {
+  "off": {
+   "functions": 200,
+   "exact": 106,
+   "compiled": 197,
+   "mean_percent": 86.403
+  },
+  "parity": {
+   "summary": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.403
+   },
+   "paired": 200,
+   "better": 0,
+   "worse": 0,
+   "same": 200,
+   "lost_exact": [],
+   "lost_compiled": [],
+   "gained_exact": [],
+   "gained_compiled": [],
+   "better_addresses": [],
+   "worse_addresses": []
+  },
+  "def": {
+   "summary": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.403
+   },
+   "paired": 200,
+   "better": 0,
+   "worse": 0,
+   "same": 200,
+   "lost_exact": [],
+   "lost_compiled": [],
+   "gained_exact": [],
+   "gained_compiled": [],
+   "better_addresses": [],
+   "worse_addresses": []
+  }
+ },
+ "gh, Ps2Lanes pristine repo copy (default arm)": {
+  "functions": 200,
+  "exact": 78,
+  "compiled": 196,
+  "mean_percent": 79.062
+ },
+ "gh, harness clone (default arm)": {
+  "functions": 200,
+  "exact": 78,
+  "compiled": 199,
+  "mean_percent": 82.119
+ },
+ "gh, harness clone (off arm)": {
+  "functions": 200,
+  "exact": 78,
+  "compiled": 199,
+  "mean_percent": 82.057
+ },
+ "gh clone, default against off": {
+  "paired": 200,
+  "better": 1,
+  "worse": 0,
+  "same": 199,
+  "lost_exact": [],
+  "lost_compiled": [],
+  "gained_exact": [],
+  "gained_compiled": [],
+  "better_addresses": [
+   "0014ff00"
+  ],
+  "worse_addresses": []
+ },
+ "ps2_decompile_success": {
+  "sampled": 10342,
+  "decompiled": 10338,
+  "games": {
+   "ps2-dark-chronicle": {
+    "sampled": 969,
+    "decompiled": 969,
+    "failures": []
+   },
+   "ps2-dark-chronicle-symtab": {
+    "sampled": 962,
+    "decompiled": 962,
+    "failures": []
+   },
+   "ps2-dark-cloud": {
+    "sampled": 937,
+    "decompiled": 936,
+    "failures": [
+     {
+      "address": "01db08a0",
+      "success": false,
+      "seconds": 60.08,
+      "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+      "class": "native runtime: native runtime: execution deadline exceeded"
+     }
+    ]
+   },
+   "ps2-dark-cloud-symtab": {
+    "sampled": 940,
+    "decompiled": 940,
+    "failures": []
+   },
+   "ps2-digital-devil-saga": {
+    "sampled": 977,
+    "decompiled": 977,
+    "failures": []
+   },
+   "ps2-fatal-frame": {
+    "sampled": 942,
+    "decompiled": 942,
+    "failures": []
+   },
+   "ps2-fatal-frame-symtab": {
+    "sampled": 940,
+    "decompiled": 940,
+    "failures": []
+   },
+   "ps2-god-hand": {
+    "sampled": 980,
+    "decompiled": 980,
+    "failures": []
+   },
+   "ps2-persona-4": {
+    "sampled": 975,
+    "decompiled": 974,
+    "failures": [
+     {
+      "address": "002be530",
+      "success": false,
+      "seconds": 60.09,
+      "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+      "class": "native runtime: native runtime: execution deadline exceeded"
+     }
+    ]
+   },
+   "ps2-ratchet-clank": {
+    "sampled": 861,
+    "decompiled": 860,
+    "failures": [
+     {
+      "address": "00239780",
+      "success": false,
+      "seconds": 0.2,
+      "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+      "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+     }
+    ]
+   },
+   "ps2-ratchet-clank-pal": {
+    "sampled": 859,
+    "decompiled": 858,
+    "failures": [
+     {
+      "address": "0023aa38",
+      "success": false,
+      "seconds": 0.19,
+      "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+      "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+     }
+    ]
+   }
+  }
+ }
+}

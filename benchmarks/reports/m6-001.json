@@ -1,13 +1,13 @@
 {
  "id": "m6-001",
- "recorded_at": "2026-09-07T09:13:49.641255+00:00",
+ "recorded_at": "2026-10-15T09:51:32.102274+00:00",
  "status": "pass",
  "passed": true,
- "summary": "18 documented commands run, 22 documented output lines checked, 24 verbs all listed in usage, 0 block(s) skipped",
+ "summary": "24 documented commands run, 37 documented output lines checked, 63 verbs all listed in usage, 0 block(s) skipped",
  "metrics": {
-  "commands": 18,
-  "output_lines": 22,
-  "verbs": 24,
+  "commands": 24,
+  "output_lines": 37,
+  "verbs": 63,
   "skipped_blocks": 0
  },
  "skipped": []

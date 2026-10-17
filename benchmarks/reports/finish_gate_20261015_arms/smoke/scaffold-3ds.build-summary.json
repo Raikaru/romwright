@@ -1,0 +1,19 @@
+{
+ "objdiff_measures": {
+  "fuzzy_match_percent": 16.108448,
+  "total_code": "3166",
+  "matched_data_percent": 100.0,
+  "total_functions": 36,
+  "complete_data_percent": 100.0,
+  "total_units": 36
+ },
+ "compile": {
+  "compiler": "clang version 22.1.8 (https://github.com/llvm/llvm-project ca7933e47d3a3451d81e72ac174dcb5aa28b59d1)",
+  "pinned": "clang-22.1.8",
+  "target": "armv6k-none-eabi",
+  "units": 38,
+  "compiled": 37,
+  "failed": 1,
+  "seconds": 0.6
+ }
+}

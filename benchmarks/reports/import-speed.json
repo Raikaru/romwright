@@ -1,0 +1,3796 @@
+{
+ "id": "import-speed",
+ "recorded_at": "2026-10-09T09:36:56+00:00",
+ "host": {
+  "cpus": 8,
+  "load_at_end": [
+   0.76,
+   1.16,
+   2.19
+  ]
+ },
+ "ghidra_version": "12.1.3",
+ "ghidra_maxmem": "8G",
+ "romwright_tools": "ea27c70333bb669d",
+ "native_dir": "/home/raikaru/runs/FinalGate/ventris/native/build",
+ "script_sha256_16": "415d79115d34bbb8",
+ "speed_tolerance_floor": 0.05,
+ "quality_margin": 0.01,
+ "limit_s": 3600,
+ "status": "fail",
+ "rows": {
+  "psx-darkstalkers-3": {
+   "status": "pass",
+   "ghidra_config": {
+    "language": "MIPS:LE:32:default",
+    "loader": null,
+    "options": [],
+    "why": "Stock Ghidra's own MIPS:LE:32:default (the R3000A is MIPS I) under the PsxLoader extension's PS-EXE loader (auto-selected; the loader only lays out the image). Our import uses PSX:LE:32:default (native/languages/psx: this MIPS plus the GTE). Ghidra on PSX:LE:32:default (its own or ours) finds only 1011 functions (recall 0.5844); the cause is not established (the extension keys its function-start patterns to MIPS); MIPS finds 2012 (0.9205), the recorded stock numbers."
+   },
+   "ours": {
+    "runs": 3,
+    "wall_s": [
+     2.36,
+     2.31,
+     2.36
+    ],
+    "wall_median_s": 2.36,
+    "spread": 0.0212,
+    "cpu_median_s": 6.44,
+    "cpu_per_wall": 2.77,
+    "peak_rss_mb_max": 121,
+    "load_1min": [
+     2.62,
+     2.61,
+     2.28
+    ],
+    "score": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "invented": 1398,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0,
+     "precision_corroborated": 0.9968,
+     "invented_corroborated": 1391,
+     "invented_corroborated_by": {
+      "frame+address-taken": 43,
+      "jal": 545,
+      "table": 803
+     },
+     "invented_uncorroborated": 7,
+     "corroborated_unfound": 52
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "total": 2.330919,
+     "console": 0.418552,
+     "discovery": 0.719605,
+     "flow": 0.339476,
+     "parse": 0.003191,
+     "patterns": 0.07954,
+     "references": 0.787494,
+     "references-only": 0.368936,
+     "settle": 0.000792,
+     "store": 0.066141,
+     "switch": 0.60094,
+     "switch-vsa": 0.048227
+    },
+    "language": "PSX:LE:32:default",
+    "argv": [
+     "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+     "import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE",
+     "--name",
+     "psx",
+     "--project",
+     "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ours-0/project",
+     "--timings"
+    ]
+   },
+   "ghidra": {
+    "runs": 3,
+    "wall_s": [
+     18.95,
+     17.84,
+     17.94
+    ],
+    "wall_median_s": 17.94,
+    "spread": 0.0619,
+    "cpu_median_s": 29.37,
+    "cpu_per_wall": 1.65,
+    "peak_rss_mb_max": 1217,
+    "load_1min": [
+     2.62,
+     2.56,
+     2.66
+    ],
+    "score": {
+     "truth": 818,
+     "found": 2012,
+     "recall": 0.9205,
+     "precision": 0.3743,
+     "invented": 1259,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0,
+     "precision_corroborated": 0.9995,
+     "invented_corroborated": 1258,
+     "invented_corroborated_by": {
+      "frame+address-taken": 39,
+      "jal": 548,
+      "table": 671
+     },
+     "invented_uncorroborated": 1,
+     "corroborated_unfound": 185
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "jvm_startup": 2.315,
+     "analysis": 13.0,
+     "load_script_save_exit": 3.63,
+     "top_analyzers": {
+      "Decompiler Switch Analysis": 5.102,
+      "MIPS Constant Reference Analyzer": 2.007,
+      "Stack": 1.846,
+      "Call Convention ID": 1.253,
+      "Disassemble": 1.092,
+      "Apply Data Archives": 0.487,
+      "Create Function": 0.452,
+      "Reference": 0.24
+     }
+    },
+    "language": "MIPS:LE:32:default",
+    "argv": [
+     "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+     "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ghidra-0/ghidra-project",
+     "proj",
+     "-import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE",
+     "-processor",
+     "MIPS:LE:32:default",
+     "-scriptPath",
+     "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+     "-postScript",
+     "ExportFunctionEntries.java",
+     "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ghidra-0/ghidra-functions.json",
+     "-deleteProject"
+    ]
+   },
+   "ours_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 2.36,
+     "cpu_s": 6.55,
+     "user_s": 5.67,
+     "sys_s": 0.88,
+     "peak_rss_mb": 121,
+     "load_before": [
+      2.62,
+      3.11,
+      3.11
+     ],
+     "load_after": [
+      2.62,
+      3.11,
+      3.11
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE",
+      "--name",
+      "psx",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ours-0/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "psx",
+     "language": "PSX:LE:32:default",
+     "phases": {
+      "total": 2.330919,
+      "console": 0.418552,
+      "discovery": 0.719605,
+      "flow": 0.339476,
+      "parse": 0.003191,
+      "patterns": 0.07954,
+      "references": 0.787494,
+      "references-only": 0.368936,
+      "settle": 0.000792,
+      "store": 0.066141,
+      "switch": 0.60094,
+      "switch-vsa": 0.048227
+     },
+     "functions_all_programs": 2206,
+     "degraded": [],
+     "ranges": [
+      [
+       2148767216,
+       2149117228
+      ]
+     ],
+     "score": {
+      "truth": 818,
+      "found": 2206,
+      "recall": 0.9878,
+      "precision": 0.3663,
+      "invented": 1398,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "precision_corroborated": 0.9968,
+      "invented_corroborated": 1391,
+      "invented_corroborated_by": {
+       "frame+address-taken": 43,
+       "jal": 545,
+       "table": 803
+      },
+      "invented_uncorroborated": 7,
+      "corroborated_unfound": 52
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 2.31,
+     "cpu_s": 6.39,
+     "user_s": 5.53,
+     "sys_s": 0.87,
+     "peak_rss_mb": 119,
+     "load_before": [
+      2.61,
+      3.07,
+      3.1
+     ],
+     "load_after": [
+      2.56,
+      3.06,
+      3.09
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE",
+      "--name",
+      "psx",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ours-1/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "psx",
+     "language": "PSX:LE:32:default",
+     "phases": {
+      "total": 2.276473,
+      "console": 0.396872,
+      "discovery": 0.688726,
+      "flow": 0.332425,
+      "parse": 0.003309,
+      "patterns": 0.08331,
+      "references": 0.767629,
+      "references-only": 0.370751,
+      "settle": 0.000512,
+      "store": 0.061698,
+      "switch": 0.600151,
+      "switch-vsa": 0.049022
+     },
+     "functions_all_programs": 2206,
+     "degraded": [],
+     "ranges": [
+      [
+       2148767216,
+       2149117228
+      ]
+     ],
+     "score": {
+      "truth": 818,
+      "found": 2206,
+      "recall": 0.9878,
+      "precision": 0.3663,
+      "invented": 1398,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "precision_corroborated": 0.9968,
+      "invented_corroborated": 1391,
+      "invented_corroborated_by": {
+       "frame+address-taken": 43,
+       "jal": 545,
+       "table": 803
+      },
+      "invented_uncorroborated": 7,
+      "corroborated_unfound": 52
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 2.36,
+     "cpu_s": 6.44,
+     "user_s": 5.57,
+     "sys_s": 0.87,
+     "peak_rss_mb": 121,
+     "load_before": [
+      2.28,
+      2.97,
+      3.06
+     ],
+     "load_after": [
+      2.66,
+      3.04,
+      3.09
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE",
+      "--name",
+      "psx",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ours-2/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "psx",
+     "language": "PSX:LE:32:default",
+     "phases": {
+      "total": 2.284203,
+      "console": 0.392299,
+      "discovery": 0.706981,
+      "flow": 0.337101,
+      "parse": 0.003464,
+      "patterns": 0.078762,
+      "references": 0.783449,
+      "references-only": 0.391144,
+      "settle": 0.000512,
+      "store": 0.061248,
+      "switch": 0.580793,
+      "switch-vsa": 0.047579
+     },
+     "functions_all_programs": 2206,
+     "degraded": [],
+     "ranges": [
+      [
+       2148767216,
+       2149117228
+      ]
+     ],
+     "score": {
+      "truth": 818,
+      "found": 2206,
+      "recall": 0.9878,
+      "precision": 0.3663,
+      "invented": 1398,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "precision_corroborated": 0.9968,
+      "invented_corroborated": 1391,
+      "invented_corroborated_by": {
+       "frame+address-taken": 43,
+       "jal": 545,
+       "table": 803
+      },
+      "invented_uncorroborated": 7,
+      "corroborated_unfound": 52
+     }
+    }
+   ],
+   "ghidra_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 18.95,
+     "cpu_s": 32.23,
+     "user_s": 30.25,
+     "sys_s": 1.98,
+     "peak_rss_mb": 1143,
+     "load_before": [
+      2.62,
+      3.11,
+      3.11
+     ],
+     "load_after": [
+      2.61,
+      3.07,
+      3.1
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ghidra-0/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE",
+      "-processor",
+      "MIPS:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ghidra-0/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "MIPS:LE:32:default",
+     "compiler": "default",
+     "format": "PSX Executables Loader",
+     "image_base": "80000000",
+     "loader": "PSX Executables Loader",
+     "functions_total": 2012,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.315,
+      "analysis": 13.0,
+      "load_script_save_exit": 3.63,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 5.102,
+       "MIPS Constant Reference Analyzer": 2.007,
+       "Stack": 1.846,
+       "Call Convention ID": 1.253,
+       "Disassemble": 1.092,
+       "Apply Data Archives": 0.487,
+       "Create Function": 0.452,
+       "Reference": 0.24
+      }
+     },
+     "score": {
+      "truth": 818,
+      "found": 2012,
+      "recall": 0.9205,
+      "precision": 0.3743,
+      "invented": 1259,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "precision_corroborated": 0.9995,
+      "invented_corroborated": 1258,
+      "invented_corroborated_by": {
+       "frame+address-taken": 39,
+       "jal": 548,
+       "table": 671
+      },
+      "invented_uncorroborated": 1,
+      "corroborated_unfound": 185
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 17.84,
+     "cpu_s": 29.37,
+     "user_s": 27.56,
+     "sys_s": 1.8,
+     "peak_rss_mb": 1170,
+     "load_before": [
+      2.56,
+      3.06,
+      3.09
+     ],
+     "load_after": [
+      2.28,
+      2.97,
+      3.06
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ghidra-1/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE",
+      "-processor",
+      "MIPS:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ghidra-1/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "MIPS:LE:32:default",
+     "compiler": "default",
+     "format": "PSX Executables Loader",
+     "image_base": "80000000",
+     "loader": "PSX Executables Loader",
+     "functions_total": 2012,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.276,
+      "analysis": 13.0,
+      "load_script_save_exit": 2.56,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 5.112,
+       "MIPS Constant Reference Analyzer": 1.945,
+       "Stack": 1.849,
+       "Call Convention ID": 1.253,
+       "Disassemble": 1.138,
+       "Create Function": 0.444,
+       "Apply Data Archives": 0.443,
+       "Reference": 0.286
+      }
+     },
+     "score": {
+      "truth": 818,
+      "found": 2012,
+      "recall": 0.9205,
+      "precision": 0.3743,
+      "invented": 1259,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "precision_corroborated": 0.9995,
+      "invented_corroborated": 1258,
+      "invented_corroborated_by": {
+       "frame+address-taken": 39,
+       "jal": 548,
+       "table": 671
+      },
+      "invented_uncorroborated": 1,
+      "corroborated_unfound": 185
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 17.94,
+     "cpu_s": 29.03,
+     "user_s": 27.1,
+     "sys_s": 1.93,
+     "peak_rss_mb": 1217,
+     "load_before": [
+      2.66,
+      3.04,
+      3.09
+     ],
+     "load_after": [
+      2.5,
+      2.99,
+      3.07
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ghidra-2/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE",
+      "-processor",
+      "MIPS:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/psx-darkstalkers-3/ghidra-2/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "MIPS:LE:32:default",
+     "compiler": "default",
+     "format": "PSX Executables Loader",
+     "image_base": "80000000",
+     "loader": "PSX Executables Loader",
+     "functions_total": 2012,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.281,
+      "analysis": 13.0,
+      "load_script_save_exit": 2.66,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 5.088,
+       "MIPS Constant Reference Analyzer": 2.024,
+       "Stack": 1.882,
+       "Call Convention ID": 1.252,
+       "Disassemble": 1.083,
+       "Apply Data Archives": 0.46,
+       "Create Function": 0.451,
+       "Reference": 0.269
+      }
+     },
+     "score": {
+      "truth": 818,
+      "found": 2012,
+      "recall": 0.9205,
+      "precision": 0.3743,
+      "invented": 1259,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "precision_corroborated": 0.9995,
+      "invented_corroborated": 1258,
+      "invented_corroborated_by": {
+       "frame+address-taken": 39,
+       "jal": 548,
+       "table": 671
+      },
+      "invented_uncorroborated": 1,
+      "corroborated_unfound": 185
+     }
+    }
+   ],
+   "failures": [],
+   "wall_ratio": 0.1315,
+   "cpu_ratio": 0.2193,
+   "rss_ratio": 0.0994,
+   "speed_tolerance": 0.0619,
+   "wall_ratio_ex_jvm_startup": 0.1507,
+   "speed": "faster",
+   "precision_gate": "precision_corroborated",
+   "recall_delta": 0.0673,
+   "precision_delta": -0.008,
+   "precision_corroborated_delta": -0.0027,
+   "quality": "not-worse",
+   "f1": {
+    "romwright": 0.5344,
+    "ghidra": 0.5322
+   }
+  },
+  "ps2-dungeon-game": {
+   "status": "pass",
+   "ghidra_config": {
+    "language": "r5900:LE:32:default",
+    "loader": null,
+    "options": [],
+    "why": "Stock ELF loader, R5900 language; stripped ELF, the same file our import reads."
+   },
+   "ours": {
+    "runs": 3,
+    "wall_s": [
+     2.56,
+     2.56,
+     2.51
+    ],
+    "wall_median_s": 2.56,
+    "spread": 0.0195,
+    "cpu_median_s": 5.04,
+    "cpu_per_wall": 2.01,
+    "peak_rss_mb_max": 111,
+    "load_1min": [
+     2.5,
+     2.56,
+     2.66
+    ],
+    "score": {
+     "truth": 783,
+     "found": 748,
+     "recall": 0.9438,
+     "precision": 0.988,
+     "invented": 9,
+     "sizes_compared": 737,
+     "size_exact": 716,
+     "size_short": 8,
+     "size_long": 13
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "total": 2.492717,
+     "console": 0.617562,
+     "discovery": 0.854966,
+     "flow": 0.234229,
+     "parse": 0.013398,
+     "patterns": 0.088305,
+     "references": 0.833265,
+     "references-only": 0.215697,
+     "settle": 0.00109,
+     "store": 0.121757,
+     "switch": 0.554757,
+     "switch-vsa": 0.016913
+    },
+    "language": "r5900:LE:32:default",
+    "argv": [
+     "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+     "import",
+     "/var/tmp/fg-import-speed/binaries/ps2-dungeon-game/dungeon_game.elf.stripped",
+     "--name",
+     "dungeon",
+     "--project",
+     "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ours-0/project",
+     "--timings"
+    ]
+   },
+   "ghidra": {
+    "runs": 3,
+    "wall_s": [
+     13.49,
+     13.39,
+     13.54
+    ],
+    "wall_median_s": 13.49,
+    "spread": 0.0111,
+    "cpu_median_s": 27.2,
+    "cpu_per_wall": 2.03,
+    "peak_rss_mb_max": 984,
+    "load_1min": [
+     2.54,
+     2.56,
+     2.66
+    ],
+    "score": {
+     "truth": 783,
+     "found": 584,
+     "recall": 0.7356,
+     "precision": 0.9863,
+     "invented": 8,
+     "sizes_compared": 574,
+     "size_exact": 430,
+     "size_short": 142,
+     "size_long": 2
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "jvm_startup": 2.258,
+     "analysis": 9.0,
+     "load_script_save_exit": 2.23,
+     "top_analyzers": {
+      "Decompiler Switch Analysis": 1.92,
+      "MIPS-R5900 Constant Reference Analyzer": 1.548,
+      "Create Address Tables - One Time": 1.175,
+      "Stack": 0.84,
+      "Disassemble Entry Points": 0.767,
+      "ASCII Strings": 0.757,
+      "Apply Data Archives": 0.412,
+      "Non-Returning Functions - Discovered": 0.379
+     }
+    },
+    "language": "r5900:LE:32:default",
+    "argv": [
+     "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+     "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ghidra-0/ghidra-project",
+     "proj",
+     "-import",
+     "/var/tmp/fg-import-speed/binaries/ps2-dungeon-game/dungeon_game.elf.stripped",
+     "-processor",
+     "r5900:LE:32:default",
+     "-scriptPath",
+     "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+     "-postScript",
+     "ExportFunctionEntries.java",
+     "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ghidra-0/ghidra-functions.json",
+     "-deleteProject"
+    ]
+   },
+   "ours_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 2.56,
+     "cpu_s": 4.94,
+     "user_s": 4.28,
+     "sys_s": 0.66,
+     "peak_rss_mb": 101,
+     "load_before": [
+      2.5,
+      2.99,
+      3.07
+     ],
+     "load_after": [
+      2.54,
+      2.99,
+      3.07
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/var/tmp/fg-import-speed/binaries/ps2-dungeon-game/dungeon_game.elf.stripped",
+      "--name",
+      "dungeon",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ours-0/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "dungeon",
+     "language": "r5900:LE:32:default",
+     "phases": {
+      "total": 2.492717,
+      "console": 0.617562,
+      "discovery": 0.854966,
+      "flow": 0.234229,
+      "parse": 0.013398,
+      "patterns": 0.088305,
+      "references": 0.833265,
+      "references-only": 0.215697,
+      "settle": 0.00109,
+      "store": 0.121757,
+      "switch": 0.554757,
+      "switch-vsa": 0.016913
+     },
+     "functions_all_programs": 748,
+     "degraded": [],
+     "ranges": [
+      [
+       1048576,
+       1269216
+      ],
+      [
+       1269216,
+       1269248
+      ],
+      [
+       5023108,
+       5023232
+      ],
+      [
+       1269296,
+       1269376
+      ],
+      [
+       1366392,
+       1366400
+      ],
+      [
+       5023012,
+       5023104
+      ]
+     ],
+     "score": {
+      "truth": 783,
+      "found": 748,
+      "recall": 0.9438,
+      "precision": 0.988,
+      "invented": 9,
+      "sizes_compared": 737,
+      "size_exact": 716,
+      "size_short": 8,
+      "size_long": 13
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 2.56,
+     "cpu_s": 5.21,
+     "user_s": 4.52,
+     "sys_s": 0.69,
+     "peak_rss_mb": 111,
+     "load_before": [
+      2.56,
+      2.97,
+      3.06
+     ],
+     "load_after": [
+      2.56,
+      2.97,
+      3.06
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/var/tmp/fg-import-speed/binaries/ps2-dungeon-game/dungeon_game.elf.stripped",
+      "--name",
+      "dungeon",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ours-1/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "dungeon",
+     "language": "r5900:LE:32:default",
+     "phases": {
+      "total": 2.528146,
+      "console": 0.642128,
+      "discovery": 0.839897,
+      "flow": 0.227675,
+      "parse": 0.012794,
+      "patterns": 0.087755,
+      "references": 0.8544,
+      "references-only": 0.212266,
+      "settle": 0.000756,
+      "store": 0.116556,
+      "switch": 0.589676,
+      "switch-vsa": 0.016944
+     },
+     "functions_all_programs": 748,
+     "degraded": [],
+     "ranges": [
+      [
+       1048576,
+       1269216
+      ],
+      [
+       1269216,
+       1269248
+      ],
+      [
+       5023108,
+       5023232
+      ],
+      [
+       1269296,
+       1269376
+      ],
+      [
+       1366392,
+       1366400
+      ],
+      [
+       5023012,
+       5023104
+      ]
+     ],
+     "score": {
+      "truth": 783,
+      "found": 748,
+      "recall": 0.9438,
+      "precision": 0.988,
+      "invented": 9,
+      "sizes_compared": 737,
+      "size_exact": 716,
+      "size_short": 8,
+      "size_long": 13
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 2.51,
+     "cpu_s": 5.04,
+     "user_s": 4.36,
+     "sys_s": 0.68,
+     "peak_rss_mb": 108,
+     "load_before": [
+      2.66,
+      2.97,
+      3.06
+     ],
+     "load_after": [
+      2.66,
+      2.97,
+      3.06
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/var/tmp/fg-import-speed/binaries/ps2-dungeon-game/dungeon_game.elf.stripped",
+      "--name",
+      "dungeon",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ours-2/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "dungeon",
+     "language": "r5900:LE:32:default",
+     "phases": {
+      "total": 2.469346,
+      "console": 0.609068,
+      "discovery": 0.826392,
+      "flow": 0.232397,
+      "parse": 0.013306,
+      "patterns": 0.088328,
+      "references": 0.835795,
+      "references-only": 0.226722,
+      "settle": 0.000716,
+      "store": 0.114916,
+      "switch": 0.56584,
+      "switch-vsa": 0.017014
+     },
+     "functions_all_programs": 748,
+     "degraded": [],
+     "ranges": [
+      [
+       1048576,
+       1269216
+      ],
+      [
+       1269216,
+       1269248
+      ],
+      [
+       5023108,
+       5023232
+      ],
+      [
+       1269296,
+       1269376
+      ],
+      [
+       1366392,
+       1366400
+      ],
+      [
+       5023012,
+       5023104
+      ]
+     ],
+     "score": {
+      "truth": 783,
+      "found": 748,
+      "recall": 0.9438,
+      "precision": 0.988,
+      "invented": 9,
+      "sizes_compared": 737,
+      "size_exact": 716,
+      "size_short": 8,
+      "size_long": 13
+     }
+    }
+   ],
+   "ghidra_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 13.49,
+     "cpu_s": 27.18,
+     "user_s": 26.02,
+     "sys_s": 1.16,
+     "peak_rss_mb": 984,
+     "load_before": [
+      2.54,
+      2.99,
+      3.07
+     ],
+     "load_after": [
+      2.56,
+      2.97,
+      3.06
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ghidra-0/ghidra-project",
+      "proj",
+      "-import",
+      "/var/tmp/fg-import-speed/binaries/ps2-dungeon-game/dungeon_game.elf.stripped",
+      "-processor",
+      "r5900:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ghidra-0/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "r5900:LE:32:default",
+     "compiler": "default",
+     "format": "Executable and Linking Format (ELF)",
+     "image_base": "00100000",
+     "loader": "Executable and Linking Format (ELF)",
+     "functions_total": 584,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.258,
+      "analysis": 9.0,
+      "load_script_save_exit": 2.23,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 1.92,
+       "MIPS-R5900 Constant Reference Analyzer": 1.548,
+       "Create Address Tables - One Time": 1.175,
+       "Stack": 0.84,
+       "Disassemble Entry Points": 0.767,
+       "ASCII Strings": 0.757,
+       "Apply Data Archives": 0.412,
+       "Non-Returning Functions - Discovered": 0.379
+      }
+     },
+     "score": {
+      "truth": 783,
+      "found": 584,
+      "recall": 0.7356,
+      "precision": 0.9863,
+      "invented": 8,
+      "sizes_compared": 574,
+      "size_exact": 430,
+      "size_short": 142,
+      "size_long": 2
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 13.39,
+     "cpu_s": 27.2,
+     "user_s": 26.04,
+     "sys_s": 1.16,
+     "peak_rss_mb": 925,
+     "load_before": [
+      2.56,
+      2.97,
+      3.06
+     ],
+     "load_after": [
+      2.66,
+      2.97,
+      3.06
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ghidra-1/ghidra-project",
+      "proj",
+      "-import",
+      "/var/tmp/fg-import-speed/binaries/ps2-dungeon-game/dungeon_game.elf.stripped",
+      "-processor",
+      "r5900:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ghidra-1/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "r5900:LE:32:default",
+     "compiler": "default",
+     "format": "Executable and Linking Format (ELF)",
+     "image_base": "00100000",
+     "loader": "Executable and Linking Format (ELF)",
+     "functions_total": 584,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.161,
+      "analysis": 9.0,
+      "load_script_save_exit": 2.23,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 1.921,
+       "MIPS-R5900 Constant Reference Analyzer": 1.619,
+       "Create Address Tables - One Time": 1.288,
+       "Stack": 0.837,
+       "Disassemble Entry Points": 0.786,
+       "ASCII Strings": 0.739,
+       "Non-Returning Functions - Discovered": 0.382,
+       "Apply Data Archives": 0.337
+      }
+     },
+     "score": {
+      "truth": 783,
+      "found": 584,
+      "recall": 0.7356,
+      "precision": 0.9863,
+      "invented": 8,
+      "sizes_compared": 574,
+      "size_exact": 430,
+      "size_short": 142,
+      "size_long": 2
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 13.54,
+     "cpu_s": 27.43,
+     "user_s": 26.32,
+     "sys_s": 1.11,
+     "peak_rss_mb": 858,
+     "load_before": [
+      2.66,
+      2.97,
+      3.06
+     ],
+     "load_after": [
+      2.81,
+      2.99,
+      3.06
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ghidra-2/ghidra-project",
+      "proj",
+      "-import",
+      "/var/tmp/fg-import-speed/binaries/ps2-dungeon-game/dungeon_game.elf.stripped",
+      "-processor",
+      "r5900:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/ps2-dungeon-game/ghidra-2/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "r5900:LE:32:default",
+     "compiler": "default",
+     "format": "Executable and Linking Format (ELF)",
+     "image_base": "00100000",
+     "loader": "Executable and Linking Format (ELF)",
+     "functions_total": 584,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.139,
+      "analysis": 9.0,
+      "load_script_save_exit": 2.4,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 1.926,
+       "MIPS-R5900 Constant Reference Analyzer": 1.628,
+       "Create Address Tables - One Time": 1.172,
+       "Stack": 0.904,
+       "Disassemble Entry Points": 0.775,
+       "ASCII Strings": 0.704,
+       "Non-Returning Functions - Discovered": 0.389,
+       "Apply Data Archives": 0.385
+      }
+     },
+     "score": {
+      "truth": 783,
+      "found": 584,
+      "recall": 0.7356,
+      "precision": 0.9863,
+      "invented": 8,
+      "sizes_compared": 574,
+      "size_exact": 430,
+      "size_short": 142,
+      "size_long": 2
+     }
+    }
+   ],
+   "failures": [],
+   "wall_ratio": 0.1898,
+   "cpu_ratio": 0.1853,
+   "rss_ratio": 0.1128,
+   "speed_tolerance": 0.05,
+   "wall_ratio_ex_jvm_startup": 0.226,
+   "speed": "faster",
+   "precision_gate": "precision",
+   "recall_delta": 0.2082,
+   "precision_delta": 0.0017,
+   "quality": "not-worse",
+   "f1": {
+    "romwright": 0.9654,
+    "ghidra": 0.8427
+   }
+  },
+  "gc-animal-crossing": {
+   "status": "pass",
+   "ghidra_config": {
+    "language": "PowerPC:BE:32:Gekko_Broadway",
+    "loader": null,
+    "options": [],
+    "why": "GameCubeLoader extension (DOL sections at their load addresses), Gekko/Broadway."
+   },
+   "ours": {
+    "runs": 3,
+    "wall_s": [
+     4.06,
+     4.06,
+     4.06
+    ],
+    "wall_median_s": 4.06,
+    "spread": 0.0,
+    "cpu_median_s": 10.11,
+    "cpu_per_wall": 2.49,
+    "peak_rss_mb_max": 195,
+    "load_1min": [
+     2.81,
+     2.61,
+     2.31
+    ],
+    "score": null,
+    "score_stable": true,
+    "phases_first_run": {
+     "total": 3.992431,
+     "console": 0.187696,
+     "discovery": 1.538045,
+     "flow": 0.641854,
+     "parse": 0.003357,
+     "patterns": 0.018177,
+     "references": 0.802968,
+     "references-only": 0.615267,
+     "settle": 0.002976,
+     "store": 0.153972,
+     "switch": 1.054638,
+     "switch-vsa": 0.280458
+    },
+    "language": "PowerPC:BE:32:Gekko_Broadway",
+    "argv": [
+     "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+     "import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gc-animal-crossing/main.dol",
+     "--name",
+     "gc",
+     "--project",
+     "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ours-0/project",
+     "--timings"
+    ]
+   },
+   "ghidra": {
+    "runs": 3,
+    "wall_s": [
+     24.61,
+     24.11,
+     24.11
+    ],
+    "wall_median_s": 24.11,
+    "spread": 0.0207,
+    "cpu_median_s": 41.86,
+    "cpu_per_wall": 1.74,
+    "peak_rss_mb_max": 1529,
+    "load_1min": [
+     2.83,
+     2.61,
+     2.53
+    ],
+    "score": null,
+    "score_stable": true,
+    "phases_first_run": {
+     "jvm_startup": 2.184,
+     "analysis": 21.0,
+     "load_script_save_exit": 1.43,
+     "top_analyzers": {
+      "Decompiler Switch Analysis": 9.161,
+      "PowerPC Constant Reference Analyzer": 2.96,
+      "Stack": 2.565,
+      "Disassemble": 1.745,
+      "Disassemble Entry Points": 0.977,
+      "Apply Data Archives": 0.584,
+      "Create Function": 0.567,
+      "Create Address Tables - One Time": 0.505
+     }
+    },
+    "language": "PowerPC:BE:32:Gekko_Broadway",
+    "argv": [
+     "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+     "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ghidra-0/ghidra-project",
+     "proj",
+     "-import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gc-animal-crossing/main.dol",
+     "-processor",
+     "PowerPC:BE:32:Gekko_Broadway",
+     "-scriptPath",
+     "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+     "-postScript",
+     "ExportFunctionEntries.java",
+     "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ghidra-0/ghidra-functions.json",
+     "-deleteProject"
+    ]
+   },
+   "ours_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 4.06,
+     "cpu_s": 10.08,
+     "user_s": 9.19,
+     "sys_s": 0.89,
+     "peak_rss_mb": 195,
+     "load_before": [
+      2.81,
+      2.99,
+      3.06
+     ],
+     "load_after": [
+      2.83,
+      2.99,
+      3.06
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gc-animal-crossing/main.dol",
+      "--name",
+      "gc",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ours-0/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "gc",
+     "language": "PowerPC:BE:32:Gekko_Broadway",
+     "phases": {
+      "total": 3.992431,
+      "console": 0.187696,
+      "discovery": 1.538045,
+      "flow": 0.641854,
+      "parse": 0.003357,
+      "patterns": 0.018177,
+      "references": 0.802968,
+      "references-only": 0.615267,
+      "settle": 0.002976,
+      "store": 0.153972,
+      "switch": 1.054638,
+      "switch-vsa": 0.280458
+     },
+     "functions_all_programs": 2984,
+     "degraded": [],
+     "ranges": [
+      [
+       2147496192,
+       2147505696
+      ],
+      [
+       2147505856,
+       2148177792
+      ]
+     ]
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 4.06,
+     "cpu_s": 10.22,
+     "user_s": 9.36,
+     "sys_s": 0.86,
+     "peak_rss_mb": 193,
+     "load_before": [
+      2.61,
+      2.93,
+      3.04
+     ],
+     "load_after": [
+      2.61,
+      2.93,
+      3.04
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gc-animal-crossing/main.dol",
+      "--name",
+      "gc",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ours-1/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "gc",
+     "language": "PowerPC:BE:32:Gekko_Broadway",
+     "phases": {
+      "total": 4.020078,
+      "console": 0.192743,
+      "discovery": 1.54935,
+      "flow": 0.635386,
+      "parse": 0.003405,
+      "patterns": 0.017937,
+      "references": 0.817036,
+      "references-only": 0.624288,
+      "settle": 0.003107,
+      "store": 0.156497,
+      "switch": 1.057167,
+      "switch-vsa": 0.282975
+     },
+     "functions_all_programs": 2984,
+     "degraded": [],
+     "ranges": [
+      [
+       2147496192,
+       2147505696
+      ],
+      [
+       2147505856,
+       2148177792
+      ]
+     ]
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 4.06,
+     "cpu_s": 10.11,
+     "user_s": 9.23,
+     "sys_s": 0.88,
+     "peak_rss_mb": 185,
+     "load_before": [
+      2.31,
+      2.83,
+      3.01
+     ],
+     "load_after": [
+      2.53,
+      2.87,
+      3.02
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gc-animal-crossing/main.dol",
+      "--name",
+      "gc",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ours-2/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "gc",
+     "language": "PowerPC:BE:32:Gekko_Broadway",
+     "phases": {
+      "total": 4.021157,
+      "console": 0.19003,
+      "discovery": 1.54262,
+      "flow": 0.640867,
+      "parse": 0.003711,
+      "patterns": 0.019234,
+      "references": 0.818253,
+      "references-only": 0.628217,
+      "settle": 0.003084,
+      "store": 0.159817,
+      "switch": 1.053717,
+      "switch-vsa": 0.281034
+     },
+     "functions_all_programs": 2984,
+     "degraded": [],
+     "ranges": [
+      [
+       2147496192,
+       2147505696
+      ],
+      [
+       2147505856,
+       2148177792
+      ]
+     ]
+    }
+   ],
+   "ghidra_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 24.61,
+     "cpu_s": 43.92,
+     "user_s": 41.39,
+     "sys_s": 2.53,
+     "peak_rss_mb": 1510,
+     "load_before": [
+      2.83,
+      2.99,
+      3.06
+     ],
+     "load_after": [
+      2.61,
+      2.93,
+      3.04
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ghidra-0/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gc-animal-crossing/main.dol",
+      "-processor",
+      "PowerPC:BE:32:Gekko_Broadway",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ghidra-0/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "PowerPC:BE:32:Gekko_Broadway",
+     "compiler": "default",
+     "format": "Nintendo GameCube/Wii Binary (Executable)",
+     "image_base": "80000000",
+     "loader": "Nintendo GameCube/Wii Binary (Executable)",
+     "functions_total": 2734,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.184,
+      "analysis": 21.0,
+      "load_script_save_exit": 1.43,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 9.161,
+       "PowerPC Constant Reference Analyzer": 2.96,
+       "Stack": 2.565,
+       "Disassemble": 1.745,
+       "Disassemble Entry Points": 0.977,
+       "Apply Data Archives": 0.584,
+       "Create Function": 0.567,
+       "Create Address Tables - One Time": 0.505
+      }
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 24.11,
+     "cpu_s": 41.86,
+     "user_s": 39.42,
+     "sys_s": 2.45,
+     "peak_rss_mb": 1422,
+     "load_before": [
+      2.61,
+      2.93,
+      3.04
+     ],
+     "load_after": [
+      2.31,
+      2.83,
+      3.01
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ghidra-1/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gc-animal-crossing/main.dol",
+      "-processor",
+      "PowerPC:BE:32:Gekko_Broadway",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ghidra-1/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "PowerPC:BE:32:Gekko_Broadway",
+     "compiler": "default",
+     "format": "Nintendo GameCube/Wii Binary (Executable)",
+     "image_base": "80000000",
+     "loader": "Nintendo GameCube/Wii Binary (Executable)",
+     "functions_total": 2734,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.3,
+      "analysis": 20.0,
+      "load_script_save_exit": 1.81,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 9.094,
+       "PowerPC Constant Reference Analyzer": 2.714,
+       "Stack": 2.43,
+       "Disassemble": 1.66,
+       "Disassemble Entry Points": 1.05,
+       "Apply Data Archives": 0.531,
+       "Reference": 0.514,
+       "Create Function": 0.473
+      }
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 24.11,
+     "cpu_s": 41.86,
+     "user_s": 39.37,
+     "sys_s": 2.49,
+     "peak_rss_mb": 1529,
+     "load_before": [
+      2.53,
+      2.87,
+      3.02
+     ],
+     "load_after": [
+      2.82,
+      2.91,
+      3.03
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ghidra-2/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gc-animal-crossing/main.dol",
+      "-processor",
+      "PowerPC:BE:32:Gekko_Broadway",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/gc-animal-crossing/ghidra-2/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "PowerPC:BE:32:Gekko_Broadway",
+     "compiler": "default",
+     "format": "Nintendo GameCube/Wii Binary (Executable)",
+     "image_base": "80000000",
+     "loader": "Nintendo GameCube/Wii Binary (Executable)",
+     "functions_total": 2734,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.238,
+      "analysis": 20.0,
+      "load_script_save_exit": 1.87,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 9.118,
+       "PowerPC Constant Reference Analyzer": 2.737,
+       "Stack": 2.46,
+       "Disassemble": 1.632,
+       "Disassemble Entry Points": 0.945,
+       "Apply Data Archives": 0.531,
+       "Create Function": 0.522,
+       "Reference": 0.506
+      }
+     }
+    }
+   ],
+   "failures": [],
+   "wall_ratio": 0.1684,
+   "cpu_ratio": 0.2415,
+   "rss_ratio": 0.1275,
+   "speed_tolerance": 0.05,
+   "wall_ratio_ex_jvm_startup": 0.1856,
+   "speed": "faster",
+   "quality": "n/a (no truth)"
+  },
+  "ps2-capcom-fighting-evolution": {
+   "status": "pass",
+   "ghidra_config": {
+    "language": "r5900:LE:32:default",
+    "loader": null,
+    "options": [],
+    "why": "Stock ELF loader with the emotionengine-reloaded R5900 language; stripped ELF (llvm-strip --strip-all), the same file our import reads."
+   },
+   "ours": {
+    "runs": 3,
+    "wall_s": [
+     43.11,
+     42.81,
+     44.22
+    ],
+    "wall_median_s": 43.11,
+    "spread": 0.0327,
+    "cpu_median_s": 163.85,
+    "cpu_per_wall": 3.8,
+    "peak_rss_mb_max": 265,
+    "load_1min": [
+     2.82,
+     2.63,
+     2.77
+    ],
+    "score": {
+     "truth": 8794,
+     "found": 8307,
+     "recall": 0.9412,
+     "precision": 0.9964,
+     "invented": 30,
+     "sizes_compared": 8277,
+     "size_exact": 8244,
+     "size_short": 2,
+     "size_long": 31
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "total": 43.032341,
+     "console": 0.333097,
+     "discovery": 3.410867,
+     "flow": 1.901604,
+     "parse": 0.00571,
+     "patterns": 1.250294,
+     "references": 4.049767,
+     "references-only": 3.716662,
+     "settle": 0.006583,
+     "store": 0.243337,
+     "switch": 34.744357,
+     "switch-vsa": 0.332903
+    },
+    "language": "r5900:LE:32:default",
+    "argv": [
+     "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+     "import",
+     "/var/tmp/fg-import-speed/binaries/ps2-capcom-fighting-evolution/SLUS_209.50.stripped",
+     "--name",
+     "capcom",
+     "--project",
+     "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ours-0/project",
+     "--timings"
+    ]
+   },
+   "ghidra": {
+    "runs": 3,
+    "wall_s": [
+     177.35,
+     173.66,
+     176.02
+    ],
+    "wall_median_s": 176.02,
+    "spread": 0.021,
+    "cpu_median_s": 247.2,
+    "cpu_per_wall": 1.4,
+    "peak_rss_mb_max": 1920,
+    "load_1min": [
+     4.37,
+     4.01,
+     4.86
+    ],
+    "score": {
+     "truth": 8794,
+     "found": 6664,
+     "recall": 0.7562,
+     "precision": 0.9979,
+     "invented": 14,
+     "sizes_compared": 6650,
+     "size_exact": 4349,
+     "size_short": 2299,
+     "size_long": 2
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "jvm_startup": 2.188,
+     "analysis": 173.0,
+     "load_script_save_exit": 2.16,
+     "top_analyzers": {
+      "Decompiler Switch Analysis": 140.995,
+      "MIPS-R5900 Constant Reference Analyzer": 11.236,
+      "Stack": 5.897,
+      "Disassemble": 4.371,
+      "Create Address Tables - One Time": 1.836,
+      "Create Function": 1.684,
+      "Reference": 1.087,
+      "Subroutine References": 1.003
+     }
+    },
+    "language": "r5900:LE:32:default",
+    "argv": [
+     "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+     "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ghidra-0/ghidra-project",
+     "proj",
+     "-import",
+     "/var/tmp/fg-import-speed/binaries/ps2-capcom-fighting-evolution/SLUS_209.50.stripped",
+     "-processor",
+     "r5900:LE:32:default",
+     "-scriptPath",
+     "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+     "-postScript",
+     "ExportFunctionEntries.java",
+     "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ghidra-0/ghidra-functions.json",
+     "-deleteProject"
+    ]
+   },
+   "ours_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 43.11,
+     "cpu_s": 163.74,
+     "user_s": 145.66,
+     "sys_s": 18.08,
+     "peak_rss_mb": 265,
+     "load_before": [
+      2.82,
+      2.91,
+      3.03
+     ],
+     "load_after": [
+      4.37,
+      3.33,
+      3.16
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/var/tmp/fg-import-speed/binaries/ps2-capcom-fighting-evolution/SLUS_209.50.stripped",
+      "--name",
+      "capcom",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ours-0/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "capcom",
+     "language": "r5900:LE:32:default",
+     "phases": {
+      "total": 43.032341,
+      "console": 0.333097,
+      "discovery": 3.410867,
+      "flow": 1.901604,
+      "parse": 0.00571,
+      "patterns": 1.250294,
+      "references": 4.049767,
+      "references-only": 3.716662,
+      "settle": 0.006583,
+      "store": 0.243337,
+      "switch": 34.744357,
+      "switch-vsa": 0.332903
+     },
+     "functions_all_programs": 8307,
+     "degraded": [],
+     "ranges": [
+      [
+       1048576,
+       3318784
+      ],
+      [
+       3318784,
+       4230784
+      ]
+     ],
+     "score": {
+      "truth": 8794,
+      "found": 8307,
+      "recall": 0.9412,
+      "precision": 0.9964,
+      "invented": 30,
+      "sizes_compared": 8277,
+      "size_exact": 8244,
+      "size_short": 2,
+      "size_long": 31
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 42.81,
+     "cpu_s": 163.85,
+     "user_s": 145.69,
+     "sys_s": 18.15,
+     "peak_rss_mb": 250,
+     "load_before": [
+      2.63,
+      2.97,
+      3.05
+     ],
+     "load_after": [
+      4.01,
+      3.3,
+      3.16
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/var/tmp/fg-import-speed/binaries/ps2-capcom-fighting-evolution/SLUS_209.50.stripped",
+      "--name",
+      "capcom",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ours-1/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "capcom",
+     "language": "r5900:LE:32:default",
+     "phases": {
+      "total": 42.769452,
+      "console": 0.342462,
+      "discovery": 3.384144,
+      "flow": 1.867962,
+      "parse": 0.005628,
+      "patterns": 1.254599,
+      "references": 4.03565,
+      "references-only": 3.69318,
+      "settle": 0.006225,
+      "store": 0.242082,
+      "switch": 34.528512,
+      "switch-vsa": 0.3344
+     },
+     "functions_all_programs": 8307,
+     "degraded": [],
+     "ranges": [
+      [
+       1048576,
+       3318784
+      ],
+      [
+       3318784,
+       4230784
+      ]
+     ],
+     "score": {
+      "truth": 8794,
+      "found": 8307,
+      "recall": 0.9412,
+      "precision": 0.9964,
+      "invented": 30,
+      "sizes_compared": 8277,
+      "size_exact": 8244,
+      "size_short": 2,
+      "size_long": 31
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 44.22,
+     "cpu_s": 166.61,
+     "user_s": 148.42,
+     "sys_s": 18.2,
+     "peak_rss_mb": 255,
+     "load_before": [
+      2.77,
+      3.06,
+      3.09
+     ],
+     "load_after": [
+      4.86,
+      3.61,
+      3.27
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/var/tmp/fg-import-speed/binaries/ps2-capcom-fighting-evolution/SLUS_209.50.stripped",
+      "--name",
+      "capcom",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ours-2/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "capcom",
+     "language": "r5900:LE:32:default",
+     "phases": {
+      "total": 44.142363,
+      "console": 0.331616,
+      "discovery": 3.484905,
+      "flow": 1.927758,
+      "parse": 0.005637,
+      "patterns": 1.265917,
+      "references": 4.049665,
+      "references-only": 3.718042,
+      "settle": 0.005984,
+      "store": 0.262593,
+      "switch": 35.761038,
+      "switch-vsa": 0.333833
+     },
+     "functions_all_programs": 8307,
+     "degraded": [],
+     "ranges": [
+      [
+       1048576,
+       3318784
+      ],
+      [
+       3318784,
+       4230784
+      ]
+     ],
+     "score": {
+      "truth": 8794,
+      "found": 8307,
+      "recall": 0.9412,
+      "precision": 0.9964,
+      "invented": 30,
+      "sizes_compared": 8277,
+      "size_exact": 8244,
+      "size_short": 2,
+      "size_long": 31
+     }
+    }
+   ],
+   "ghidra_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 177.35,
+     "cpu_s": 248.66,
+     "user_s": 241.04,
+     "sys_s": 7.61,
+     "peak_rss_mb": 1728,
+     "load_before": [
+      4.37,
+      3.33,
+      3.16
+     ],
+     "load_after": [
+      2.63,
+      2.97,
+      3.05
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ghidra-0/ghidra-project",
+      "proj",
+      "-import",
+      "/var/tmp/fg-import-speed/binaries/ps2-capcom-fighting-evolution/SLUS_209.50.stripped",
+      "-processor",
+      "r5900:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ghidra-0/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "r5900:LE:32:default",
+     "compiler": "default",
+     "format": "Executable and Linking Format (ELF)",
+     "image_base": "00100000",
+     "loader": "Executable and Linking Format (ELF)",
+     "functions_total": 6664,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.188,
+      "analysis": 173.0,
+      "load_script_save_exit": 2.16,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 140.995,
+       "MIPS-R5900 Constant Reference Analyzer": 11.236,
+       "Stack": 5.897,
+       "Disassemble": 4.371,
+       "Create Address Tables - One Time": 1.836,
+       "Create Function": 1.684,
+       "Reference": 1.087,
+       "Subroutine References": 1.003
+      }
+     },
+     "score": {
+      "truth": 8794,
+      "found": 6664,
+      "recall": 0.7562,
+      "precision": 0.9979,
+      "invented": 14,
+      "sizes_compared": 6650,
+      "size_exact": 4349,
+      "size_short": 2299,
+      "size_long": 2
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 173.66,
+     "cpu_s": 242.37,
+     "user_s": 234.78,
+     "sys_s": 7.59,
+     "peak_rss_mb": 1892,
+     "load_before": [
+      4.01,
+      3.3,
+      3.16
+     ],
+     "load_after": [
+      2.77,
+      3.06,
+      3.09
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ghidra-1/ghidra-project",
+      "proj",
+      "-import",
+      "/var/tmp/fg-import-speed/binaries/ps2-capcom-fighting-evolution/SLUS_209.50.stripped",
+      "-processor",
+      "r5900:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ghidra-1/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "r5900:LE:32:default",
+     "compiler": "default",
+     "format": "Executable and Linking Format (ELF)",
+     "image_base": "00100000",
+     "loader": "Executable and Linking Format (ELF)",
+     "functions_total": 6664,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.158,
+      "analysis": 169.0,
+      "load_script_save_exit": 2.5,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 138.093,
+       "MIPS-R5900 Constant Reference Analyzer": 10.834,
+       "Stack": 5.618,
+       "Disassemble": 4.143,
+       "Create Address Tables - One Time": 1.754,
+       "Create Function": 1.661,
+       "Reference": 1.156,
+       "Subroutine References": 1.009
+      }
+     },
+     "score": {
+      "truth": 8794,
+      "found": 6664,
+      "recall": 0.7562,
+      "precision": 0.9979,
+      "invented": 14,
+      "sizes_compared": 6650,
+      "size_exact": 4349,
+      "size_short": 2299,
+      "size_long": 2
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 176.02,
+     "cpu_s": 247.2,
+     "user_s": 239.8,
+     "sys_s": 7.4,
+     "peak_rss_mb": 1920,
+     "load_before": [
+      4.86,
+      3.61,
+      3.27
+     ],
+     "load_after": [
+      2.71,
+      3.14,
+      3.15
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ghidra-2/ghidra-project",
+      "proj",
+      "-import",
+      "/var/tmp/fg-import-speed/binaries/ps2-capcom-fighting-evolution/SLUS_209.50.stripped",
+      "-processor",
+      "r5900:LE:32:default",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/ps2-capcom-fighting-evolution/ghidra-2/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "r5900:LE:32:default",
+     "compiler": "default",
+     "format": "Executable and Linking Format (ELF)",
+     "image_base": "00100000",
+     "loader": "Executable and Linking Format (ELF)",
+     "functions_total": 6664,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.112,
+      "analysis": 171.0,
+      "load_script_save_exit": 2.91,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 140.275,
+       "MIPS-R5900 Constant Reference Analyzer": 10.843,
+       "Stack": 5.717,
+       "Disassemble": 4.28,
+       "Create Address Tables - One Time": 1.81,
+       "Create Function": 1.779,
+       "Reference": 1.113,
+       "Subroutine References": 0.981
+      }
+     },
+     "score": {
+      "truth": 8794,
+      "found": 6664,
+      "recall": 0.7562,
+      "precision": 0.9979,
+      "invented": 14,
+      "sizes_compared": 6650,
+      "size_exact": 4349,
+      "size_short": 2299,
+      "size_long": 2
+     }
+    }
+   ],
+   "failures": [],
+   "wall_ratio": 0.2449,
+   "cpu_ratio": 0.6628,
+   "rss_ratio": 0.138,
+   "speed_tolerance": 0.05,
+   "wall_ratio_ex_jvm_startup": 0.248,
+   "speed": "faster",
+   "precision_gate": "precision",
+   "recall_delta": 0.185,
+   "precision_delta": -0.0015,
+   "quality": "not-worse",
+   "f1": {
+    "romwright": 0.968,
+    "ghidra": 0.8604
+   }
+  },
+  "x360-black-ops-2": {
+   "status": "pass",
+   "ghidra_config": {
+    "language": "PowerPC:BE:64:A2ALT-32addr",
+    "loader": null,
+    "options": [],
+    "why": "XEXLoaderWV extension. Our language, PowerPC:BE:64:Xenon-32addr, is built by native/languages/xenon/install.sh (A2 + VMX128) and is not a Ghidra module (no Module.manifest), so stock Ghidra cannot load it; A2ALT-32addr (A2 + AltiVec) is the stock language it extends. VMX128 instructions do not decode there, so Ghidra's flow stops at them. The MSVC map is not given to either tool."
+   },
+   "ours": {
+    "runs": 2,
+    "wall_s": [
+     46.77,
+     45.85
+    ],
+    "wall_median_s": 46.31,
+    "spread": 0.0199,
+    "cpu_median_s": 118.74,
+    "cpu_per_wall": 2.56,
+    "peak_rss_mb_max": 1355,
+    "load_1min": [
+     2.71,
+     2.67
+    ],
+    "score": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "invented": 98,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "total": 46.63326,
+     "console": 4.765155,
+     "discovery": 16.947765,
+     "flow": 13.165233,
+     "parse": 0.146325,
+     "patterns": 0.131515,
+     "references": 10.386109,
+     "references-only": 5.620947,
+     "settle": 0.02267,
+     "store": 1.582868,
+     "switch": 15.704939,
+     "switch-vsa": 1.181935
+    },
+    "language": "PowerPC:BE:64:Xenon-32addr",
+    "argv": [
+     "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+     "import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/x360-call-of-duty-black-ops-2/default_mp_script.exe",
+     "--name",
+     "x360",
+     "--project",
+     "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ours-0/project",
+     "--timings"
+    ]
+   },
+   "ghidra": {
+    "runs": 2,
+    "wall_s": [
+     131.3,
+     133.69
+    ],
+    "wall_median_s": 132.5,
+    "spread": 0.018,
+    "cpu_median_s": 193.01,
+    "cpu_per_wall": 1.46,
+    "peak_rss_mb_max": 7253,
+    "load_1min": [
+     3.01,
+     3.04
+    ],
+    "score": {
+     "truth": 27730,
+     "found": 21228,
+     "recall": 0.7628,
+     "precision": 0.9965,
+     "invented": 75,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "jvm_startup": 2.258,
+     "analysis": 104.0,
+     "load_script_save_exit": 25.04,
+     "top_analyzers": {
+      "Decompiler Switch Analysis": 32.161,
+      "Non-Returning Functions - Discovered": 28.985,
+      "PowerPC Constant Reference Analyzer": 15.81,
+      "Stack": 7.758,
+      "Create Address Tables - One Time": 5.023,
+      "Reference": 2.352,
+      "ASCII Strings": 2.345,
+      "Subroutine References": 1.828
+     }
+    },
+    "language": "PowerPC:BE:64:A2ALT-32addr",
+    "argv": [
+     "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+     "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ghidra-0/ghidra-project",
+     "proj",
+     "-import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/x360-call-of-duty-black-ops-2/default_mp_script.exe",
+     "-processor",
+     "PowerPC:BE:64:A2ALT-32addr",
+     "-scriptPath",
+     "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+     "-postScript",
+     "ExportFunctionEntries.java",
+     "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ghidra-0/ghidra-functions.json",
+     "-deleteProject"
+    ]
+   },
+   "ours_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 46.77,
+     "cpu_s": 119.69,
+     "user_s": 110.05,
+     "sys_s": 9.64,
+     "peak_rss_mb": 1332,
+     "load_before": [
+      2.71,
+      3.14,
+      3.15
+     ],
+     "load_after": [
+      3.01,
+      3.19,
+      3.16
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/x360-call-of-duty-black-ops-2/default_mp_script.exe",
+      "--name",
+      "x360",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ours-0/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "x360.xex",
+     "language": "PowerPC:BE:64:Xenon-32addr",
+     "phases": {
+      "total": 46.63326,
+      "console": 4.765155,
+      "discovery": 16.947765,
+      "flow": 13.165233,
+      "parse": 0.146325,
+      "patterns": 0.131515,
+      "references": 10.386109,
+      "references-only": 5.620947,
+      "settle": 0.02267,
+      "store": 1.582868,
+      "switch": 15.704939,
+      "switch-vsa": 1.181935
+     },
+     "functions_all_programs": 27364,
+     "degraded": [],
+     "ranges": [
+      [
+       2189948416,
+       2189974800
+      ],
+      [
+       2182348800,
+       2189948332
+      ],
+      [
+       2189975040,
+       2190041040
+      ],
+      [
+       2190041088,
+       2190043892
+      ]
+     ],
+     "score": {
+      "truth": 27730,
+      "found": 27364,
+      "recall": 0.9833,
+      "precision": 0.9964,
+      "invented": 98,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 45.85,
+     "cpu_s": 117.79,
+     "user_s": 108.13,
+     "sys_s": 9.65,
+     "peak_rss_mb": 1355,
+     "load_before": [
+      2.67,
+      2.97,
+      3.08
+     ],
+     "load_after": [
+      3.04,
+      3.06,
+      3.11
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/x360-call-of-duty-black-ops-2/default_mp_script.exe",
+      "--name",
+      "x360",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ours-1/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "x360.xex",
+     "language": "PowerPC:BE:64:Xenon-32addr",
+     "phases": {
+      "total": 45.748942,
+      "console": 4.70104,
+      "discovery": 16.588508,
+      "flow": 12.867054,
+      "parse": 0.145995,
+      "patterns": 0.131539,
+      "references": 10.178646,
+      "references-only": 5.477597,
+      "settle": 0.024237,
+      "store": 1.5546,
+      "switch": 15.373415,
+      "switch-vsa": 1.19413
+     },
+     "functions_all_programs": 27364,
+     "degraded": [],
+     "ranges": [
+      [
+       2189948416,
+       2189974800
+      ],
+      [
+       2182348800,
+       2189948332
+      ],
+      [
+       2189975040,
+       2190041040
+      ],
+      [
+       2190041088,
+       2190043892
+      ]
+     ],
+     "score": {
+      "truth": 27730,
+      "found": 27364,
+      "recall": 0.9833,
+      "precision": 0.9964,
+      "invented": 98,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0
+     }
+    }
+   ],
+   "ghidra_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 131.3,
+     "cpu_s": 191.15,
+     "user_s": 180.02,
+     "sys_s": 11.13,
+     "peak_rss_mb": 7253,
+     "load_before": [
+      3.01,
+      3.19,
+      3.16
+     ],
+     "load_after": [
+      2.67,
+      2.97,
+      3.08
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ghidra-0/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/x360-call-of-duty-black-ops-2/default_mp_script.exe",
+      "-processor",
+      "PowerPC:BE:64:A2ALT-32addr",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ghidra-0/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "PowerPC:BE:64:A2ALT-32addr",
+     "compiler": "default",
+     "format": "XEX Loader by Warranty Voider",
+     "image_base": "00000000",
+     "loader": "XEX Loader by Warranty Voider",
+     "functions_total": 21228,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.258,
+      "analysis": 104.0,
+      "load_script_save_exit": 25.04,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 32.161,
+       "Non-Returning Functions - Discovered": 28.985,
+       "PowerPC Constant Reference Analyzer": 15.81,
+       "Stack": 7.758,
+       "Create Address Tables - One Time": 5.023,
+       "Reference": 2.352,
+       "ASCII Strings": 2.345,
+       "Subroutine References": 1.828
+      }
+     },
+     "score": {
+      "truth": 27730,
+      "found": 21228,
+      "recall": 0.7628,
+      "precision": 0.9965,
+      "invented": 75,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 133.69,
+     "cpu_s": 194.88,
+     "user_s": 183.66,
+     "sys_s": 11.22,
+     "peak_rss_mb": 7209,
+     "load_before": [
+      3.04,
+      3.06,
+      3.11
+     ],
+     "load_after": [
+      2.92,
+      3.0,
+      3.07
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ghidra-1/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/x360-call-of-duty-black-ops-2/default_mp_script.exe",
+      "-processor",
+      "PowerPC:BE:64:A2ALT-32addr",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/x360-black-ops-2/ghidra-1/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "PowerPC:BE:64:A2ALT-32addr",
+     "compiler": "default",
+     "format": "XEX Loader by Warranty Voider",
+     "image_base": "00000000",
+     "loader": "XEX Loader by Warranty Voider",
+     "functions_total": 21228,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.444,
+      "analysis": 106.0,
+      "load_script_save_exit": 25.25,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 32.157,
+       "Non-Returning Functions - Discovered": 30.268,
+       "PowerPC Constant Reference Analyzer": 16.89,
+       "Stack": 7.984,
+       "Create Address Tables - One Time": 4.955,
+       "ASCII Strings": 2.268,
+       "Reference": 2.181,
+       "Subroutine References": 1.949
+      }
+     },
+     "score": {
+      "truth": 27730,
+      "found": 21228,
+      "recall": 0.7628,
+      "precision": 0.9965,
+      "invented": 75,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0
+     }
+    }
+   ],
+   "failures": [],
+   "wall_ratio": 0.3495,
+   "cpu_ratio": 0.6152,
+   "rss_ratio": 0.1868,
+   "speed_tolerance": 0.05,
+   "wall_ratio_ex_jvm_startup": 0.3558,
+   "speed": "faster",
+   "precision_gate": "precision",
+   "recall_delta": 0.2205,
+   "precision_delta": -0.0001,
+   "quality": "not-worse",
+   "f1": {
+    "romwright": 0.9898,
+    "ghidra": 0.8641
+   }
+  },
+  "psv-need-for-speed-most-wanted": {
+   "status": "pass",
+   "ghidra_config": {
+    "language": "ARM:LE:32:v8",
+    "loader": null,
+    "options": [],
+    "why": "Stock ELF loader (auto-selected) on the decrypted eboot.elf (e_type 0xFE00, SCE executable), ARM:LE:32:v8 as our import."
+   },
+   "ours": {
+    "runs": 2,
+    "wall_s": [
+     170.01,
+     168.65
+    ],
+    "wall_median_s": 169.33,
+    "spread": 0.008,
+    "cpu_median_s": 554.27,
+    "cpu_per_wall": 3.27,
+    "peak_rss_mb_max": 1601,
+    "load_1min": [
+     2.92,
+     2.47
+    ],
+    "score": {
+     "truth": 26495,
+     "found": 26544,
+     "recall": 0.9731,
+     "precision": 0.9713,
+     "invented": 762,
+     "sizes_compared": 25782,
+     "size_exact": 16274,
+     "size_short": 9499,
+     "size_long": 9
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "total": 169.895388,
+     "console": 8.696298,
+     "discovery": 31.547573,
+     "flow": 25.902916,
+     "parse": 0.006189,
+     "patterns": 0.326941,
+     "references": 23.667309,
+     "references-only": 14.971004,
+     "settle": 0.043898,
+     "store": 1.805301,
+     "switch": 106.944811,
+     "switch-vsa": 4.302664
+    },
+    "language": "ARM:LE:32:v8",
+    "argv": [
+     "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+     "import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psv-need-for-speed-most-wanted/eboot.elf",
+     "--name",
+     "vita",
+     "--project",
+     "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ours-0/project",
+     "--timings"
+    ]
+   },
+   "ghidra": {
+    "runs": 2,
+    "wall_s": [
+     348.74,
+     351.96
+    ],
+    "wall_median_s": 350.35,
+    "spread": 0.0092,
+    "cpu_median_s": 695.34,
+    "cpu_per_wall": 1.98,
+    "peak_rss_mb_max": 3701,
+    "load_1min": [
+     3.4,
+     4.4
+    ],
+    "score": {
+     "truth": 26495,
+     "found": 19302,
+     "recall": 0.7035,
+     "precision": 0.9657,
+     "invented": 662,
+     "sizes_compared": 18640,
+     "size_exact": 11860,
+     "size_short": 6775,
+     "size_long": 5
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "jvm_startup": 2.394,
+     "analysis": 343.0,
+     "load_script_save_exit": 3.35,
+     "top_analyzers": {
+      "Decompiler Switch Analysis": 197.607,
+      "Disassemble": 55.663,
+      "ARM Constant Reference Analyzer": 27.511,
+      "Stack": 27.465,
+      "Subroutine References": 8.258,
+      "Create Function": 5.126,
+      "Reference": 4.865,
+      "Data Reference": 3.442
+     }
+    },
+    "language": "ARM:LE:32:v8",
+    "argv": [
+     "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+     "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ghidra-0/ghidra-project",
+     "proj",
+     "-import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psv-need-for-speed-most-wanted/eboot.elf",
+     "-processor",
+     "ARM:LE:32:v8",
+     "-scriptPath",
+     "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+     "-postScript",
+     "ExportFunctionEntries.java",
+     "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ghidra-0/ghidra-functions.json",
+     "-deleteProject"
+    ]
+   },
+   "ours_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 170.01,
+     "cpu_s": 555.79,
+     "user_s": 541.48,
+     "sys_s": 14.31,
+     "peak_rss_mb": 1581,
+     "load_before": [
+      2.92,
+      3.0,
+      3.07
+     ],
+     "load_after": [
+      3.4,
+      3.47,
+      3.26
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psv-need-for-speed-most-wanted/eboot.elf",
+      "--name",
+      "vita",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ours-0/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "vita",
+     "language": "ARM:LE:32:v8",
+     "phases": {
+      "total": 169.895388,
+      "console": 8.696298,
+      "discovery": 31.547573,
+      "flow": 25.902916,
+      "parse": 0.006189,
+      "patterns": 0.326941,
+      "references": 23.667309,
+      "references-only": 14.971004,
+      "settle": 0.043898,
+      "store": 1.805301,
+      "switch": 106.944811,
+      "switch-vsa": 4.302664
+     },
+     "functions_all_programs": 27576,
+     "degraded": [],
+     "ranges": [
+      [
+       2164260864,
+       2171052476
+      ]
+     ],
+     "score": {
+      "truth": 26495,
+      "found": 26544,
+      "recall": 0.9731,
+      "precision": 0.9713,
+      "invented": 762,
+      "sizes_compared": 25782,
+      "size_exact": 16274,
+      "size_short": 9499,
+      "size_long": 9
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 168.65,
+     "cpu_s": 552.75,
+     "user_s": 538.4,
+     "sys_s": 14.35,
+     "peak_rss_mb": 1601,
+     "load_before": [
+      2.47,
+      3.11,
+      3.22
+     ],
+     "load_after": [
+      4.4,
+      3.82,
+      3.48
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psv-need-for-speed-most-wanted/eboot.elf",
+      "--name",
+      "vita",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ours-1/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "vita",
+     "language": "ARM:LE:32:v8",
+     "phases": {
+      "total": 168.506585,
+      "console": 8.702041,
+      "discovery": 31.551934,
+      "flow": 25.988853,
+      "parse": 0.006076,
+      "patterns": 0.330794,
+      "references": 23.619629,
+      "references-only": 14.917581,
+      "settle": 0.038289,
+      "store": 1.816222,
+      "switch": 105.573687,
+      "switch-vsa": 4.30521
+     },
+     "functions_all_programs": 27576,
+     "degraded": [],
+     "ranges": [
+      [
+       2164260864,
+       2171052476
+      ]
+     ],
+     "score": {
+      "truth": 26495,
+      "found": 26544,
+      "recall": 0.9731,
+      "precision": 0.9713,
+      "invented": 762,
+      "sizes_compared": 25782,
+      "size_exact": 16274,
+      "size_short": 9499,
+      "size_long": 9
+     }
+    }
+   ],
+   "ghidra_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 348.74,
+     "cpu_s": 694.68,
+     "user_s": 677.13,
+     "sys_s": 17.55,
+     "peak_rss_mb": 3701,
+     "load_before": [
+      3.4,
+      3.47,
+      3.26
+     ],
+     "load_after": [
+      2.47,
+      3.11,
+      3.22
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ghidra-0/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psv-need-for-speed-most-wanted/eboot.elf",
+      "-processor",
+      "ARM:LE:32:v8",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ghidra-0/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "ARM:LE:32:v8",
+     "compiler": "default",
+     "format": "Executable and Linking Format (ELF)",
+     "image_base": "81000000",
+     "loader": "Executable and Linking Format (ELF)",
+     "functions_total": 19846,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.394,
+      "analysis": 343.0,
+      "load_script_save_exit": 3.35,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 197.607,
+       "Disassemble": 55.663,
+       "ARM Constant Reference Analyzer": 27.511,
+       "Stack": 27.465,
+       "Subroutine References": 8.258,
+       "Create Function": 5.126,
+       "Reference": 4.865,
+       "Data Reference": 3.442
+      }
+     },
+     "score": {
+      "truth": 26495,
+      "found": 19302,
+      "recall": 0.7035,
+      "precision": 0.9657,
+      "invented": 662,
+      "sizes_compared": 18640,
+      "size_exact": 11860,
+      "size_short": 6775,
+      "size_long": 5
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 351.96,
+     "cpu_s": 695.99,
+     "user_s": 678.37,
+     "sys_s": 17.62,
+     "peak_rss_mb": 3691,
+     "load_before": [
+      4.4,
+      3.82,
+      3.48
+     ],
+     "load_after": [
+      2.53,
+      3.3,
+      3.41
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ghidra-1/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/psv-need-for-speed-most-wanted/eboot.elf",
+      "-processor",
+      "ARM:LE:32:v8",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/psv-need-for-speed-most-wanted/ghidra-1/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "ARM:LE:32:v8",
+     "compiler": "default",
+     "format": "Executable and Linking Format (ELF)",
+     "image_base": "81000000",
+     "loader": "Executable and Linking Format (ELF)",
+     "functions_total": 19846,
+     "functions_overlay": 0,
+     "phases": {
+      "jvm_startup": 2.429,
+      "analysis": 346.0,
+      "load_script_save_exit": 3.53,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 198.933,
+       "Disassemble": 56.816,
+       "Stack": 28.71,
+       "ARM Constant Reference Analyzer": 27.044,
+       "Subroutine References": 8.382,
+       "Create Function": 5.132,
+       "Reference": 4.758,
+       "Data Reference": 3.489
+      }
+     },
+     "score": {
+      "truth": 26495,
+      "found": 19302,
+      "recall": 0.7035,
+      "precision": 0.9657,
+      "invented": 662,
+      "sizes_compared": 18640,
+      "size_exact": 11860,
+      "size_short": 6775,
+      "size_long": 5
+     }
+    }
+   ],
+   "failures": [],
+   "wall_ratio": 0.4833,
+   "cpu_ratio": 0.7971,
+   "rss_ratio": 0.4326,
+   "speed_tolerance": 0.05,
+   "wall_ratio_ex_jvm_startup": 0.4867,
+   "speed": "faster",
+   "precision_gate": "precision",
+   "recall_delta": 0.2696,
+   "precision_delta": 0.0056,
+   "quality": "not-worse",
+   "f1": {
+    "romwright": 0.9722,
+    "ghidra": 0.814
+   }
+  },
+  "nds-pokeheartgold-arm9": {
+   "status": "pass",
+   "ghidra_config": {
+    "language": "ARM:LE:32:v5t",
+    "loader": "NTRGhidraLoader",
+    "options": [
+     "-loader-cpu",
+     "ARM9",
+     "-loader-overlays",
+     "true"
+    ],
+    "why": "NdsLoader (NTRGhidra) extension, ARM9 CPU; ARM9 overlays loaded into overlay spaces (our import also analyses them) but not scored. The loader takes one CPU per program: the ARM7 binary our import also analyses (161 KB) is not loaded, a small advantage to Ghidra."
+   },
+   "ours": {
+    "runs": 2,
+    "wall_s": [
+     111.39,
+     103.11
+    ],
+    "wall_median_s": 107.25,
+    "spread": 0.0772,
+    "cpu_median_s": 263.79,
+    "cpu_per_wall": 2.46,
+    "peak_rss_mb_max": 753,
+    "load_1min": [
+     2.53,
+     0.78
+    ],
+    "score": {
+     "truth": 11078,
+     "found": 10795,
+     "recall": 0.9729,
+     "precision": 0.9984,
+     "invented": 17,
+     "sizes_compared": 10735,
+     "size_exact": 5151,
+     "size_short": 5583,
+     "size_long": 1
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "total": 111.310774,
+     "console": 2.149792,
+     "discovery": 4.0031,
+     "flow": 2.696411,
+     "parse": 0.189141,
+     "patterns": 0.079644,
+     "references": 3.856356,
+     "references-only": 1.706558,
+     "settle": 0.004126,
+     "store": 0.393357,
+     "switch": 5.247455,
+     "switch-vsa": 1.826476
+    },
+    "language": "ARM:LE:32:v5t",
+    "argv": [
+     "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+     "import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
+     "--name",
+     "nds",
+     "--project",
+     "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ours-0/project",
+     "--timings"
+    ]
+   },
+   "ghidra": {
+    "runs": 2,
+    "wall_s": [
+     357.53,
+     339.43
+    ],
+    "wall_median_s": 348.48,
+    "spread": 0.0519,
+    "cpu_median_s": 244.16,
+    "cpu_per_wall": 0.7,
+    "peak_rss_mb_max": 2733,
+    "load_1min": [
+     3.7,
+     2.08
+    ],
+    "score": {
+     "truth": 11078,
+     "found": 9591,
+     "recall": 0.8643,
+     "precision": 0.9983,
+     "invented": 16,
+     "sizes_compared": 9532,
+     "size_exact": 4453,
+     "size_short": 5079,
+     "size_long": 0
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "jvm_startup": 2.475,
+     "analysis": 351.0,
+     "load_script_save_exit": 4.05,
+     "top_analyzers": {
+      "Decompiler Switch Analysis": 246.242,
+      "Disassemble": 30.02,
+      "ARM Constant Reference Analyzer": 20.872,
+      "Stack": 16.993,
+      "Subroutine References": 11.179,
+      "Create Address Tables - One Time": 5.962,
+      "Reference": 4.382,
+      "Create Function": 4.086
+     }
+    },
+    "language": "ARM:LE:32:v5t",
+    "argv": [
+     "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+     "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ghidra-0/ghidra-project",
+     "proj",
+     "-import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
+     "-loader",
+     "NTRGhidraLoader",
+     "-loader-cpu",
+     "ARM9",
+     "-loader-overlays",
+     "true",
+     "-processor",
+     "ARM:LE:32:v5t",
+     "-scriptPath",
+     "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+     "-postScript",
+     "ExportFunctionEntries.java",
+     "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ghidra-0/ghidra-functions.json",
+     "-deleteProject"
+    ]
+   },
+   "ours_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 111.39,
+     "cpu_s": 267.29,
+     "user_s": 184.77,
+     "sys_s": 82.52,
+     "peak_rss_mb": 753,
+     "load_before": [
+      2.53,
+      3.3,
+      3.41
+     ],
+     "load_after": [
+      3.7,
+      3.43,
+      3.44
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
+      "--name",
+      "nds",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ours-0/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "nds.arm9",
+     "language": "ARM:LE:32:v5t",
+     "phases": {
+      "total": 111.310774,
+      "console": 2.149792,
+      "discovery": 4.0031,
+      "flow": 2.696411,
+      "parse": 0.189141,
+      "patterns": 0.079644,
+      "references": 3.856356,
+      "references-only": 1.706558,
+      "settle": 0.004126,
+      "store": 0.393357,
+      "switch": 5.247455,
+      "switch-vsa": 1.826476
+     },
+     "functions_all_programs": 10795,
+     "degraded": [],
+     "ranges": [
+      [
+       33521664,
+       33554432
+      ],
+      [
+       33554432,
+       35543296
+      ]
+     ],
+     "score": {
+      "truth": 11078,
+      "found": 10795,
+      "recall": 0.9729,
+      "precision": 0.9984,
+      "invented": 17,
+      "sizes_compared": 10735,
+      "size_exact": 5151,
+      "size_short": 5583,
+      "size_long": 1
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 103.11,
+     "cpu_s": 260.29,
+     "user_s": 177.31,
+     "sys_s": 82.97,
+     "peak_rss_mb": 753,
+     "load_before": [
+      0.78,
+      1.97,
+      2.86
+     ],
+     "load_after": [
+      2.08,
+      2.16,
+      2.84
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
+      "--name",
+      "nds",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ours-1/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "nds.arm9",
+     "language": "ARM:LE:32:v5t",
+     "phases": {
+      "total": 103.027507,
+      "console": 2.108328,
+      "discovery": 3.482821,
+      "flow": 2.225549,
+      "parse": 0.188876,
+      "patterns": 0.079077,
+      "references": 3.582114,
+      "references-only": 1.47378,
+      "settle": 0.004071,
+      "store": 0.369468,
+      "switch": 4.793546,
+      "switch-vsa": 1.785359
+     },
+     "functions_all_programs": 10795,
+     "degraded": [],
+     "ranges": [
+      [
+       33521664,
+       33554432
+      ],
+      [
+       33554432,
+       35543296
+      ]
+     ],
+     "score": {
+      "truth": 11078,
+      "found": 10795,
+      "recall": 0.9729,
+      "precision": 0.9984,
+      "invented": 17,
+      "sizes_compared": 10735,
+      "size_exact": 5151,
+      "size_short": 5583,
+      "size_long": 1
+     }
+    }
+   ],
+   "ghidra_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 357.53,
+     "cpu_s": 252.19,
+     "user_s": 236.59,
+     "sys_s": 15.6,
+     "peak_rss_mb": 2733,
+     "load_before": [
+      3.7,
+      3.43,
+      3.44
+     ],
+     "load_after": [
+      0.78,
+      1.97,
+      2.86
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ghidra-0/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
+      "-loader",
+      "NTRGhidraLoader",
+      "-loader-cpu",
+      "ARM9",
+      "-loader-overlays",
+      "true",
+      "-processor",
+      "ARM:LE:32:v5t",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ghidra-0/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "ARM:LE:32:v5t",
+     "compiler": "default",
+     "format": "Nintendo DS (NTR) and DSi (TWL)",
+     "image_base": "02000000",
+     "loader": "Nintendo DS (NTR) and DSi (TWL)",
+     "functions_total": 27821,
+     "functions_overlay": 18230,
+     "phases": {
+      "jvm_startup": 2.475,
+      "analysis": 351.0,
+      "load_script_save_exit": 4.05,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 246.242,
+       "Disassemble": 30.02,
+       "ARM Constant Reference Analyzer": 20.872,
+       "Stack": 16.993,
+       "Subroutine References": 11.179,
+       "Create Address Tables - One Time": 5.962,
+       "Reference": 4.382,
+       "Create Function": 4.086
+      }
+     },
+     "score": {
+      "truth": 11078,
+      "found": 9591,
+      "recall": 0.8643,
+      "precision": 0.9983,
+      "invented": 16,
+      "sizes_compared": 9532,
+      "size_exact": 4453,
+      "size_short": 5079,
+      "size_long": 0
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 339.43,
+     "cpu_s": 236.14,
+     "user_s": 219.89,
+     "sys_s": 16.25,
+     "peak_rss_mb": 2705,
+     "load_before": [
+      2.08,
+      2.16,
+      2.84
+     ],
+     "load_after": [
+      0.76,
+      1.16,
+      2.19
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ghidra-1/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
+      "-loader",
+      "NTRGhidraLoader",
+      "-loader-cpu",
+      "ARM9",
+      "-loader-overlays",
+      "true",
+      "-processor",
+      "ARM:LE:32:v5t",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/nds-pokeheartgold-arm9/ghidra-1/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "ok",
+     "language": "ARM:LE:32:v5t",
+     "compiler": "default",
+     "format": "Nintendo DS (NTR) and DSi (TWL)",
+     "image_base": "02000000",
+     "loader": "Nintendo DS (NTR) and DSi (TWL)",
+     "functions_total": 27821,
+     "functions_overlay": 18230,
+     "phases": {
+      "jvm_startup": 2.267,
+      "analysis": 334.0,
+      "load_script_save_exit": 3.16,
+      "top_analyzers": {
+       "Decompiler Switch Analysis": 234.28,
+       "Disassemble": 25.073,
+       "ARM Constant Reference Analyzer": 20.815,
+       "Stack": 17.134,
+       "Subroutine References": 11.094,
+       "Create Address Tables - One Time": 6.186,
+       "Reference": 4.643,
+       "Create Function": 3.519
+      }
+     },
+     "score": {
+      "truth": 11078,
+      "found": 9591,
+      "recall": 0.8643,
+      "precision": 0.9983,
+      "invented": 16,
+      "sizes_compared": 9532,
+      "size_exact": 4453,
+      "size_short": 5079,
+      "size_long": 0
+     }
+    }
+   ],
+   "failures": [],
+   "wall_ratio": 0.3078,
+   "cpu_ratio": 1.0804,
+   "rss_ratio": 0.2755,
+   "speed_tolerance": 0.0772,
+   "wall_ratio_ex_jvm_startup": 0.3099,
+   "speed": "faster",
+   "precision_gate": "precision",
+   "recall_delta": 0.1086,
+   "precision_delta": 0.0001,
+   "quality": "not-worse",
+   "f1": {
+    "romwright": 0.9855,
+    "ghidra": 0.9265
+   }
+  },
+  "gba-pokeemerald": {
+   "status": "incomplete",
+   "ghidra_config": {
+    "language": "ARM:LE:32:v4t",
+    "loader": "GBALoader",
+    "options": [],
+    "why": "gba-ghidra-loader extension (GBALoader), forced because the ROM has no container a stock loader recognises."
+   },
+   "ours": {
+    "runs": 2,
+    "wall_s": [
+     57.21,
+     56.54
+    ],
+    "wall_median_s": 56.88,
+    "spread": 0.0118,
+    "cpu_median_s": 111.03,
+    "cpu_per_wall": 1.95,
+    "peak_rss_mb_max": 1758,
+    "load_1min": [
+     2.03,
+     3.22
+    ],
+    "score": {
+     "truth": 15856,
+     "found": 15484,
+     "recall": 0.9737,
+     "precision": 0.9971,
+     "invented": 45,
+     "sizes_compared": 15437,
+     "size_exact": 5730,
+     "size_short": 9707,
+     "size_long": 0
+    },
+    "score_stable": true,
+    "phases_first_run": {
+     "total": 57.106726,
+     "console": 5.787863,
+     "discovery": 12.158221,
+     "flow": 8.528373,
+     "parse": 0.004629,
+     "patterns": 0.258263,
+     "references": 36.539811,
+     "references-only": 30.75194,
+     "settle": 0.022152,
+     "store": 0.962444,
+     "switch": 3.894627,
+     "switch-vsa": 2.052597
+    },
+    "language": "ARM:LE:32:v4t",
+    "argv": [
+     "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+     "import",
+     "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gba-pokeemerald/pokeemerald.gba",
+     "--name",
+     "gba",
+     "--project",
+     "/var/tmp/fg-import-speed/runs/gba-pokeemerald/ours-0/project",
+     "--timings"
+    ]
+   },
+   "ghidra": null,
+   "ours_runs": [
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 57.21,
+     "cpu_s": 111.5,
+     "user_s": 102.73,
+     "sys_s": 8.77,
+     "peak_rss_mb": 1758,
+     "load_before": [
+      2.03,
+      2.78,
+      2.81
+     ],
+     "load_after": [
+      3.08,
+      2.97,
+      2.88
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gba-pokeemerald/pokeemerald.gba",
+      "--name",
+      "gba",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/gba-pokeemerald/ours-0/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "gba",
+     "language": "ARM:LE:32:v4t",
+     "phases": {
+      "total": 57.106726,
+      "console": 5.787863,
+      "discovery": 12.158221,
+      "flow": 8.528373,
+      "parse": 0.004629,
+      "patterns": 0.258263,
+      "references": 36.539811,
+      "references-only": 30.75194,
+      "settle": 0.022152,
+      "store": 0.962444,
+      "switch": 3.894627,
+      "switch-vsa": 2.052597
+     },
+     "functions_all_programs": 15484,
+     "degraded": [],
+     "ranges": [
+      [
+       134217728,
+       167772160
+      ]
+     ],
+     "score": {
+      "truth": 15856,
+      "found": 15484,
+      "recall": 0.9737,
+      "precision": 0.9971,
+      "invented": 45,
+      "sizes_compared": 15437,
+      "size_exact": 5730,
+      "size_short": 9707,
+      "size_long": 0
+     }
+    },
+    {
+     "timed_out": false,
+     "returncode": 0,
+     "wall_s": 56.54,
+     "cpu_s": 110.55,
+     "user_s": 101.35,
+     "sys_s": 9.2,
+     "peak_rss_mb": 1758,
+     "load_before": [
+      3.22,
+      3.71,
+      3.71
+     ],
+     "load_after": [
+      3.38,
+      3.69,
+      3.7
+     ],
+     "argv": [
+      "/home/raikaru/runs/FinalGate/target/release/romwright-cli",
+      "import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gba-pokeemerald/pokeemerald.gba",
+      "--name",
+      "gba",
+      "--project",
+      "/var/tmp/fg-import-speed/runs/gba-pokeemerald/ours-1/project",
+      "--timings"
+     ],
+     "status": "ok",
+     "program": "gba",
+     "language": "ARM:LE:32:v4t",
+     "phases": {
+      "total": 56.468148,
+      "console": 5.885707,
+      "discovery": 11.928139,
+      "flow": 8.366146,
+      "parse": 0.005889,
+      "patterns": 0.258226,
+      "references": 36.108934,
+      "references-only": 30.22322,
+      "settle": 0.017776,
+      "store": 0.9729,
+      "switch": 3.845969,
+      "switch-vsa": 2.034083
+     },
+     "functions_all_programs": 15484,
+     "degraded": [],
+     "ranges": [
+      [
+       134217728,
+       167772160
+      ]
+     ],
+     "score": {
+      "truth": 15856,
+      "found": 15484,
+      "recall": 0.9737,
+      "precision": 0.9971,
+      "invented": 45,
+      "sizes_compared": 15437,
+      "size_exact": 5730,
+      "size_short": 9707,
+      "size_long": 0
+     }
+    }
+   ],
+   "ghidra_runs": [
+    {
+     "timed_out": true,
+     "wall_s": 3600.02,
+     "load_before": [
+      3.07763671875,
+      2.9677734375,
+      2.88134765625
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/gba-pokeemerald/ghidra-0/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gba-pokeemerald/pokeemerald.gba",
+      "-loader",
+      "GBALoader",
+      "-processor",
+      "ARM:LE:32:v4t",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/gba-pokeemerald/ghidra-0/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "timeout",
+     "error": ""
+    },
+    {
+     "timed_out": true,
+     "wall_s": 3600.05,
+     "load_before": [
+      3.3779296875,
+      3.68798828125,
+      3.70361328125
+     ],
+     "argv": [
+      "/home/raikaru/ghidra_12.1.3_PUBLIC/support/analyzeHeadless",
+      "/var/tmp/fg-import-speed/runs/gba-pokeemerald/ghidra-1/ghidra-project",
+      "proj",
+      "-import",
+      "/home/raikaru/runs/FinalGate/home/ventris-corpus/extracted/gba-pokeemerald/pokeemerald.gba",
+      "-loader",
+      "GBALoader",
+      "-processor",
+      "ARM:LE:32:v4t",
+      "-scriptPath",
+      "/home/raikaru/runs/FinalGate/ventris/benchmarks/ghidra",
+      "-postScript",
+      "ExportFunctionEntries.java",
+      "/var/tmp/fg-import-speed/runs/gba-pokeemerald/ghidra-1/ghidra-functions.json",
+      "-deleteProject"
+     ],
+     "status": "timeout",
+     "error": ""
+    }
+   ],
+   "failures": [
+    "Ghidra auto-analysis did not finish in any of 2 runs (killed at 3600, 3600 s): wall ratio < 0.016, but no Ghidra function list, so quality is not comparable"
+   ],
+   "speed": "faster (bound)",
+   "wall_ratio_upper_bound": 0.0158,
+   "quality": "unknown (Ghidra did not finish)"
+  }
+ },
+ "failures": {
+  "gba-pokeemerald": [
+   "Ghidra auto-analysis did not finish in any of 2 runs (killed at 3600, 3600 s): wall ratio < 0.016, but no Ghidra function list, so quality is not comparable"
+  ]
+ }
+}

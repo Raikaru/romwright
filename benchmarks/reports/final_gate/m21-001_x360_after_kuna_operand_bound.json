@@ -1,0 +1,78 @@
+{
+  "id": "m21-001",
+  "recorded_at": "2026-10-09T10:10:02.125752+00:00",
+  "floors": {
+    "gba-pokeemerald": [
+      0.963,
+      0.987
+    ],
+    "nds-pokeheartgold-arm9": [
+      0.962,
+      0.988
+    ],
+    "ps2-capcom-fighting-evolution": [
+      0.931,
+      0.986
+    ],
+    "ps2-dungeon-game": [
+      0.933,
+      0.978
+    ],
+    "psx-darkstalkers-3": [
+      0.976,
+      0.356
+    ],
+    "psv-need-for-speed-most-wanted": [
+      0.963,
+      0.961
+    ],
+    "x360-black-ops-2": [
+      0.973,
+      0.986
+    ]
+  },
+  "rows": {
+    "x360-black-ops-2": {
+      "truth": 27730,
+      "found": 27364,
+      "recall": 0.9833,
+      "precision": 0.9964,
+      "invented": 98,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "missed_sample": [
+        "0x8214fc70 ?KickOffWorkerThreadDpc@D3D@@YAXPAU_KDPC@@PAX11@Z",
+        "0x82157d68 ?DriverCleanup@D3D@@YAXPAX@Z",
+        "0x8215a4e0 ?XMScalarSin@@YAMM@Z",
+        "0x8215abe0 ?Bessi0@D3D@@YAMM@Z",
+        "0x8217ddb0 ?AimAssist_GetScreenTargetCount@@YAHW4LocalClientNum_t@@@Z",
+        "0x8217ddc8 ?AimAssist_GetScreenTargetEntity@@YAHW4LocalClientNum_t@@H@Z",
+        "0x8217fe00 ??0jqBatchGroup@@QAA@XZ",
+        "0x82180010 ?AimTarget_CompareTargets@@YA_NABUAimTarget@@0@Z",
+        "0x82199108 ?CG_SensorGrenadePingPlayer@@YAXW4LocalClientNum_t@@PBUclientInfo_t@@H_N@Z",
+        "0x821a1928 ?compareEntityDist@@YAHPBX0@Z"
+      ],
+      "invented_sample": [
+        "0x824044ac",
+        "0x82712fec",
+        "0x82713880",
+        "0x827138a8",
+        "0x82713b74",
+        "0x82713b9c",
+        "0x82714438",
+        "0x82714458",
+        "0x8271449c",
+        "0x827144c0"
+      ],
+      "seconds": 55.4,
+      "peak_rss_mb": 1322,
+      "diagnostics": [],
+      "status": "pass",
+      "failures": []
+    }
+  },
+  "status": "pass",
+  "failures": []
+}

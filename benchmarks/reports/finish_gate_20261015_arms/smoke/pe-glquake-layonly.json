@@ -1,0 +1,74 @@
+{
+ "name": "pe-glquake-layonly",
+ "image": "/home/raikaru/ventris-corpus/extracted/pc-glquake-msvc42/glquake.exe",
+ "started": "2026-10-15T16:17:02Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 351.2,
+   "tail": [
+    "warning: no C for 0x445d92: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Cannot properly adjust input varnodes",
+    "warning: no C for 0x445dc3: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Cannot properly adjust input varnodes",
+    "warning: no C for 0x445e50: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Cannot properly adjust input varnodes",
+    "decompile: 1424 function(s) in 338.7s (14 refused by the decompiler)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-layonly: per-function PE project (1438 functions, 1424 sources, 1424 target objects with 5513 call and 12255 data relocations, 1424 objdiff units, 1620 symbols, 1388 prototypes (36 skipped)), compiler `msvc4.2` (msvc), detected `msvc-10`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-layonly && python3 configure.py && python3 build.py && python3 build.py report"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/pc-glquake-msvc42/glquake.exe /home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-layonly --name glquake"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 4.0,
+   "tail": [
+    "download objdiff-cli v3.6.1 <- https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-linux-x86_64",
+    "/home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-layonly/build/tools/objdiff-cli",
+    "download wibo 1.2.0 <- https://github.com/decompals/wibo/releases/download/1.2.0/wibo-x86_64",
+    "/home/raikaru/runs/FinalGate2/smoke/proj-pe-glquake-layonly/build/tools/wibo",
+    "configured: msvc4.2 (msvc), flags /O2 /Gd /W0",
+    "next: python3 build.py && python3 build.py report"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 1059.7,
+   "tail": [
+    "  FAIL src/main/0041/FUN_004100e0.c: FUN_004100e0.c",
+    "  FAIL src/main/0041/FUN_00412f80.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-layonly\\src\\main\\0041\\FUN_00412f80.c(35) : error C2065: 'register0x00000010' : undeclared identifier",
+    "  FAIL src/main/0041/FUN_00414c00.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-layonly\\src\\main\\0041\\FUN_00414c00.c(128) : error C2440: 'abstract declarator' : cannot convert from 'float ' to 'char *' (new behavior; please see help)",
+    "  FAIL src/main/0041/FUN_00416800.c: FUN_00416800.c",
+    "  FAIL src/main/0041/FUN_0041b450.c: Z:\\home\\raikaru\\runs\\FinalGate2\\smoke\\proj-pe-glquake-layonly\\src\\main\\0041\\FUN_0041b450.c(82) : error C2143: syntax error : missing ';' before '}'",
+    "  ... 80 more in build/compile_report.json"
+   ],
+   "cmd": "python3 build.py -j 3"
+  },
+  "report": {
+   "rc": 0,
+   "secs": 0.2,
+   "tail": [
+    "1424 functions: 1334 compile, 232 match exactly, 103 at >= 90%, mean 61.008% (build/progress.json, build/progress.tsv)",
+    "matched, ready to drop their NON_MATCHING marker: FUN_004019d0, FUN_00402360, FUN_00402370, FUN_00402380, FUN_004023c0, FUN_004023d0, FUN_004023e0, FUN_004023f0, FUN_00402400, FUN_00402410, FUN_00402420, FUN_00402430, FUN_00402440, FUN_00402450, FUN_00402460, FUN_00402470, FUN_00402480, FUN_00402490, FUN_004024a0, FUN_004024b0, FUN_004024c0, FUN_00"
+   ],
+   "cmd": "python3 build.py report"
+  }
+ },
+ "build/progress.json": {
+  "summary_count": 8,
+  "functions_count": 1424
+ },
+ "build/compile_report.json": {
+  "compiler": "msvc4.2",
+  "family": "msvc",
+  "units": 1424,
+  "compiled": 1334,
+  "failed": 90,
+  "seconds": 1059.6,
+  "flags_count": 3,
+  "failures_count": 90
+ },
+ "build_rc": 0,
+ "match_functions": [],
+ "matches": [],
+ "result": "done",
+ "finished": "2026-10-15T16:40:37Z"
+}

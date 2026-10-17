@@ -1,25 +1,27 @@
 {
  "id": "m6-006",
- "recorded_at": "2026-09-07T09:59:11.361058+00:00",
+ "recorded_at": "2026-10-15T10:12:57.901769+00:00",
  "status": "pass",
  "passed": true,
- "summary": "13 surfaces named in prose, 5 pages gated command-by-command, 30 blocks excused with a recorded reason, 79 measured metric names, no stale citation",
+ "summary": "18 surfaces named in prose, 6 pages gated command-by-command, 51 blocks excused with a recorded reason, 496 measured metric names, no stale citation",
  "metrics": {
-  "surfaces": 13,
-  "gated_pages": 5,
-  "excused_blocks": 30,
-  "metric_names": 79,
-  "pages": 11
+  "surfaces": 18,
+  "gated_pages": 6,
+  "excused_blocks": 51,
+  "metric_names": 496,
+  "pages": 28
  },
  "surfaces": {
   "binaries": [
+   "gte_dump",
    "romwright-api",
    "romwright-cli",
    "romwright-debug",
-   "romwright-worker"
-  ],
-  "desktop": [
-   "romwright-qt"
+   "romwright-desktop",
+   "romwright-facts",
+   "romwright-worker",
+   "rsp_dump",
+   "vu_dump"
   ],
   "python": [
    "romwright_ai.py",
@@ -28,6 +30,7 @@
    "romwright_sdk.py"
   ],
   "packaging": [
+   "package_desktop.py",
    "sbom.py",
    "stage_release.py",
    "update_manifest.py",
@@ -35,6 +38,7 @@
   ]
  },
  "gated_pages": [
+  "README.md",
   "docs/core-api.md",
   "docs/desktop.md",
   "docs/getting-started.md",

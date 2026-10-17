@@ -1,0 +1,382 @@
+{
+  "rom": "perfect_dark_ntsc_final.z64",
+  "truth_named": 4086,
+  "corroborating_entries": 4942,
+  "ours_rom": {
+    "truth": 4086,
+    "found_in_game_text": 4330,
+    "found_total": 5485,
+    "recall": 0.9491,
+    "precision": 0.8956,
+    "precision_corroborated": 0.9998,
+    "invented": 452,
+    "invented_corroborated": 451,
+    "size_exact": 3877,
+    "sizes_compared": 3878,
+    "missed_sample": [
+      "0x7f0155f0 getitle0f0155f0",
+      "0x7f015e04 getitle_load",
+      "0x7f015e88 getitle_render",
+      "0x7f0160e8 getitle0f0160e8",
+      "0x7f01e7a4 chrs_set_debug_something",
+      "0x7f01e7b0 chrs_get_debug_something",
+      "0x7f02152c chr_handle_joint_positioned",
+      "0x7f04dc58 ai_yield"
+    ],
+    "m21_score": {
+      "truth": 4086,
+      "found": 4330,
+      "recall": 0.9491,
+      "precision": 0.8956,
+      "invented": 452,
+      "sizes_compared": 3878,
+      "size_exact": 3877,
+      "size_short": 1,
+      "size_long": 0,
+      "missed_sample": [
+        "0x7f0155f0 getitle0f0155f0",
+        "0x7f015e04 getitle_load",
+        "0x7f015e88 getitle_render",
+        "0x7f0160e8 getitle0f0160e8",
+        "0x7f01e7a4 chrs_set_debug_something",
+        "0x7f01e7b0 chrs_get_debug_something",
+        "0x7f02152c chr_handle_joint_positioned",
+        "0x7f04dc58 ai_yield",
+        "0x7f04e174 ai_chr_do_animation",
+        "0x7f04e3b0 ai_if_idle"
+      ],
+      "invented_sample": [
+        "0x7f1165d0",
+        "0x7f1165f8",
+        "0x7f116650",
+        "0x7f116658",
+        "0x7f116684",
+        "0x7f11668c",
+        "0x7f116720",
+        "0x7f1167b0",
+        "0x7f1167d8",
+        "0x7f116800"
+      ]
+    }
+  },
+  "modules": [
+    [
+      "cartridge",
+      "rom",
+      "10000000",
+      33554432
+    ],
+    [
+      "lib",
+      "code",
+      "70001050",
+      364432
+    ],
+    [
+      "inflate",
+      "code",
+      "70200000",
+      5104
+    ],
+    [
+      "game",
+      "code",
+      "7f000000",
+      1808864
+    ],
+    [
+      "preamble",
+      "code",
+      "80001000",
+      80
+    ],
+    [
+      "lib-boot",
+      "code",
+      "80001050",
+      8192
+    ],
+    [
+      "data",
+      "data",
+      "80059fe0",
+      200256
+    ]
+  ],
+  "regions": [
+    [
+      "n64:cartridge",
+      "10000000",
+      33554432,
+      "r--"
+    ],
+    [
+      "n64:lib",
+      "70001050",
+      364432,
+      "rwx"
+    ],
+    [
+      "n64:inflate",
+      "70200000",
+      5104,
+      "rwx"
+    ],
+    [
+      "n64:game",
+      "7f000000",
+      1808864,
+      "rwx"
+    ],
+    [
+      "n64:rdram",
+      "80000000",
+      8388608,
+      "rwx"
+    ],
+    [
+      "n64:preamble",
+      "80001000",
+      80,
+      "r-x"
+    ],
+    [
+      "n64:lib-boot",
+      "80001050",
+      8192,
+      "r-x"
+    ],
+    [
+      "n64:data",
+      "80059fe0",
+      200256,
+      "rw-"
+    ],
+    [
+      "n64:sp-dmem",
+      "a4000000",
+      4096,
+      "rw-"
+    ],
+    [
+      "n64:sp-imem",
+      "a4001000",
+      4096,
+      "rwx"
+    ],
+    [
+      "n64:mmio",
+      "a4300000",
+      2097152,
+      "rw-"
+    ]
+  ],
+  "functions_by_segment": {
+    "lib": 1098,
+    "inflate": 8,
+    "game": 4330,
+    "preamble": 1,
+    "lib-boot": 48
+  },
+  "ours_raw_game_segment": {
+    "truth": 4086,
+    "found_in_game_text": 4315,
+    "found_total": 4315,
+    "recall": 0.9462,
+    "precision": 0.8959,
+    "precision_corroborated": 0.9998,
+    "invented": 449,
+    "invented_corroborated": 448,
+    "size_exact": 3865,
+    "sizes_compared": 3866,
+    "missed_sample": [
+      "0x7f000130 bodies_init",
+      "0x7f000870 stub0f000870",
+      "0x7f000880 smokes_init",
+      "0x7f0008e0 stub0f0008e0",
+      "0x7f0008f0 stub0f0008f0",
+      "0x7f000900 stub0f000900",
+      "0x7f000910 stub0f000910",
+      "0x7f0155f0 getitle0f0155f0"
+    ],
+    "m21_score": {
+      "truth": 4086,
+      "found": 4315,
+      "recall": 0.9462,
+      "precision": 0.8959,
+      "invented": 449,
+      "sizes_compared": 3866,
+      "size_exact": 3865,
+      "size_short": 1,
+      "size_long": 0,
+      "missed_sample": [
+        "0x7f000130 bodies_init",
+        "0x7f000870 stub0f000870",
+        "0x7f000880 smokes_init",
+        "0x7f0008e0 stub0f0008e0",
+        "0x7f0008f0 stub0f0008f0",
+        "0x7f000900 stub0f000900",
+        "0x7f000910 stub0f000910",
+        "0x7f0155f0 getitle0f0155f0",
+        "0x7f015e04 getitle_load",
+        "0x7f015e88 getitle_render"
+      ],
+      "invented_sample": [
+        "0x7f1165d0",
+        "0x7f1165f8",
+        "0x7f116650",
+        "0x7f116658",
+        "0x7f116684",
+        "0x7f11668c",
+        "0x7f116720",
+        "0x7f1167b0",
+        "0x7f1167d8",
+        "0x7f116800"
+      ]
+    }
+  },
+  "stock_rom_n64loaderwv": {
+    "truth": 4086,
+    "found_in_game_text": 0,
+    "found_total": 130,
+    "recall": 0.0,
+    "precision": 0.0,
+    "precision_corroborated": 0.0,
+    "invented": 0,
+    "invented_corroborated": 0,
+    "size_exact": 0,
+    "sizes_compared": 0,
+    "missed_sample": [
+      "0x7f000000 lang_init",
+      "0x7f000090 title_init",
+      "0x7f000100 races_init",
+      "0x7f000130 bodies_init",
+      "0x7f0002a0 race_get_anim_sum_angle_as_int",
+      "0x7f000358 race_get_anim_sum_forward_as_int",
+      "0x7f00040c race_init_anim_group",
+      "0x7f00052c race_init_anim_groups"
+    ]
+  },
+  "stock_raw_game_segment": {
+    "truth": 4086,
+    "found_in_game_text": 3823,
+    "found_total": 3823,
+    "recall": 0.8436,
+    "precision": 0.9016,
+    "precision_corroborated": 1.0,
+    "invented": 376,
+    "invented_corroborated": 376,
+    "size_exact": 2506,
+    "sizes_compared": 3447,
+    "missed_sample": [
+      "0x7f000000 lang_init",
+      "0x7f000090 title_init",
+      "0x7f000130 bodies_init",
+      "0x7f000840 stub0f000840",
+      "0x7f000850 stub0f000850",
+      "0x7f000860 stub0f000860",
+      "0x7f000870 stub0f000870",
+      "0x7f000880 smokes_init"
+    ]
+  },
+  "spot_check": [
+    {
+      "address": "0x7f000000",
+      "name": "lang_init",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f0369cc",
+      "name": "chr_get_side_vector_to_target",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f054b74",
+      "name": "ai_unset_obj_flag3",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f07b038",
+      "name": "chopper_attack",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f0aa86c",
+      "name": "bgun_draw_hud",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f0df364",
+      "name": "hudmsgs_tick",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f111d88",
+      "name": "inv_give_single_weapon",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f1578c8",
+      "name": "func0f1578c8",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f1853d0",
+      "name": "scenario_read_save",
+      "bytes": 64,
+      "equal": true
+    },
+    {
+      "address": "0x7f1a78b0",
+      "name": "func0f1a78b0",
+      "bytes": 8,
+      "equal": true
+    }
+  ],
+  "segments": {
+    "preamble": {
+      "vaddr": "0x80001000",
+      "size": 80,
+      "sha256": "e74dde194a02477d15650d2443079f7b1264e86ad67e277812c2f860d3649f48",
+      "loader_equal": true
+    },
+    "lib-boot": {
+      "vaddr": "0x80001050",
+      "size": 8192,
+      "sha256": "4d644b1bb3afce6a8ecefdf2cb665952e1958e975f1e62553a99027d61e35d2d",
+      "loader_equal": true
+    },
+    "lib": {
+      "vaddr": "0x70001050",
+      "size": 364432,
+      "sha256": "bd930d8c530be04b320d10f3a72594f106f0c54f0a580a93c747e2f9adb8cf5b",
+      "loader_equal": true
+    },
+    "data": {
+      "vaddr": "0x80059fe0",
+      "size": 200256,
+      "sha256": "c789f6fe1eeebff0ca4a89006333147e8d53452a83db3e4409fe6e64f4d615f3",
+      "loader_equal": true
+    },
+    "inflate": {
+      "vaddr": "0x70200000",
+      "size": 5104,
+      "sha256": "dd99dcf0a6f3fc0a2a8974cef38f3f69c158c9ebb8e8dd42ed9b8ef1f781380a",
+      "loader_equal": true
+    },
+    "game": {
+      "vaddr": "0x7f000000",
+      "size": 1808864,
+      "sha256": "0ee3c0a8bb3c7f006ec1e81d5400ac93d6d9d27c4062c934e03d7caa70e8d7d0",
+      "loader_equal": true
+    }
+  }
+}

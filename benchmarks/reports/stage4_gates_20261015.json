@@ -1,0 +1,882 @@
+{
+ "benchmark": "stage4_gates",
+ "date": "20261015",
+ "tag": "g1",
+ "gates": [
+  {
+   "gate": "m22-002 MWCC seed 20261010",
+   "off": {
+    "functions": 200,
+    "exact": 55,
+    "compiled": 193,
+    "mean_percent": 76.968
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 195,
+      "mean_percent": 77.324
+     },
+     "paired": 200,
+     "better": 2,
+     "worse": 0,
+     "same": 198,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "001424b0",
+      "0021dc50"
+     ],
+     "better_addresses": [
+      "001424b0",
+      "0021dc50"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-002 MWCC seed 20261011",
+   "off": {
+    "functions": 200,
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.316
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 57,
+      "compiled": 194,
+      "mean_percent": 78.316
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-002 ee-gcc",
+   "off": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.403
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 106,
+      "compiled": 197,
+      "mean_percent": 86.622
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "004c5870"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dds",
+   "off": {
+    "functions": 200,
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.224,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 61,
+      "compiled": 200,
+      "mean_percent": 77.224,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 rc",
+   "off": {
+    "functions": 200,
+    "exact": 26,
+    "compiled": 200,
+    "mean_percent": 68.158,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 26,
+      "compiled": 200,
+      "mean_percent": 68.158,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 p4",
+   "off": {
+    "functions": 200,
+    "exact": 60,
+    "compiled": 193,
+    "mean_percent": 79.4,
+    "classes": {
+     "call does not match prototype": 1,
+     "undeclared identifier": 1,
+     "type mismatch (assignment, operand, return, cast)": 5
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 60,
+      "compiled": 198,
+      "mean_percent": 80.732,
+      "classes": {
+       "undeclared identifier": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      }
+     },
+     "paired": 200,
+     "better": 5,
+     "worse": 0,
+     "same": 195,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "0021ae80",
+      "00317240",
+      "00317320",
+      "00356170",
+      "00450e80"
+     ],
+     "better_addresses": [
+      "0021ae80",
+      "00317240",
+      "00317320",
+      "00356170",
+      "00450e80"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 gh (harness clone)",
+   "off": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 199,
+    "mean_percent": 82.119,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 78,
+      "compiled": 199,
+      "mean_percent": 82.119,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 ff",
+   "off": {
+    "functions": 200,
+    "exact": 21,
+    "compiled": 195,
+    "mean_percent": 61.753,
+    "classes": {
+     "type mismatch (assignment, operand, return, cast)": 5
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 21,
+      "compiled": 199,
+      "mean_percent": 62.913,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 1
+      }
+     },
+     "paired": 200,
+     "better": 4,
+     "worse": 1,
+     "same": 195,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "00138ff8",
+      "00172cc0",
+      "00179860",
+      "002071c8"
+     ],
+     "better_addresses": [
+      "00138ff8",
+      "00172cc0",
+      "00179860",
+      "002071c8"
+     ],
+     "worse_addresses": [
+      "001ae360"
+     ]
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dc",
+   "off": {
+    "functions": 200,
+    "exact": 38,
+    "compiled": 186,
+    "mean_percent": 69.844,
+    "classes": {
+     "call does not match prototype": 2,
+     "type mismatch (assignment, operand, return, cast)": 10,
+     "undeclared identifier": 1,
+     "unit post-processing rejected the candidate object": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 41,
+      "compiled": 197,
+      "mean_percent": 73.653,
+      "classes": {
+       "call does not match prototype": 1,
+       "unit post-processing rejected the candidate object": 1,
+       "type mismatch (assignment, operand, return, cast)": 1
+      }
+     },
+     "paired": 200,
+     "better": 11,
+     "worse": 0,
+     "same": 189,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "00137e70",
+      "00148be0",
+      "0029f580"
+     ],
+     "gained_compiled": [
+      "00137e70",
+      "00148be0",
+      "0015b8d0",
+      "00165520",
+      "001734f0",
+      "0021c290",
+      "0029f580",
+      "002d6f60",
+      "002e8ba0",
+      "002f2250",
+      "003067d0"
+     ],
+     "better_addresses": [
+      "00137e70",
+      "00148be0",
+      "0015b8d0",
+      "00165520",
+      "001734f0",
+      "0021c290",
+      "0029f580",
+      "002d6f60",
+      "002e8ba0",
+      "002f2250",
+      "003067d0"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dk",
+   "off": {
+    "functions": 200,
+    "exact": 29,
+    "compiled": 189,
+    "mean_percent": 75.561,
+    "classes": {
+     "type mismatch (assignment, operand, return, cast)": 6,
+     "undeclared identifier": 2,
+     "illegal or unknown type name": 1,
+     "member access on a type the context lacks": 2
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 29,
+      "compiled": 197,
+      "mean_percent": 78.277,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 1,
+       "member access on a type the context lacks": 2
+      }
+     },
+     "paired": 200,
+     "better": 8,
+     "worse": 0,
+     "same": 192,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [
+      "001938b0",
+      "00198f90",
+      "0019aec0",
+      "001d4100",
+      "001d5b30",
+      "001d6940",
+      "001e2220",
+      "0020ee10"
+     ],
+     "better_addresses": [
+      "001938b0",
+      "00198f90",
+      "0019aec0",
+      "001d4100",
+      "001d5b30",
+      "001d6940",
+      "001e2220",
+      "0020ee10"
+     ],
+     "worse_addresses": []
+    }
+   }
+  }
+ ],
+ "extra": {
+  "types_port_measure_stage4": {
+   "benchmark": "types_port_measure",
+   "date": "2026-10-15",
+   "ghidra_opt": "/home/raikaru/runs/Stage4Types/bin-fin/ghidra_opt",
+   "images": [
+    {
+     "image": "gba-pokeemerald",
+     "functions_logged": 200,
+     "cast_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "worker_cast_operators": {
+      "bare_constants": 0,
+      "casts": 983,
+      "casts_replaced": 2,
+      "constants_retyped": 0,
+      "long_marked": 0,
+      "ptrsubs": 0,
+      "unsigned_marked": 10,
+      "warnings": 0
+     },
+     "decompiler_cast_ops_in_declined_functions": 0,
+     "infer": {
+      "functions": 201,
+      "calls_total": 553,
+      "calls_per_function_mean": 2.75,
+      "calls_per_function_max": 9,
+      "ops_per_call_mean": 68.0,
+      "varnodes_per_call_mean": 119.2,
+      "microseconds_total": 18928,
+      "microseconds_per_function_mean": 94.2,
+      "decompile_wall_seconds": 18.5,
+      "infer_share_of_wall": 0.001
+     }
+    },
+    {
+     "image": "gc-animal-crossing",
+     "functions_logged": 200,
+     "cast_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "worker_cast_operators": {
+      "bare_constants": 0,
+      "casts": 1856,
+      "casts_replaced": 1,
+      "constants_retyped": 0,
+      "long_marked": 0,
+      "ptrsubs": 0,
+      "unsigned_marked": 31,
+      "warnings": 0
+     },
+     "decompiler_cast_ops_in_declined_functions": 0,
+     "infer": {
+      "functions": 206,
+      "calls_total": 485,
+      "calls_per_function_mean": 2.35,
+      "calls_per_function_max": 8,
+      "ops_per_call_mean": 226.0,
+      "varnodes_per_call_mean": 386.7,
+      "microseconds_total": 68679,
+      "microseconds_per_function_mean": 333.4,
+      "decompile_wall_seconds": 12.0,
+      "infer_share_of_wall": 0.0057
+     }
+    },
+    {
+     "image": "nds-pokeheartgold-arm9",
+     "functions_logged": 200,
+     "cast_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "worker_cast_operators": {
+      "bare_constants": 0,
+      "casts": 696,
+      "casts_replaced": 0,
+      "constants_retyped": 0,
+      "long_marked": 0,
+      "ptrsubs": 0,
+      "unsigned_marked": 5,
+      "warnings": 0
+     },
+     "decompiler_cast_ops_in_declined_functions": 0,
+     "infer": {
+      "functions": 200,
+      "calls_total": 369,
+      "calls_per_function_mean": 1.84,
+      "calls_per_function_max": 6,
+      "ops_per_call_mean": 68.9,
+      "varnodes_per_call_mean": 122.2,
+      "microseconds_total": 16300,
+      "microseconds_per_function_mean": 81.5,
+      "decompile_wall_seconds": 14.0,
+      "infer_share_of_wall": 0.0012
+     }
+    },
+    {
+     "image": "ps2-capcom-fighting-evolution",
+     "functions_logged": 200,
+     "cast_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "worker_cast_operators": {
+      "bare_constants": 0,
+      "casts": 1977,
+      "casts_replaced": 8,
+      "constants_retyped": 0,
+      "long_marked": 38,
+      "ptrsubs": 0,
+      "unsigned_marked": 102,
+      "warnings": 0
+     },
+     "decompiler_cast_ops_in_declined_functions": 0,
+     "infer": {
+      "functions": 202,
+      "calls_total": 369,
+      "calls_per_function_mean": 1.83,
+      "calls_per_function_max": 6,
+      "ops_per_call_mean": 80.2,
+      "varnodes_per_call_mean": 140.4,
+      "microseconds_total": 19763,
+      "microseconds_per_function_mean": 97.8,
+      "decompile_wall_seconds": 10.1,
+      "infer_share_of_wall": 0.002
+     }
+    },
+    {
+     "image": "ps2-dungeon-game",
+     "functions_logged": 200,
+     "cast_functions": {
+      "worker": 197,
+      "decompiler": 3
+     },
+     "worker_cast_operators": {
+      "bare_constants": 2,
+      "casts": 1559,
+      "casts_replaced": 0,
+      "constants_retyped": 2,
+      "long_marked": 23,
+      "ptrsubs": 0,
+      "unsigned_marked": 127,
+      "warnings": 0
+     },
+     "decompiler_cast_ops_in_declined_functions": 87,
+     "infer": {
+      "functions": 207,
+      "calls_total": 606,
+      "calls_per_function_mean": 2.93,
+      "calls_per_function_max": 11,
+      "ops_per_call_mean": 609.6,
+      "varnodes_per_call_mean": 1134.9,
+      "microseconds_total": 875664,
+      "microseconds_per_function_mean": 4230.3,
+      "decompile_wall_seconds": 24.3,
+      "infer_share_of_wall": 0.036
+     }
+    },
+    {
+     "image": "psv-need-for-speed-most-wanted",
+     "functions_logged": 200,
+     "cast_functions": {
+      "worker": 190,
+      "decompiler": 10
+     },
+     "worker_cast_operators": {
+      "bare_constants": 34,
+      "casts": 2431,
+      "casts_replaced": 0,
+      "constants_retyped": 5,
+      "long_marked": 0,
+      "ptrsubs": 0,
+      "unsigned_marked": 20,
+      "warnings": 0
+     },
+     "decompiler_cast_ops_in_declined_functions": 510,
+     "infer": {
+      "functions": 205,
+      "calls_total": 627,
+      "calls_per_function_mean": 3.06,
+      "calls_per_function_max": 12,
+      "ops_per_call_mean": 278.7,
+      "varnodes_per_call_mean": 514.5,
+      "microseconds_total": 146923,
+      "microseconds_per_function_mean": 716.7,
+      "decompile_wall_seconds": 36.2,
+      "infer_share_of_wall": 0.0041
+     }
+    },
+    {
+     "image": "psx-darkstalkers-3",
+     "functions_logged": 200,
+     "cast_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "worker_cast_operators": {
+      "bare_constants": 0,
+      "casts": 1696,
+      "casts_replaced": 0,
+      "constants_retyped": 0,
+      "long_marked": 0,
+      "ptrsubs": 0,
+      "unsigned_marked": 191,
+      "warnings": 0
+     },
+     "decompiler_cast_ops_in_declined_functions": 0,
+     "infer": {
+      "functions": 204,
+      "calls_total": 391,
+      "calls_per_function_mean": 1.92,
+      "calls_per_function_max": 9,
+      "ops_per_call_mean": 174.1,
+      "varnodes_per_call_mean": 299.5,
+      "microseconds_total": 49049,
+      "microseconds_per_function_mean": 240.4,
+      "decompile_wall_seconds": 6.9,
+      "infer_share_of_wall": 0.0071
+     }
+    },
+    {
+     "image": "x360-black-ops-2",
+     "functions_logged": 200,
+     "cast_functions": {
+      "worker": 198,
+      "decompiler": 2
+     },
+     "worker_cast_operators": {
+      "bare_constants": 0,
+      "casts": 1424,
+      "casts_replaced": 2,
+      "constants_retyped": 0,
+      "long_marked": 0,
+      "ptrsubs": 0,
+      "unsigned_marked": 34,
+      "warnings": 0
+     },
+     "decompiler_cast_ops_in_declined_functions": 10,
+     "infer": {
+      "functions": 205,
+      "calls_total": 593,
+      "calls_per_function_mean": 2.89,
+      "calls_per_function_max": 7,
+      "ops_per_call_mean": 133.7,
+      "varnodes_per_call_mean": 227.9,
+      "microseconds_total": 49835,
+      "microseconds_per_function_mean": 243.1,
+      "decompile_wall_seconds": 27.6,
+      "infer_share_of_wall": 0.0018
+     }
+    }
+   ]
+  },
+  "ptrfields_dk": {
+   "addresses": 200,
+   "env": [],
+   "structs_printed": 9,
+   "pointer_fields": {
+    "fields": 71,
+    "void *": 1,
+    "non-pointer fields read through a pointer cast": 3
+   },
+   "functions_with_a_pointer_field": 1,
+   "scalar_pointee_types": {}
+  },
+  "ps2_decompile_success": {
+   "off": {
+    "ps2-fatal-frame": {
+     "sampled": 942,
+     "decompiled": 942
+    },
+    "ps2-ratchet-clank-pal": {
+     "sampled": 859,
+     "decompiled": 858
+    },
+    "ps2-god-hand": {
+     "sampled": 980,
+     "decompiled": 980
+    },
+    "ps2-digital-devil-saga": {
+     "sampled": 977,
+     "decompiled": 977
+    },
+    "ps2-dark-chronicle": {
+     "sampled": 969,
+     "decompiled": 969
+    },
+    "ps2-ratchet-clank": {
+     "sampled": 861,
+     "decompiled": 860
+    },
+    "ps2-persona-4": {
+     "sampled": 975,
+     "decompiled": 974
+    },
+    "ps2-dark-cloud": {
+     "sampled": 937,
+     "decompiled": 888
+    }
+   },
+   "def": {
+    "ps2-fatal-frame": {
+     "sampled": 942,
+     "decompiled": 942
+    },
+    "ps2-ratchet-clank-pal": {
+     "sampled": 859,
+     "decompiled": 858
+    },
+    "ps2-god-hand": {
+     "sampled": 980,
+     "decompiled": 980
+    },
+    "ps2-digital-devil-saga": {
+     "sampled": 977,
+     "decompiled": 977
+    },
+    "ps2-dark-chronicle": {
+     "sampled": 969,
+     "decompiled": 969
+    },
+    "ps2-ratchet-clank": {
+     "sampled": 861,
+     "decompiled": 860
+    },
+    "ps2-persona-4": {
+     "sampled": 975,
+     "decompiled": 974
+    },
+    "ps2-dark-cloud": {
+     "sampled": 937,
+     "decompiled": 888
+    }
+   }
+  },
+  "ps2_decompile_success_total": {
+   "off [decompiled, sampled]": [
+    7448,
+    7500
+   ],
+   "def [decompiled, sampled]": [
+    7448,
+    7500
+   ],
+   "games that differ": []
+  },
+  "m21-001_off": {
+   "status": "pass",
+   "failures": [],
+   "rows": {
+    "gba-pokeemerald": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "size_exact": 15421
+    },
+    "nds-pokeheartgold-arm9": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "size_exact": 9888
+    },
+    "ps2-capcom-fighting-evolution": {
+     "truth": 8794,
+     "found": 8598,
+     "recall": 0.9724,
+     "precision": 0.9945,
+     "size_exact": 8534
+    },
+    "ps2-dungeon-game": {
+     "truth": 783,
+     "found": 785,
+     "recall": 0.9872,
+     "precision": 0.9847,
+     "size_exact": 752
+    },
+    "psx-darkstalkers-3": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "size_exact": 0
+    },
+    "psv-need-for-speed-most-wanted": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "size_exact": 16300
+    },
+    "x360-black-ops-2": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "size_exact": 0
+    }
+   }
+  },
+  "m21-001_def": {
+   "status": "pass",
+   "failures": [],
+   "rows": {
+    "gba-pokeemerald": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "size_exact": 15421
+    },
+    "nds-pokeheartgold-arm9": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "size_exact": 9888
+    },
+    "ps2-capcom-fighting-evolution": {
+     "truth": 8794,
+     "found": 8598,
+     "recall": 0.9724,
+     "precision": 0.9945,
+     "size_exact": 8534
+    },
+    "ps2-dungeon-game": {
+     "truth": 783,
+     "found": 785,
+     "recall": 0.9872,
+     "precision": 0.9847,
+     "size_exact": 752
+    },
+    "psx-darkstalkers-3": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "size_exact": 0
+    },
+    "psv-need-for-speed-most-wanted": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "size_exact": 16300
+    },
+    "x360-black-ops-2": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "size_exact": 0
+    }
+   }
+  },
+  "printer_differential": {
+   "decompiled": 1800,
+   "identical": 1800,
+   "identical_rate": 1.0
+  }
+ }
+}

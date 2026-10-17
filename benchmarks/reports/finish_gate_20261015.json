@@ -1,0 +1,1597 @@
+{
+ "schema": "finish-gate/1",
+ "generated": "20261015",
+ "summary_text": "One integrated gate of the finished tree on one build: every lane, success run, import comparison, per-platform project smoke and the desktop gate, each number set next to the value the last agent reported. **Against the latest defaults (PcUpgrade's console readings and PC table, MemoryFix's m21-001, SymbolLayout's PS2 success, PcImport's PC import) every number is equal**: dc 42 / 197 / 73.877, dds 61 / 200 / 77.402, m22-002 MWCC 20261010 56 / 196 / 78.031, the six m22-004 fixtures cell for cell, m21-001 field for field, PS2 decompile success 7,448 of 7,500, the eight PC import rows score field for field. Against SymbolLayout's table (which predates two PcUpgrade rules) six console lanes read slightly higher, never lower (D1, D2): no lane lost an exact or a compiled function. Every project smoke rebuilds the retail image byte for byte (sha1 equal) or, for the PE and the scaffold, reports per function (D3, D4 and D5 explain where a number differs from an earlier document). The desktop gate passes with the numbers ReleaseReady recorded.",
+ "tree_lines": [
+  "Tree frozen 2026-10-15 14:07:14 to 14:07:30 UTC: one `rsync -a --delete --exclude target --exclude .cargo/config.toml --exclude 'project.sqlite*' --exclude native/build` of the laptop tree to `nih-vps-u:~/runs/FinalGate2/ventris` (manifest sha1 `c0d31114200b12debd7428095f38d8fc19963032` over every non-`target` file), `native/build/ghidra_opt` copied from the laptop (sha256 `4532792d...`, unchanged since SymbolLayout). Never synced again.",
+  "Built once, 14:07:58 to 14:13:46 UTC (5 min 48 s): `cargo build --release -p romwright-cli -p romwright-api -p romwright-worker -p romwright-desktop -j8`, rustc 1.98.1, `CARGO_PROFILE_RELEASE_LTO=false CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16` (the allowed gate profile; the tree's release profile is `lto = \"fat\"`, `codegen-units = 1`). sha256: `romwright-cli` `a820e725...`, `romwright-worker` `71ef64db...`, `romwright-api` `7ba0b41d...`, `romwright-desktop` `2c3416c4...`. The lanes, imports and smokes ran on copies of these binaries; `tests/m6-007` repackaged from the same `target/` and cargo recompiled nothing (the four hashes are unchanged after the gate).",
+  "Hosts: `nih-vps-u` (8 vCPU, 31 GB, load 5 to 32 from other agents: no wall time in this report is a measurement) for everything except the two 32-bit compilers; `smt-cloud` for `match` with `ee-gcc` (PS2) and `psp-gcc` (PSP): a `bwrap` sandbox that maps the paths the binary was built against, the same three binaries, a full copy of the host's Ghidra 12.1.3 (with the `r5900` extension) and the frozen tree's `native/`, `oracle/` and `third_party/ghidra`. `fates-vps` was not used.",
+  "Every import is fresh (`ROMWRIGHT_NO_IMPORT_CACHE=1 ROMWRIGHT_NO_FACT_PACK=1`); an m22-003 lane restores a pristine snapshot of its prepared work directory and repository at the same path before each run (the prepare records absolute paths); `gh` runs on the harness's own clone (no `--repo`); the m22-002 lanes and m21-001 go through a wrapper binary (the harness drops `ROMWRIGHT_*`). The scripts are `~/runs/FinalGate2/*.sh` on the host (Stage4Types' per-arm scripts with the paths changed)."
+ ],
+ "deviations": [
+  {
+   "id": "D1",
+   "title": "five console lanes read higher than SymbolLayout's table: the float-store rule",
+   "text": "m22-003 ff 22 / 199 / 63.373 (SymbolLayout 63.148), dk 78.223 (78.194), p4 81.202 (80.85), dc 42 / 197 / 73.877 (41 / 197 / 73.562) and m22-002 MWCC 20261010 56 / 196 / 78.031 (55 / 196 / 77.638): in each lane one to three functions score higher (table above), none lower, and the sums explain the means to the third decimal (each lane's `mean_delta_from_changed_functions`). Cause: `ROMWRIGHT_EXPORT_FLOAT_STORES` (PcUpgrade, `emit_m2c/conform.rs`), which prints a float stored through an integer-typed pointer as `*(float *)&p[i] = x` instead of `p[i] = (float)x`. It was written for Visual C++ (`fstp dword` against `fistp`) but is gated only by the stage-4 switch, not by platform, so it prints the MIPS lane functions that store a float through a `u32 *` as well. Established three ways: (1) SymbolLayout's own final binary (`~/runs/SymbolLayout/bin-f4-def`) on this tree's harness reproduces SymbolLayout's ff and dk lanes exactly (63.148, 78.194), so the harness and the host did not move; (2) the same functions with only `ROMWRIGHT_EXPORT_FLOAT_STORES=off` on this build equal SymbolLayout's rows exactly (`off_arm` in the JSON: ff, dk, p4, dc, every changed function), and the whole m22-002 MWCC 20261010 lane with that one switch off is 55 / 196 / 77.638, SymbolLayout's; (3) for ff, the other twelve PcUpgrade/PcProject switches off one at a time leave the function at its new value (58.25), and old binaries bracket the change (PcProject's 04:29 build 13.25, PcImport's 07:12 build 58.25; the raw `export-c` of the function is byte-identical across eight builds, the difference appears with the lane's asserted prototypes and context). One exact function is gained (dc `SetBSphere__8mgCFrameFPff` 84.706 -> 100, m22-002 `btlUnitCreateMoveToUnitPacket` 21.5 -> 100) and none lost. PcUpgrade's console gate (off equal to default at dc 42 / 197 / 73.877) did not catch the rule because its `off` arm evidently left this switch on [INFERENCE: its arm list is not in its report; the dc value with the switch off is 41 / 197 / 73.562 here]. Not a regression; the rule is neutral-to-better on these lanes. Whether it should be gated to i386 is a decision for the owner of `conform.rs`: it changes five PS2 lanes' numbers."
+  },
+  {
+   "id": "D2",
+   "title": "m22-003 gh (harness clone) reads 82.129, SymbolLayout 82.119: the sqrt rule",
+   "text": "One function, `Quaternion_SetVectorRotation` (296 B), 20.541 -> 22.392 (+1.851 / 200 = +0.009; exact 78 and compiled 199 unchanged). Cause: `ROMWRIGHT_EXPORT_SQRT` (PcUpgrade, `emit_m2c/dependencies.rs`), which prints the p-code `FLOAT_SQRT` as a call of C's `sqrt` instead of an unsupported intrinsic; it was written for the x87 `fsqrt` and is not gated to x86, so MIPS `sqrt.s` is printed as `sqrt` too. Established with 15 single-function arms on the harness clone (this build's default, SymbolLayout's own binary, and each of the thirteen PcProject/PcUpgrade switches off one at a time): only `ROMWRIGHT_EXPORT_SQRT=off` (20.541, SymbolLayout's value) and SymbolLayout's binary (20.541) give the old value; the default, the float-store switch off and the eleven other switches give 22.392. Same caveat as D1: PcUpgrade's console gate did not include gh."
+  },
+  {
+   "id": "D3",
+   "title": "the GLQuake PE project smoke is better than the numbers in docs/pc-project.md (232 exact, 1,179 compile, mean 64.501)",
+   "text": "`docs/pc-project.md` (PcProject, before PcImport, SymbolLayout and PcUpgrade) records for the GLQuake project: 1,284 functions imported, 1,283 decompiled, 5,472 call and 12,227 data relocations, 1,179 of 1,283 compile, 232 match exactly, 98 at >= 90%, mean 64.501%, and `match` at 98.5 to 99.7% on six functions (83.2 for one). This gate: 1,294 imported, 1,293 decompiled (one refusal, `FUN_00445dc3`, a decompiler `Low-level Error`), 5,487 / 12,295 relocations, **1,249 of 1,293 compile, 243 exact, 120 at >= 90%, mean 68.416%**, and `match` on the same three addresses 99.667 / 99.643 / 83.214. PcProject's own binary (`~/runs/PcProject/target2/release`, with its own `ghidra_opt` 486ace43) reproduces the document on this host to the digit (1,284 / 1,283, 5,472 / 12,227, 1,179, 232, 98, 64.501) and gives the same three `match` numbers as this build, so the tool and the host did not drift; the difference is the tree. The table above runs this build with the groups of changes since PcProject off or on one at a time (the other two groups off): the exact count is PcUpgrade's (231 to 232 with all three groups off, with SymbolLayout's alone and with PcImport's alone; 243 with PcUpgrade's eleven switches alone and in the default: +11; the at-least-90% count goes 98 -> 114 with PcUpgrade's alone, 120 with all); the function count and the mean are PcImport's PE discovery rules (nine rules, `compiler_rules/pe.json`): with them off the project has 1,424 functions (1,438 imported) and the mean reads 58.801; with only them on, 1,293 functions (131 fewer: PcImport's report counts the invented rows, 153 before its rules and 8 after) and 64.536; the compile rate is SymbolLayout's (the `stack0x` / partial-member failures: 1,267 -> 1,334 of 1,424 with only the layout rules on, +67) and the dropped rows (89.0% -> 92.0% with PcImport's rules alone); PcUpgrade's switches add 2 on the 1,424-function project (1,269); together 1,249 of 1,293 = 96.6%, from 91.9%. Not isolated [INFERENCE]: the all-off arm of this build is not PcProject's binary (1,267 against 1,179 compile, 1,438 against 1,284 imported): it also contains PcImport's non-rule discovery changes (`pe_roots`, local calls) and `ghidra_opt` 4532792d instead of 486ace43, neither of which has a switch."
+  },
+  {
+   "id": "D4",
+   "title": "Super Mario 64 repository: 4,525 asm units and 41 binary units, docs/new-project.md says 4,592 / 186",
+   "text": "The all-assembly rebuild still hits the retail sha1 (`9bef1128...`). The unit counts differ because the importer found fewer functions: NewProjectMips' binary (`~/runs/NewProjectMips/ventris/target`) and SymbolLayout's binary both give 4,592 / 186 on this host today; the integrated build gives 4,525 / 41. ImportPrecision (finish item 1, after both) added three MIPS rules to `compiler_rules/common.json` (`epilogue-not-entry`, `case-run-in-one-function`, `branch-table-after-dispatch`; the other three of its six existed) and edited `native/discovery.rs`: with those three rules off this build reads 4,537 (`epilogue-not-entry` alone: 12), and with all six off 5,008 (what both older binaries give with their rules off); the other 55 functions and the 145 binary units of the gap are ImportPrecision's `discovery.rs` edits [INFERENCE: not isolated one by one]. ImportPrecision's own report has Super Mario 64's invented entries 368 -> 17 against 3 lost truth rows (`import_precision_20261015_loo.md`). `docs/new-project.md` records the number of the earlier importer."
+  },
+  {
+   "id": "D5",
+   "title": "`match` of a PS2 repository on nih-vps-u compiles nothing (0.000% in `smoke/ps2-dds.json`)",
+   "text": "`ee-gcc` is a 32-bit ELF and nih-vps-u has no `/lib/ld-linux.so.2` (the m22-003 harness runs it through a glibc32 overlay under `bwrap`; `romwright-cli match` does not). Every row of that `match` reads `cannot run .../ee-gcc: No such file or directory`. The valid PS2 `match` is the one on `smt-cloud` (`smoke-smt-cloud/ps2-dds.json`), which has the loader; the repository there is the same (10,348 objects, 10,327 functions, sha1 `6d18898e...` = the retail file's). The nih-vps-u run still gives the PS2 import, configure and `ninja` rows."
+  }
+ ],
+ "not_included": [
+  "ReleaseProfile ran in parallel (STATUS section \"Release follow-ups: a shipping build profile, the service's resident set, m6-006\") and none of its changes is in the frozen tree or in the binaries measured. An `rsync -ani` of the laptop tree against the host copy at the end of the gate lists exactly its files: `Cargo.toml` (profiles), `Cargo.lock`, `README.md`, `STATUS.md`, `.github/workflows/ci.yml`, `benchmarks/cost.py`, `benchmarks/service_memory.py` and `benchmarks/reports/service_memory_20261015-*`, `crates/romwright-api/{Cargo.toml,src/lib.rs,src/main.rs}`, `crates/romwright-worker-client/{Cargo.toml,src/lib.rs}`, `docs/{desktop,environment,import-speed,pc-project,releasing,third-party}.md`, `packaging/{package_desktop.py,stage_release.py}`, `tests/m7-001_cost_envelope.py`, `tests/m7-002_decompile_envelope.py`, `tests/m7-003_session_envelope.py`. None is in `romwright-core`, the importer, the decompiler or the printer, so no number here depends on it.",
+  "What that means for this gate: (1) the frozen `Cargo.toml` has the profile MemoryFix left (`release` = `lto = \"fat\"`, `codegen-units = 1`); the gate built it with LTO off and sixteen units, which is what ReleaseProfile's new development `release` profile is (`overflow-checks = true` only), so these binaries are the new `cargo build --release` build, not the shipping `dist` profile (fat LTO, one unit; `dist-service` for the API) that ReleaseProfile's packaging builds; the profiles differ in memory and speed, not in output, and this gate measures only output; (2) `romwright-api` was built from the pre-change source (before the `JobOutput::{Tree, Document}` reply path) and not run; (3) `tests/m6-007` here packaged the frozen `package_desktop.py` (`cargo build --release`, `target/release`), not ReleaseProfile's (`--profile dist`).",
+  "Already in the frozen tree and so measured: MemoryFix (decoder sharing, lazy tables, executor threads, the pattern-scan speed-up), ReleaseFixes, PcUpgrade, SymbolLayout, PcImport, PcProject, ReleaseReady, ImportPrecision, Stage4Types and the new-project slices."
+ ],
+ "user_wip": "This gate edited none of the listed user-WIP files (`crates/romwright-cli/src/main.rs`, `crates/romwright-core/src/{emit_m2c.rs,lib.rs,native.rs,native/elf.rs,native/elf_image.rs,native/tests.rs}`, `crates/romwright-sig/src/object.rs`, `crates/romwright-worker/src/{provider.rs,specs.rs}`, `crates/romwright-core/src/sdk_types/`, `tests/m22-001_c_output.py`) and no source file at all. Added: `benchmarks/finish_gate_report.py` (reads the raw arms, writes the report), `benchmarks/reports/finish_gate_20261015.{json,md}`, `benchmarks/reports/finish_gate_20261015_arms/` (raw lane, import, smoke and bisect reports, `prose.json`); appended: the \"Finish gate\" section of `STATUS.md`; and the one `finish_gate_20261015.json` row of `README.md`'s evidence index, written by `scripts/gen_evidence_index.py` (the generator rewrites only the index block).",
+ "limits": [
+  "One build with LTO off and sixteen code-generation units (allowed: no behaviour change); the memory envelopes (`m7-001`, `m7-003`) and the unit and doc suites (ReleaseReady, ReleaseFixes, MemoryFix) were not re-run: they measure the release profile or the tree, not these lanes.",
+  "No wall time here is a measurement (load 5 to 32 on `nih-vps-u`); the PC import wall times are ours fresh against stock's cached seconds from PcImport's run.",
+  "The PC import's stock side is PcImport's cached Ghidra 12.1.3 run (`benchmarks/pc_import.py --cache`), not a new stock run; ours is fresh.",
+  "The NDS repository has no `symbols.txt` (dsd's layout), so `match` ran on three ARM9 functions picked by hand from `config/romwright/main.symbols.txt` (quartiles of the 28-100 byte ARM functions at 0x02000000 and above); the other platforms' three functions are picked by script (the 1/4, 2/4, 3/4 points of the 24-96 byte functions of `config/**/symbols.txt`), except Pikmin 2 (GC and Wii) and FE8, whose addresses are the earlier agents' (so the numbers compare), and GLQuake's three addresses (PcProject's smoke list).",
+  "The scaffold is the 3DS Fire Emblem Fates `.code` (`--decompile first:40`; 202 s); the Switch Xenoblade import (2,023 s under load, 420 s unloaded) was not run. `match` does not apply to a scaffold (`config/project.json names no compiler`), so its row has a per-function objdiff report instead of a match.",
+  "Procedure notes: the first `smt-cloud` attempts imported with no Ghidra install visible inside the sandbox, then with a trimmed Ghidra that lacks the `r5900` extension (PS2 imported as plain MIPS, 10,457 functions); both were discarded and rerun with the full install. The PSP repository there has 3,379 objects, the PS2 one the same 10,348 as on `nih-vps-u`. Missing Python dependencies of splat (`n64img`, `crunch64`, `pygfxd`, `pydantic`, ...) were installed into a venv beside the sandbox, not into the repository."
+ ],
+ "console_lanes": [
+  {
+   "gate": "m22-002 MWCC 20261010",
+   "got": {
+    "exact": 56,
+    "compiled": 196,
+    "mean_percent": 78.031
+   },
+   "expected_symbol_layout": {
+    "exact": 55,
+    "compiled": 196,
+    "mean_percent": 77.638
+   },
+   "expected_pc_upgrade": {
+    "exact": 56,
+    "compiled": 196,
+    "mean_percent": 78.031
+   },
+   "delta_vs_symbol_layout": {
+    "exact": 1,
+    "compiled": 0,
+    "mean_percent": 0.393
+   },
+   "delta_vs_pc_upgrade": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.0
+   },
+   "equals_symbol_layout": false,
+   "equals_pc_upgrade": true,
+   "functions_changed_vs_symbol_layout": [
+    {
+     "function": "btlUnitCreateMoveToUnitPacket",
+     "address": "0x1979e0",
+     "size": 160,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 21.5
+     },
+     "to": {
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    }
+   ],
+   "mean_delta_from_changed_functions": 0.393,
+   "off_arm": {
+    "switch": "ROMWRIGHT_EXPORT_FLOAT_STORES=off",
+    "lane": {
+     "exact": 55,
+     "compiled": 196,
+     "mean_percent": 77.638
+    },
+    "changed_vs_symbol_layout": []
+   }
+  },
+  {
+   "gate": "m22-002 MWCC 20261011",
+   "got": {
+    "exact": 57,
+    "compiled": 195,
+    "mean_percent": 78.712
+   },
+   "expected_symbol_layout": {
+    "exact": 57,
+    "compiled": 195,
+    "mean_percent": 78.712
+   },
+   "expected_pc_upgrade": null,
+   "delta_vs_symbol_layout": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.0
+   },
+   "delta_vs_pc_upgrade": null,
+   "equals_symbol_layout": true,
+   "equals_pc_upgrade": null,
+   "functions_changed_vs_symbol_layout": [],
+   "mean_delta_from_changed_functions": 0.0
+  },
+  {
+   "gate": "m22-002 ee-gcc",
+   "got": {
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.622
+   },
+   "expected_symbol_layout": {
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.622
+   },
+   "expected_pc_upgrade": null,
+   "delta_vs_symbol_layout": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.0
+   },
+   "delta_vs_pc_upgrade": null,
+   "equals_symbol_layout": true,
+   "equals_pc_upgrade": null,
+   "functions_changed_vs_symbol_layout": [],
+   "mean_delta_from_changed_functions": 0.0
+  },
+  {
+   "gate": "m22-003 dds",
+   "got": {
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.402
+   },
+   "expected_symbol_layout": {
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.402
+   },
+   "expected_pc_upgrade": {
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.402
+   },
+   "delta_vs_symbol_layout": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.0
+   },
+   "delta_vs_pc_upgrade": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.0
+   },
+   "equals_symbol_layout": true,
+   "equals_pc_upgrade": true,
+   "functions_changed_vs_symbol_layout": [],
+   "mean_delta_from_changed_functions": 0.0
+  },
+  {
+   "gate": "m22-003 rc",
+   "got": {
+    "exact": 26,
+    "compiled": 200,
+    "mean_percent": 68.327
+   },
+   "expected_symbol_layout": {
+    "exact": 26,
+    "compiled": 200,
+    "mean_percent": 68.327
+   },
+   "expected_pc_upgrade": null,
+   "delta_vs_symbol_layout": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.0
+   },
+   "delta_vs_pc_upgrade": null,
+   "equals_symbol_layout": true,
+   "equals_pc_upgrade": null,
+   "functions_changed_vs_symbol_layout": [],
+   "mean_delta_from_changed_functions": 0.0
+  },
+  {
+   "gate": "m22-003 p4",
+   "got": {
+    "exact": 60,
+    "compiled": 199,
+    "mean_percent": 81.202
+   },
+   "expected_symbol_layout": {
+    "exact": 60,
+    "compiled": 199,
+    "mean_percent": 80.85
+   },
+   "expected_pc_upgrade": null,
+   "delta_vs_symbol_layout": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.352
+   },
+   "delta_vs_pc_upgrade": null,
+   "equals_symbol_layout": false,
+   "equals_pc_upgrade": null,
+   "functions_changed_vs_symbol_layout": [
+    {
+     "function": "func_002b6c30",
+     "address": "0x2b6c30",
+     "size": 292,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 66.712
+     },
+     "to": {
+      "compiled": true,
+      "exact": false,
+      "percent": 91.37
+     }
+    },
+    {
+     "function": "func_002b8200",
+     "address": "0x2b8200",
+     "size": 108,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 0.0
+     },
+     "to": {
+      "compiled": true,
+      "exact": false,
+      "percent": 45.852
+     }
+    }
+   ],
+   "mean_delta_from_changed_functions": 0.353,
+   "off_arm": {
+    "switch": "ROMWRIGHT_EXPORT_FLOAT_STORES=off",
+    "functions": {
+     "func_002b6c30": [
+      true,
+      false,
+      66.712
+     ],
+     "func_002b8200": [
+      true,
+      false,
+      0.0
+     ]
+    },
+    "symbol_layout": {
+     "func_002b6c30": [
+      true,
+      false,
+      66.712
+     ],
+     "func_002b8200": [
+      true,
+      false,
+      0.0
+     ]
+    },
+    "equal_to_symbol_layout": true
+   }
+  },
+  {
+   "gate": "m22-003 gh (harness clone)",
+   "got": {
+    "exact": 78,
+    "compiled": 199,
+    "mean_percent": 82.129
+   },
+   "expected_symbol_layout": {
+    "exact": 78,
+    "compiled": 199,
+    "mean_percent": 82.119
+   },
+   "expected_pc_upgrade": null,
+   "delta_vs_symbol_layout": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.01
+   },
+   "delta_vs_pc_upgrade": null,
+   "equals_symbol_layout": false,
+   "equals_pc_upgrade": null,
+   "functions_changed_vs_symbol_layout": [
+    {
+     "function": "Quaternion_SetVectorRotation",
+     "address": "0x15a878",
+     "size": 296,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 20.541
+     },
+     "to": {
+      "compiled": true,
+      "exact": false,
+      "percent": 22.392
+     }
+    }
+   ],
+   "mean_delta_from_changed_functions": 0.009,
+   "off_arm": {
+    "switch": "ROMWRIGHT_EXPORT_SQRT=off",
+    "functions": {
+     "Quaternion_SetVectorRotation": [
+      true,
+      false,
+      20.541
+     ]
+    },
+    "symbol_layout": {
+     "Quaternion_SetVectorRotation": [
+      true,
+      false,
+      20.541
+     ]
+    },
+    "equal_to_symbol_layout": true,
+    "float_stores_off_instead": {
+     "Quaternion_SetVectorRotation": [
+      true,
+      false,
+      22.392
+     ]
+    }
+   }
+  },
+  {
+   "gate": "m22-003 ff",
+   "got": {
+    "exact": 22,
+    "compiled": 199,
+    "mean_percent": 63.373
+   },
+   "expected_symbol_layout": {
+    "exact": 22,
+    "compiled": 199,
+    "mean_percent": 63.148
+   },
+   "expected_pc_upgrade": null,
+   "delta_vs_symbol_layout": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.225
+   },
+   "delta_vs_pc_upgrade": null,
+   "equals_symbol_layout": false,
+   "equals_pc_upgrade": null,
+   "functions_changed_vs_symbol_layout": [
+    {
+     "function": "SettleGhostBattleSet",
+     "address": "0x19c2f0",
+     "size": 208,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 13.25
+     },
+     "to": {
+      "compiled": true,
+      "exact": false,
+      "percent": 58.25
+     }
+    }
+   ],
+   "mean_delta_from_changed_functions": 0.225,
+   "off_arm": {
+    "switch": "ROMWRIGHT_EXPORT_FLOAT_STORES=off",
+    "functions": {
+     "SettleGhostBattleSet": [
+      true,
+      false,
+      13.25
+     ]
+    },
+    "symbol_layout": {
+     "SettleGhostBattleSet": [
+      true,
+      false,
+      13.25
+     ]
+    },
+    "equal_to_symbol_layout": true
+   }
+  },
+  {
+   "gate": "m22-003 dc",
+   "got": {
+    "exact": 42,
+    "compiled": 197,
+    "mean_percent": 73.877
+   },
+   "expected_symbol_layout": {
+    "exact": 41,
+    "compiled": 197,
+    "mean_percent": 73.562
+   },
+   "expected_pc_upgrade": {
+    "exact": 42,
+    "compiled": 197,
+    "mean_percent": 73.877
+   },
+   "delta_vs_symbol_layout": {
+    "exact": 1,
+    "compiled": 0,
+    "mean_percent": 0.315
+   },
+   "delta_vs_pc_upgrade": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.0
+   },
+   "equals_symbol_layout": false,
+   "equals_pc_upgrade": true,
+   "functions_changed_vs_symbol_layout": [
+    {
+     "function": "SetBSphere__8mgCFrameFPff",
+     "address": "0x136df0",
+     "size": 68,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 84.706
+     },
+     "to": {
+      "compiled": true,
+      "exact": true,
+      "percent": 100.0
+     }
+    },
+    {
+     "function": "SetAttrParamObjAlpha__8mgCFrameFfi",
+     "address": "0x1383c0",
+     "size": 108,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 57.0
+     },
+     "to": {
+      "compiled": true,
+      "exact": false,
+      "percent": 82.778
+     }
+    },
+    {
+     "function": "EntryDamage2__12CActionCharaFP8mgCFrameP8mgCFramePcfPcffPc",
+     "address": "0x16bc60",
+     "size": 352,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 56.295
+     },
+     "to": {
+      "compiled": true,
+      "exact": false,
+      "percent": 78.17
+     }
+    }
+   ],
+   "mean_delta_from_changed_functions": 0.315,
+   "off_arm": {
+    "switch": "ROMWRIGHT_EXPORT_FLOAT_STORES=off",
+    "functions": {
+     "SetBSphere__8mgCFrameFPff": [
+      true,
+      false,
+      84.706
+     ],
+     "SetAttrParamObjAlpha__8mgCFrameFfi": [
+      true,
+      false,
+      57.0
+     ],
+     "EntryDamage2__12CActionCharaFP8mgCFrameP8mgCFramePcfPcffPc": [
+      true,
+      false,
+      56.295
+     ]
+    },
+    "symbol_layout": {
+     "SetBSphere__8mgCFrameFPff": [
+      true,
+      false,
+      84.706
+     ],
+     "SetAttrParamObjAlpha__8mgCFrameFfi": [
+      true,
+      false,
+      57.0
+     ],
+     "EntryDamage2__12CActionCharaFP8mgCFrameP8mgCFramePcfPcffPc": [
+      true,
+      false,
+      56.295
+     ]
+    },
+    "equal_to_symbol_layout": true
+   }
+  },
+  {
+   "gate": "m22-003 dk",
+   "got": {
+    "exact": 29,
+    "compiled": 197,
+    "mean_percent": 78.223
+   },
+   "expected_symbol_layout": {
+    "exact": 29,
+    "compiled": 197,
+    "mean_percent": 78.194
+   },
+   "expected_pc_upgrade": null,
+   "delta_vs_symbol_layout": {
+    "exact": 0,
+    "compiled": 0,
+    "mean_percent": 0.029
+   },
+   "delta_vs_pc_upgrade": null,
+   "equals_symbol_layout": false,
+   "equals_pc_upgrade": null,
+   "functions_changed_vs_symbol_layout": [
+    {
+     "function": "Set__14CWeaponElementFPA4_fPffif",
+     "address": "0x1b7840",
+     "size": 244,
+     "from": {
+      "compiled": true,
+      "exact": false,
+      "percent": 46.951
+     },
+     "to": {
+      "compiled": true,
+      "exact": false,
+      "percent": 52.689
+     }
+    }
+   ],
+   "mean_delta_from_changed_functions": 0.029,
+   "off_arm": {
+    "switch": "ROMWRIGHT_EXPORT_FLOAT_STORES=off",
+    "functions": {
+     "Set__14CWeaponElementFPA4_fPffif": [
+      true,
+      false,
+      46.951
+     ]
+    },
+    "symbol_layout": {
+     "Set__14CWeaponElementFPA4_fPffif": [
+      true,
+      false,
+      46.951
+     ]
+    },
+    "equal_to_symbol_layout": true
+   }
+  }
+ ],
+ "pc_lanes": [
+  {
+   "fixture": "pc-glquake-msvc42",
+   "got": {
+    "exact": 50,
+    "compiled": 191,
+    "mean_percent": 72.535,
+    "percent_ge_90": 73
+   },
+   "expected_pc_upgrade": {
+    "exact": 50,
+    "compiled": 191,
+    "mean_percent": 72.535,
+    "percent_ge_90": 73
+   },
+   "equal": true,
+   "import_seconds": 8.8
+  },
+  {
+   "fixture": "pc-quake2-msvc8",
+   "got": {
+    "exact": 38,
+    "compiled": 196,
+    "mean_percent": 67.99,
+    "percent_ge_90": 65
+   },
+   "expected_pc_upgrade": {
+    "exact": 38,
+    "compiled": 196,
+    "mean_percent": 67.99,
+    "percent_ge_90": 65
+   },
+   "equal": true,
+   "import_seconds": 12.1
+  },
+  {
+   "fixture": "pc-ioq3-ded-mingw32",
+   "got": {
+    "exact": 22,
+    "compiled": 181,
+    "mean_percent": 41.968,
+    "percent_ge_90": 29
+   },
+   "expected_pc_upgrade": {
+    "exact": 22,
+    "compiled": 181,
+    "mean_percent": 41.968,
+    "percent_ge_90": 29
+   },
+   "equal": true,
+   "import_seconds": 18.3
+  },
+  {
+   "fixture": "pc-doomgeneric-mingw32",
+   "got": {
+    "exact": 35,
+    "compiled": 176,
+    "mean_percent": 47.829,
+    "percent_ge_90": 43
+   },
+   "expected_pc_upgrade": {
+    "exact": 35,
+    "compiled": 176,
+    "mean_percent": 47.829,
+    "percent_ge_90": 43
+   },
+   "equal": true,
+   "import_seconds": 13.0
+  },
+  {
+   "fixture": "pc-quake2-game-msvc8",
+   "got": {
+    "exact": 35,
+    "compiled": 195,
+    "mean_percent": 63.132,
+    "percent_ge_90": 43
+   },
+   "expected_pc_upgrade": {
+    "exact": 35,
+    "compiled": 195,
+    "mean_percent": 63.132,
+    "percent_ge_90": 43
+   },
+   "equal": true,
+   "import_seconds": 5.9
+  },
+  {
+   "fixture": "pc-quake2-refgl-msvc8",
+   "got": {
+    "exact": 94,
+    "compiled": 197,
+    "mean_percent": 73.786,
+    "percent_ge_90": 100
+   },
+   "expected_pc_upgrade": {
+    "exact": 94,
+    "compiled": 197,
+    "mean_percent": 73.786,
+    "percent_ge_90": 100
+   },
+   "equal": true,
+   "import_seconds": 6.3
+  }
+ ],
+ "m21_001": {
+  "status": "pass",
+  "failures": [],
+  "expected_status": "pass",
+  "images": 7,
+  "rows": {
+   "gba-pokeemerald": {
+    "recall": 0.9761,
+    "precision": 0.9972,
+    "found": 15520,
+    "truth": 15856,
+    "invented": 43,
+    "expected_recall": 0.9761,
+    "expected_precision": 0.9972,
+    "fields_differing_from_expected": {}
+   },
+   "nds-pokeheartgold-arm9": {
+    "recall": 0.9746,
+    "precision": 0.9994,
+    "found": 10804,
+    "truth": 11078,
+    "invented": 7,
+    "expected_recall": 0.9746,
+    "expected_precision": 0.9994,
+    "fields_differing_from_expected": {}
+   },
+   "ps2-capcom-fighting-evolution": {
+    "recall": 0.9692,
+    "precision": 0.9945,
+    "found": 8570,
+    "truth": 8794,
+    "invented": 47,
+    "expected_recall": 0.9692,
+    "expected_precision": 0.9945,
+    "fields_differing_from_expected": {}
+   },
+   "ps2-dungeon-game": {
+    "recall": 0.9885,
+    "precision": 0.9847,
+    "found": 786,
+    "truth": 783,
+    "invented": 12,
+    "expected_recall": 0.9885,
+    "expected_precision": 0.9847,
+    "fields_differing_from_expected": {}
+   },
+   "psx-darkstalkers-3": {
+    "recall": 0.9878,
+    "precision": 0.3664,
+    "found": 2205,
+    "truth": 818,
+    "invented": 1397,
+    "expected_recall": 0.9878,
+    "expected_precision": 0.3664,
+    "fields_differing_from_expected": {}
+   },
+   "psv-need-for-speed-most-wanted": {
+    "recall": 0.9734,
+    "precision": 0.9719,
+    "found": 26535,
+    "truth": 26495,
+    "invented": 746,
+    "expected_recall": 0.9734,
+    "expected_precision": 0.9719,
+    "fields_differing_from_expected": {}
+   },
+   "x360-black-ops-2": {
+    "recall": 0.9833,
+    "precision": 0.9964,
+    "found": 27364,
+    "truth": 27730,
+    "invented": 98,
+    "expected_recall": 0.9833,
+    "expected_precision": 0.9964,
+    "fields_differing_from_expected": {}
+   }
+  },
+  "all_fields_equal": true
+ },
+ "ps2_decompile_success": {
+  "decompiled": 7448,
+  "sampled": 7500,
+  "expected": "7448 / 7500",
+  "games": {
+   "ps2-fatal-frame": {
+    "sampled": 942,
+    "decompiled": 942,
+    "expected_decompiled": 942,
+    "expected_sampled": 942
+   },
+   "ps2-ratchet-clank-pal": {
+    "sampled": 859,
+    "decompiled": 858,
+    "expected_decompiled": 858,
+    "expected_sampled": 859
+   },
+   "ps2-god-hand": {
+    "sampled": 980,
+    "decompiled": 980,
+    "expected_decompiled": 980,
+    "expected_sampled": 980
+   },
+   "ps2-digital-devil-saga": {
+    "sampled": 977,
+    "decompiled": 977,
+    "expected_decompiled": 977,
+    "expected_sampled": 977
+   },
+   "ps2-dark-chronicle": {
+    "sampled": 969,
+    "decompiled": 969,
+    "expected_decompiled": 969,
+    "expected_sampled": 969
+   },
+   "ps2-ratchet-clank": {
+    "sampled": 861,
+    "decompiled": 860,
+    "expected_decompiled": 860,
+    "expected_sampled": 861
+   },
+   "ps2-persona-4": {
+    "sampled": 975,
+    "decompiled": 974,
+    "expected_decompiled": 974,
+    "expected_sampled": 975
+   },
+   "ps2-dark-cloud": {
+    "sampled": 937,
+    "decompiled": 888,
+    "expected_decompiled": 888,
+    "expected_sampled": 937
+   }
+  },
+  "equal": true
+ },
+ "pc_import": {
+  "fixtures": 8,
+  "rows": [
+   {
+    "fixture": "pc-doomgeneric-mingw32",
+    "truth": 1077,
+    "ours": {
+     "found": 1023,
+     "invented": 0,
+     "recall": 0.9499,
+     "precision": 1.0,
+     "recall_verified": 0.9499,
+     "precision_verified": 1.0
+    },
+    "stock": {
+     "found": 705,
+     "invented": 0,
+     "recall": 0.6546,
+     "precision": 1.0,
+     "recall_verified": 0.6546,
+     "precision_verified": 1.0
+    },
+    "ours_seconds": 7.57,
+    "ours_cpu_seconds": 9.39,
+    "stock_seconds": 36.4,
+    "stock_cpu_seconds": 56.0,
+    "ours_fields_differing_from_recorded": {},
+    "stock_fields_differing_from_recorded": {}
+   },
+   {
+    "fixture": "pc-glquake-msvc42",
+    "truth": 1331,
+    "ours": {
+     "found": 1294,
+     "invented": 8,
+     "recall": 0.9662,
+     "precision": 0.9938,
+     "recall_verified": 0.9662,
+     "precision_verified": 0.9938
+    },
+    "stock": {
+     "found": 1110,
+     "invented": 22,
+     "recall": 0.8174,
+     "precision": 0.9802,
+     "recall_verified": 0.8174,
+     "precision_verified": 0.9802
+    },
+    "ours_seconds": 6.4,
+    "ours_cpu_seconds": 9.47,
+    "stock_seconds": 39.0,
+    "stock_cpu_seconds": 51.3,
+    "ours_fields_differing_from_recorded": {},
+    "stock_fields_differing_from_recorded": {}
+   },
+   {
+    "fixture": "pc-ioq3-ded-mingw32",
+    "truth": 1887,
+    "ours": {
+     "found": 1777,
+     "invented": 0,
+     "recall": 0.9417,
+     "precision": 1.0,
+     "recall_verified": 0.9417,
+     "precision_verified": 1.0
+    },
+    "stock": {
+     "found": 1205,
+     "invented": 0,
+     "recall": 0.6386,
+     "precision": 1.0,
+     "recall_verified": 0.6386,
+     "precision_verified": 1.0
+    },
+    "ours_seconds": 15.74,
+    "ours_cpu_seconds": 21.06,
+    "stock_seconds": 54.2,
+    "stock_cpu_seconds": 67.1,
+    "ours_fields_differing_from_recorded": {},
+    "stock_fields_differing_from_recorded": {}
+   },
+   {
+    "fixture": "pc-ioq3-ded-mingw64",
+    "truth": 1963,
+    "ours": {
+     "found": 1963,
+     "invented": 0,
+     "recall": 1.0,
+     "precision": 1.0,
+     "recall_verified": 1.0,
+     "precision_verified": 1.0
+    },
+    "stock": {
+     "found": 1822,
+     "invented": 0,
+     "recall": 0.9282,
+     "precision": 1.0,
+     "recall_verified": 0.9282,
+     "precision_verified": 1.0
+    },
+    "ours_seconds": 11.15,
+    "ours_cpu_seconds": 18.4,
+    "stock_seconds": 51.8,
+    "stock_cpu_seconds": 70.1,
+    "ours_fields_differing_from_recorded": {},
+    "stock_fields_differing_from_recorded": {}
+   },
+   {
+    "fixture": "pc-quake2-game-msvc8",
+    "truth": 1945,
+    "ours": {
+     "found": 1701,
+     "invented": 55,
+     "recall": 0.8463,
+     "precision": 0.9677,
+     "recall_verified": 0.8463,
+     "precision_verified": 0.9722
+    },
+    "stock": {
+     "found": 1011,
+     "invented": 52,
+     "recall": 0.4931,
+     "precision": 0.9486,
+     "recall_verified": 0.4931,
+     "precision_verified": 0.9504
+    },
+    "ours_seconds": 5.95,
+    "ours_cpu_seconds": 8.57,
+    "stock_seconds": 56.2,
+    "stock_cpu_seconds": 63.3,
+    "ours_fields_differing_from_recorded": {},
+    "stock_fields_differing_from_recorded": {}
+   },
+   {
+    "fixture": "pc-quake2-game-msvc8-debug",
+    "truth": 3393,
+    "ours": {
+     "found": 3107,
+     "invented": 89,
+     "recall": 0.8895,
+     "precision": 0.9714,
+     "recall_verified": 0.8895,
+     "precision_verified": 0.9751
+    },
+    "stock": {
+     "found": 2770,
+     "invented": 208,
+     "recall": 0.7551,
+     "precision": 0.9249,
+     "recall_verified": 0.7551,
+     "precision_verified": 0.9273
+    },
+    "ours_seconds": 57.14,
+    "ours_cpu_seconds": 65.32,
+    "stock_seconds": 68.2,
+    "stock_cpu_seconds": 117.4,
+    "ours_fields_differing_from_recorded": {},
+    "stock_fields_differing_from_recorded": {}
+   },
+   {
+    "fixture": "pc-quake2-msvc8",
+    "truth": 2094,
+    "ours": {
+     "found": 1789,
+     "invented": 37,
+     "recall": 0.8367,
+     "precision": 0.9793,
+     "recall_verified": 0.8367,
+     "precision_verified": 0.9793
+    },
+    "stock": {
+     "found": 1332,
+     "invented": 64,
+     "recall": 0.6055,
+     "precision": 0.952,
+     "recall_verified": 0.6055,
+     "precision_verified": 0.9534
+    },
+    "ours_seconds": 9.6,
+    "ours_cpu_seconds": 12.81,
+    "stock_seconds": 35.1,
+    "stock_cpu_seconds": 55.7,
+    "ours_fields_differing_from_recorded": {},
+    "stock_fields_differing_from_recorded": {}
+   },
+   {
+    "fixture": "pc-quake2-refgl-msvc8",
+    "truth": 1517,
+    "ours": {
+     "found": 1243,
+     "invented": 45,
+     "recall": 0.7897,
+     "precision": 0.9638,
+     "recall_verified": 0.7897,
+     "precision_verified": 0.9646
+    },
+    "stock": {
+     "found": 709,
+     "invented": 48,
+     "recall": 0.4357,
+     "precision": 0.9323,
+     "recall_verified": 0.4357,
+     "precision_verified": 0.9323
+    },
+    "ours_seconds": 6.36,
+    "ours_cpu_seconds": 8.11,
+    "stock_seconds": 45.9,
+    "stock_cpu_seconds": 62.7,
+    "ours_fields_differing_from_recorded": {},
+    "stock_fields_differing_from_recorded": {}
+   }
+  ],
+  "ours_wins_of_8": {
+   "recall": 8,
+   "precision": 5,
+   "recall_verified": 8,
+   "precision_verified": 5,
+   "wall": 8,
+   "cpu": 8
+  },
+  "equal_to_recorded": true,
+  "note": "stock is the cached stock Ghidra 12.1.3 run of PcImport (`pc_import_discovery_stock_20261015.json`, cache `benchmarks/pc_import.py --cache`); its seconds are that run's"
+ },
+ "smokes": [
+  {
+   "id": "ps2-dds",
+   "platform": "PS2 (Digital Devil Saga, SLUS_209.74)",
+   "report": "smoke-smt-cloud/ps2-dds.json",
+   "result": "done",
+   "expected_build": "6d18898e2724bf1d145392766e8ba1e678487419",
+   "expected_match": "no earlier number; any result",
+   "note": "ee-gcc is i386: `match` runs on smt-cloud (nih-vps-u has no /lib/ld-linux.so.2)",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 24.9
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 36.1
+    },
+    "build": {
+     "rc": 0,
+     "secs": 126.0
+    }
+   },
+   "sha1_built": "6d18898e2724bf1d145392766e8ba1e678487419",
+   "build_ok_lines": [
+    "OK  build/SLUS_209.74  sha1 6d18898e2724bf1d145392766e8ba1e678487419"
+   ],
+   "matches": [
+    {
+     "function": "0x17b3d8",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 0.9s",
+     "rc": 0
+    },
+    {
+     "function": "0x21a088",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 0.5s",
+     "rc": 0
+    },
+    {
+     "function": "0x2a5a00",
+     "best": "best: default 55.636% (default 55.636%) 7 decompiles, 1 compiles, 3.2s",
+     "rc": 0
+    }
+   ],
+   "build_ok": true
+  },
+  {
+   "id": "gc-pikmin2",
+   "platform": "GameCube (Pikmin 2 main.dol)",
+   "report": "smoke/gc-pikmin2.json",
+   "result": "done",
+   "expected_build": "build/PIKMIN2/main.dol: OK",
+   "expected_match": "0x800c03ec 100%, 0x8006bd04 100%, 0x800c0394 49.250% (NewProjectGC)",
+   "note": "",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 24.3
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 11.7
+    },
+    "build": {
+     "rc": 0,
+     "secs": 1.2
+    }
+   },
+   "sha1_built": null,
+   "build_ok_lines": [
+    "build/PIKMIN2/main.dol: OK"
+   ],
+   "matches": [
+    {
+     "function": "0x800c03ec",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 0.9s",
+     "rc": 0
+    },
+    {
+     "function": "0x8006bd04",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 1.0s",
+     "rc": 0
+    },
+    {
+     "function": "0x800c0394",
+     "best": "best: default 49.250% (default 49.250%) 7 decompiles, 1 compiles, 6.6s",
+     "rc": 0
+    }
+   ],
+   "build_ok": true
+  },
+  {
+   "id": "wii-pikmin2",
+   "platform": "Wii (Pikmin 2 NPC main.dol)",
+   "report": "smoke/wii-pikmin2.json",
+   "result": "done",
+   "expected_build": "build/PIKMIN2WII/main.dol: OK",
+   "expected_match": "0x800060b8, 0x80067628, 0x800e8c5c exact (NewProjectGC)",
+   "note": "",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 51.6
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 34.9
+    },
+    "build": {
+     "rc": 0,
+     "secs": 3.4
+    }
+   },
+   "sha1_built": null,
+   "build_ok_lines": [
+    "build/PIKMIN2WII/main.dol: OK"
+   ],
+   "matches": [
+    {
+     "function": "0x800060b8",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 1.2s",
+     "rc": 0
+    },
+    {
+     "function": "0x80067628",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 1.1s",
+     "rc": 0
+    },
+    {
+     "function": "0x800e8c5c",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 1.2s",
+     "rc": 0
+    }
+   ],
+   "build_ok": true
+  },
+  {
+   "id": "n64-sm64",
+   "platform": "N64 (Super Mario 64 US)",
+   "report": "smoke/n64-sm64.json",
+   "result": "done",
+   "expected_build": "9bef1128717f958171a4afac3ed78ee2bb4e86ce",
+   "expected_match": "no earlier number for these three; any result (NewProjectMips: 8-40 byte 13 of 24, 48-160 byte 0 of 30)",
+   "note": "",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 10.4
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 15.6
+    },
+    "build": {
+     "rc": 0,
+     "secs": 39.5
+    }
+   },
+   "sha1_built": "9bef1128717f958171a4afac3ed78ee2bb4e86ce",
+   "build_ok_lines": [
+    "OK  build/n64-super-mario-64.z64  sha1 9bef1128717f958171a4afac3ed78ee2bb4e86ce"
+   ],
+   "matches": [
+    {
+     "function": "0x80284cfc",
+     "best": "best: default 62.333% (default 62.333%) 7 decompiles, 1 compiles, 1.6s",
+     "rc": 0
+    },
+    {
+     "function": "0x802a10f0",
+     "best": "best: default 46.474% (default 46.474%) 7 decompiles, 1 compiles, 1.6s",
+     "rc": 0
+    },
+    {
+     "function": "0x802ee9cc",
+     "best": "best: default 34.773% (default 34.773%) 7 decompiles, 1 compiles, 1.9s",
+     "rc": 0
+    }
+   ],
+   "build_ok": true
+  },
+  {
+   "id": "psx-silenthill",
+   "platform": "PSX (Silent Hill SLUS_007.07)",
+   "report": "smoke/psx-silenthill.json",
+   "result": "done",
+   "expected_build": "f38344565fb731befc52fd968eb5a667be37acf3",
+   "expected_match": "no earlier number for these three; any result (NewProjectMips: 7 exact of 40, mean 73.2)",
+   "note": "",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 0.9
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 2.4
+    },
+    "build": {
+     "rc": 0,
+     "secs": 5.0
+    }
+   },
+   "sha1_built": "f38344565fb731befc52fd968eb5a667be37acf3",
+   "build_ok_lines": [
+    "OK  build/SLUS_007.07  sha1 f38344565fb731befc52fd968eb5a667be37acf3"
+   ],
+   "matches": [
+    {
+     "function": "0x80012e1c",
+     "best": "best: default 71.273% (default 71.273%) 7 decompiles, 1 compiles, 0.7s",
+     "rc": 0
+    },
+    {
+     "function": "0x80013efc",
+     "best": "best: default 91.667% (default 91.667%) 7 decompiles, 2 compiles, 1.0s",
+     "rc": 0
+    },
+    {
+     "function": "0x80018784",
+     "best": "best: default 91.667% (default 91.667%) 7 decompiles, 1 compiles, 0.7s",
+     "rc": 0
+    }
+   ],
+   "build_ok": true
+  },
+  {
+   "id": "psp-melodie",
+   "platform": "PSP (psp-melodie EBOOT.BIN, a PRX)",
+   "report": "smoke-smt-cloud/psp-melodie.json",
+   "result": "done",
+   "expected_build": "724fe026421bfc1f881924d657099b07def869cb",
+   "expected_match": "no earlier number for these three; any result (NewProjectMips: small functions 4 exact of 24, 81.2)",
+   "note": "psp-gcc is i386: smt-cloud",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 4.5
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 11.8
+    },
+    "build": {
+     "rc": 0,
+     "secs": 42.8
+    }
+   },
+   "sha1_built": "724fe026421bfc1f881924d657099b07def869cb",
+   "build_ok_lines": [
+    "OK  build/EBOOT.BIN  sha1 724fe026421bfc1f881924d657099b07def869cb"
+   ],
+   "matches": [
+    {
+     "function": "0x28990",
+     "best": "best: default 64.200% (default 64.200%) 7 decompiles, 1 compiles, 2.4s",
+     "rc": 0
+    },
+    {
+     "function": "0x92540",
+     "best": "best: default 0.000% (default 0.000%) 7 decompiles, 1 compiles, 2.5s",
+     "rc": 0
+    },
+    {
+     "function": "0xbd21c",
+     "best": "best: default 99.429% (default 99.429%) 7 decompiles, 1 compiles, 2.4s",
+     "rc": 0
+    }
+   ],
+   "build_ok": true
+  },
+  {
+   "id": "gba-fe8",
+   "platform": "GBA (Fire Emblem: The Sacred Stones)",
+   "report": "smoke/gba-fe8.json",
+   "result": "done",
+   "expected_build": "c25b145e37456171ada4b0d440bf88a19f4d509f",
+   "expected_match": "0x080a6f0c exact (docs/new-project.md example; NewProjectArm: 7 exact of 16)",
+   "note": "",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 17.2
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 23.8
+    },
+    "build": {
+     "rc": 0,
+     "secs": 164.2
+    }
+   },
+   "sha1_built": "c25b145e37456171ada4b0d440bf88a19f4d509f",
+   "build_ok_lines": [
+    "OK  build/fe8.gba  sha1 c25b145e37456171ada4b0d440bf88a19f4d509f"
+   ],
+   "matches": [
+    {
+     "function": "0x080a6f0c",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 0.8s",
+     "rc": 0
+    }
+   ],
+   "build_ok": true
+  },
+  {
+   "id": "nds-twewy",
+   "platform": "NDS (The World Ends With You)",
+   "report": "smoke/nds-twewy.json",
+   "result": "done",
+   "expected_build": "23e87b1e72aab7f9b718f83e92fd1c3039f23675",
+   "expected_match": "no earlier number for these three; any result (NewProjectArm: 14 ARM + 1 Thumb of 28-100 bytes)",
+   "note": "three ARM9 functions picked by hand (the NDS symbol files are not `symbols.txt`): `smoke/nds-twewy.match-*.log`",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 20.1
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 3.4
+    },
+    "build": {
+     "rc": 0,
+     "secs": 2.9
+    }
+   },
+   "sha1_built": "23e87b1e72aab7f9b718f83e92fd1c3039f23675",
+   "build_ok_lines": [
+    "OK  build/twewy.nds  sha1 23e87b1e72aab7f9b718f83e92fd1c3039f23675"
+   ],
+   "matches": [
+    {
+     "function": "0x02018edc",
+     "best": "best: default 100.000% exact (default 100.000%) 1 decompiles, 1 compiles, 0.8s",
+     "rc": 0
+    },
+    {
+     "function": "0x02027564",
+     "best": "best: default 80.000% (default 80.000%) 7 decompiles, 2 compiles, 3.2s",
+     "rc": 0
+    },
+    {
+     "function": "0x020391d4",
+     "best": "best: default 68.909% (default 68.909%) 7 decompiles, 1 compiles, 3.0s",
+     "rc": 0
+    }
+   ],
+   "build_ok": true
+  },
+  {
+   "id": "pe-glquake",
+   "platform": "Windows PE (GLQuake, MSVC 4.2)",
+   "report": "smoke/pe-glquake.json",
+   "result": "done",
+   "expected_build": "per-function report",
+   "expected_match": "six functions 98.5 to 99.7 (83.2 for one) at the default flags (PcProject)",
+   "note": "no sha1 for a PE (docs/new-project.md)",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 362.1
+    },
+    "configure": {
+     "rc": 0,
+     "secs": 5.4
+    },
+    "build": {
+     "rc": 0,
+     "secs": 823.0
+    },
+    "report": {
+     "rc": 0,
+     "secs": 0.4
+    }
+   },
+   "sha1_built": null,
+   "build_ok_lines": null,
+   "matches": [
+    {
+     "function": "0x425320",
+     "best": "best: default 99.667% (default 99.667%) 7 decompiles, 2 compiles, 4.8s",
+     "rc": 0
+    },
+    {
+     "function": "0x4393d0",
+     "best": "best: default 99.643% (default 99.643%) 7 decompiles, 1 compiles, 3.4s",
+     "rc": 0
+    },
+    {
+     "function": "0x42f840",
+     "best": "best: default 83.214% (default 83.214%) 7 decompiles, 1 compiles, 3.4s",
+     "rc": 0
+    }
+   ],
+   "build_ok": null,
+   "build_summary": {
+    "progress_summary": {
+     "functions": 1293,
+     "scored": 1293,
+     "compiled": 1249,
+     "matched": 243,
+     "near_90": 120,
+     "mean_percent": 68.416,
+     "compiler": "msvc4.2",
+     "whole_image_rebuild": false
+    },
+    "compile": {
+     "compiler": "msvc4.2",
+     "family": "msvc",
+     "units": 1293,
+     "compiled": 1249,
+     "failed": 44,
+     "seconds": 822.9
+    }
+   }
+  },
+  {
+   "id": "scaffold-3ds",
+   "platform": "scaffold (3DS Fire Emblem Fates `.code`)",
+   "report": "smoke/scaffold-3ds.json",
+   "result": "done",
+   "expected_build": "per-function report",
+   "expected_match": "38 sources, 37/38 compile, 36 objdiff units, 61 calls relocated, 16.1% (NewProjectScaffold)",
+   "note": "`match` does not apply to a scaffold",
+   "steps": {
+    "new-project": {
+     "rc": 0,
+     "secs": 202.0
+    },
+    "fetch": {
+     "rc": 0,
+     "secs": 207.8
+    },
+    "build": {
+     "rc": 0,
+     "secs": 0.8
+    },
+    "report": {
+     "rc": 0,
+     "secs": 0.1
+    }
+   },
+   "sha1_built": null,
+   "build_ok_lines": null,
+   "matches": [],
+   "build_ok": null,
+   "build_summary": {
+    "objdiff_measures": {
+     "fuzzy_match_percent": 16.108448,
+     "total_code": "3166",
+     "matched_data_percent": 100.0,
+     "total_functions": 36,
+     "complete_data_percent": 100.0,
+     "total_units": 36
+    },
+    "compile": {
+     "compiler": "clang version 22.1.8 (https://github.com/llvm/llvm-project ca7933e47d3a3451d81e72ac174dcb5aa28b59d1)",
+     "pinned": "clang-22.1.8",
+     "target": "armv6k-none-eabi",
+     "units": 38,
+     "compiled": 37,
+     "failed": 1,
+     "seconds": 0.6
+    }
+   }
+  }
+ ],
+ "desktop": {
+  "status": "pass",
+  "summary": "packaged romwright-0.5.0-Linux-x86_64.tar.gz on Linux/x86_64 rendering on llvmpipe (LLVM 22.1.8, 256 bits) (Vulkan): Create project wrote 13 files in 303 ms; Match on FUN_00405380 showed 7 variants, 7 compiled, best 1.763% against stock 1.599%",
+  "package": "romwright-0.5.0-Linux-x86_64.tar.gz",
+  "adapter": "llvmpipe (LLVM 22.1.8, 256 bits) (Vulkan)",
+  "files": 13,
+  "rows": 7,
+  "compiled_rows": 7,
+  "best_percent": 1.763,
+  "default_percent": 1.599,
+  "function": "FUN_00405380",
+  "expected": "ReleaseReady: Create project 13 files; Match on FUN_00405380 7 variant rows, 7 compiled, best 1.763 % against the stock print's 1.599 %",
+  "equal_to_expected": true,
+  "direct_gate": "`romwright-desktop --gate --project-image tests/fixtures-src/tiny_pe32.exe` rc 0 (logs/desktop.log)"
+ },
+ "pe_glquake_attribution": [
+  {
+   "arm": "pe-glquake-pcproj",
+   "what": "PcProject's own binary (`~/runs/PcProject/target2`, `ghidra_opt` 486ace43): the docs/pc-project.md smoke",
+   "functions": 1283,
+   "compiled": 1179,
+   "exact": 232,
+   "at_least_90": 98,
+   "mean_percent": 64.501
+  },
+  {
+   "arm": "pe-glquake-alloff",
+   "what": "this build with PcImport's nine PE discovery rules, SymbolLayout's layout rules (`ROMWRIGHT_NATIVE_LAYOUT=1`) and PcUpgrade's eleven switches all off",
+   "functions": 1424,
+   "compiled": 1267,
+   "exact": 232,
+   "at_least_90": 98,
+   "mean_percent": 58.801
+  },
+  {
+   "arm": "pe-glquake-peonly",
+   "what": "this build, only PcImport's PE discovery rules on",
+   "functions": 1293,
+   "compiled": 1189,
+   "exact": 231,
+   "at_least_90": 100,
+   "mean_percent": 64.536
+  },
+  {
+   "arm": "pe-glquake-layonly",
+   "what": "this build, only SymbolLayout's layout rules on",
+   "functions": 1424,
+   "compiled": 1334,
+   "exact": 232,
+   "at_least_90": 103,
+   "mean_percent": 61.008
+  },
+  {
+   "arm": "pe-glquake-uponly",
+   "what": "this build, only PcUpgrade's eleven switches on",
+   "functions": 1424,
+   "compiled": 1269,
+   "exact": 243,
+   "at_least_90": 114,
+   "mean_percent": 60.142
+  },
+  {
+   "arm": "pe-glquake",
+   "what": "this build, default (the smoke above)",
+   "functions": 1293,
+   "compiled": 1249,
+   "exact": 243,
+   "at_least_90": 120,
+   "mean_percent": 68.416
+  }
+ ]
+}

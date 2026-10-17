@@ -1,0 +1,24 @@
+{
+ "ps2-fatal-frame": {
+  "without": 278,
+  "with": 278,
+  "lost": [],
+  "gained": [],
+  "different": [],
+  "edges": [
+   2286,
+   2286
+  ]
+ },
+ "ps2-god-hand": {
+  "without": 992,
+  "with": 992,
+  "lost": [],
+  "gained": [],
+  "different": [],
+  "edges": [
+   7902,
+   7902
+  ]
+ }
+}

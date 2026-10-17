@@ -1,0 +1,665 @@
+diff --git a/decompiler/coreaction.cc b/decompiler/coreaction.cc
+index 58b02c8..1235aba 100644
+--- a/decompiler/coreaction.cc
++++ b/decompiler/coreaction.cc
+@@ -1280,6 +1280,62 @@ int4 ActionDeindirect::apply(Funcdata &data)
+   return 0;
+ }
+ 
++/// \brief Try to eliminate constant extended to be larger than sizeof(uintb)
++///
++/// If given varnode is defined as zext(#0), simplify operations that read it.
++/// \param vn is the big varnode
++/// \param data is the function
++void ActionVarnodeProps::handleExtendedZero(Varnode *vn,Funcdata &data)
++
++{
++  PcodeOp *zext = vn->getDef();
++  if (zext->code() != CPUI_INT_ZEXT) return;
++  if (!zext->getIn(0)->constantMatch(0)) return;
++  list<PcodeOp *>::const_iterator iter;
++  iter = vn->beginDescend();
++   while(iter != vn->endDescend()) {
++    PcodeOp *subop = *iter;
++    ++iter;
++    switch(subop->code()) {
++      case CPUI_INT_ADD:
++      case CPUI_INT_OR:
++      case CPUI_INT_XOR:
++	data.opRemoveInput(subop, subop->getSlot(vn));	// Convert to COPY of other slot
++	data.opSetOpcode(subop, CPUI_COPY);
++	iter = vn->beginDescend();
++	count += 1;
++	break;
++      case CPUI_INT_2COMP:
++	data.opSetOpcode(subop, CPUI_COPY);
++	count += 1;
++	break;
++      case CPUI_INT_LEFT:
++      case CPUI_INT_RIGHT:
++      case CPUI_INT_SRIGHT:
++      case CPUI_INT_DIV:
++      case CPUI_INT_SDIV:
++      case CPUI_INT_REM:
++      case CPUI_INT_SREM:
++	if (subop->getIn(0) != vn)		// Check if zero is first input
++	  break;
++	data.opRemoveInput(subop, 1);		// Convert to COPY of zero
++	data.opSetOpcode(subop, CPUI_COPY);
++	iter = vn->beginDescend();
++	count += 1;
++	break;
++      case CPUI_INT_MULT:
++      case CPUI_INT_AND:
++	data.opRemoveInput(subop, 1-subop->getSlot(vn));	// Convert to COPY of zero
++	data.opSetOpcode(subop, CPUI_COPY);
++	iter = vn->beginDescend();
++	count += 1;
++	break;
++      default:
++	break;
++    }
++  }
++}
++
+ int4 ActionVarnodeProps::apply(Funcdata &data)
+ 
+ {
+@@ -1325,10 +1381,14 @@ int4 ActionVarnodeProps::apply(Funcdata &data)
+ 	if (data.replaceVolatile(vn))
+ 	  count += 1;		// Try to replace vn with pcode op
+     }
+-    else if (((vn->getNZMask() & vn->getConsume())==0)&&(vnSize<=sizeof(uintb))) {
++    else if ((vn->getNZMask() & vn->getConsume())==0) {
+       // FIXME: uintb should be arbitrary precision
+       if (vn->isConstant()) continue; // Don't replace a constant
+       if (vn->isWritten()) {
++	if (vnSize > sizeof(uintb)) {
++	  handleExtendedZero(vn, data);
++	  continue;
++	}
+ 	if (vn->getDef()->code() == CPUI_COPY) {
+ 	  if (vn->getDef()->getIn(0)->isConstant()) {
+ 	    // Don't replace a COPY 0, with a zero, let
+diff --git a/decompiler/coreaction.hh b/decompiler/coreaction.hh
+index d974875..4fc54d8 100644
+--- a/decompiler/coreaction.hh
++++ b/decompiler/coreaction.hh
+@@ -220,6 +220,7 @@ public:
+ ///   - Volatile Varnodes are converted read/write functions
+ ///   - Varnodes whose values are not consumed are replaced with constant 0 Varnodes
+ class ActionVarnodeProps : public Action {
++  void handleExtendedZero(Varnode *vn,Funcdata &data);
+ public:
+   ActionVarnodeProps(const string &g) : Action(0,"varnodeprops",g) {}	///< Constructor
+   virtual Action *clone(const ActionGroupList &grouplist) const {
+diff --git a/decompiler/jumptable.cc b/decompiler/jumptable.cc
+index 2e26fa0..1e8fa52 100644
+--- a/decompiler/jumptable.cc
++++ b/decompiler/jumptable.cc
+@@ -390,11 +390,11 @@ JumpValues *JumpValuesRangeDefault::clone(void) const
+   return res;
+ }
+ 
+-bool JumpModelTrivial::recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize)
++bool JumpModelTrivial::recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize)
+ 
+ {
+   size = indop->getParent()->sizeOut();
+-  return ((size != 0)&&(size<=matchsize));
++  return ((size != 0)&&(size<=jumptable->numEntries()));
+ }
+ 
+ void JumpModelTrivial::buildAddresses(Funcdata *fd,PcodeOp *indop,vector<Address> &addresstable,
+@@ -509,44 +509,58 @@ uintb JumpBasic::backup2Switch(Funcdata *fd,uintb output,Varnode *outvn,Varnode
+   return output;
+ }
+ 
+-/// If the Varnode has a restricted range due to masking via INT_AND, the maximum value of this range is returned.
+-/// Otherwise, 0 is returned, indicating that the Varnode can take all possible values.
+ /// \param vn is the given Varnode
+-/// \return the maximum value or 0
+-uintb JumpBasic::getMaxValue(Varnode *vn)
++/// \param rng passes back the initial range
++void JumpBasic::getInitialRange(Varnode *vn,CircleRange &rng,bool useRem) const
+ 
+ {
+-  uintb maxValue = 0;		// 0 indicates maximum possible value
+-  if (!vn->isWritten())
+-    return maxValue;
++  if (vn->isConstant()) {
++    rng = CircleRange(vn->getOffset(),vn->getSize());
++    return;
++  }
++  if (vn->isWritten() && vn->getDef()->isBoolOutput()) {
++    rng = CircleRange(0,2,1,1);	// Only 0 or 1 possible
++    return;
++  }
++  int4 step = getStride(vn);
++  if (!vn->isWritten()) {
++    rng = CircleRange(0,0,vn->getSize(),step);
++    return;
++  }
++  if (jumptable->isPartial())
++    rng.setRange(0,0,vn->getSize(),step);	// Don't restrict with non-zero mask if we restricted too far previously
++  else
++    rng.setRange(0,vn->getNZMask() + step, vn->getSize(),step);
+   PcodeOp *op = vn->getDef();
+   if (op->code() == CPUI_INT_AND) {
+-    Varnode *constvn = op->getIn(1);
+-    if (constvn->isConstant()) {
+-      maxValue = coveringmask( constvn->getOffset() );
+-      maxValue = (maxValue + 1) & calc_mask(vn->getSize());
+-    }
+-  }
+-  else if (op->code() == CPUI_MULTIEQUAL) {	// Its possible the AND is duplicated across multiple blocks
+-    int4 i;
+-    for(i=0;i<op->numInput();++i) {
+-      Varnode *subvn = op->getIn(i);
+-      if (!subvn->isWritten()) break;
+-      PcodeOp *andOp = subvn->getDef();
+-      if (andOp->code() != CPUI_INT_AND) break;
+-      Varnode *constvn = andOp->getIn(1);
+-      if (!constvn->isConstant()) break;
+-      if (maxValue < constvn->getOffset())
+-	maxValue = constvn->getOffset();
+-    }
+-    if (i == op->numInput()) {
+-      maxValue = coveringmask( maxValue );
+-      maxValue = (maxValue + 1) & calc_mask(vn->getSize());
++    Varnode *cvn = op->getIn(1);
++    if (cvn->isConstant()) {
++      CircleRange tmprange(0,cvn->getOffset()+step,vn->getSize(),step);
++      if (tmprange.getSize() < rng.getSize())
++	rng = tmprange;
++    }
++  }
++  else if (useRem && op->code() == CPUI_INT_REM) {
++    Varnode *cvn = op->getIn(1);
++    if (cvn->isConstant()) {
++      CircleRange tmprange(0,cvn->getOffset(),vn->getSize(),step);
++      if (tmprange.getSize() < rng.getSize())
++	rng = tmprange;
++    }
++  }
++  else if (useRem && op->code() == CPUI_INT_SREM) {
++    Varnode *cvn = op->getIn(1);
++    if (cvn->isConstant()) {
++      uintb val = cvn->getOffset();
++      if (signbit_negative(val, cvn->getSize())) {
++	val = uintb_negate(val,cvn->getSize());
++	val += 1;
++      }
++      CircleRange tmprange(-val+step,val,vn->getSize(),step);
++      if (tmprange.getSize() < rng.getSize())
++	rng = tmprange;
+     }
+-    else
+-      maxValue = 0;
+   }
+-  return maxValue;
+ }
+ 
+ /// \brief Calculate the initial set of Varnodes that might be switch variables
+@@ -1139,77 +1153,106 @@ void JumpBasic::analyzeGuards(BlockBasic *bl,int4 pathout)
+ void JumpBasic::calcRange(Varnode *vn,CircleRange &rng) const
+ 
+ {
+-  // Get an initial range, based on the size/type of -vn-
+-  int4 stride = 1;
+-  if (vn->isConstant())
+-    rng = CircleRange(vn->getOffset(),vn->getSize());
+-  else if (vn->isWritten() && vn->getDef()->isBoolOutput())
+-    rng = CircleRange(0,2,1,1);	// Only 0 or 1 possible
+-  else {			// Should we go ahead and use nzmask in all cases?
+-    uintb maxValue = getMaxValue(vn);
+-    stride = getStride(vn);
+-    rng = CircleRange(0,maxValue,vn->getSize(),stride);
+-  }
+-
+-  // Intersect any guard ranges which apply to -vn-
++  // A remainder bounds the value tighter than the table a compiler emitted: "x % 5" can index a
++  // six-entry table when the guard is "x < 6", and the sixth entry is code the program holds
++  // (God Hand 0x274828: switch (irand() % 5) with a case 5). The remainder bound is therefore used
++  // only when no guard bounds the switch variable; with a guard, the table the guard describes is
++  // recovered, as in 12.1.3.
+   int4 bitsPreserved;
+   Varnode *baseVn = GuardRecord::quasiCopy(vn, bitsPreserved);
+-  vector<GuardRecord>::const_iterator iter;
+-  for(iter=selectguards.begin();iter!=selectguards.end();++iter) {
+-    const GuardRecord &guard( *iter );
+-    int4 matchval = guard.valueMatch(vn,baseVn,bitsPreserved);
+-    // if (matchval == 2)   TODO: we need to check for aliases
+-    if (matchval==0) continue;
+-    if (rng.intersect(guard.getRange())!=0) continue;
++  for(int4 pass=0;pass<2;++pass) {
++    getInitialRange(vn,rng,pass==0);
++
++    // Intersect any guard ranges which apply to -vn-
++    bool guarded = false;
++    vector<GuardRecord>::const_iterator iter;
++    for(iter=selectguards.begin();iter!=selectguards.end();++iter) {
++      const GuardRecord &guard( *iter );
++      int4 matchval = guard.valueMatch(vn,baseVn,bitsPreserved);
++      // if (matchval == 2)   TODO: we need to check for aliases
++      if (matchval==0) continue;
++      CircleRange before(rng);
++      if (rng.intersect(guard.getRange())!=0) continue;
++      if (rng.isEmpty()) {	// Strides disagree and newStride() wrapped: keep the non-zero-mask estimate
++	rng = before;
++	continue;
++      }
++      guarded = true;
++    }
++    if (!guarded) break;	// No guard: the first pass (remainder bound included) stands
+   }
+ 
+   // It may be an assumption that the switch value is positive
+   // in which case the guard might not check for it. If the
+   // size is too big, we try only positive values
+   if (rng.getSize() > 0x10000) {
+-    CircleRange positive(0,(rng.getMask()>>1)+1,vn->getSize(),stride);
++    CircleRange positive(0,(rng.getMask()>>1)+1,vn->getSize(),rng.getStep());
+     positive.intersect(rng);
+     if (!positive.isEmpty())
+       rng = positive;
+   }
+ }
+ 
++/// \brief Return \b true if the \b newRange is preferred over the \b oldRange
++///
++/// If the ranges are equal keep the old. Prefer a range with a smaller step,min,or size.
++/// \param oldRange is the old range
++/// \param newRange is the new range
++/// \return \b true if the new range is preferred
++bool JumpBasic::isPreferredRange(int4 pos,const CircleRange &newRange)
++
++{
++  const CircleRange &oldRange(jrange->getRange());
++  if (oldRange.getStep() != newRange.getStep())
++    return (newRange.getStep() < oldRange.getStep());
++  if (oldRange.getMin() != newRange.getMin())
++    return (newRange.getMin() < oldRange.getMin());
++  int4 oldSize = pathMeld.getVarnode(varnodeIndex)->getSize();
++  int4 newSize = pathMeld.getVarnode(pos)->getSize();
++  return (newSize < oldSize);
++}
++
+ /// \brief Find the putative switch variable with the smallest range of values reaching the switch
+ ///
+ /// The Varnode with the smallest range and closest to the BRANCHIND is assumed to be the normalized
+ /// switch variable. If an expected range size is provided, it is used to \e prefer a particular
+ /// Varnode as the switch variable.  Whatever Varnode is selected,
+ /// the JumpValue object is set up to iterator over its range.
+-/// \param matchsize optionally gives an expected size of the range, or it can be 0
+-void JumpBasic::findSmallestNormal(uint4 matchsize)
++/// \param previous (if not NULL) is a previously recovered model for the same switch
++void JumpBasic::findSmallestNormal(const JumpBasic *previous)
+ 
+ {
+   CircleRange rng;
++  CircleRange expectedRange;
+   uintb sz,maxsize;
+ 
++  if (previous != (const JumpBasic *)0 && previous->jrange != (JumpValuesRange *)0) {
++    expectedRange = previous->jrange->getRange();
++  }
+   varnodeIndex = 0;
+   calcRange(pathMeld.getVarnode(0),rng);
+-  jrange->setRange(rng);
+-  jrange->setStartVn(pathMeld.getVarnode(0));
+-  jrange->setStartOp(pathMeld.getOp(0));
++  jrange->setRange(rng,pathMeld.getVarnode(0),pathMeld.getOp(0));
+   maxsize = rng.getSize();
+   for(uint4 i=1;i<pathMeld.numCommonVarnode();++i) {
+-    if (maxsize == matchsize)	// Found variable that gives (already recovered) size
++    if (rng == expectedRange)	// Found variable that gives (already recovered) range
+       return;
+     calcRange(pathMeld.getVarnode(i),rng);
+     sz = rng.getSize();
+-    if (sz < maxsize) {
+-      // Don't accept a 1-byte switch variable unless there is an explicit guard
+-      // or a table lookup between the byte and the indirect jump.
+-      // "goto *(#const + byteVar)" should not be interpreted as 256 case switch
+-      if (sz != 256 || pathMeld.getVarnode(i)->getSize()!=1 || pathMeld.isLoadInPath(i)) {
+-	varnodeIndex = i;
+-	maxsize = sz;
+-	jrange->setRange(rng);
+-	jrange->setStartVn(pathMeld.getVarnode(i));
+-	jrange->setStartOp(pathMeld.getEarliestOp(i));
+-      }
++    if (sz > maxsize) continue;
++    if (sz == maxsize) {				// If range sizes are the same
++      if (!isPreferredRange(i, rng))	// Prefer a smaller step, min, or size
++	continue;
+     }
++    varnodeIndex = i;
++    maxsize = sz;
++    jrange->setRange(rng,pathMeld.getVarnode(i),pathMeld.getEarliestOp(i));
++  }
++  if (maxsize == 256 && pathMeld.getVarnode(varnodeIndex)->getSize()==1 && !pathMeld.isLoadInPath(varnodeIndex)) {
++    // Don't accept a 1-byte switch variable unless there is an explicit guard
++    // or a table lookup between the byte and the indirect jump.
++    // "goto *(#const + byteVar)" should not be interpreted as 256 case switch
++    rng.setFull(pathMeld.getVarnode(0)->getSize());
++    jrange->setRange(rng,pathMeld.getVarnode(0),pathMeld.getOp(0));
+   }
+ }
+ 
+@@ -1220,15 +1263,15 @@ void JumpBasic::findSmallestNormal(uint4 matchsize)
+ /// \param fd is the function containing the switch
+ /// \param rootbl is the basic-block
+ /// \param pathout is the (optional) path to the BRANCHIND or -1
+-/// \param matchsize is an (optional) size to expect for the normalized switch variable range
++/// \param previous is an (optional) previous model to compare with (or NULL)
+ /// \param maxtablesize is the maximum size expected for the normalized switch variable range
+-void JumpBasic::findNormalized(Funcdata *fd,BlockBasic *rootbl,int4 pathout,uint4 matchsize,uint4 maxtablesize)
++void JumpBasic::findNormalized(Funcdata *fd,BlockBasic *rootbl,int4 pathout,const JumpModel *previous,uint4 maxtablesize)
+ 
+ {
+   uintb sz;
+ 
+   analyzeGuards(rootbl,pathout);
+-  findSmallestNormal(matchsize);
++  findSmallestNormal(dynamic_cast<const JumpBasic *>(previous));
+   sz = jrange->getSize();
+   if ((sz > maxtablesize)&&(pathMeld.numCommonVarnode()==1)) {
+     // Check for jump through readonly variable
+@@ -1246,9 +1289,7 @@ void JumpBasic::findNormalized(Funcdata *fd,BlockBasic *rootbl,int4 pathout,uint
+       MemoryImage mem(vn->getSpace(),4,16,glb->loader);
+       uintb val = mem.getValue(vn->getOffset(),vn->getSize());
+       varnodeIndex = 0;
+-      jrange->setRange(CircleRange(val,vn->getSize()));
+-      jrange->setStartVn(vn);
+-      jrange->setStartOp(pathMeld.getOp(0));
++      jrange->setRange(CircleRange(val,vn->getSize()),vn,pathMeld.getOp(0));
+     }
+   }
+ }
+@@ -1436,7 +1477,7 @@ JumpBasic::~JumpBasic(void)
+     delete jrange;
+ }
+ 
+-bool JumpBasic::recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize)
++bool JumpBasic::recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize)
+ 
+ {
+   // Basically there needs to be a straight line calculation from a switch variable to the final
+@@ -1445,7 +1486,7 @@ bool JumpBasic::recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 m
+   // location.
+   jrange = new JumpValuesRange();
+   findDeterminingVarnodes(indop,0);
+-  findNormalized(fd,indop->getParent(),-1,matchsize,maxtablesize);
++  findNormalized(fd,indop->getParent(),-1,previous,maxtablesize);
+   if (jrange->getSize() > maxtablesize)
+     return false;
+   markFoldableGuards();
+@@ -1681,7 +1722,7 @@ void JumpBasic2::initializeStart(const PathMeld &pMeld)
+   origPathMeld.set(pMeld);
+ }
+ 
+-bool JumpBasic2::recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize)
++bool JumpBasic2::recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize)
+ 
+ { // Try to recover a jumptable using the second model
+   // Basically there is a guard on the main switch variable,
+@@ -1723,7 +1764,7 @@ bool JumpBasic2::recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4
+   jdef->setDefaultOp(origPathMeld.getOp(origPathMeld.numOps()-1));
+ 
+   findDeterminingVarnodes(multiop,1-path);
+-  findNormalized(fd,rootbl,pathout,matchsize,maxtablesize);
++  findNormalized(fd,rootbl,pathout,previous,maxtablesize);
+   if (jrange->getSize() > maxtablesize)
+     return false;		// We didn't find a good range
+ 
+@@ -2044,7 +2085,7 @@ void JumpBasicOverride::clearCopySpecific(void)
+   switchvn = (Varnode *)0;
+ }
+ 
+-bool JumpBasicOverride::recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize)
++bool JumpBasicOverride::recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize)
+ 
+ {
+   clearCopySpecific();
+@@ -2186,7 +2227,7 @@ void JumpBasicOverride::decode(Decoder &decoder)
+     throw LowlevelError("Empty jumptable override");
+ }
+ 
+-bool JumpAssisted::recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize)
++bool JumpAssisted::recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize)
+ 
+ {
+   // Look for the special "jumpassist" pseudo-op
+@@ -2218,7 +2259,7 @@ bool JumpAssisted::recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint
+       inputs.push_back(assistOp->getIn(i+1)->getOffset());
+     sizeIndices = pcodeScript->evaluate(inputs);
+   }
+-  if (matchsize !=0 && matchsize-1 != sizeIndices)	// matchsize has 1 added to it for the default case
++  if (previous != (const JumpModel *)0 && previous->getTableSize()-1 != sizeIndices)	// table size has 1 added to it for the default case
+     return false;			// Not matching the size we saw previously
+   if (sizeIndices > maxtablesize)
+     return false;
+@@ -2347,15 +2388,16 @@ void JumpTable::clearSavedModel(void)
+   }
+ }
+ 
+-/// Try to recover each model in turn, until we find one that matches the specific BRANCHIND.
++/// Try to recover each model in turn, until we find one that matches data-flow around the specific BRANCHIND.
+ /// \param fd is the function containing the switch
+-void JumpTable::recoverModel(Funcdata *fd)
++/// \param matchModel (if not NULL) is a previously calculated model that we are trying to match
++void JumpTable::recoverModel(Funcdata *fd,const JumpModel *matchModel)
+ 
+ {
+   uint4 maxTableSize = fd->getArch()->max_jumptable_size;
+   if (jmodel != (JumpModel *)0) {
+     if (jmodel->isOverride()) {	// If preexisting model is override
+-      jmodel->recoverModel(fd,indirect,0,maxTableSize);
++      jmodel->recoverModel(fd,indirect,(const JumpModel *)0,maxTableSize);
+       return;
+     }
+     delete jmodel;		// Otherwise this is an old attempt we should remove
+@@ -2366,18 +2408,18 @@ void JumpTable::recoverModel(Funcdata *fd)
+     if (op->code() == CPUI_CALLOTHER) {
+       JumpAssisted *jassisted = new JumpAssisted(this);
+       jmodel = jassisted;
+-      if (jmodel->recoverModel(fd,indirect,addresstable.size(),maxTableSize))
++      if (jmodel->recoverModel(fd,indirect,matchModel,maxTableSize))
+ 	return;
+     }
+   }
+   JumpBasic *jbasic = new JumpBasic(this);
+   jmodel = jbasic;
+-  if (jmodel->recoverModel(fd,indirect,addresstable.size(),maxTableSize))
++  if (jmodel->recoverModel(fd,indirect,matchModel,maxTableSize))
+     return;
+   jmodel = new JumpBasic2(this);
+   ((JumpBasic2 *)jmodel)->initializeStart(jbasic->getPathMeld());
+   delete jbasic;
+-  if (jmodel->recoverModel(fd,indirect,addresstable.size(),maxTableSize))
++  if (jmodel->recoverModel(fd,indirect,matchModel,maxTableSize))
+     return;
+   delete jmodel;
+   jmodel = (JumpModel *)0;
+@@ -2725,7 +2767,7 @@ void JumpTable::trivialSwitchOver(void)
+ void JumpTable::recoverAddresses(Funcdata *fd)
+ 
+ {
+-  recoverModel(fd);
++  recoverModel(fd,(const JumpModel *)0);
+   if (jmodel == (JumpModel *)0) {
+     ostringstream err;
+     err << "Could not recover jumptable at " << opaddress << ". Too many branches";
+@@ -2898,7 +2940,7 @@ void JumpTable::matchModel(Funcdata *fd)
+ 	fd->warning("Switch is manually overridden",opaddress);
+     }
+   }
+-  recoverModel(fd);		// Create a current instance of the model
++  recoverModel(fd,origmodel);		// Create a current instance of the model (matching the previous model)
+   if (jmodel != (JumpModel *)0 && jmodel->getTableSize() != addresstable.size()) {
+     if ((addresstable.size()==1)&&(jmodel->getTableSize() > 1)) {
+       // The jumptable was not fully recovered during flow analysis, try to issue a restart
+@@ -2929,7 +2971,7 @@ void JumpTable::recoverLabels(Funcdata *fd)
+   }
+   else {
+     jmodel = new JumpModelTrivial(this);
+-    jmodel->recoverModel(fd,indirect,addresstable.size(),fd->getArch()->max_jumptable_size);
++    jmodel->recoverModel(fd,indirect,origmodel,fd->getArch()->max_jumptable_size);
+     jmodel->buildAddresses(fd,indirect,addresstable,(vector<LoadTable> *)0,(vector<int4> *)0);
+     trivialSwitchOver();
+     jmodel->buildLabels(fd,addresstable,label,origmodel);
+diff --git a/decompiler/jumptable.hh b/decompiler/jumptable.hh
+index 509d66b..02e686b 100644
+--- a/decompiler/jumptable.hh
++++ b/decompiler/jumptable.hh
+@@ -196,9 +196,9 @@ protected:
+   PcodeOp *startop;		///< First PcodeOp in the jump-table calculation
+   mutable uintb curval;		///< The current value pointed to be the iterator
+ public:
+-  void setRange(const CircleRange &rng) { range = rng; }	///< Set the range of values explicitly
+-  void setStartVn(Varnode *vn) { normqvn = vn; }		///< Set the normalized switch Varnode explicitly
+-  void setStartOp(PcodeOp *op) { startop = op; }		///< Set the starting PcodeOp explicitly
++  /// \brief Set the range of values explicitly
++  void setRange(const CircleRange &rng,Varnode *vn,PcodeOp *op) { range = rng; normqvn = vn; startop = op; }
++  const CircleRange &getRange(void) const { return range; }	///< Get the full range of values
+   virtual void truncate(int4 nm);
+   virtual uintb getSize(void) const;
+   virtual bool contains(uintb val) const;
+@@ -258,10 +258,10 @@ public:
+   /// This generally recovers the normalized switch variable and any guards.
+   /// \param fd is the function containing the switch
+   /// \param indop is the given BRANCHIND
+-  /// \param matchsize is the expected number of address table entries to recover, or 0 for no expectation
++  /// \param previous (if not NULL) is a previous version of the model we are trying to match
+   /// \param maxtablesize is maximum number of address table entries to allow in the model
+   /// \return \b true if details of the model were successfully recovered
+-  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize)=0;
++  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize)=0;
+ 
+   /// \brief Construct the explicit list of target addresses (the Address Table) from \b this model
+   ///
+@@ -357,7 +357,7 @@ public:
+   JumpModelTrivial(JumpTable *jt) : JumpModel(jt) { size = 0; }	///< Construct given a parent JumpTable
+   virtual bool isOverride(void) const { return false; }
+   virtual int4 getTableSize(void) const { return size; }
+-  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize);
++  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize);
+   virtual void buildAddresses(Funcdata *fd,PcodeOp *indop,vector<Address> &addresstable,
+ 			      vector<LoadTable> *loadpoints,vector<int4> *loadcounts) const;
+   virtual void findUnnormalized(uint4 maxaddsub,uint4 maxleftright,uint4 maxext) {}
+@@ -387,13 +387,14 @@ protected:
+   static bool ispoint(Varnode *vn);	///< Is it possible for the given Varnode to be a switch variable?
+   static int4 getStride(Varnode *vn);	///< Get the step/stride associated with the Varnode
+   static uintb backup2Switch(Funcdata *fd,uintb output,Varnode *outvn,Varnode *invn);
+-  static uintb getMaxValue(Varnode *vn);	///< Get maximum value associated with the given Varnode
+   static bool duplicateVarnodes(const vector<Varnode *> &arr);	///< Return \b true if all array elements are the same Varnode
++  void getInitialRange(Varnode *vn,CircleRange &rng,bool useRem=true) const;	///< Get initial range of values the given Varnode can take
+   void findDeterminingVarnodes(PcodeOp *op,int4 slot);
+   void analyzeGuards(BlockBasic *bl,int4 pathout);
+   void calcRange(Varnode *vn,CircleRange &rng) const;
+-  void findSmallestNormal(uint4 matchsize);
+-  void findNormalized(Funcdata *fd,BlockBasic *rootbl,int4 pathout,uint4 matchsize,uint4 maxtablesize);
++  bool isPreferredRange(int4 pos,const CircleRange &newRange);
++  void findSmallestNormal(const JumpBasic *previous);
++  void findNormalized(Funcdata *fd,BlockBasic *rootbl,int4 pathout,const JumpModel *previous,uint4 maxtablesize);
+   void markFoldableGuards();
+   void markModel(bool val);		///< Mark (or unmark) all PcodeOps involved in the model
+   bool flowsOnlyToModel(Varnode *vn,PcodeOp *trailOp);	///< Check if the given Varnode flows to anything other than \b this model
+@@ -417,7 +418,7 @@ public:
+   virtual ~JumpBasic(void);
+   virtual bool isOverride(void) const { return false; }
+   virtual int4 getTableSize(void) const { return jrange->getSize(); }
+-  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize);
++  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize);
+   virtual void buildAddresses(Funcdata *fd,PcodeOp *indop,vector<Address> &addresstable,
+ 			      vector<LoadTable> *loadpoints,vector<int4> *loadcounts) const;
+   virtual void findUnnormalized(uint4 maxaddsub,uint4 maxleftright,uint4 maxext);
+@@ -450,7 +451,7 @@ class JumpBasic2 : public JumpBasic {
+ public:
+   JumpBasic2(JumpTable *jt) : JumpBasic(jt) {}	///< Constructor
+   void initializeStart(const PathMeld &pMeld);	///< Pass in the prior PathMeld calculation
+-  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize);
++  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize);
+   virtual void findUnnormalized(uint4 maxaddsub,uint4 maxleftright,uint4 maxext);
+   virtual JumpModel *clone(JumpTable *jt) const;
+   virtual void clear(void);
+@@ -485,7 +486,7 @@ public:
+   virtual bool isOverride(void) const { return true; }
+   bool isTrivialModel(void) const { return istrivial; }	///< Romwright: \b true if no normalized switch variable was found
+   virtual int4 getTableSize(void) const { return addrtable.size(); }
+-  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize);
++  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize);
+   virtual void buildAddresses(Funcdata *fd,PcodeOp *indop,vector<Address> &addresstable,
+ 			      vector<LoadTable> *loadpoints,vector<int4> *loadcounts) const;
+   // findUnnormalized inherited from JumpBasic
+@@ -524,7 +525,7 @@ public:
+ //  virtual ~JumpAssisted(void);
+   virtual bool isOverride(void) const { return false; }
+   virtual int4 getTableSize(void) const { return sizeIndices+1; }
+-  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,uint4 matchsize,uint4 maxtablesize);
++  virtual bool recoverModel(Funcdata *fd,PcodeOp *indop,const JumpModel *previous,uint4 maxtablesize);
+   virtual void buildAddresses(Funcdata *fd,PcodeOp *indop,vector<Address> &addresstable,
+ 			      vector<LoadTable> *loadpoints,vector<int4> *loadcounts) const;
+   virtual void findUnnormalized(uint4 maxaddsub,uint4 maxleftright,uint4 maxext) {}
+@@ -590,7 +591,7 @@ private:
+   void saveModel(void);		///< Save off current model (if any) and prepare for instantiating a new model
+   void restoreSavedModel(void);	///< Restore any saved model as the current model
+   void clearSavedModel(void);	///< Clear any saved model
+-  void recoverModel(Funcdata *fd);	///< Attempt recovery of the jump-table model
++  void recoverModel(Funcdata *fd,const JumpModel *matchModel);	///< Attempt recovery of the jump-table model
+   void trivialSwitchOver(void);	///< Switch \b this table over to a trivial model
+   void sanityCheck(Funcdata *fd,vector<int4> *loadpoints);	///< Perform sanity check on recovered address targets
+   int4 block2Position(const FlowBlock *bl) const;	///< Convert a basic-block to an out-edge index from the switch.
+diff --git a/decompiler/rangeutil.cc b/decompiler/rangeutil.cc
+index 4613c60..e468122 100644
+--- a/decompiler/rangeutil.cc
++++ b/decompiler/rangeutil.cc
+@@ -181,8 +181,8 @@ CircleRange::CircleRange(uintb lft,uintb rgt,int4 size,int4 stp)
+ {
+   mask = calc_mask(size);
+   step = stp;
+-  left = lft;
+-  right = rgt;
++  left = lft & mask;
++  right = rgt & mask;
+   isempty = false;
+ }
+ 
+@@ -220,8 +220,8 @@ void CircleRange::setRange(uintb lft,uintb rgt,int4 size,int4 stp)
+ 
+ {
+   mask = calc_mask(size);
+-  left = lft;
+-  right = rgt;
++  left = lft & mask;
++  right = rgt & mask;
+   step = stp;
+   isempty = false;
+ }
+diff --git a/decompiler/ruleaction.cc b/decompiler/ruleaction.cc
+index 3071e76..f4de422 100644
+--- a/decompiler/ruleaction.cc
++++ b/decompiler/ruleaction.cc
+@@ -4506,18 +4506,18 @@ bool RuleSubCommute::cancelExtensions(PcodeOp *longform,PcodeOp *subOp,Varnode *
+   if (outvn->loneDescend() != subOp) return false;	// Must be exactly one output to SUBPIECE
+   if (ext0In->getSize() == ext1In->getSize()) {
+     maxSize = ext0In->getSize();
+-    if (ext0In->isFree()) return false;		// Must be able to propagate inputs
+-    if (ext1In->isFree()) return false;
++    if (ext0In->isFree() && !ext0In->isConstant()) return false;		// Must be able to propagate inputs
++    if (ext1In->isFree() && !ext1In->isConstant()) return false;
+   }
+   else if (ext0In->getSize() < ext1In->getSize()) {
+     maxSize = ext1In->getSize();
+-    if (ext1In->isFree()) return false;
++    if (ext1In->isFree() && !ext1In->isConstant()) return false;
+     if (longform->getIn(0)->loneDescend() != longform) return false;
+     ext0In = shortenExtension(longform->getIn(0)->getDef(), maxSize, data);
+   }
+   else {
+     maxSize = ext0In->getSize();
+-    if (ext0In->isFree()) return false;
++    if (ext0In->isFree() && !ext0In->isConstant()) return false;
+     if (longform->getIn(1)->loneDescend() != longform) return false;
+     ext1In = shortenExtension(longform->getIn(1)->getDef(), maxSize, data);
+   }

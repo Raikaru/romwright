@@ -1,0 +1,1704 @@
+{
+ "id": "memory-fix",
+ "date": "2026-10-15",
+ "recorded_at": "2026-10-15T13:54:09.132125+00:00",
+ "host": {
+  "node": "vultr.guest",
+  "machine": "x86_64",
+  "load_at_start": 0.66
+ },
+ "before": {
+  "dir": "/home/raikaru/runs/MemoryFix/basebin",
+  "cli_sha256": "42a5aee43acf36a6a07818f1d5a906d5b6f63045b871d8c8f7381c37a5a8888c"
+ },
+ "after": {
+  "dir": "/home/raikaru/runs/MemoryFix/ventris/target/release",
+  "cli_sha256": "76aa82f052719ba6147182d56a909176f578c9c46779bc6e59208fe211be2186"
+ },
+ "peaks": {
+  "rows": [
+   {
+    "id": "x86_64_plain_o0",
+    "envelope_kb": 40568,
+    "limit_kb": 50710,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.38,
+     "cpu_s": 0.765,
+     "max_rss_kb": 299204,
+     "tree_peak_kb": 429960,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 299236,
+      "RssAnon": 283664,
+      "RssFile": 15540
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.475878,
+     "load_at_start": 0.66
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.158,
+     "cpu_s": 0.25,
+     "max_rss_kb": 40212,
+     "tree_peak_kb": 159416,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 37872,
+      "RssAnon": 32268,
+      "RssFile": 5604
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.022854,
+     "load_at_start": 0.66
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "x86_64_plain_o2",
+    "envelope_kb": 40612,
+    "limit_kb": 50765,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.156,
+     "cpu_s": 0.249,
+     "max_rss_kb": 40236,
+     "tree_peak_kb": 163980,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 39536,
+      "RssAnon": 33040,
+      "RssFile": 6496
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.022819,
+     "load_at_start": 0.66
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.383,
+     "cpu_s": 0.778,
+     "max_rss_kb": 298844,
+     "tree_peak_kb": 440720,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 299040,
+      "RssAnon": 283696,
+      "RssFile": 15312
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.48535,
+     "load_at_start": 0.66
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "x86_64_plain_pie",
+    "envelope_kb": 40648,
+    "limit_kb": 50810,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.373,
+     "cpu_s": 0.765,
+     "max_rss_kb": 299024,
+     "tree_peak_kb": 435216,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 299108,
+      "RssAnon": 283632,
+      "RssFile": 15444
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.481789,
+     "load_at_start": 0.66
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.158,
+     "cpu_s": 0.25,
+     "max_rss_kb": 40164,
+     "tree_peak_kb": 159868,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 38460,
+      "RssAnon": 32820,
+      "RssFile": 5640
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.022736,
+     "load_at_start": 0.66
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "x86_64_cpp_o2",
+    "envelope_kb": 40752,
+    "limit_kb": 50940,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.158,
+     "cpu_s": 0.249,
+     "max_rss_kb": 40164,
+     "tree_peak_kb": 161160,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 38684,
+      "RssAnon": 33048,
+      "RssFile": 5636
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.023073,
+     "load_at_start": 0.66
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.374,
+     "cpu_s": 0.771,
+     "max_rss_kb": 297416,
+     "tree_peak_kb": 436472,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 297524,
+      "RssAnon": 282040,
+      "RssFile": 15452
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.486012,
+     "load_at_start": 0.66
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "x86_64_many_o2",
+    "envelope_kb": 42892,
+    "limit_kb": 53615,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.396,
+     "cpu_s": 0.739,
+     "max_rss_kb": 298872,
+     "tree_peak_kb": 391480,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 298640,
+      "RssAnon": 282924,
+      "RssFile": 15684
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.47049,
+     "load_at_start": 0.66
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.186,
+     "cpu_s": 0.235,
+     "max_rss_kb": 40112,
+     "tree_peak_kb": 120372,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 39636,
+      "RssAnon": 33068,
+      "RssFile": 6568
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.022919,
+     "load_at_start": 0.66
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "i386_plain_o0",
+    "envelope_kb": 33704,
+    "limit_kb": 42130,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.143,
+     "cpu_s": 0.136,
+     "max_rss_kb": 32880,
+     "tree_peak_kb": 61880,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 32464,
+      "RssAnon": 25904,
+      "RssFile": 6560
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.02037,
+     "load_at_start": 0.66
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.317,
+     "cpu_s": 0.549,
+     "max_rss_kb": 244536,
+     "tree_peak_kb": 281428,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 244484,
+      "RssAnon": 229176,
+      "RssFile": 15276
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.376234,
+     "load_at_start": 0.66
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "i386_plain_o2",
+    "envelope_kb": 33576,
+    "limit_kb": 41970,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.318,
+     "cpu_s": 0.55,
+     "max_rss_kb": 244476,
+     "tree_peak_kb": 283316,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 244552,
+      "RssAnon": 229192,
+      "RssFile": 15328
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.376024,
+     "load_at_start": 0.66
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.144,
+     "cpu_s": 0.14,
+     "max_rss_kb": 33064,
+     "tree_peak_kb": 62360,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 32648,
+      "RssAnon": 25904,
+      "RssFile": 6744
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.019744,
+     "load_at_start": 0.66
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "i386_plain_pie",
+    "envelope_kb": 33696,
+    "limit_kb": 42120,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.142,
+     "cpu_s": 0.136,
+     "max_rss_kb": 33040,
+     "tree_peak_kb": 63864,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 33084,
+      "RssAnon": 25900,
+      "RssFile": 7184
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.019951,
+     "load_at_start": 0.66
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.321,
+     "cpu_s": 0.554,
+     "max_rss_kb": 243568,
+     "tree_peak_kb": 280360,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 243348,
+      "RssAnon": 228156,
+      "RssFile": 15160
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.379876,
+     "load_at_start": 0.66
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "i386_cpp_o2",
+    "envelope_kb": 33780,
+    "limit_kb": 42225,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.32,
+     "cpu_s": 0.553,
+     "max_rss_kb": 243360,
+     "tree_peak_kb": 281368,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 243428,
+      "RssAnon": 228232,
+      "RssFile": 15164
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.377612,
+     "load_at_start": 0.66
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.145,
+     "cpu_s": 0.14,
+     "max_rss_kb": 32928,
+     "tree_peak_kb": 60080,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 30772,
+      "RssAnon": 25128,
+      "RssFile": 5644
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.019987,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "i386_many_o2",
+    "envelope_kb": 35792,
+    "limit_kb": 44740,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.169,
+     "cpu_s": 0.165,
+     "max_rss_kb": 33056,
+     "tree_peak_kb": 63960,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 31768,
+      "RssAnon": 25932,
+      "RssFile": 5836
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.020225,
+     "load_at_start": 0.68
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.344,
+     "cpu_s": 0.578,
+     "max_rss_kb": 245168,
+     "tree_peak_kb": 282956,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 245188,
+      "RssAnon": 229664,
+      "RssFile": 15492
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.377476,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "aarch64_plain_o0",
+    "envelope_kb": 36284,
+    "limit_kb": 45355,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.292,
+     "cpu_s": 0.649,
+     "max_rss_kb": 249156,
+     "tree_peak_kb": 378180,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 249680,
+      "RssAnon": 234992,
+      "RssFile": 14656
+     },
+     "decoder_builds": 6.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.394648,
+     "load_at_start": 0.68
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.16,
+     "cpu_s": 0.238,
+     "max_rss_kb": 35524,
+     "tree_peak_kb": 136952,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 35540,
+      "RssAnon": 28560,
+      "RssFile": 6980
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 3.0,
+     "decoder_build_thread_s": 0.02308,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "aarch64_plain_o2",
+    "envelope_kb": 36284,
+    "limit_kb": 45355,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.152,
+     "cpu_s": 0.235,
+     "max_rss_kb": 35696,
+     "tree_peak_kb": 140452,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 30924,
+      "RssAnon": 25208,
+      "RssFile": 5716
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 3.0,
+     "decoder_build_thread_s": 0.023038,
+     "load_at_start": 0.68
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.302,
+     "cpu_s": 0.661,
+     "max_rss_kb": 248768,
+     "tree_peak_kb": 373900,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 249368,
+      "RssAnon": 235008,
+      "RssFile": 14328
+     },
+     "decoder_builds": 6.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.401478,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "aarch64_plain_pie",
+    "envelope_kb": 36428,
+    "limit_kb": 45535,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.3,
+     "cpu_s": 0.662,
+     "max_rss_kb": 248948,
+     "tree_peak_kb": 374912,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 249656,
+      "RssAnon": 234884,
+      "RssFile": 14740
+     },
+     "decoder_builds": 6.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.401726,
+     "load_at_start": 0.68
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.16,
+     "cpu_s": 0.243,
+     "max_rss_kb": 35716,
+     "tree_peak_kb": 156672,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 35768,
+      "RssAnon": 28564,
+      "RssFile": 7204
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 3.0,
+     "decoder_build_thread_s": 0.023087,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "aarch64_cpp_o2",
+    "envelope_kb": 36388,
+    "limit_kb": 45485,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.161,
+     "cpu_s": 0.241,
+     "max_rss_kb": 35684,
+     "tree_peak_kb": 151960,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 34352,
+      "RssAnon": 28564,
+      "RssFile": 5788
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 3.0,
+     "decoder_build_thread_s": 0.023116,
+     "load_at_start": 0.68
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.299,
+     "cpu_s": 0.664,
+     "max_rss_kb": 249600,
+     "tree_peak_kb": 376896,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 250288,
+      "RssAnon": 234964,
+      "RssFile": 15292
+     },
+     "decoder_builds": 6.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.402619,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "aarch64_many_o2",
+    "envelope_kb": 36412,
+    "limit_kb": 45515,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.328,
+     "cpu_s": 0.696,
+     "max_rss_kb": 251104,
+     "tree_peak_kb": 375944,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 251708,
+      "RssAnon": 236616,
+      "RssFile": 15060
+     },
+     "decoder_builds": 6.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.392779,
+     "load_at_start": 0.68
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.196,
+     "cpu_s": 0.284,
+     "max_rss_kb": 35708,
+     "tree_peak_kb": 153340,
+     "largest_process_at_peak": {
+      "Name": "ghidra_opt",
+      "VmRSS": 35064,
+      "RssAnon": 28592,
+      "RssFile": 6472
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 3.0,
+     "decoder_build_thread_s": 0.023137,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "powerpc_plain_o0",
+    "envelope_kb": 18736,
+    "limit_kb": 23420,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.112,
+     "cpu_s": 0.132,
+     "max_rss_kb": 20084,
+     "tree_peak_kb": 65852,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 19324,
+      "RssAnon": 7308,
+      "RssFile": 11984
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.009838,
+     "load_at_start": 0.68
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.176,
+     "cpu_s": 0.278,
+     "max_rss_kb": 90336,
+     "tree_peak_kb": 131524,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 90284,
+      "RssAnon": 75440,
+      "RssFile": 14812
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.131309,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "powerpc_plain_o2",
+    "envelope_kb": 18736,
+    "limit_kb": 23420,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.176,
+     "cpu_s": 0.279,
+     "max_rss_kb": 90432,
+     "tree_peak_kb": 133172,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 90752,
+      "RssAnon": 75380,
+      "RssFile": 15340
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.13274,
+     "load_at_start": 0.68
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.115,
+     "cpu_s": 0.13,
+     "max_rss_kb": 20364,
+     "tree_peak_kb": 67224,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 18960,
+      "RssAnon": 6476,
+      "RssFile": 12452
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.00983,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "powerpc_plain_pie",
+    "envelope_kb": 18736,
+    "limit_kb": 23420,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.108,
+     "cpu_s": 0.105,
+     "max_rss_kb": 19964,
+     "tree_peak_kb": 44172,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 20208,
+      "RssAnon": 8104,
+      "RssFile": 12072
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.0098,
+     "load_at_start": 0.68
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.174,
+     "cpu_s": 0.252,
+     "max_rss_kb": 90268,
+     "tree_peak_kb": 113320,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 90464,
+      "RssAnon": 75300,
+      "RssFile": 15132
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.13104,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "powerpc_cpp_o2",
+    "envelope_kb": 18736,
+    "limit_kb": 23420,
+    "before": {
+     "exit": 0,
+     "wall_s": 0.177,
+     "cpu_s": 0.28,
+     "max_rss_kb": 92504,
+     "tree_peak_kb": 135560,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 92308,
+      "RssAnon": 76924,
+      "RssFile": 15352
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.131671,
+     "load_at_start": 0.68
+    },
+    "after": {
+     "exit": 0,
+     "wall_s": 0.117,
+     "cpu_s": 0.132,
+     "max_rss_kb": 20648,
+     "tree_peak_kb": 66276,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 20996,
+      "RssAnon": 8560,
+      "RssFile": 12404
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.009868,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "powerpc_many_o2",
+    "envelope_kb": 18736,
+    "limit_kb": 23420,
+    "after": {
+     "exit": 0,
+     "wall_s": 0.132,
+     "cpu_s": 0.151,
+     "max_rss_kb": 21596,
+     "tree_peak_kb": 64644,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 20708,
+      "RssAnon": 8784,
+      "RssFile": 11892
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.009637,
+     "load_at_start": 0.68
+    },
+    "before": {
+     "exit": 0,
+     "wall_s": 0.191,
+     "cpu_s": 0.299,
+     "max_rss_kb": 91904,
+     "tree_peak_kb": 131928,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 92168,
+      "RssAnon": 76896,
+      "RssFile": 15240
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.129991,
+     "load_at_start": 0.68
+    },
+    "after_within_limit": true
+   }
+  ],
+  "median_before_kb": 246968.0,
+  "median_after_kb": 34294.0,
+  "after_failures": []
+ },
+ "components": {
+  "rows": [
+   {
+    "id": "x86_64_plain_o0",
+    "before": {
+     "max_rss_kb": 298496,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 298376,
+      "RssAnon": 283432,
+      "RssFile": 14912
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.465174,
+     "wall_s": 0.292
+    },
+    "after_eager_tables": {
+     "max_rss_kb": 55236,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 51864,
+      "RssAnon": 40404,
+      "RssFile": 11428
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.053407,
+     "wall_s": 0.123
+    },
+    "after": {
+     "max_rss_kb": 22468,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 22136,
+      "RssAnon": 11224,
+      "RssFile": 10880
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.022861,
+     "wall_s": 0.084
+    },
+    "tables_kb": 32768,
+    "lanes_pool_kb": 243260
+   },
+   {
+    "id": "i386_plain_o0",
+    "before": {
+     "max_rss_kb": 244228,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 244056,
+      "RssAnon": 229152,
+      "RssFile": 14872
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.376997,
+     "wall_s": 0.252
+    },
+    "after_eager_tables": {
+     "max_rss_kb": 46168,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 43376,
+      "RssAnon": 33204,
+      "RssFile": 10140
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.043145,
+     "wall_s": 0.11
+    },
+    "after": {
+     "max_rss_kb": 21552,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 21600,
+      "RssAnon": 10464,
+      "RssFile": 11104
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.020086,
+     "wall_s": 0.078
+    },
+    "tables_kb": 24616,
+    "lanes_pool_kb": 198060
+   },
+   {
+    "id": "aarch64_plain_o0",
+    "before": {
+     "max_rss_kb": 248964,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 249732,
+      "RssAnon": 234896,
+      "RssFile": 14804
+     },
+     "decoder_builds": 6.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.395054,
+     "wall_s": 0.218
+    },
+    "after_eager_tables": {
+     "max_rss_kb": 49996,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 49360,
+      "RssAnon": 36996,
+      "RssFile": 12332
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 3.0,
+     "decoder_build_thread_s": 0.051742,
+     "wall_s": 0.12
+    },
+    "after": {
+     "max_rss_kb": 23700,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 22488,
+      "RssAnon": 11556,
+      "RssFile": 10900
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 3.0,
+     "decoder_build_thread_s": 0.022891,
+     "wall_s": 0.084
+    },
+    "tables_kb": 26296,
+    "lanes_pool_kb": 198968
+   },
+   {
+    "id": "powerpc_plain_o0",
+    "before": {
+     "max_rss_kb": 90096,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 90060,
+      "RssAnon": 75080,
+      "RssFile": 14948
+     },
+     "decoder_builds": 7.0,
+     "decoder_reuses": 5.0,
+     "decoder_build_thread_s": 0.130581,
+     "wall_s": 0.125
+    },
+    "after_eager_tables": {
+     "max_rss_kb": 24948,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 24808,
+      "RssAnon": 12908,
+      "RssFile": 11868
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.015824,
+     "wall_s": 0.073
+    },
+    "after": {
+     "max_rss_kb": 19664,
+     "largest_process_at_peak": {
+      "Name": "romwright-cli",
+      "VmRSS": 18844,
+      "RssAnon": 7140,
+      "RssFile": 11672
+     },
+     "decoder_builds": 1.0,
+     "decoder_reuses": 4.0,
+     "decoder_build_thread_s": 0.009622,
+     "wall_s": 0.065
+    },
+    "tables_kb": 5284,
+    "lanes_pool_kb": 65148
+   }
+  ]
+ },
+ "session": {
+  "rows": [
+   {
+    "id": "x86_64_plain_o0",
+    "envelope_kb": 47568,
+    "limit_kb": 59460,
+    "before": {
+     "tree_peak_kb": 344060,
+     "rounds_kb": [
+      56452,
+      97568,
+      138668,
+      179604,
+      220712,
+      261820,
+      302912,
+      344020,
+      344040,
+      344048,
+      344056,
+      344060
+     ],
+     "growth_after_warmup_kb": 123348,
+     "final_by_process_kb": {
+      "romwright-api": [
+       22296
+      ],
+      "ghidra_opt": [
+       40072,
+       40244,
+       40232,
+       40232,
+       40244,
+       40236,
+       40244,
+       40260
+      ]
+     },
+     "processes_at_end": 9,
+     "peak_by_name_kb": {
+      "romwright-api": 22296,
+      "ghidra_opt": 321764
+     }
+    },
+    "after": {
+     "tree_peak_kb": 54376,
+     "rounds_kb": [
+      54328,
+      54340,
+      54348,
+      54352,
+      54356,
+      54360,
+      54364,
+      54364,
+      54372,
+      54372,
+      54372,
+      54376
+     ],
+     "growth_after_warmup_kb": 20,
+     "final_by_process_kb": {
+      "romwright-api": [
+       14276
+      ],
+      "ghidra_opt": [
+       40100
+      ]
+     },
+     "processes_at_end": 2,
+     "peak_by_name_kb": {
+      "romwright-api": 14276,
+      "ghidra_opt": 40100
+     }
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "i386_plain_o0",
+    "envelope_kb": 40184,
+    "limit_kb": 50230,
+    "before": {
+     "tree_peak_kb": 286440,
+     "rounds_kb": [
+      49140,
+      83108,
+      117064,
+      150924,
+      184692,
+      218556,
+      252548,
+      286396,
+      286404,
+      286404,
+      286408,
+      286408
+     ],
+     "growth_after_warmup_kb": 101716,
+     "final_by_process_kb": {
+      "romwright-api": [
+       22264
+      ],
+      "ghidra_opt": [
+       32968,
+       33104,
+       32884,
+       32976,
+       32968,
+       33072,
+       33100,
+       33072
+      ]
+     },
+     "processes_at_end": 9,
+     "peak_by_name_kb": {
+      "romwright-api": 22296,
+      "ghidra_opt": 264144
+     }
+    },
+    "after": {
+     "tree_peak_kb": 47320,
+     "rounds_kb": [
+      47264,
+      47280,
+      47284,
+      47292,
+      47292,
+      47296,
+      47300,
+      47308,
+      47316,
+      47320,
+      47320,
+      47324
+     ],
+     "growth_after_warmup_kb": 32,
+     "final_by_process_kb": {
+      "romwright-api": [
+       14368
+      ],
+      "ghidra_opt": [
+       32956
+      ]
+     },
+     "processes_at_end": 2,
+     "peak_by_name_kb": {
+      "romwright-api": 14364,
+      "ghidra_opt": 32956
+     }
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "aarch64_plain_o0",
+    "envelope_kb": 43192,
+    "limit_kb": 53990,
+    "before": {
+     "tree_peak_kb": 307492,
+     "rounds_kb": [
+      51952,
+      88376,
+      124792,
+      161316,
+      197712,
+      234268,
+      270804,
+      307340,
+      307400,
+      307444,
+      307484,
+      307524
+     ],
+     "growth_after_warmup_kb": 109812,
+     "final_by_process_kb": {
+      "romwright-api": [
+       21872
+      ],
+      "ghidra_opt": [
+       35760,
+       35756,
+       35768,
+       35740,
+       35612,
+       35632,
+       35636,
+       35748
+      ]
+     },
+     "processes_at_end": 9,
+     "peak_by_name_kb": {
+      "romwright-api": 21840,
+      "ghidra_opt": 285652
+     }
+    },
+    "after": {
+     "tree_peak_kb": 50080,
+     "rounds_kb": [
+      49968,
+      50048,
+      50052,
+      50060,
+      50060,
+      50064,
+      50064,
+      50068,
+      50072,
+      50072,
+      50080,
+      50080
+     ],
+     "growth_after_warmup_kb": 20,
+     "final_by_process_kb": {
+      "romwright-api": [
+       14356
+      ],
+      "ghidra_opt": [
+       35724
+      ]
+     },
+     "processes_at_end": 2,
+     "peak_by_name_kb": {
+      "romwright-api": 14356,
+      "ghidra_opt": 35724
+     }
+    },
+    "after_within_limit": true
+   },
+   {
+    "id": "powerpc_plain_o0",
+    "envelope_kb": 23756,
+    "limit_kb": 29695,
+    "before": {
+     "tree_peak_kb": 152004,
+     "rounds_kb": [
+      32496,
+      49448,
+      66456,
+      83440,
+      100632,
+      117804,
+      134816,
+      151996,
+      152000,
+      152000,
+      152000,
+      152004
+     ],
+     "growth_after_warmup_kb": 51372,
+     "final_by_process_kb": {
+      "romwright-api": [
+       23740
+      ],
+      "ghidra_opt": [
+       16148,
+       15984,
+       16144,
+       16156,
+       15944,
+       15972,
+       15904,
+       16012
+      ]
+     },
+     "processes_at_end": 9,
+     "peak_by_name_kb": {
+      "romwright-api": 23772,
+      "ghidra_opt": 128264
+     }
+    },
+    "after": {
+     "tree_peak_kb": 30488,
+     "rounds_kb": [
+      30428,
+      30452,
+      30460,
+      30468,
+      30468,
+      30472,
+      30476,
+      30476,
+      30480,
+      30488,
+      30488,
+      30492
+     ],
+     "growth_after_warmup_kb": 24,
+     "final_by_process_kb": {
+      "romwright-api": [
+       14472
+      ],
+      "ghidra_opt": [
+       16020
+      ]
+     },
+     "processes_at_end": 2,
+     "peak_by_name_kb": {
+      "romwright-api": 14468,
+      "ghidra_opt": 16020
+     }
+    },
+    "after_within_limit": false
+   }
+  ],
+  "over_limit": [
+   "powerpc_plain_o0"
+  ]
+ },
+ "images": {
+  "rows": [
+   {
+    "id": "gc-melee",
+    "image_bytes": 4425184,
+    "before": [
+     {
+      "exit": 0,
+      "wall_s": 19.261,
+      "cpu_s": 39.329,
+      "max_rss_kb": 810748,
+      "tree_peak_kb": 2115556,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 811348,
+       "RssAnon": 795760,
+       "RssFile": 15556
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.109786,
+      "load_at_start": 0.71
+     },
+     {
+      "exit": 0,
+      "wall_s": 19.29,
+      "cpu_s": 39.516,
+      "max_rss_kb": 778752,
+      "tree_peak_kb": 2135904,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 779308,
+       "RssAnon": 764144,
+       "RssFile": 15132
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.110886,
+      "load_at_start": 1.47
+     },
+     {
+      "exit": 0,
+      "wall_s": 19.233,
+      "cpu_s": 39.281,
+      "max_rss_kb": 785880,
+      "tree_peak_kb": 2113728,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 786404,
+       "RssAnon": 770660,
+       "RssFile": 15712
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.113189,
+      "load_at_start": 2.22
+     }
+    ],
+    "after": [
+     {
+      "exit": 0,
+      "wall_s": 18.727,
+      "cpu_s": 38.578,
+      "max_rss_kb": 727996,
+      "tree_peak_kb": 2092828,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 728596,
+       "RssAnon": 716320,
+       "RssFile": 12244
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.052757,
+      "load_at_start": 1.0
+     },
+     {
+      "exit": 0,
+      "wall_s": 18.843,
+      "cpu_s": 38.66,
+      "max_rss_kb": 743236,
+      "tree_peak_kb": 2063768,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 743788,
+       "RssAnon": 731616,
+       "RssFile": 12140
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.056112,
+      "load_at_start": 1.0
+     },
+     {
+      "exit": 0,
+      "wall_s": 18.759,
+      "cpu_s": 38.425,
+      "max_rss_kb": 742908,
+      "tree_peak_kb": 2073504,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 743576,
+       "RssAnon": 731396,
+       "RssFile": 12148
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.053128,
+      "load_at_start": 2.08
+     }
+    ],
+    "identity": {
+     "tables": 42,
+     "rows": 386925,
+     "differing_tables": [],
+     "table_lists_equal": true,
+     "identical": true
+    },
+    "wall_before_mean_s": 19.261,
+    "wall_after_mean_s": 18.776,
+    "wall_ratio_after_over_before": 0.975,
+    "cpu_before_mean_s": 39.375,
+    "cpu_after_mean_s": 38.554,
+    "cpu_ratio_after_over_before": 0.979
+   },
+   {
+    "id": "gba-pokeemerald",
+    "image_bytes": 16777216,
+    "before": [
+     {
+      "exit": 0,
+      "wall_s": 15.733,
+      "cpu_s": 34.332,
+      "max_rss_kb": 875904,
+      "tree_peak_kb": 1480912,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 876364,
+       "RssAnon": 844716,
+       "RssFile": 15232
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.101175,
+      "load_at_start": 1.96
+     },
+     {
+      "exit": 0,
+      "wall_s": 15.671,
+      "cpu_s": 34.334,
+      "max_rss_kb": 856664,
+      "tree_peak_kb": 1496284,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 857388,
+       "RssAnon": 825864,
+       "RssFile": 15108
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.102691,
+      "load_at_start": 1.45
+     },
+     {
+      "exit": 0,
+      "wall_s": 15.816,
+      "cpu_s": 34.498,
+      "max_rss_kb": 844748,
+      "tree_peak_kb": 1488856,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 845416,
+       "RssAnon": 813876,
+       "RssFile": 15124
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.101205,
+      "load_at_start": 1.77
+     }
+    ],
+    "after": [
+     {
+      "exit": 0,
+      "wall_s": 15.115,
+      "cpu_s": 33.353,
+      "max_rss_kb": 811992,
+      "tree_peak_kb": 1432724,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 812424,
+       "RssAnon": 784036,
+       "RssFile": 11972
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.058799,
+      "load_at_start": 1.74
+     },
+     {
+      "exit": 0,
+      "wall_s": 15.044,
+      "cpu_s": 33.198,
+      "max_rss_kb": 819052,
+      "tree_peak_kb": 1454744,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 819708,
+       "RssAnon": 791376,
+       "RssFile": 11916
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.058181,
+      "load_at_start": 1.58
+     },
+     {
+      "exit": 0,
+      "wall_s": 15.065,
+      "cpu_s": 33.209,
+      "max_rss_kb": 800840,
+      "tree_peak_kb": 1464976,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 801228,
+       "RssAnon": 772892,
+       "RssFile": 11920
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.061356,
+      "load_at_start": 1.81
+     }
+    ],
+    "identity": {
+     "tables": 42,
+     "rows": 231818,
+     "differing_tables": [],
+     "table_lists_equal": true,
+     "identical": true
+    },
+    "wall_before_mean_s": 15.74,
+    "wall_after_mean_s": 15.075,
+    "wall_ratio_after_over_before": 0.958,
+    "cpu_before_mean_s": 34.388,
+    "cpu_after_mean_s": 33.253,
+    "cpu_ratio_after_over_before": 0.967
+   },
+   {
+    "id": "ps2-persona-4",
+    "image_bytes": 8621084,
+    "before": [
+     {
+      "exit": 0,
+      "wall_s": 24.933,
+      "cpu_s": 41.673,
+      "max_rss_kb": 889088,
+      "tree_peak_kb": 1587112,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 889344,
+       "RssAnon": 875252,
+       "RssFile": 14060
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.084198,
+      "load_at_start": 1.63
+     },
+     {
+      "exit": 0,
+      "wall_s": 24.989,
+      "cpu_s": 41.683,
+      "max_rss_kb": 889024,
+      "tree_peak_kb": 1586088,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 889512,
+       "RssAnon": 875260,
+       "RssFile": 14220
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.075929,
+      "load_at_start": 1.67
+     },
+     {
+      "exit": 0,
+      "wall_s": 25.036,
+      "cpu_s": 41.793,
+      "max_rss_kb": 888968,
+      "tree_peak_kb": 1585500,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 889408,
+       "RssAnon": 875260,
+       "RssFile": 14116
+      },
+      "decoder_builds": 6.0,
+      "decoder_reuses": 33.0,
+      "decoder_build_thread_s": 0.074782,
+      "load_at_start": 1.83
+     }
+    ],
+    "after": [
+     {
+      "exit": 0,
+      "wall_s": 18.492,
+      "cpu_s": 34.702,
+      "max_rss_kb": 863592,
+      "tree_peak_kb": 1544428,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 863944,
+       "RssAnon": 852744,
+       "RssFile": 11168
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.042027,
+      "load_at_start": 1.77
+     },
+     {
+      "exit": 0,
+      "wall_s": 18.636,
+      "cpu_s": 34.844,
+      "max_rss_kb": 866920,
+      "tree_peak_kb": 1556696,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 867116,
+       "RssAnon": 856160,
+       "RssFile": 10924
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.04144,
+      "load_at_start": 1.62
+     },
+     {
+      "exit": 0,
+      "wall_s": 18.502,
+      "cpu_s": 34.699,
+      "max_rss_kb": 863280,
+      "tree_peak_kb": 1544788,
+      "largest_process_at_peak": {
+       "Name": "romwright-cli",
+       "VmRSS": 863364,
+       "RssAnon": 852748,
+       "RssFile": 10584
+      },
+      "decoder_builds": 5.0,
+      "decoder_reuses": 34.0,
+      "decoder_build_thread_s": 0.041573,
+      "load_at_start": 1.73
+     }
+    ],
+    "identity": {
+     "tables": 42,
+     "rows": 165812,
+     "differing_tables": [],
+     "table_lists_equal": true,
+     "identical": true
+    },
+    "wall_before_mean_s": 24.986,
+    "wall_after_mean_s": 18.543,
+    "wall_ratio_after_over_before": 0.742,
+    "cpu_before_mean_s": 41.716,
+    "cpu_after_mean_s": 34.748,
+    "cpu_ratio_after_over_before": 0.833
+   }
+  ]
+ },
+ "checks": {
+  "imports_inside_envelope": true,
+  "session_not_larger": true,
+  "results_identical": true,
+  "images_not_slower": true
+ },
+ "passed": true,
+ "metrics": {
+  "import.peak_kb.median.before": 246968.0,
+  "import.peak_kb.median.after": 34294.0,
+  "import.peak_over_limit.worst_ratio": 0.922,
+  "import.entries_over_limit": 0,
+  "session.peak_kb.max.after": 54376,
+  "session.processes_at_end.after": 2,
+  "session.entries_over_limit": 1,
+  "images.wall_ratio.max": 0.975,
+  "images.cpu_ratio.max": 0.979,
+  "images.rows_compared": 784555
+ }
+}

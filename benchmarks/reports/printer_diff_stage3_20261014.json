@@ -1,0 +1,119 @@
+{
+  "benchmark": "printer_diff",
+  "date": "2026-10-14",
+  "commit": "",
+  "ghidra_opt": "/home/raikaru/runs/Stage3/bin-f1/ghidra_opt",
+  "decompiled": 1800,
+  "identical": 1800,
+  "identical_rate": 1.0,
+  "images": [
+    {
+      "image": "gba-pokeemerald",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/runs/Stage3/cache/projects/gba-pokeemerald-a9dec84dfe7f-4f53cda18c2b-23c94218619e781c",
+      "differences": []
+    },
+    {
+      "image": "gc-animal-crossing",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/runs/Stage3/cache/projects/gc-animal-crossing-e3166b15b810-4f53cda18c2b-23c94218619e781c",
+      "differences": []
+    },
+    {
+      "image": "nds-pokeheartgold-arm9",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/runs/Stage3/cache/projects/nds-pokeheartgold-arm9-65f02a56842b-4f53cda18c2b-23c94218619e781c",
+      "differences": []
+    },
+    {
+      "image": "ps2-capcom-fighting-evolution",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/runs/Stage3/cache/projects/ps2-capcom-fighting-evolution-84b53104d505-4f53cda18c2b-23c94218619e781c",
+      "differences": []
+    },
+    {
+      "image": "ps2-dungeon-game",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/runs/Stage3/cache/projects/ps2-dungeon-game-25faee2f9848-4f53cda18c2b-23c94218619e781c",
+      "differences": []
+    },
+    {
+      "image": "psv-need-for-speed-most-wanted",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/runs/Stage3/cache/projects/psv-need-for-speed-most-wanted-d15fc4d950ff-4f53cda18c2b-23c94218619e781c",
+      "differences": []
+    },
+    {
+      "image": "psx-darkstalkers-3",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/runs/Stage3/cache/projects/psx-darkstalkers-3-f933f98f1c35-4f53cda18c2b-23c94218619e781c",
+      "differences": []
+    },
+    {
+      "image": "x360-black-ops-2",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/runs/Stage3/cache/projects/x360-black-ops-2-bbf68c880351-4f53cda18c2b-23c94218619e781c",
+      "differences": []
+    },
+    {
+      "image": "x86-libc",
+      "sampled": 200,
+      "decompiled": 200,
+      "decompile_errors": 0,
+      "identical": 200,
+      "identical_rate": 1.0,
+      "categories": {},
+      "examples": {},
+      "project": "/home/raikaru/.cache/romwright/printer-diff/libc-01cccbe278d898ad",
+      "differences": []
+    }
+  ]
+}

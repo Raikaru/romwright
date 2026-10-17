@@ -1,0 +1,5005 @@
+{
+ "schema": "ownership/1",
+ "generated": "2026-10-08T22:59:55+00:00",
+ "tree": {
+  "files": 292,
+  "sha256": "fa7e3e2494034a33",
+  "vcs": "none: a working-tree snapshot, not a checkout"
+ },
+ "n": 200,
+ "seed": 20261006,
+ "inventory": {
+  "unit": "code lines: non-blank, non-comment; Rust test code excluded",
+  "rust_first_party": {
+   "code": 90137,
+   "test": 25714,
+   "crates": {
+    "romwright-api": {
+     "code": 862,
+     "test": 165
+    },
+    "romwright-cli": {
+     "code": 2302,
+     "test": 0
+    },
+    "romwright-core": {
+     "code": 50128,
+     "test": 19503
+    },
+    "romwright-db": {
+     "code": 5221,
+     "test": 2003
+    },
+    "romwright-debug": {
+     "code": 1659,
+     "test": 763
+    },
+    "romwright-desktop": {
+     "code": 13942,
+     "test": 271
+    },
+    "romwright-diff": {
+     "code": 1702,
+     "test": 776
+    },
+    "romwright-facts": {
+     "code": 290,
+     "test": 102
+    },
+    "romwright-model": {
+     "code": 1894,
+     "test": 60
+    },
+    "romwright-sig": {
+     "code": 1018,
+     "test": 468
+    },
+    "romwright-worker": {
+     "code": 9951,
+     "test": 1452
+    },
+    "romwright-worker-client": {
+     "code": 1168,
+     "test": 151
+    }
+   },
+   "pipeline_code": 70954,
+   "pipeline_crates": [
+    "romwright-cli",
+    "romwright-core",
+    "romwright-db",
+    "romwright-facts",
+    "romwright-model",
+    "romwright-worker",
+    "romwright-worker-client"
+   ]
+  },
+  "rust_third_party_vendored": {
+   "kuna-sleigh (third_party/kuna-sleigh, patched copy; kuna-base and kuna-num are git dependencies, not counted)": 17540
+  },
+  "cpp_ours": {
+   "patch_added_code": 481,
+   "patch_files": 30,
+   "patch_new_files": [],
+   "headers": {
+    "romwright_callfixups.hh": 41,
+    "romwright_constant_state.hh": 251,
+    "romwright_constants.hh": 1055,
+    "romwright_flow.hh": 151,
+    "romwright_ir.hh": 222,
+    "romwright_ir_state.hh": 17,
+    "romwright_linkage.hh": 371,
+    "romwright_nonreturn.hh": 44,
+    "romwright_operand_refs.hh": 154,
+    "romwright_parent.hh": 24,
+    "romwright_patterns.hh": 575,
+    "romwright_printir.hh": 420,
+    "romwright_x86_references.hh": 42
+   },
+   "headers_code": 3367,
+   "code": 3848
+  },
+  "cpp_vendored": {
+   "code": 137961,
+   "files": 236,
+   "note": "includes the SLEIGH compiler and the interactive console sources, which the decompile and import paths never run"
+  }
+ },
+ "stages": [
+  {
+   "stage": "load",
+   "scope": "container parsing, segments, symbols, relocations, platform maps; the bytes and names the decompiler is given"
+  },
+  {
+   "stage": "discovery",
+   "scope": "function entries and data/code references (walk, seeds, pattern and constant-propagation references, thunks, no-return)"
+  },
+  {
+   "stage": "flow",
+   "scope": "instruction flow classification during the walk"
+  },
+  {
+   "stage": "pcode_lift",
+   "scope": "SLEIGH decode and p-code build"
+  },
+  {
+   "stage": "switch_recovery",
+   "scope": "jump-table recovery (stored import tables and the decompiler's own)"
+  },
+  {
+   "stage": "simplification",
+   "scope": "p-code dataflow and the action/rule pipeline up to high variables"
+  },
+  {
+   "stage": "type_inference",
+   "scope": "type propagation, casts, and the p-code type solver"
+  },
+  {
+   "stage": "prototype",
+   "scope": "calling convention, parameter and return recovery; persisted prototypes"
+  },
+  {
+   "stage": "structuring",
+   "scope": "control-flow structuring of the function's block graph"
+  },
+  {
+   "stage": "printing",
+   "scope": "C expression/declaration emission, block layer and pretty printing"
+  },
+  {
+   "stage": "postprocess",
+   "scope": "export-c text canonicalisation (temporary names, honesty markers)"
+  },
+  {
+   "stage": "host",
+   "scope": "process, wire protocol, facade, database and CLI plumbing"
+  }
+ ],
+ "images": {
+  "gba-pokeemerald": {
+   "status": "ran",
+   "program": "gba",
+   "sample": [
+    "08000814",
+    "08001324",
+    "080023d4",
+    "080040a8",
+    "08006a58",
+    "08007a90",
+    "08007f80",
+    "0800883c",
+    "080099e0",
+    "0800a620",
+    "0800a6b0",
+    "0800b1a0",
+    "0800d158",
+    "0800e94c",
+    "080124e8",
+    "0801f18c",
+    "0801f7e0",
+    "08021608",
+    "08022250",
+    "0802385c",
+    "08024048",
+    "080284cc",
+    "08028fcc",
+    "0802c7a0",
+    "0802f2b8",
+    "080315bc",
+    "08034530",
+    "0803849c",
+    "0803f3cc",
+    "080400c8",
+    "08044498",
+    "0804643c",
+    "08047038",
+    "0804a154",
+    "080500e8",
+    "08056230",
+    "0805c710",
+    "0806268c",
+    "08062ba4",
+    "08064b04",
+    "080678c4",
+    "0806b960",
+    "0806ecec",
+    "08077100",
+    "0807b140",
+    "0807f19c",
+    "08080fd0",
+    "080849a8",
+    "08084e2c",
+    "080880e0",
+    "08089618",
+    "080897f8",
+    "0808a8ac",
+    "0808bd8c",
+    "0808c9b0",
+    "0808f7cc",
+    "08090648",
+    "0809115c",
+    "080936a0",
+    "0809390c",
+    "08093ce4",
+    "08094ea8",
+    "080950f4",
+    "08095228",
+    "08095fe8",
+    "08096140",
+    "08099770",
+    "0809aa38",
+    "0809b674",
+    "0809d908",
+    "080a0aa8",
+    "080a3ce4",
+    "080a791c",
+    "080a933c",
+    "080ae3fc",
+    "080ae958",
+    "080b1234",
+    "080b236c",
+    "080b550c",
+    "080b5e10",
+    "080b72f4",
+    "080ba174",
+    "080c3548",
+    "080c3608",
+    "080c4904",
+    "080c9be8",
+    "080ca230",
+    "080cdba0",
+    "080cf5c4",
+    "080d1080",
+    "080d140c",
+    "080d20d0",
+    "080d6f64",
+    "080db2bc",
+    "080dbd34",
+    "080df250",
+    "080e1ca4",
+    "080e756c",
+    "080ed718",
+    "080ee72c",
+    "080eff6c",
+    "080f0020",
+    "080f0e58",
+    "080f9160",
+    "080fe820",
+    "08104938",
+    "08108c94",
+    "08109afc",
+    "0811369c",
+    "081136e8",
+    "08119dbc",
+    "0811e64c",
+    "0811fc80",
+    "081221ac",
+    "081230c4",
+    "08126e44",
+    "0812764c",
+    "081277e8",
+    "0812dee4",
+    "081301ec",
+    "08131acc",
+    "08135e2c",
+    "08136edc",
+    "08137f90",
+    "081382a0",
+    "08139370",
+    "081429f0",
+    "08147688",
+    "0814a228",
+    "0814d2a0",
+    "08153ed4",
+    "0815661c",
+    "08157850",
+    "08158724",
+    "08159c20",
+    "0815c700",
+    "0815ef08",
+    "08161b34",
+    "08164040",
+    "08166edc",
+    "081693cc",
+    "0816acfc",
+    "0816baf8",
+    "0816f9d4",
+    "081701c4",
+    "081713d0",
+    "081738bc",
+    "08175a9c",
+    "08176d1c",
+    "08178250",
+    "08178974",
+    "0817c3a0",
+    "0818100c",
+    "081811e0",
+    "081821cc",
+    "081850dc",
+    "08185fd0",
+    "0818a514",
+    "0818c15c",
+    "08190ac4",
+    "08197310",
+    "0819bd70",
+    "081a0990",
+    "081a2ba0",
+    "081a6bf4",
+    "081adc70",
+    "081af724",
+    "081b04bc",
+    "081b22d8",
+    "081b2ac8",
+    "081b2b40",
+    "081b3e60",
+    "081b452c",
+    "081b4a08",
+    "081b64d0",
+    "081b6bec",
+    "081b9df8",
+    "081bd5c8",
+    "081bd760",
+    "081bdaa0",
+    "081bdabc",
+    "081c1efc",
+    "081c4d18",
+    "081c4f84",
+    "081c7e14",
+    "081cb02c",
+    "081cc158",
+    "081ccd70",
+    "081d1448",
+    "081d189c",
+    "081d1ec0",
+    "081d4a90",
+    "081d5b2c",
+    "081d6120",
+    "082e02b4",
+    "082e15a0",
+    "082e2c60",
+    "082e2f54",
+    "082e4210",
+    "082e4874"
+   ],
+   "import": {
+    "seconds": 292.9,
+    "phases": {
+     "console": 14.79789,
+     "discovery": 75.94644,
+     "flow": 67.342523,
+     "parse": 0.009032,
+     "patterns": 0.604368,
+     "references": 138.945026,
+     "references-only": 124.147126,
+     "settle": 0.076289,
+     "store": 2.207311,
+     "switch": 51.351351,
+     "switch-vsa": 19.015415
+    },
+    "switch_stats": {
+     "vsa_resolved": 528,
+     "vsa_refused": 134,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 15589,
+    "functions_by_producer": {
+     "pattern": 10168,
+     "call": 2993,
+     "flow": 1708,
+     "const": 718,
+     "thunk": 2
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 52638,
+     "native-analysis:constant-propagation|READ": 49794,
+     "native-analysis:constant-propagation|DATA": 8593,
+     "native-import:switch|COMPUTED_JUMP": 5031,
+     "native-import:branch|UNCONDITIONAL_JUMP": 109,
+     "native-analysis:constant-propagation|WRITE": 62,
+     "native-import:branch|UNCONDITIONAL_CALL": 10,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 3,
+     "native-analysis:constant-propagation|COMPUTED_JUMP": 3,
+     "native-import:thunk|UNCONDITIONAL_JUMP": 2
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 46674
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 9,
+     "native-import:thunk": 4
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 17173504,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "pattern": 130,
+     "call": 42,
+     "flow": 22,
+     "const": 6
+    },
+    "sample_instructions": 9333,
+    "sample_bytes": 21834
+   },
+   "switch": {
+    "stored_dispatches": 617,
+    "stored_cases": 5031,
+    "rust_vsa_dispatches": 528,
+    "rust_vsa_cases": 4106,
+    "decompiler_dispatches": 89,
+    "decompiler_cases": 925,
+    "vsa_only_import_dispatches": 528,
+    "sample_dispatches": 13,
+    "sample_rust_vsa": 11,
+    "sample_decompiler": 2,
+    "sample_printed_as_switch": 13,
+    "sample_printed_as_switch_rust_vsa": 11,
+    "sample_printed_tables_not_stored": 0
+   },
+   "default_pass": {
+    "wall_seconds": 107.1,
+    "sampled": 200,
+    "decompiled": 200,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 200,
+    "tokens": 34205,
+    "fragment_tokens": 29624,
+    "block_layer_tokens": 4581,
+    "spacing_tokens": 30960,
+    "ghidra_constructs": 1614,
+    "printed_constructs": 1647,
+    "kept_constructs": 1559,
+    "gotos_ghidra": 69,
+    "gotos_printed": 14,
+    "labels_ghidra": 38,
+    "labels_printed": 7,
+    "restructured_functions": 23,
+    "operations": 10521,
+    "calls": 645,
+    "calls_with_stored_prototype": 0,
+    "edits": 21,
+    "edits_additive_inverse": 21,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 17,
+    "cuts_proposed": 45,
+    "cuts_kept": 5,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 13,
+    "jump_table_cases_printed": 123,
+    "printed_parameters": 177,
+    "parameters_from_pass": 0,
+    "identifiers": 21187,
+    "renamed_identifiers": 2271,
+    "fragment_tokens_by_kind": {
+     "comment": 2102,
+     "function_name": 859,
+     "operator": 7240,
+     "paren": 8172,
+     "punctuation": 982,
+     "type": 2288,
+     "variable": 7857,
+     "case_label": 103,
+     "label": 21
+    },
+    "fragment_tokens_by_region": {
+     "body": 26336,
+     "declaration": 1325,
+     "locals": 1949,
+     "header": 14
+    },
+    "constructs_created_by_kind": {
+     "if": 17,
+     "leaf": 55,
+     "goto_block": 15,
+     "switch": 1
+    },
+    "constructs_removed_by_kind": {
+     "goto_block": 41,
+     "if": 13,
+     "switch": 1
+    },
+    "structuring_applied": {
+     "irreducible_entry": 4,
+     "sink_join": 6,
+     "switch_tails": 37,
+     "else_join": 4,
+     "loop_exits": 4
+    },
+    "pass_items": {
+     "type_inference:analyze": 15478,
+     "additive_inverse:transform": 21,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 5
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 200,
+     "identical": 177,
+     "different": 23
+    },
+    "ir-none": {
+     "compared": 200,
+     "identical": 183,
+     "different": 17
+    },
+    "either": {
+     "compared": 200,
+     "identical": 169,
+     "different": 31
+    }
+   },
+   "persisted_prototypes": {
+    "origin": "/home/raikaru/.cache/romwright/research-final/projects/gba-pokeemerald-a9dec84dfe7f-4f53cda18c2b-cdbbf0f7d1273898-proto-987ccbd006a9",
+    "origin_tools": "cdbbf0f7d1273898",
+    "job": {
+     "env": {
+      "ROMWRIGHT_INFERRED_TYPES": "1"
+     },
+     "seconds": 320.1,
+     "analyzed": 35050,
+     "changed": 21200,
+     "rounds": 3
+    },
+    "sampled": 200,
+    "decompiled": 200,
+    "prototypes_by_provenance": {
+     "native-decompiler prototype recovery": 14257,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)": 1126,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr)": 34,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_3:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr,param_2:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr)": 125,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:uint->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->int,param_3:int->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr,param_4:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr)": 14,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:undefined4->int)": 1
+    },
+    "aggregate": {
+     "functions": 200,
+     "tokens": 35916,
+     "fragment_tokens": 31282,
+     "block_layer_tokens": 4634,
+     "spacing_tokens": 32936,
+     "ghidra_constructs": 1611,
+     "printed_constructs": 1643,
+     "kept_constructs": 1557,
+     "gotos_ghidra": 67,
+     "gotos_printed": 13,
+     "labels_ghidra": 36,
+     "labels_printed": 6,
+     "restructured_functions": 22,
+     "operations": 10896,
+     "calls": 645,
+     "calls_with_stored_prototype": 645,
+     "edits": 21,
+     "edits_additive_inverse": 21,
+     "edits_canonical_helpers": 0,
+     "functions_with_edits": 16,
+     "cuts_proposed": 45,
+     "cuts_kept": 5,
+     "functions_with_stored_prototype": 200,
+     "jump_tables_printed": 13,
+     "jump_table_cases_printed": 123,
+     "printed_parameters": 186,
+     "parameters_from_pass": 0,
+     "identifiers": 23392,
+     "renamed_identifiers": 2237,
+     "inferred_slot_upgrades": 13,
+     "fragment_tokens_by_kind": {
+      "comment": 2110,
+      "function_name": 858,
+      "operator": 7426,
+      "paren": 9052,
+      "punctuation": 1016,
+      "type": 2674,
+      "variable": 8024,
+      "case_label": 103,
+      "label": 19
+     },
+     "fragment_tokens_by_region": {
+      "body": 27783,
+      "declaration": 1400,
+      "locals": 2077,
+      "header": 22
+     },
+     "constructs_created_by_kind": {
+      "if": 16,
+      "leaf": 54,
+      "goto_block": 15,
+      "switch": 1
+     },
+     "constructs_removed_by_kind": {
+      "goto_block": 41,
+      "if": 12,
+      "switch": 1
+     },
+     "structuring_applied": {
+      "irreducible_entry": 4,
+      "sink_join": 5,
+      "switch_tails": 37,
+      "else_join": 4,
+      "loop_exits": 4
+     },
+     "pass_items": {
+      "type_inference:analyze": 16327,
+      "additive_inverse:transform": 21,
+      "canonical_helpers:transform": 0,
+      "structure:structure": 5
+     },
+     "prototype_sources": {
+      "native-decompiler prototype recovery": 188,
+      "native-decompiler prototype recovery+native-prototype:inferred-types()": 12
+     }
+    }
+   }
+  },
+  "nds-pokeheartgold-arm9": {
+   "status": "ran",
+   "program": "nds.arm9",
+   "sample": [
+    "02001f20",
+    "02002ba8",
+    "02002f30",
+    "020030b8",
+    "020035f0",
+    "020047c8",
+    "02007974",
+    "02007c60",
+    "02009138",
+    "0200a790",
+    "0200b9f8",
+    "0200bc4c",
+    "0200c3e8",
+    "0200c578",
+    "0200cad8",
+    "0200cf6c",
+    "0200d934",
+    "0200dc34",
+    "0200dd60",
+    "0200dd68",
+    "0200de00",
+    "020143e0",
+    "02014708",
+    "020149a4",
+    "02015834",
+    "020159e4",
+    "02015a5c",
+    "02015cc8",
+    "02016748",
+    "020169cc",
+    "02019014",
+    "0201a928",
+    "0201aa38",
+    "0201ab0c",
+    "0201ace8",
+    "0201ad0c",
+    "0201cc2c",
+    "0201eeb4",
+    "0201f5b8",
+    "0201f984",
+    "0201fd2c",
+    "02020020",
+    "02020aa0",
+    "020216f4",
+    "02021dd0",
+    "02022238",
+    "02022260",
+    "020223c4",
+    "02023214",
+    "020245fc",
+    "020248ac",
+    "02024a6c",
+    "02024b34",
+    "02025404",
+    "02025b40",
+    "020274e0",
+    "02027744",
+    "02027d6c",
+    "02028d30",
+    "02028dc4",
+    "020290c8",
+    "020296c8",
+    "0202984c",
+    "02029ef4",
+    "0202a57c",
+    "0202aed4",
+    "0202b3f0",
+    "0202cc5c",
+    "0202d9f4",
+    "0202debc",
+    "0202e0ac",
+    "0202e4b0",
+    "0202f720",
+    "0202f888",
+    "0202fa64",
+    "0202fab0",
+    "02031774",
+    "0203197c",
+    "020327ac",
+    "0203b014",
+    "0203b470",
+    "0203ca44",
+    "0203d264",
+    "0203d488",
+    "0203e344",
+    "0203e3d4",
+    "0203ea5c",
+    "0203f050",
+    "02040ff0",
+    "02041040",
+    "0204146c",
+    "02041fb8",
+    "0204236c",
+    "02044658",
+    "020447cc",
+    "02045394",
+    "0204592c",
+    "0204720c",
+    "0204749c",
+    "02047518",
+    "02047b6c",
+    "02049344",
+    "02049460",
+    "0204a424",
+    "0204a6a0",
+    "0204a824",
+    "0204babc",
+    "0204bc98",
+    "0204bfd0",
+    "0204c630",
+    "0204c63c",
+    "0204c658",
+    "0204c91c",
+    "0204cb7c",
+    "0204d248",
+    "0204dfe4",
+    "0204e4e0",
+    "0204e7dc",
+    "02050aac",
+    "02050d1c",
+    "02051114",
+    "02051660",
+    "02052544",
+    "02053e08",
+    "020541b0",
+    "020543f0",
+    "02055640",
+    "02055828",
+    "020560c4",
+    "0205b63c",
+    "0205b858",
+    "0205b8a0",
+    "0205ba00",
+    "0205c390",
+    "0205c6a0",
+    "0205c810",
+    "0205e2b4",
+    "0205e400",
+    "0205ee10",
+    "0205f340",
+    "0205f414",
+    "0205f498",
+    "0205f5f8",
+    "0205f690",
+    "0205f89c",
+    "0205f908",
+    "0205f954",
+    "0205fcb8",
+    "02064910",
+    "02064eb8",
+    "020650e8",
+    "0206536c",
+    "02065670",
+    "0206659c",
+    "020667a4",
+    "02066860",
+    "02066b60",
+    "02066d60",
+    "02067f4c",
+    "02068968",
+    "02068f00",
+    "0206a798",
+    "0206d8d0",
+    "0206db94",
+    "0206e5b8",
+    "0206fd30",
+    "0206ffc8",
+    "02070068",
+    "02070438",
+    "02070588",
+    "02070e34",
+    "02071bd0",
+    "0207280c",
+    "020733c0",
+    "02073f00",
+    "02073ff8",
+    "02074490",
+    "020778dc",
+    "02077924",
+    "02078724",
+    "0207997c",
+    "0207bb14",
+    "0207d1c8",
+    "02080040",
+    "0208421c",
+    "02084430",
+    "0208f550",
+    "02090dc0",
+    "02090e5c",
+    "02090f00",
+    "02091240",
+    "02093134",
+    "02097230",
+    "020972c4",
+    "020d0fec",
+    "020d1868",
+    "020d2444",
+    "020d3a38",
+    "020d3cfc",
+    "020e80f4"
+   ],
+   "import": {
+    "seconds": 386.3,
+    "phases": {
+     "console": 2.481612,
+     "discovery": 16.819863,
+     "flow": 14.994088,
+     "parse": 0.255209,
+     "patterns": 0.206272,
+     "references": 9.566777,
+     "references-only": 7.085156,
+     "settle": 0.008632,
+     "store": 0.749497,
+     "switch": 16.064978,
+     "switch-vsa": 13.642815
+    },
+    "switch_stats": {
+     "vsa_resolved": 341,
+     "vsa_refused": 2011,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 10799,
+    "functions_by_producer": {
+     "call": 5567,
+     "pattern": 2972,
+     "flow": 2046,
+     "const": 214
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 35282,
+     "native-analysis:constant-propagation|READ": 13759,
+     "native-import:switch|COMPUTED_JUMP": 3348,
+     "native-analysis:constant-propagation|DATA": 2006,
+     "native-analysis:constant-propagation|COMPUTED_JUMP": 729,
+     "native-analysis:constant-propagation|WRITE": 193,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 16,
+     "native-import:branch|UNCONDITIONAL_CALL": 7,
+     "native-import:branch|UNCONDITIONAL_JUMP": 4,
+     "native-import|UNCONDITIONAL_JUMP": 1
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 10123
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 7,
+     "native-import:thunk": 2
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 6528760,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 110,
+     "flow": 39,
+     "pattern": 46,
+     "const": 5
+    },
+    "sample_instructions": 6944,
+    "sample_bytes": 15616
+   },
+   "switch": {
+    "stored_dispatches": 408,
+    "stored_cases": 3348,
+    "rust_vsa_dispatches": 343,
+    "rust_vsa_cases": 2705,
+    "decompiler_dispatches": 65,
+    "decompiler_cases": 643,
+    "vsa_only_import_dispatches": 343,
+    "sample_dispatches": 9,
+    "sample_rust_vsa": 5,
+    "sample_decompiler": 4,
+    "sample_printed_as_switch": 9,
+    "sample_printed_as_switch_rust_vsa": 5,
+    "sample_printed_tables_not_stored": 0
+   },
+   "default_pass": {
+    "wall_seconds": 78.3,
+    "sampled": 200,
+    "decompiled": 200,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 200,
+    "tokens": 27524,
+    "fragment_tokens": 23373,
+    "block_layer_tokens": 4151,
+    "spacing_tokens": 24732,
+    "ghidra_constructs": 1551,
+    "printed_constructs": 1557,
+    "kept_constructs": 1542,
+    "gotos_ghidra": 9,
+    "gotos_printed": 0,
+    "labels_ghidra": 7,
+    "labels_printed": 0,
+    "restructured_functions": 3,
+    "operations": 9015,
+    "calls": 683,
+    "calls_with_stored_prototype": 0,
+    "edits": 37,
+    "edits_additive_inverse": 37,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 13,
+    "cuts_proposed": 16,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 9,
+    "jump_table_cases_printed": 87,
+    "printed_parameters": 416,
+    "parameters_from_pass": 0,
+    "identifiers": 16404,
+    "renamed_identifiers": 2168,
+    "fragment_tokens_by_kind": {
+     "function_name": 883,
+     "operator": 5805,
+     "paren": 6564,
+     "punctuation": 908,
+     "type": 1974,
+     "variable": 6901,
+     "comment": 256,
+     "case_label": 82
+    },
+    "fragment_tokens_by_region": {
+     "body": 19980,
+     "declaration": 1947,
+     "locals": 1446
+    },
+    "constructs_created_by_kind": {
+     "if": 6,
+     "leaf": 6,
+     "goto_block": 2,
+     "switch": 1
+    },
+    "constructs_removed_by_kind": {
+     "if": 6,
+     "goto_block": 2,
+     "switch": 1
+    },
+    "structuring_applied": {
+     "irreducible_entry": 4,
+     "break_continue": 3,
+     "switch_tails": 2
+    },
+    "pass_items": {
+     "type_inference:analyze": 13327,
+     "additive_inverse:transform": 37,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 200,
+     "identical": 197,
+     "different": 3
+    },
+    "ir-none": {
+     "compared": 200,
+     "identical": 187,
+     "different": 13
+    },
+    "either": {
+     "compared": 200,
+     "identical": 185,
+     "different": 15
+    }
+   },
+   "persisted_prototypes": {
+    "origin": "/home/raikaru/.cache/romwright/research-final/projects/nds-pokeheartgold-arm9-65f02a56842b-4f53cda18c2b-cdbbf0f7d1273898-proto-987ccbd006a9",
+    "origin_tools": "cdbbf0f7d1273898",
+    "job": {
+     "env": {
+      "ROMWRIGHT_INFERRED_TYPES": "1"
+     },
+     "seconds": 96.0,
+     "analyzed": 23009,
+     "changed": 18664,
+     "rounds": 3
+    },
+    "sampled": 200,
+    "decompiled": 200,
+    "prototypes_by_provenance": {
+     "native-decompiler prototype recovery": 9371,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)": 1164,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr)": 37,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_3:int->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:int->ptr)": 8,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:uint->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_4:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr)": 7,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->int)": 8,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->int,param_2:undefined4->int,param_4:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr)": 117,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr)": 6,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:uint->ptr,param_3:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->int)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->int,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr)": 27,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr,param_4:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:int->ptr)": 31,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:undefined4->int)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:undefined4->ptr)": 1
+    },
+    "aggregate": {
+     "functions": 200,
+     "tokens": 30303,
+     "fragment_tokens": 26008,
+     "block_layer_tokens": 4295,
+     "spacing_tokens": 27657,
+     "ghidra_constructs": 1551,
+     "printed_constructs": 1557,
+     "kept_constructs": 1542,
+     "gotos_ghidra": 9,
+     "gotos_printed": 0,
+     "labels_ghidra": 7,
+     "labels_printed": 0,
+     "restructured_functions": 3,
+     "operations": 9757,
+     "calls": 683,
+     "calls_with_stored_prototype": 673,
+     "edits": 36,
+     "edits_additive_inverse": 36,
+     "edits_canonical_helpers": 0,
+     "functions_with_edits": 14,
+     "cuts_proposed": 16,
+     "cuts_kept": 0,
+     "functions_with_stored_prototype": 200,
+     "jump_tables_printed": 9,
+     "jump_table_cases_printed": 87,
+     "printed_parameters": 456,
+     "parameters_from_pass": 0,
+     "identifiers": 18359,
+     "renamed_identifiers": 1966,
+     "inferred_slot_upgrades": 15,
+     "fragment_tokens_by_kind": {
+      "function_name": 883,
+      "operator": 6426,
+      "paren": 7396,
+      "punctuation": 1017,
+      "type": 2478,
+      "variable": 7469,
+      "comment": 256,
+      "case_label": 83
+     },
+     "fragment_tokens_by_region": {
+      "body": 22035,
+      "declaration": 2166,
+      "locals": 1807
+     },
+     "constructs_created_by_kind": {
+      "if": 6,
+      "leaf": 6,
+      "goto_block": 2,
+      "switch": 1
+     },
+     "constructs_removed_by_kind": {
+      "if": 6,
+      "goto_block": 2,
+      "switch": 1
+     },
+     "structuring_applied": {
+      "irreducible_entry": 4,
+      "break_continue": 3,
+      "switch_tails": 2
+     },
+     "pass_items": {
+      "type_inference:analyze": 14435,
+      "additive_inverse:transform": 36,
+      "canonical_helpers:transform": 0,
+      "structure:structure": 0
+     },
+     "prototype_sources": {
+      "native-decompiler prototype recovery": 185,
+      "native-decompiler prototype recovery+native-prototype:inferred-types()": 15
+     }
+    }
+   }
+  },
+  "ps2-capcom-fighting-evolution": {
+   "status": "ran",
+   "program": "capcom",
+   "sample": [
+    "00129bd0",
+    "0012d070",
+    "0012d860",
+    "0012dba0",
+    "0012fa40",
+    "0012fcd0",
+    "00130170",
+    "00130a70",
+    "00130f00",
+    "001314d0",
+    "00131db0",
+    "00133fd0",
+    "001349b0",
+    "00135720",
+    "00136080",
+    "00136750",
+    "00137130",
+    "00137ed0",
+    "0013a880",
+    "0013e130",
+    "00140330",
+    "00141080",
+    "00141360",
+    "00141dc0",
+    "001438b0",
+    "00144770",
+    "001449b0",
+    "00144bf0",
+    "00145c30",
+    "00146e70",
+    "00147a00",
+    "00148910",
+    "00149d20",
+    "0014a520",
+    "0014cd20",
+    "0014e200",
+    "0014e630",
+    "0014fe80",
+    "0014ff00",
+    "00150690",
+    "00150c20",
+    "00153010",
+    "001542b0",
+    "00154760",
+    "00154820",
+    "001548d0",
+    "00155fb0",
+    "00156200",
+    "00157520",
+    "001580d0",
+    "00158b90",
+    "00158e70",
+    "0015a570",
+    "0015a990",
+    "0015bf00",
+    "0015c150",
+    "0015fb80",
+    "001607a0",
+    "00160c30",
+    "001611c0",
+    "00162580",
+    "00164220",
+    "00164440",
+    "00166320",
+    "00166db0",
+    "00168130",
+    "0016b040",
+    "0016b500",
+    "0016c160",
+    "0016f600",
+    "0016fd10",
+    "00170d20",
+    "00171180",
+    "001713e0",
+    "00173c50",
+    "00173cd0",
+    "00174a30",
+    "001752d0",
+    "0017a570",
+    "0017af80",
+    "0017c650",
+    "0017cf80",
+    "00181de0",
+    "001831e0",
+    "00187ca0",
+    "00188eb0",
+    "0018a030",
+    "0018b770",
+    "00190b60",
+    "00191bd0",
+    "00192030",
+    "00194ed0",
+    "00195b80",
+    "00196080",
+    "001973f0",
+    "00199f60",
+    "0019b540",
+    "0019e330",
+    "001a7c90",
+    "001a9330",
+    "001a9530",
+    "001aa090",
+    "001abdf0",
+    "001ac870",
+    "001ad140",
+    "001ad4e0",
+    "001aff20",
+    "001b02d0",
+    "001b0490",
+    "001b2840",
+    "001b5530",
+    "001b5eb0",
+    "001b7b40",
+    "001b7d60",
+    "001bcd90",
+    "001bd9f0",
+    "001bdd50",
+    "001bdeb0",
+    "001bf4c0",
+    "001c0370",
+    "001c04b0",
+    "001c9560",
+    "001ca090",
+    "001cb8d0",
+    "001ce5e0",
+    "001ce710",
+    "001ceb60",
+    "001cf230",
+    "001cf2c0",
+    "001d2450",
+    "001d2e10",
+    "001d4860",
+    "001d4a60",
+    "001d9960",
+    "001d9bd0",
+    "001dc240",
+    "001dffb0",
+    "001e2dd0",
+    "001e61c0",
+    "001e7360",
+    "001e9360",
+    "001ebdc0",
+    "001ebf60",
+    "001f0ea0",
+    "001f2410",
+    "001f4810",
+    "001f76e0",
+    "001fa1b0",
+    "001fa7a0",
+    "00203fc0",
+    "00204140",
+    "00205e10",
+    "0020c050",
+    "0020ebf0",
+    "002112d0",
+    "002118c0",
+    "002129e0",
+    "00212a10",
+    "00213fe0",
+    "00217890",
+    "0021a150",
+    "0021ac90",
+    "0021b180",
+    "0021c710",
+    "00257160",
+    "00257260",
+    "002579e0",
+    "00258e20",
+    "0027c0b0",
+    "00280190",
+    "00287ed0",
+    "00288f50",
+    "00289770",
+    "00289f70",
+    "0028c560",
+    "0028ee20",
+    "0028fdb0",
+    "00291680",
+    "002916d0",
+    "002926c0",
+    "00292e20",
+    "00293840",
+    "002957d0",
+    "002963a0",
+    "00298530",
+    "0029a1c0",
+    "0029a6f0",
+    "0029a830",
+    "0029b210",
+    "0029b570",
+    "0029bdb0",
+    "0029c7c0",
+    "0029d200",
+    "0029e7f0",
+    "0029f780",
+    "002a0ba0",
+    "002a1f90",
+    "002a43c0",
+    "002a7200",
+    "002a7680"
+   ],
+   "import": {
+    "seconds": 110.0,
+    "phases": {
+     "console": 0.604511,
+     "discovery": 13.000369,
+     "flow": 9.921911,
+     "parse": 0.008003,
+     "patterns": 2.611606,
+     "references": 13.792897,
+     "references-only": 13.188377,
+     "settle": 0.024873,
+     "store": 0.663452,
+     "switch": 79.426806,
+     "switch-vsa": 2.204983
+    },
+    "switch_stats": {
+     "vsa_resolved": 126,
+     "vsa_refused": 360,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": [
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aaae0: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aad20: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aabf0: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1ab430: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x1aad00: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x182fa0: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions"
+     },
+     {
+      "severity": "partial",
+      "stage": "references",
+      "message": "1 function ranges the console could not decode for references"
+     }
+    ]
+   },
+   "facts": {
+    "functions": 8312,
+    "functions_by_producer": {
+     "pattern": 4916,
+     "call": 1765,
+     "flow": 1446,
+     "thunk": 143,
+     "const": 42
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 21638,
+     "native-analysis:constant-propagation|READ": 9831,
+     "native-analysis:constant-propagation|WRITE": 4140,
+     "native-import:switch|COMPUTED_JUMP": 2923,
+     "native-analysis:constant-propagation|DATA": 2635,
+     "native-import:branch|UNCONDITIONAL_CALL": 1356,
+     "native-analysis:constant-propagation|READ_WRITE": 128,
+     "native-import:thunk|UNCONDITIONAL_JUMP": 97,
+     "native-analysis:data-pointer|DATA": 72,
+     "native-import:branch|UNCONDITIONAL_JUMP": 40
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-pointer": 72,
+     "native-analysis:data-width": 3943
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 1313,
+     "native-import:thunk": 45
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 3182208,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "flow": 49,
+     "call": 38,
+     "pattern": 109,
+     "thunk": 3,
+     "const": 1
+    },
+    "sample_instructions": 9465,
+    "sample_bytes": 46512
+   },
+   "switch": {
+    "stored_dispatches": 454,
+    "stored_cases": 2923,
+    "rust_vsa_dispatches": 126,
+    "rust_vsa_cases": 646,
+    "decompiler_dispatches": 328,
+    "decompiler_cases": 2277,
+    "vsa_only_import_dispatches": 126,
+    "sample_dispatches": 31,
+    "sample_rust_vsa": 18,
+    "sample_decompiler": 13,
+    "sample_printed_as_switch": 31,
+    "sample_printed_as_switch_rust_vsa": 18,
+    "sample_printed_tables_not_stored": 0
+   },
+   "default_pass": {
+    "wall_seconds": 32.7,
+    "sampled": 200,
+    "decompiled": 199,
+    "failed": [
+     "00212a10"
+    ]
+   },
+   "aggregate": {
+    "functions": 199,
+    "tokens": 71774,
+    "fragment_tokens": 62591,
+    "block_layer_tokens": 9183,
+    "spacing_tokens": 67808,
+    "ghidra_constructs": 3470,
+    "printed_constructs": 3474,
+    "kept_constructs": 3465,
+    "gotos_ghidra": 7,
+    "gotos_printed": 2,
+    "labels_ghidra": 7,
+    "labels_printed": 2,
+    "restructured_functions": 4,
+    "operations": 25008,
+    "calls": 928,
+    "calls_with_stored_prototype": 0,
+    "edits": 114,
+    "edits_additive_inverse": 114,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 52,
+    "cuts_proposed": 8,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 32,
+    "jump_table_cases_printed": 263,
+    "printed_parameters": 202,
+    "parameters_from_pass": 0,
+    "identifiers": 28935,
+    "renamed_identifiers": 4563,
+    "fragment_tokens_by_kind": {
+     "function_name": 1128,
+     "operator": 17831,
+     "paren": 21006,
+     "punctuation": 1211,
+     "type": 4981,
+     "variable": 15617,
+     "case_label": 258,
+     "comment": 555,
+     "label": 4
+    },
+    "fragment_tokens_by_region": {
+     "body": 59290,
+     "declaration": 1267,
+     "locals": 1833,
+     "header": 201
+    },
+    "constructs_created_by_kind": {
+     "leaf": 5,
+     "switch": 1,
+     "if": 3
+    },
+    "constructs_removed_by_kind": {
+     "switch": 1,
+     "if": 3,
+     "goto_block": 1
+    },
+    "structuring_applied": {
+     "switch_tails": 4,
+     "irreducible_entry": 1
+    },
+    "pass_items": {
+     "type_inference:analyze": 35973,
+     "additive_inverse:transform": 114,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 199,
+     "identical": 195,
+     "different": 4
+    },
+    "ir-none": {
+     "compared": 199,
+     "identical": 147,
+     "different": 52
+    },
+    "either": {
+     "compared": 199,
+     "identical": 145,
+     "different": 54
+    }
+   },
+   "persisted_prototypes": {
+    "origin": "/home/raikaru/.cache/romwright/research-final/projects/ps2-capcom-fighting-evolution-84b53104d505-4f53cda18c2b-cdbbf0f7d1273898-proto-987ccbd006a9",
+    "origin_tools": "cdbbf0f7d1273898",
+    "job": {
+     "env": {
+      "ROMWRIGHT_INFERRED_TYPES": "1"
+     },
+     "seconds": 299.3,
+     "analyzed": 18630,
+     "changed": 13470,
+     "rounds": 3
+    },
+    "sampled": 200,
+    "decompiled": 200,
+    "prototypes_by_provenance": {
+     "native-decompiler prototype recovery": 6154,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)": 1266,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr)": 44,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_3:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:long->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:undefined8->ptr)": 8,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:int->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr)": 130,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr,param_2:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr,param_2:long->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr,param_2:long->ptr,param_3:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr,param_2:uint->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr,param_3:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:ulong->ptr)": 11,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:ulong->ptr,param_4:ulong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->int)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr)": 10,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr)": 473,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_2:undefined8->ptr)": 46,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_2:undefined8->ptr,param_3:undefined8->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_3:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_3:undefined8->ptr,param_4:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_5:undefined8->ptr,param_6:undefined8->ptr,param_7:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr)": 43,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:ulong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:undefined8->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:long->ptr)": 7,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:long->ptr,param_3:long->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:uint->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:ulong->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->int)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr)": 12,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr,param_3:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr,param_3:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr)": 12,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr,param_6:undefined8->ptr,param_7:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:long->ptr)": 13,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:long->ptr,param_4:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:uint->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:ulong->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined4->int)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined8->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:undefined4->int,param_7:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:undefined8->ptr,param_7:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_7:int->ptr)": 1
+    },
+    "aggregate": {
+     "functions": 200,
+     "tokens": 44163,
+     "fragment_tokens": 37967,
+     "block_layer_tokens": 6196,
+     "spacing_tokens": 40724,
+     "ghidra_constructs": 2241,
+     "printed_constructs": 2248,
+     "kept_constructs": 2232,
+     "gotos_ghidra": 18,
+     "gotos_printed": 9,
+     "labels_ghidra": 13,
+     "labels_printed": 5,
+     "restructured_functions": 6,
+     "operations": 13154,
+     "calls": 606,
+     "calls_with_stored_prototype": 606,
+     "edits": 38,
+     "edits_additive_inverse": 38,
+     "edits_canonical_helpers": 0,
+     "functions_with_edits": 21,
+     "cuts_proposed": 4,
+     "cuts_kept": 0,
+     "functions_with_stored_prototype": 199,
+     "inferred_slot_upgrades": 49,
+     "jump_tables_printed": 14,
+     "jump_table_cases_printed": 92,
+     "printed_parameters": 287,
+     "parameters_from_pass": 0,
+     "identifiers": 20196,
+     "renamed_identifiers": 2512,
+     "fragment_tokens_by_kind": {
+      "comment": 294,
+      "function_name": 810,
+      "operator": 9521,
+      "paren": 12468,
+      "punctuation": 898,
+      "type": 2967,
+      "variable": 10914,
+      "case_label": 81,
+      "label": 14
+     },
+     "fragment_tokens_by_region": {
+      "body": 34439,
+      "declaration": 1697,
+      "header": 98,
+      "locals": 1733
+     },
+     "constructs_created_by_kind": {
+      "if": 7,
+      "leaf": 9
+     },
+     "constructs_removed_by_kind": {
+      "if": 7,
+      "goto_block": 2
+     },
+     "structuring_applied": {
+      "loop_exits": 2,
+      "sink_join": 1,
+      "switch_tails": 5,
+      "irreducible_entry": 1
+     },
+     "pass_items": {
+      "type_inference:analyze": 21371,
+      "additive_inverse:transform": 38,
+      "canonical_helpers:transform": 0,
+      "structure:structure": 0
+     },
+     "prototype_sources": {
+      "native-decompiler prototype recovery+native-prototype:inferred-types()": 44,
+      "native-decompiler prototype recovery": 155
+     }
+    }
+   }
+  },
+  "ps2-dungeon-game": {
+   "status": "ran",
+   "program": "dungeon",
+   "sample": [
+    "00100430",
+    "001007b0",
+    "00100a30",
+    "00101158",
+    "00101ad8",
+    "00101d58",
+    "001020a8",
+    "00102a58",
+    "00102cc0",
+    "00102cd0",
+    "00102dc0",
+    "00102ef8",
+    "00103060",
+    "00104548",
+    "00104828",
+    "00104d50",
+    "001063c0",
+    "00106a68",
+    "00106fe0",
+    "00107f18",
+    "00109d78",
+    "0010af70",
+    "0010b120",
+    "0010b558",
+    "0010ba58",
+    "0010c3f0",
+    "0010e698",
+    "0010e6b8",
+    "0010e8d8",
+    "0010e9d0",
+    "0010f000",
+    "0010f840",
+    "0010f888",
+    "0010f978",
+    "0010fc18",
+    "0010fc40",
+    "0010fc70",
+    "0010fcb0",
+    "0010fcd8",
+    "0010fe60",
+    "00111860",
+    "00112148",
+    "00112918",
+    "00113110",
+    "00113298",
+    "00113688",
+    "00113710",
+    "00113b30",
+    "001140b8",
+    "00114850",
+    "00114880",
+    "001148e0",
+    "00114b90",
+    "00114bf0",
+    "00114c70",
+    "001156d8",
+    "001157c0",
+    "00115848",
+    "00115860",
+    "00115a30",
+    "00115a58",
+    "00115aa8",
+    "00116a00",
+    "00117168",
+    "00117488",
+    "00117498",
+    "001174a0",
+    "001174b8",
+    "001174c0",
+    "00117530",
+    "00117c28",
+    "00117e98",
+    "00118270",
+    "00118318",
+    "001192a8",
+    "001195d0",
+    "0011a160",
+    "0011b2a8",
+    "0011b790",
+    "0011b850",
+    "0011bb88",
+    "0011bd20",
+    "0011d1e0",
+    "0011de20",
+    "0011e560",
+    "0011f190",
+    "0011f1b8",
+    "0011f2e0",
+    "0011f320",
+    "0011f368",
+    "0011f450",
+    "0011f490",
+    "0011f680",
+    "0011f778",
+    "001203d0",
+    "00120548",
+    "001205a0",
+    "00120780",
+    "001215c8",
+    "00121a40",
+    "001222c8",
+    "00124058",
+    "00125750",
+    "001264b8",
+    "001265b8",
+    "00126b80",
+    "00126c90",
+    "00126fe0",
+    "00127048",
+    "00127200",
+    "00127230",
+    "00128740",
+    "00128778",
+    "001288f8",
+    "00128ba0",
+    "00128bc0",
+    "00128c58",
+    "00128d58",
+    "00128de8",
+    "00129198",
+    "00129c38",
+    "00129c90",
+    "00129ca0",
+    "0012aac0",
+    "0012aaf8",
+    "0012b3e8",
+    "0012c468",
+    "0012c598",
+    "0012c890",
+    "0012ca78",
+    "0012d7a8",
+    "0012d7f0",
+    "0012d8e0",
+    "0012da20",
+    "0012de48",
+    "0012e038",
+    "0012e088",
+    "0012e200",
+    "0012e420",
+    "0012e448",
+    "0012e4a8",
+    "0012e508",
+    "0012e548",
+    "0012eb20",
+    "0012f510",
+    "0012f8f0",
+    "0012f930",
+    "0012f960",
+    "0012f9a0",
+    "0012fa20",
+    "0012fe90",
+    "001303b0",
+    "00130a68",
+    "00130d90",
+    "00130ec0",
+    "00131018",
+    "001311c8",
+    "001311f0",
+    "001313d0",
+    "00131508",
+    "00131700",
+    "00131710",
+    "00131730",
+    "00131780",
+    "001317b0",
+    "001318a0",
+    "00131948",
+    "00131a78",
+    "00131ff8",
+    "00132260",
+    "001322d8",
+    "001322f8",
+    "001329a0",
+    "001329c0",
+    "00133068",
+    "00133100",
+    "00133140",
+    "00133378",
+    "001333d8",
+    "00133448",
+    "001334a8",
+    "00133718",
+    "00133770",
+    "00133830",
+    "001338d0",
+    "00133900",
+    "001339e0",
+    "00133b70",
+    "00133c58",
+    "00133e90",
+    "00134a30",
+    "00134af0",
+    "00134bb8",
+    "00134c30",
+    "00134e08",
+    "00134e38",
+    "00134ec0",
+    "001357b8",
+    "00135ce0",
+    "00135dbc"
+   ],
+   "import": {
+    "seconds": 21.6,
+    "phases": {
+     "console": 4.069572,
+     "discovery": 7.631731,
+     "flow": 4.944671,
+     "parse": 0.248669,
+     "patterns": 0.299678,
+     "references": 5.919948,
+     "references-only": 1.850365,
+     "settle": 0.001975,
+     "store": 0.811057,
+     "switch": 6.256078,
+     "switch-vsa": 0.166764
+    },
+    "switch_stats": {
+     "vsa_resolved": 4,
+     "vsa_refused": 7,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 748,
+    "functions_by_producer": {
+     "call": 418,
+     "flow": 163,
+     "pattern": 154,
+     "const": 13
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 2061,
+     "native-import:elf-pointer|DATA": 1444,
+     "native-analysis:constant-propagation|DATA": 1149,
+     "native-analysis:constant-propagation|READ": 610,
+     "native-analysis:constant-propagation|WRITE": 398,
+     "native-import:switch|COMPUTED_JUMP": 98,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 5,
+     "native-import:branch|UNCONDITIONAL_JUMP": 3,
+     "native-analysis:constant-propagation|READ_WRITE": 2,
+     "native-analysis:data-pointer|DATA": 2
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-pointer": 15,
+     "native-analysis:data-width": 430
+    },
+    "flow_overrides_by_provenance": {
+     "native-import:thunk": 31
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 4076520,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 123,
+     "pattern": 31,
+     "flow": 46
+    },
+    "sample_instructions": 12121,
+    "sample_bytes": 56836
+   },
+   "switch": {
+    "stored_dispatches": 13,
+    "stored_cases": 98,
+    "rust_vsa_dispatches": 4,
+    "rust_vsa_cases": 22,
+    "decompiler_dispatches": 9,
+    "decompiler_cases": 76,
+    "vsa_only_import_dispatches": 4,
+    "sample_dispatches": 1,
+    "sample_rust_vsa": 0,
+    "sample_decompiler": 1,
+    "sample_printed_as_switch": 1,
+    "sample_printed_as_switch_rust_vsa": 0,
+    "sample_printed_tables_not_stored": 0
+   },
+   "default_pass": {
+    "wall_seconds": 50.6,
+    "sampled": 200,
+    "decompiled": 200,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 200,
+    "tokens": 90777,
+    "fragment_tokens": 79385,
+    "block_layer_tokens": 11392,
+    "spacing_tokens": 83057,
+    "ghidra_constructs": 3172,
+    "printed_constructs": 3221,
+    "kept_constructs": 3089,
+    "gotos_ghidra": 111,
+    "gotos_printed": 28,
+    "labels_ghidra": 88,
+    "labels_printed": 24,
+    "restructured_functions": 24,
+    "operations": 43030,
+    "calls": 802,
+    "calls_with_stored_prototype": 0,
+    "edits": 97,
+    "edits_additive_inverse": 97,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 27,
+    "cuts_proposed": 113,
+    "cuts_kept": 17,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 1,
+    "jump_table_cases_printed": 6,
+    "printed_parameters": 353,
+    "parameters_from_pass": 0,
+    "identifiers": 39445,
+    "renamed_identifiers": 10441,
+    "fragment_tokens_by_kind": {
+     "function_name": 1002,
+     "operator": 22011,
+     "paren": 22730,
+     "punctuation": 3184,
+     "type": 4952,
+     "variable": 25258,
+     "label": 52,
+     "comment": 189,
+     "case_label": 7
+    },
+    "fragment_tokens_by_region": {
+     "body": 72761,
+     "declaration": 1835,
+     "locals": 4600,
+     "header": 189
+    },
+    "constructs_created_by_kind": {
+     "if": 29,
+     "leaf": 99,
+     "condition": 3,
+     "goto_block": 1
+    },
+    "constructs_removed_by_kind": {
+     "if": 24,
+     "goto_block": 59
+    },
+    "structuring_applied": {
+     "irreducible_entry": 24,
+     "switch_tails": 38,
+     "else_join": 3,
+     "loop_exits": 8,
+     "sink_join": 10
+    },
+    "pass_items": {
+     "type_inference:analyze": 57592,
+     "additive_inverse:transform": 97,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 17
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 200,
+     "identical": 176,
+     "different": 24
+    },
+    "ir-none": {
+     "compared": 200,
+     "identical": 172,
+     "different": 28
+    },
+    "either": {
+     "compared": 200,
+     "identical": 161,
+     "different": 39
+    }
+   },
+   "persisted_prototypes": {
+    "origin": "/home/raikaru/.cache/romwright/research-final/projects/ps2-dungeon-game-25faee2f9848-4f53cda18c2b-cdbbf0f7d1273898-proto-987ccbd006a9",
+    "origin_tools": "cdbbf0f7d1273898",
+    "job": {
+     "env": {
+      "ROMWRIGHT_INFERRED_TYPES": "1"
+     },
+     "seconds": 27.5,
+     "analyzed": 1445,
+     "changed": 1045,
+     "rounds": 3
+    },
+    "sampled": 200,
+    "decompiled": 200,
+    "prototypes_by_provenance": {
+     "native-decompiler prototype recovery": 577,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)": 103,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_7:long->ptr,param_8:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_7:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr,param_2:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:long->ptr,param_2:uint->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr)": 7,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr,param_5:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:ulong->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->int)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->int,param_4:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr)": 13,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_2:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_2:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_2:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_2:undefined8->ptr,param_3:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_3:undefined8->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:long->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->int)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:long->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined4->short)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:long->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:long->ptr)": 1
+    },
+    "aggregate": {
+     "functions": 200,
+     "tokens": 96459,
+     "fragment_tokens": 85003,
+     "block_layer_tokens": 11456,
+     "spacing_tokens": 88871,
+     "ghidra_constructs": 3144,
+     "printed_constructs": 3193,
+     "kept_constructs": 3061,
+     "gotos_ghidra": 111,
+     "gotos_printed": 28,
+     "labels_ghidra": 88,
+     "labels_printed": 24,
+     "restructured_functions": 24,
+     "operations": 44414,
+     "calls": 802,
+     "calls_with_stored_prototype": 802,
+     "edits": 93,
+     "edits_additive_inverse": 93,
+     "edits_canonical_helpers": 0,
+     "functions_with_edits": 25,
+     "cuts_proposed": 113,
+     "cuts_kept": 17,
+     "functions_with_stored_prototype": 200,
+     "jump_tables_printed": 1,
+     "jump_table_cases_printed": 6,
+     "printed_parameters": 362,
+     "parameters_from_pass": 0,
+     "identifiers": 45006,
+     "renamed_identifiers": 10567,
+     "inferred_slot_upgrades": 57,
+     "fragment_tokens_by_kind": {
+      "function_name": 1002,
+      "operator": 23142,
+      "paren": 24662,
+      "punctuation": 3695,
+      "type": 6088,
+      "variable": 26166,
+      "label": 52,
+      "comment": 189,
+      "case_label": 7
+     },
+     "fragment_tokens_by_region": {
+      "body": 76927,
+      "declaration": 1968,
+      "locals": 5919,
+      "header": 189
+     },
+     "constructs_created_by_kind": {
+      "if": 29,
+      "leaf": 99,
+      "condition": 3,
+      "goto_block": 1
+     },
+     "constructs_removed_by_kind": {
+      "if": 24,
+      "goto_block": 59
+     },
+     "structuring_applied": {
+      "irreducible_entry": 24,
+      "switch_tails": 38,
+      "else_join": 3,
+      "loop_exits": 8,
+      "sink_join": 10
+     },
+     "pass_items": {
+      "type_inference:analyze": 59908,
+      "additive_inverse:transform": 93,
+      "canonical_helpers:transform": 0,
+      "structure:structure": 17
+     },
+     "prototype_sources": {
+      "native-decompiler prototype recovery": 147,
+      "native-decompiler prototype recovery+native-prototype:inferred-types()": 53
+     }
+    }
+   }
+  },
+  "psx-darkstalkers-3": {
+   "status": "ran",
+   "program": "psx",
+   "sample": [
+    "801395f0",
+    "80139dec",
+    "80139e44",
+    "80139f70",
+    "8013a154",
+    "8013a39c",
+    "8013c194",
+    "8013cd70",
+    "8013d078",
+    "8013d994",
+    "8013dc70",
+    "8013e5e0",
+    "8013ea74",
+    "8013eeac",
+    "8013f064",
+    "80140c48",
+    "80140d48",
+    "80143ffc",
+    "801463c8",
+    "801468c0",
+    "8014b548",
+    "8014bc38",
+    "8014bc9c",
+    "8014be24",
+    "8014bf2c",
+    "8014bf7c",
+    "8014c660",
+    "8014cdf0",
+    "8014d108",
+    "8014d384",
+    "8014d4a4",
+    "8014d9b8",
+    "8014e008",
+    "8014e264",
+    "8014e5b8",
+    "8014e9b0",
+    "8014ed9c",
+    "8014ef7c",
+    "8014f248",
+    "8014f39c",
+    "8014f5d8",
+    "8014fd4c",
+    "801505b0",
+    "80151c54",
+    "80151d6c",
+    "801546d8",
+    "801551e4",
+    "801552c8",
+    "80155458",
+    "801598c4",
+    "80159b20",
+    "80159df8",
+    "8015ac2c",
+    "8015ad58",
+    "8015c33c",
+    "8015d568",
+    "8015dc8c",
+    "8015ed24",
+    "8015f93c",
+    "8015fdd4",
+    "80160ad0",
+    "8016178c",
+    "801639dc",
+    "80163bf8",
+    "80163e04",
+    "80164c38",
+    "801672b8",
+    "8016906c",
+    "8016982c",
+    "8016a7d8",
+    "8016aa04",
+    "8016c6bc",
+    "8016c77c",
+    "8016e1a4",
+    "8016ed04",
+    "8016eeac",
+    "8016f320",
+    "8016f94c",
+    "8016fda8",
+    "8016fe00",
+    "8016fe38",
+    "8016fed8",
+    "8016ff18",
+    "8016ff58",
+    "8016ffb4",
+    "801700b0",
+    "80170330",
+    "80170474",
+    "80170674",
+    "801706ec",
+    "8017074c",
+    "80170ab4",
+    "80170aec",
+    "80170c58",
+    "80170ea8",
+    "80170f68",
+    "80171264",
+    "8017137c",
+    "80171564",
+    "801716f4",
+    "8017179c",
+    "8017187c",
+    "801718b4",
+    "80171994",
+    "80171ee0",
+    "80171f90",
+    "8017215c",
+    "80172248",
+    "80172c30",
+    "80173098",
+    "80173270",
+    "80173354",
+    "80173418",
+    "801735a8",
+    "80173e48",
+    "8017431c",
+    "8017897c",
+    "80179248",
+    "8017a740",
+    "8017abf8",
+    "8017afdc",
+    "8017b060",
+    "8017b290",
+    "8017b2f8",
+    "8017b858",
+    "8017be28",
+    "8017c4d8",
+    "8017c6a4",
+    "8017d228",
+    "8017e848",
+    "8017ee18",
+    "8017f2e8",
+    "80180678",
+    "80180c48",
+    "80180d58",
+    "80181228",
+    "80181810",
+    "80181ae8",
+    "80181af8",
+    "80181bb8",
+    "80181f38",
+    "80181fb8",
+    "80182418",
+    "801826e8",
+    "801827a8",
+    "80182898",
+    "801829a8",
+    "801829ec",
+    "80182edc",
+    "80182f70",
+    "80182fb0",
+    "8018362c",
+    "801838d4",
+    "8018395c",
+    "8018397c",
+    "80183d3c",
+    "80184a30",
+    "80184cbc",
+    "80184d4c",
+    "80184f5c",
+    "80185368",
+    "80185894",
+    "8018597c",
+    "80185a60",
+    "801877dc",
+    "80187840",
+    "80187880",
+    "8018916c",
+    "8018919c",
+    "8018921c",
+    "8018923c",
+    "8018930c",
+    "8018932c",
+    "8018936c",
+    "8018939c",
+    "801893ec",
+    "80189530",
+    "80189564",
+    "80189648",
+    "80189708",
+    "801898ac",
+    "801898fc",
+    "80189924",
+    "8018aa24",
+    "8018aab8",
+    "8018afd4",
+    "8018afe0",
+    "8018afec",
+    "8018b02c",
+    "8018b068",
+    "8018c8b0",
+    "8018ccbc",
+    "8018d29c",
+    "8018d5ac",
+    "8018d804",
+    "8018d8dc",
+    "8018dcf4",
+    "8018e71c",
+    "8018e72c",
+    "8018eccc"
+   ],
+   "import": {
+    "seconds": 23.3,
+    "phases": {
+     "console": 3.812206,
+     "discovery": 10.365933,
+     "flow": 5.968445,
+     "parse": 0.008352,
+     "patterns": 0.392633,
+     "references": 7.500267,
+     "references-only": 3.688051,
+     "settle": 0.001861,
+     "store": 0.308348,
+     "switch": 3.364131,
+     "switch-vsa": 0.517959
+    },
+    "switch_stats": {
+     "vsa_resolved": 19,
+     "vsa_refused": 32,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 2206,
+    "functions_by_producer": {
+     "pattern": 1425,
+     "call": 578,
+     "flow": 200,
+     "const": 3
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 4132,
+     "native-analysis:constant-propagation|READ": 1062,
+     "native-analysis:constant-propagation|WRITE": 532,
+     "native-analysis:constant-propagation|DATA": 464,
+     "native-import:switch|COMPUTED_JUMP": 122,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 21,
+     "native-analysis:constant-propagation|READ_WRITE": 2
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 279
+    },
+    "flow_overrides_by_provenance": {},
+    "prototypes_by_provenance": {},
+    "memory_bytes": 2518016,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 72,
+     "pattern": 114,
+     "flow": 14
+    },
+    "sample_instructions": 8875,
+    "sample_bytes": 40712
+   },
+   "switch": {
+    "stored_dispatches": 19,
+    "stored_cases": 122,
+    "rust_vsa_dispatches": 19,
+    "rust_vsa_cases": 122,
+    "decompiler_dispatches": 0,
+    "decompiler_cases": 0,
+    "vsa_only_import_dispatches": 19,
+    "sample_dispatches": 2,
+    "sample_rust_vsa": 2,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 0,
+    "sample_printed_as_switch_rust_vsa": 0,
+    "sample_printed_tables_not_stored": 0
+   },
+   "default_pass": {
+    "wall_seconds": 27.3,
+    "sampled": 200,
+    "decompiled": 200,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 200,
+    "tokens": 21248,
+    "fragment_tokens": 18329,
+    "block_layer_tokens": 2919,
+    "spacing_tokens": 19128,
+    "ghidra_constructs": 1033,
+    "printed_constructs": 1042,
+    "kept_constructs": 1022,
+    "gotos_ghidra": 13,
+    "gotos_printed": 2,
+    "labels_ghidra": 11,
+    "labels_printed": 2,
+    "restructured_functions": 4,
+    "operations": 5838,
+    "calls": 222,
+    "calls_with_stored_prototype": 0,
+    "edits": 61,
+    "edits_additive_inverse": 61,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 28,
+    "cuts_proposed": 7,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 0,
+    "jump_table_cases_printed": 0,
+    "printed_parameters": 185,
+    "parameters_from_pass": 0,
+    "identifiers": 14381,
+    "renamed_identifiers": 1604,
+    "fragment_tokens_by_kind": {
+     "comment": 2254,
+     "function_name": 433,
+     "operator": 4216,
+     "paren": 5216,
+     "punctuation": 361,
+     "type": 1300,
+     "variable": 4545,
+     "label": 4
+    },
+    "fragment_tokens_by_region": {
+     "body": 15424,
+     "declaration": 1316,
+     "header": 934,
+     "locals": 655
+    },
+    "constructs_created_by_kind": {
+     "if": 6,
+     "leaf": 14
+    },
+    "constructs_removed_by_kind": {
+     "goto_block": 5,
+     "if": 6
+    },
+    "structuring_applied": {
+     "switch_tails": 9,
+     "irreducible_entry": 1,
+     "sink_join": 1
+    },
+    "pass_items": {
+     "type_inference:analyze": 8656,
+     "additive_inverse:transform": 61,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 200,
+     "identical": 196,
+     "different": 4
+    },
+    "ir-none": {
+     "compared": 200,
+     "identical": 172,
+     "different": 28
+    },
+    "either": {
+     "compared": 200,
+     "identical": 169,
+     "different": 31
+    }
+   },
+   "persisted_prototypes": {
+    "origin": "/home/raikaru/.cache/romwright/research-final/projects/psx-darkstalkers-3-f933f98f1c35-4f53cda18c2b-cdbbf0f7d1273898-proto-987ccbd006a9",
+    "origin_tools": "cdbbf0f7d1273898",
+    "job": {
+     "env": {
+      "ROMWRIGHT_INFERRED_TYPES": "1"
+     },
+     "seconds": 10.0,
+     "analyzed": 4324,
+     "changed": 3010,
+     "rounds": 3
+    },
+    "sampled": 200,
+    "decompiled": 200,
+    "prototypes_by_provenance": {
+     "native-decompiler prototype recovery": 1668,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)": 471,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr)": 23,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_3:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_3:int->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:int->ptr,param_3:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr)": 17,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr)": 6,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr,param_3:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr)": 3
+    },
+    "aggregate": {
+     "functions": 200,
+     "tokens": 20265,
+     "fragment_tokens": 17364,
+     "block_layer_tokens": 2901,
+     "spacing_tokens": 18084,
+     "ghidra_constructs": 1032,
+     "printed_constructs": 1041,
+     "kept_constructs": 1021,
+     "gotos_ghidra": 13,
+     "gotos_printed": 2,
+     "labels_ghidra": 11,
+     "labels_printed": 2,
+     "restructured_functions": 4,
+     "operations": 5574,
+     "calls": 222,
+     "calls_with_stored_prototype": 222,
+     "edits": 57,
+     "edits_additive_inverse": 57,
+     "edits_canonical_helpers": 0,
+     "functions_with_edits": 27,
+     "cuts_proposed": 7,
+     "cuts_kept": 0,
+     "functions_with_stored_prototype": 200,
+     "jump_tables_printed": 0,
+     "jump_table_cases_printed": 0,
+     "printed_parameters": 169,
+     "parameters_from_pass": 0,
+     "identifiers": 14122,
+     "renamed_identifiers": 1494,
+     "inferred_slot_upgrades": 34,
+     "fragment_tokens_by_kind": {
+      "comment": 2254,
+      "function_name": 433,
+      "operator": 3712,
+      "paren": 5034,
+      "punctuation": 337,
+      "type": 1187,
+      "variable": 4403,
+      "label": 4
+     },
+     "fragment_tokens_by_region": {
+      "body": 14432,
+      "declaration": 1366,
+      "header": 934,
+      "locals": 632
+     },
+     "constructs_created_by_kind": {
+      "if": 6,
+      "leaf": 14
+     },
+     "constructs_removed_by_kind": {
+      "goto_block": 5,
+      "if": 6
+     },
+     "structuring_applied": {
+      "switch_tails": 9,
+      "irreducible_entry": 1,
+      "sink_join": 1
+     },
+     "pass_items": {
+      "type_inference:analyze": 8540,
+      "additive_inverse:transform": 57,
+      "canonical_helpers:transform": 0,
+      "structure:structure": 0
+     },
+     "prototype_sources": {
+      "native-decompiler prototype recovery": 166,
+      "native-decompiler prototype recovery+native-prototype:inferred-types()": 34
+     }
+    }
+   }
+  },
+  "psv-need-for-speed-most-wanted": {
+   "status": "ran",
+   "program": "vita",
+   "sample": [
+    "81002134",
+    "81003e24",
+    "8100a56c",
+    "8100f9d2",
+    "81016b8e",
+    "81035e70",
+    "8103ff96",
+    "810427c4",
+    "8104a3a6",
+    "8104a5b8",
+    "8104e230",
+    "8104e774",
+    "8104eaa8",
+    "8105e556",
+    "8105e752",
+    "8106c9e6",
+    "810887d6",
+    "8108aa78",
+    "8109263c",
+    "810950dc",
+    "810a9ae8",
+    "810c9e58",
+    "810f4b58",
+    "810fbf40",
+    "8111580e",
+    "8111ac3c",
+    "8112cb54",
+    "811424a0",
+    "8114a36a",
+    "81154cf8",
+    "8115777e",
+    "811609ce",
+    "811696fe",
+    "81175e26",
+    "81177bfa",
+    "8117be10",
+    "8117d798",
+    "8117da98",
+    "8118e9cc",
+    "8118f580",
+    "811a3ac0",
+    "811aa560",
+    "811b327a",
+    "811b8742",
+    "811b88a8",
+    "811bd2a8",
+    "811c1bf6",
+    "811d5e42",
+    "811e7464",
+    "811ff506",
+    "8120cc58",
+    "8122464e",
+    "81228518",
+    "81235c06",
+    "812437d8",
+    "81245526",
+    "81246b32",
+    "8126b8a4",
+    "8126c670",
+    "8126df2a",
+    "81276b8a",
+    "8128c67c",
+    "8129e820",
+    "812a8a30",
+    "812ad2e0",
+    "812bb956",
+    "812bd880",
+    "812c18be",
+    "812c660c",
+    "812c723e",
+    "812c7c5c",
+    "812c8110",
+    "812e32e2",
+    "812f3d7c",
+    "8131bab6",
+    "8131f5e0",
+    "813238ce",
+    "81353a28",
+    "81365ba4",
+    "8137b910",
+    "8139fc5a",
+    "813a8382",
+    "813b6e04",
+    "813bfb92",
+    "813c0ac0",
+    "813c790e",
+    "813ca198",
+    "813cb9d2",
+    "813cc584",
+    "813d0e78",
+    "813e50ba",
+    "813eb138",
+    "8140bf3a",
+    "8140c6a2",
+    "8140c9d2",
+    "8141150e",
+    "81412b62",
+    "8141362e",
+    "814138be",
+    "8141caec",
+    "8141f024",
+    "8142662c",
+    "8142afc2",
+    "8143f99e",
+    "8144398e",
+    "81443bb0",
+    "81444764",
+    "8144b6ee",
+    "8144cec8",
+    "8144ddbc",
+    "81451baa",
+    "8145632c",
+    "81459e7e",
+    "8145e55a",
+    "814620ae",
+    "81474270",
+    "8148c9b6",
+    "8149751a",
+    "8149f468",
+    "8149fc9c",
+    "814a6d72",
+    "814c8aaa",
+    "814dbfca",
+    "814deaec",
+    "814e02dc",
+    "814e4b22",
+    "814e9546",
+    "814ece70",
+    "814efa04",
+    "814f018e",
+    "814f02c4",
+    "814f07bc",
+    "814fbec4",
+    "81500ecc",
+    "81502628",
+    "8150a8fe",
+    "8150c9be",
+    "815111de",
+    "815251fe",
+    "8153000e",
+    "81547c00",
+    "8154eaee",
+    "8154eb64",
+    "8154f296",
+    "8155040e",
+    "8155a098",
+    "81565cc8",
+    "8156c93a",
+    "8156cff0",
+    "815753de",
+    "8159c004",
+    "8159fee0",
+    "815a3dbc",
+    "815a59b8",
+    "815a95d4",
+    "815ab5a8",
+    "815b0e7c",
+    "815bbb98",
+    "815be660",
+    "815c1908",
+    "815c611c",
+    "815c7654",
+    "815ce72c",
+    "815d0150",
+    "815d60a4",
+    "815d69f8",
+    "815dba60",
+    "815dea70",
+    "815df540",
+    "815e2220",
+    "815e36a0",
+    "815e62ac",
+    "815eb3b0",
+    "81609a10",
+    "8161cf08",
+    "81626c90",
+    "81627558",
+    "81636328",
+    "81636350",
+    "8163be10",
+    "81641b84",
+    "816429d8",
+    "81642e44",
+    "816452b4",
+    "81648cb8",
+    "8164a608",
+    "8164ecc4",
+    "8164f8ac",
+    "81652514",
+    "81652c28",
+    "816530f4",
+    "8165cad4",
+    "8165cccc",
+    "8165f8d0",
+    "816643c4",
+    "81668194",
+    "8166ba24",
+    "8166c768",
+    "8166cb30",
+    "8166eab0"
+   ],
+   "import": {
+    "seconds": 431.8,
+    "phases": {
+     "console": 11.185443,
+     "discovery": 137.1825,
+     "flow": 128.811807,
+     "parse": 0.011173,
+     "patterns": 0.973122,
+     "references": 66.670316,
+     "references-only": 55.484863,
+     "settle": 0.104606,
+     "store": 3.211874,
+     "switch": 190.825991,
+     "switch-vsa": 28.02526
+    },
+    "switch_stats": {
+     "vsa_resolved": 435,
+     "vsa_refused": 275,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": [
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x8130ffc0: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811cd8be: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x81428f64: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x8145272c: decompiler exception: DataUnavailError: GHIDRA has no data in the loadimage at 0x7f46b6d4"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x814e180a: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x81459fb4: decompiler exception: DataUnavailError: GHIDRA has no data in the loadimage at 0x82c95b2c"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811d10c4: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811e99c0: decompiler timed out after 59s"
+     },
+     {
+      "severity": "partial",
+      "stage": "switch",
+      "message": "0x811d113e: decompiler timed out after 59s"
+     }
+    ]
+   },
+   "facts": {
+    "functions": 27550,
+    "functions_by_producer": {
+     "pattern": 19248,
+     "flow": 4944,
+     "call": 2625,
+     "thunk": 491,
+     "symbol": 202,
+     "const": 40
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 82229,
+     "native-analysis:constant-propagation|DATA": 35226,
+     "native-analysis:constant-propagation|WRITE": 30630,
+     "native-analysis:constant-propagation|READ": 27598,
+     "native-import:switch|COMPUTED_JUMP": 4806,
+     "native-import:branch|UNCONDITIONAL_JUMP": 1044,
+     "native-import:branch|UNCONDITIONAL_CALL": 410,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 27,
+     "native-analysis:data-pointer|DATA": 6,
+     "native-analysis:constant-propagation|COMPUTED_JUMP": 1
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-pointer": 6,
+     "native-analysis:data-width": 36883
+    },
+    "flow_overrides_by_provenance": {
+     "native-import:thunk": 410
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 9126464,
+    "symbols_by_source": {
+     "native-import": 580,
+     "native-import:elf-object": 2
+    },
+    "sample_functions_by_producer": {
+     "pattern": 147,
+     "flow": 28,
+     "call": 24,
+     "const": 1
+    },
+    "sample_instructions": 17148,
+    "sample_bytes": 54156
+   },
+   "switch": {
+    "stored_dispatches": 597,
+    "stored_cases": 4806,
+    "rust_vsa_dispatches": 433,
+    "rust_vsa_cases": 3380,
+    "decompiler_dispatches": 164,
+    "decompiler_cases": 1426,
+    "vsa_only_import_dispatches": 433,
+    "sample_dispatches": 6,
+    "sample_rust_vsa": 4,
+    "sample_decompiler": 2,
+    "sample_printed_as_switch": 6,
+    "sample_printed_as_switch_rust_vsa": 4,
+    "sample_printed_tables_not_stored": 0
+   },
+   "default_pass": {
+    "wall_seconds": 141.7,
+    "sampled": 200,
+    "decompiled": 200,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 200,
+    "tokens": 95634,
+    "fragment_tokens": 84972,
+    "block_layer_tokens": 10662,
+    "spacing_tokens": 88498,
+    "ghidra_constructs": 2721,
+    "printed_constructs": 2731,
+    "kept_constructs": 2710,
+    "gotos_ghidra": 49,
+    "gotos_printed": 38,
+    "labels_ghidra": 45,
+    "labels_printed": 35,
+    "restructured_functions": 9,
+    "operations": 30057,
+    "calls": 684,
+    "calls_with_stored_prototype": 0,
+    "edits": 64,
+    "edits_additive_inverse": 64,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 23,
+    "cuts_proposed": 45,
+    "cuts_kept": 5,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 6,
+    "jump_table_cases_printed": 48,
+    "printed_parameters": 428,
+    "parameters_from_pass": 0,
+    "identifiers": 49273,
+    "renamed_identifiers": 11495,
+    "fragment_tokens_by_kind": {
+     "function_name": 886,
+     "operator": 25788,
+     "paren": 21942,
+     "punctuation": 3997,
+     "type": 5770,
+     "variable": 26194,
+     "label": 73,
+     "case_label": 46,
+     "comment": 276
+    },
+    "fragment_tokens_by_region": {
+     "body": 76121,
+     "declaration": 2153,
+     "locals": 6422,
+     "header": 276
+    },
+    "constructs_created_by_kind": {
+     "if": 8,
+     "leaf": 12,
+     "goto_block": 1
+    },
+    "constructs_removed_by_kind": {
+     "if": 7,
+     "goto_block": 4
+    },
+    "structuring_applied": {
+     "switch_tails": 7,
+     "break_continue": 1,
+     "else_join": 1,
+     "loop_exits": 1,
+     "sink_join": 1
+    },
+    "pass_items": {
+     "type_inference:analyze": 46204,
+     "additive_inverse:transform": 64,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 5
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 200,
+     "identical": 191,
+     "different": 9
+    },
+    "ir-none": {
+     "compared": 200,
+     "identical": 176,
+     "different": 24
+    },
+    "either": {
+     "compared": 200,
+     "identical": 171,
+     "different": 29
+    }
+   },
+   "persisted_prototypes": {
+    "origin": "/home/raikaru/.cache/romwright/research-proto/projects/psv-need-for-speed-most-wanted-d15fc4d950ff-4f53cda18c2b-08df1a6eff7987ed-proto-4f53cda18c2b",
+    "origin_tools": "08df1a6eff7987ed",
+    "job": {
+     "env": {},
+     "seconds": 5201.7,
+     "analyzed": 49510,
+     "changed": 35596,
+     "rounds": 3
+    },
+    "sampled": 200,
+    "decompiled": 200,
+    "prototypes_by_provenance": {
+     "native-decompiler prototype recovery": 18611,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)": 6649,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr)": 294,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_3:int->ptr)": 18,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_3:int->ptr,param_4:int->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_4:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:uint->ptr)": 6,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:undefined4->ptr)": 28,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:int->ptr)": 47,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:int->ptr,param_4:int->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:uint->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:undefined4->int)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_4:int->ptr)": 24,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_4:uint->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_4:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr)": 19,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr,param_2:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr,param_2:int->ptr,param_3:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr,param_2:uint->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr,param_3:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->int)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr)": 110,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:int->ptr)": 10,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:undefined4->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:undefined4->ptr,param_3:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:undefined4->ptr,param_3:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:undefined4->ptr,param_3:undefined4->ptr,param_4:undefined4->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_2:undefined4->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_3:int->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_3:undefined4->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_3:undefined4->ptr,param_4:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_4:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr,param_4:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr)": 666,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr)": 36,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_4:int->ptr)": 8,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:uint->ptr)": 6,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:uint->ptr,param_3:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->int)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr)": 36,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr,param_3:undefined4->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr,param_3:undefined4->ptr,param_4:undefined4->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr)": 201,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr,param_4:int->ptr)": 13,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined4->ptr)": 7,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined4->ptr,param_4:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:int->ptr)": 88,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:uint->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:undefined4->ptr)": 5
+    },
+    "aggregate": {
+     "functions": 200,
+     "tokens": 95815,
+     "fragment_tokens": 85521,
+     "block_layer_tokens": 10294,
+     "spacing_tokens": 89472,
+     "ghidra_constructs": 2570,
+     "printed_constructs": 2577,
+     "kept_constructs": 2562,
+     "gotos_ghidra": 31,
+     "gotos_printed": 23,
+     "labels_ghidra": 27,
+     "labels_printed": 21,
+     "restructured_functions": 6,
+     "operations": 27249,
+     "calls": 725,
+     "calls_with_stored_prototype": 671,
+     "edits": 63,
+     "edits_additive_inverse": 63,
+     "edits_canonical_helpers": 0,
+     "functions_with_edits": 24,
+     "cuts_proposed": 25,
+     "cuts_kept": 5,
+     "functions_with_stored_prototype": 199,
+     "jump_tables_printed": 3,
+     "jump_table_cases_printed": 33,
+     "printed_parameters": 457,
+     "parameters_from_pass": 0,
+     "identifiers": 48342,
+     "renamed_identifiers": 10035,
+     "inferred_slot_upgrades": 68,
+     "fragment_tokens_by_kind": {
+      "function_name": 925,
+      "operator": 25406,
+      "paren": 23574,
+      "punctuation": 3532,
+      "type": 6106,
+      "variable": 25718,
+      "comment": 183,
+      "label": 44,
+      "case_label": 33
+     },
+     "fragment_tokens_by_region": {
+      "body": 77071,
+      "declaration": 2361,
+      "locals": 5906,
+      "header": 183
+     },
+     "constructs_created_by_kind": {
+      "goto_block": 2,
+      "if": 5,
+      "leaf": 8
+     },
+     "constructs_removed_by_kind": {
+      "goto_block": 3,
+      "if": 5
+     },
+     "structuring_applied": {
+      "break_continue": 1,
+      "irreducible_entry": 2,
+      "switch_tails": 2,
+      "sink_join": 2,
+      "loop_exits": 1
+     },
+     "pass_items": {
+      "type_inference:analyze": 45218,
+      "additive_inverse:transform": 63,
+      "canonical_helpers:transform": 0,
+      "structure:structure": 5
+     },
+     "prototype_sources": {
+      "native-decompiler prototype recovery": 138,
+      "native-decompiler prototype recovery+native-prototype:inferred-types()": 61
+     }
+    }
+   }
+  },
+  "x360-black-ops-2": {
+   "status": "ran",
+   "program": "x360.xex",
+   "sample": [
+    "821464b0",
+    "82151c48",
+    "82175968",
+    "82182800",
+    "82184ef0",
+    "82185ce8",
+    "8218ab60",
+    "8218cb60",
+    "821a5c78",
+    "821ae468",
+    "821afe90",
+    "821c0ed8",
+    "821dacb0",
+    "821e32a8",
+    "821f28e8",
+    "822013e8",
+    "822117e8",
+    "8222fbc8",
+    "82232d38",
+    "8223ff68",
+    "82244038",
+    "8225a060",
+    "82268620",
+    "8226a2e0",
+    "8226ba78",
+    "822767f0",
+    "822773d8",
+    "82277a38",
+    "82277d20",
+    "82280cc8",
+    "822853c0",
+    "82288638",
+    "82289d88",
+    "8228b8a8",
+    "8228cc78",
+    "82295b68",
+    "8229e310",
+    "822a9260",
+    "822a9738",
+    "822a9b90",
+    "822abc18",
+    "822ac538",
+    "822b1568",
+    "822cce08",
+    "822cf570",
+    "822dfbf0",
+    "822fb128",
+    "82300018",
+    "8231f8c8",
+    "823303b0",
+    "823341f8",
+    "8234c680",
+    "823570c8",
+    "82367b50",
+    "82372480",
+    "82381348",
+    "82386398",
+    "8238e1d8",
+    "8239f780",
+    "823a2870",
+    "823a5d08",
+    "823ae088",
+    "823baf60",
+    "823beb30",
+    "823c1bd8",
+    "823cf380",
+    "823e4298",
+    "823e74b0",
+    "823eea78",
+    "823f8b88",
+    "8240a070",
+    "82422010",
+    "8242a668",
+    "8242cb78",
+    "824470e8",
+    "8244cb28",
+    "82453668",
+    "82455890",
+    "8245bc30",
+    "8245d3e8",
+    "8245dec0",
+    "8246f820",
+    "824774b0",
+    "8247c848",
+    "8247d8a8",
+    "82491e68",
+    "8249ffd0",
+    "824a12d8",
+    "824a2108",
+    "824ae030",
+    "824b0a68",
+    "824b6aa8",
+    "824cf738",
+    "824e87e8",
+    "824f43c0",
+    "82506de8",
+    "82507bd0",
+    "8250ed38",
+    "82518490",
+    "82524130",
+    "8253e770",
+    "8254a258",
+    "8254c088",
+    "8254fa88",
+    "82550ae8",
+    "82554a60",
+    "82558608",
+    "8255aae0",
+    "8255b578",
+    "82560b18",
+    "82579488",
+    "8257f228",
+    "82582358",
+    "82584178",
+    "82585660",
+    "82589050",
+    "8258d150",
+    "82592a68",
+    "825af148",
+    "825bc188",
+    "825c8708",
+    "825ca2e8",
+    "825d2548",
+    "825da3c0",
+    "8261c948",
+    "8261ccd8",
+    "8261ef58",
+    "8262cbd8",
+    "8262cd98",
+    "82639f08",
+    "82646700",
+    "8264bb68",
+    "826584c0",
+    "8265cba0",
+    "82666ef0",
+    "8267e218",
+    "8268fa30",
+    "82691e08",
+    "826928a0",
+    "82694168",
+    "8269aac0",
+    "8269dc40",
+    "8269ef70",
+    "826ac740",
+    "826af4d8",
+    "826b7b50",
+    "826bcb08",
+    "826d4540",
+    "826dcde0",
+    "826dd2f8",
+    "826e3f78",
+    "82707ea0",
+    "8270c208",
+    "82710068",
+    "827145d8",
+    "82715820",
+    "8271d380",
+    "8273db28",
+    "8273f9e0",
+    "827441c0",
+    "82749bc0",
+    "82757358",
+    "827600f0",
+    "8276a728",
+    "8277f870",
+    "82783678",
+    "82796ce8",
+    "827a76f8",
+    "827aa7e0",
+    "827b04f4",
+    "827b5908",
+    "827b5938",
+    "827ba1b0",
+    "827bb0a4",
+    "827bbe10",
+    "827bc7f8",
+    "827bed40",
+    "827bf2e8",
+    "827c1890",
+    "827c5258",
+    "827c756c",
+    "827cbf88",
+    "827ce7e0",
+    "827d4220",
+    "827d86f8",
+    "827d94c8",
+    "827fa530",
+    "8284b210",
+    "82857ad8",
+    "8286bb20",
+    "82875b98",
+    "82879558",
+    "8287a380",
+    "8287c5d0",
+    "8287dfc0",
+    "8287ea7c",
+    "8287eaec",
+    "8287f40c",
+    "828888e0",
+    "828964e8"
+   ],
+   "import": {
+    "seconds": 160.7,
+    "phases": {
+     "console": 9.62351,
+     "discovery": 53.537765,
+     "flow": 46.687196,
+     "parse": 0.905538,
+     "patterns": 0.301693,
+     "references": 35.828039,
+     "references-only": 26.204511,
+     "settle": 0.074317,
+     "store": 6.465841,
+     "switch": 51.732145,
+     "switch-vsa": 8.746973
+    },
+    "switch_stats": {
+     "vsa_resolved": 196,
+     "vsa_refused": 275,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 27364,
+    "functions_by_producer": {
+     "call": 19134,
+     "flow": 7849,
+     "thunk": 302,
+     "const": 79
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 140546,
+     "native-import:pe-unwind|DATA": 21393,
+     "native-import:branch|UNCONDITIONAL_JUMP": 16986,
+     "native-import:switch|COMPUTED_JUMP": 3325,
+     "native-analysis:constant-propagation|DATA": 3078,
+     "native-import:branch|UNCONDITIONAL_CALL": 2114,
+     "native-import:thunk|UNCONDITIONAL_JUMP": 221,
+     "native-analysis:constant-propagation|READ": 15,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 1,
+     "native-analysis:constant-propagation|WRITE": 1
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 3
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 2049,
+     "native-import:thunk": 88
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 45628925,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 148,
+     "thunk": 3,
+     "flow": 49
+    },
+    "sample_instructions": 12420,
+    "sample_bytes": 49753
+   },
+   "switch": {
+    "stored_dispatches": 248,
+    "stored_cases": 3325,
+    "rust_vsa_dispatches": 204,
+    "rust_vsa_cases": 1832,
+    "decompiler_dispatches": 44,
+    "decompiler_cases": 1493,
+    "vsa_only_import_dispatches": 204,
+    "sample_dispatches": 1,
+    "sample_rust_vsa": 1,
+    "sample_decompiler": 0,
+    "sample_printed_as_switch": 1,
+    "sample_printed_as_switch_rust_vsa": 1,
+    "sample_printed_tables_not_stored": 0
+   },
+   "default_pass": {
+    "wall_seconds": 269.6,
+    "sampled": 200,
+    "decompiled": 200,
+    "failed": []
+   },
+   "aggregate": {
+    "functions": 200,
+    "tokens": 57539,
+    "fragment_tokens": 48791,
+    "block_layer_tokens": 8748,
+    "spacing_tokens": 52739,
+    "ghidra_constructs": 3115,
+    "printed_constructs": 3145,
+    "kept_constructs": 3078,
+    "gotos_ghidra": 45,
+    "gotos_printed": 8,
+    "labels_ghidra": 31,
+    "labels_printed": 7,
+    "restructured_functions": 17,
+    "operations": 19076,
+    "calls": 876,
+    "calls_with_stored_prototype": 0,
+    "edits": 261,
+    "edits_additive_inverse": 261,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 61,
+    "cuts_proposed": 38,
+    "cuts_kept": 0,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 1,
+    "jump_table_cases_printed": 17,
+    "printed_parameters": 372,
+    "parameters_from_pass": 0,
+    "identifiers": 32638,
+    "renamed_identifiers": 6833,
+    "fragment_tokens_by_kind": {
+     "function_name": 1102,
+     "operator": 12001,
+     "paren": 14996,
+     "punctuation": 1586,
+     "type": 4207,
+     "variable": 14714,
+     "label": 15,
+     "case_label": 11,
+     "comment": 159
+    },
+    "fragment_tokens_by_region": {
+     "body": 43405,
+     "declaration": 1856,
+     "locals": 3421,
+     "header": 109
+    },
+    "constructs_created_by_kind": {
+     "leaf": 37,
+     "condition": 2,
+     "if": 27,
+     "goto_block": 1
+    },
+    "constructs_removed_by_kind": {
+     "goto_block": 14,
+     "if": 23
+    },
+    "structuring_applied": {
+     "switch_tails": 19,
+     "else_join": 4,
+     "irreducible_entry": 8,
+     "sink_join": 5,
+     "break_continue": 1
+    },
+    "pass_items": {
+     "type_inference:analyze": 27217,
+     "additive_inverse:transform": 261,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 0
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 200,
+     "identical": 183,
+     "different": 17
+    },
+    "ir-none": {
+     "compared": 200,
+     "identical": 139,
+     "different": 61
+    },
+    "either": {
+     "compared": 200,
+     "identical": 127,
+     "different": 73
+    }
+   },
+   "persisted_prototypes": {
+    "origin": "/home/raikaru/.cache/romwright/research-proto/projects/x360-black-ops-2-bbf68c880351-4f53cda18c2b-08df1a6eff7987ed-proto-4f53cda18c2b",
+    "origin_tools": "08df1a6eff7987ed",
+    "job": {
+     "env": {},
+     "seconds": 1559.9,
+     "analyzed": 65502,
+     "changed": 48998,
+     "rounds": 3
+    },
+    "sampled": 200,
+    "decompiled": 200,
+    "prototypes_by_provenance": {
+     "native-decompiler prototype recovery": 23816,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)": 1619,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr)": 60,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr,param_4:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:longlong->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:int->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:longlong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:uint->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_3:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:longlong->ptr)": 317,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:longlong->ptr,param_2:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:longlong->ptr,param_2:undefined8->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:longlong->ptr,param_3:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr)": 8,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:ulonglong->ptr)": 144,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:ulonglong->ptr,param_2:ulonglong->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr)": 338,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_2:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined8->ptr,param_3:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr)": 369,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr)": 23,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr,param_4:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:longlong->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:ulonglong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_4:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_4:longlong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_5:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_5:longlong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:longlong->ptr)": 186,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:longlong->ptr,param_3:int->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:longlong->ptr,param_3:longlong->ptr)": 8,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:longlong->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:longlong->ptr,param_4:longlong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:longlong->ptr,param_4:longlong->ptr,param_5:longlong->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:uint->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:ulonglong->ptr)": 106,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:ulonglong->ptr,param_3:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:ulonglong->ptr,param_3:longlong->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:ulonglong->ptr,param_3:ulonglong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr)": 66,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr,param_3:int->ptr)": 6,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr,param_3:ulonglong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr,param_3:undefined8->ptr)": 6,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr,param_4:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined8->ptr,param_5:longlong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr)": 48,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:longlong->ptr)": 38,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:longlong->ptr,param_4:longlong->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:longlong->ptr,param_4:longlong->ptr,param_6:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:longlong->ptr,param_4:ulonglong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:longlong->ptr,param_4:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:longlong->ptr,param_5:longlong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:longlong->ptr,param_6:longlong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:ulonglong->ptr)": 20,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined8->ptr)": 41,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:undefined8->ptr,param_4:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:int->ptr)": 15,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:longlong->ptr)": 10,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:longlong->ptr,param_5:ulonglong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:ulonglong->ptr)": 6,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:undefined8->ptr)": 11,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:int->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:longlong->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:ulonglong->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:undefined8->ptr)": 5,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:undefined8->ptr,param_6:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:longlong->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:ulonglong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:undefined8->ptr,param_7:longlong->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_6:undefined8->ptr,param_7:undefined8->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_7:ulonglong->ptr)": 4,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_8:ulonglong->ptr)": 1
+    },
+    "aggregate": {
+     "functions": 200,
+     "tokens": 61716,
+     "fragment_tokens": 52883,
+     "block_layer_tokens": 8833,
+     "spacing_tokens": 57178,
+     "ghidra_constructs": 3126,
+     "printed_constructs": 3153,
+     "kept_constructs": 3088,
+     "gotos_ghidra": 44,
+     "gotos_printed": 7,
+     "labels_ghidra": 30,
+     "labels_printed": 6,
+     "restructured_functions": 16,
+     "operations": 20075,
+     "calls": 878,
+     "calls_with_stored_prototype": 870,
+     "edits": 255,
+     "edits_additive_inverse": 255,
+     "edits_canonical_helpers": 0,
+     "functions_with_edits": 63,
+     "cuts_proposed": 37,
+     "cuts_kept": 0,
+     "functions_with_stored_prototype": 200,
+     "jump_tables_printed": 1,
+     "jump_table_cases_printed": 17,
+     "printed_parameters": 524,
+     "parameters_from_pass": 0,
+     "identifiers": 38285,
+     "renamed_identifiers": 7212,
+     "inferred_slot_upgrades": 28,
+     "fragment_tokens_by_kind": {
+      "function_name": 1102,
+      "operator": 13143,
+      "paren": 15862,
+      "punctuation": 1740,
+      "type": 4922,
+      "variable": 15995,
+      "label": 13,
+      "case_label": 11,
+      "comment": 95
+     },
+     "fragment_tokens_by_region": {
+      "body": 46815,
+      "declaration": 2345,
+      "locals": 3678,
+      "header": 45
+     },
+     "constructs_created_by_kind": {
+      "leaf": 34,
+      "condition": 3,
+      "if": 27,
+      "goto_block": 1
+     },
+     "constructs_removed_by_kind": {
+      "goto_block": 14,
+      "condition": 1,
+      "if": 23
+     },
+     "structuring_applied": {
+      "switch_tails": 17,
+      "else_join": 4,
+      "irreducible_entry": 10,
+      "sink_join": 5,
+      "break_continue": 1
+     },
+     "pass_items": {
+      "type_inference:analyze": 29027,
+      "additive_inverse:transform": 255,
+      "canonical_helpers:transform": 0,
+      "structure:structure": 0
+     },
+     "prototype_sources": {
+      "native-decompiler prototype recovery": 172,
+      "native-decompiler prototype recovery+native-prototype:inferred-types()": 28
+     }
+    }
+   }
+  },
+  "gc-animal-crossing": {
+   "status": "ran",
+   "program": "gc",
+   "sample": [
+    "800033d8",
+    "80003c34",
+    "80005468",
+    "800056c8",
+    "8000663c",
+    "800080a8",
+    "8000b120",
+    "8000baf0",
+    "8000f8e0",
+    "8001383c",
+    "80013f90",
+    "800142e8",
+    "80014d18",
+    "8001585c",
+    "80017c60",
+    "80018bc0",
+    "80018c00",
+    "80019d40",
+    "8001a2e0",
+    "8001a380",
+    "8001b4a0",
+    "8001b500",
+    "8001d4e0",
+    "8001d560",
+    "8001e020",
+    "8001e700",
+    "80020420",
+    "80021ee0",
+    "80023f40",
+    "80025220",
+    "80026e00",
+    "80027c40",
+    "80028500",
+    "800289e0",
+    "80029400",
+    "80029600",
+    "8002c4c0",
+    "8002ce20",
+    "8002db20",
+    "8002dc64",
+    "8002f2c0",
+    "8002f7c0",
+    "8002fe40",
+    "8002ff40",
+    "800303e0",
+    "800308a0",
+    "80031520",
+    "800318c0",
+    "800325c0",
+    "80032840",
+    "80033fa0",
+    "800352e0",
+    "80035600",
+    "800376a0",
+    "80038d00",
+    "800398c0",
+    "8003ac90",
+    "80044be8",
+    "800456dc",
+    "80046670",
+    "8004671c",
+    "80046840",
+    "80046b80",
+    "80046db0",
+    "80047f9c",
+    "80048120",
+    "80048628",
+    "80048884",
+    "8004b9f4",
+    "8005465c",
+    "800552bc",
+    "80055e78",
+    "80058900",
+    "80058bec",
+    "80059d34",
+    "8005ab2c",
+    "8005b1ec",
+    "8005b210",
+    "8005b8fc",
+    "8005bcb8",
+    "8005bde4",
+    "8005bedc",
+    "8005c8a8",
+    "8005d048",
+    "8005d068",
+    "8005d52c",
+    "8005dfa4",
+    "8005ff74",
+    "8006147c",
+    "8006157c",
+    "80061644",
+    "800616c0",
+    "80061944",
+    "80061d10",
+    "80062290",
+    "80063980",
+    "80063c34",
+    "80063cb8",
+    "80065e58",
+    "80066918",
+    "8006716c",
+    "800676ac",
+    "8006799c",
+    "80067a88",
+    "80067af8",
+    "80068744",
+    "80068a24",
+    "80068fbc",
+    "80069a64",
+    "8006a270",
+    "8006abd8",
+    "8006bbb0",
+    "8006c8a8",
+    "8006d718",
+    "8006d7e0",
+    "8006e1c4",
+    "8006ea9c",
+    "8006ed9c",
+    "8006fdac",
+    "800716c0",
+    "800735e4",
+    "80073678",
+    "80073f3c",
+    "80073fac",
+    "800743f8",
+    "800746d8",
+    "80076db0",
+    "80077268",
+    "800774c4",
+    "80077720",
+    "8007868c",
+    "80078868",
+    "800790c0",
+    "80079384",
+    "8007988c",
+    "8007a2d0",
+    "8007b0fc",
+    "8007b968",
+    "8007bc08",
+    "8007c2e0",
+    "8007d794",
+    "8007d8a8",
+    "80082108",
+    "80082924",
+    "800829b0",
+    "80083de0",
+    "8008425c",
+    "80085fd4",
+    "8008712c",
+    "80088a68",
+    "80089854",
+    "80089a44",
+    "8008bd74",
+    "8008e504",
+    "8008ea90",
+    "8008eb2c",
+    "8008f4b0",
+    "8008f734",
+    "80092898",
+    "80092fbc",
+    "80092fe0",
+    "80094248",
+    "800945d8",
+    "80094a68",
+    "80094e1c",
+    "80095420",
+    "8009580c",
+    "80095a14",
+    "80095f94",
+    "80096bb4",
+    "8009758c",
+    "8009796c",
+    "80097c00",
+    "80099580",
+    "8009a060",
+    "8009ad7c",
+    "8009ada4",
+    "8009b234",
+    "8009c54c",
+    "8009cbe4",
+    "8009df1c",
+    "8009e608",
+    "8009ef68",
+    "8009f494",
+    "8009fcd0",
+    "800a2208",
+    "800a2494",
+    "800a2f60",
+    "800a346c",
+    "800a34f4",
+    "800a3834",
+    "800a4944",
+    "800a550c",
+    "800a7eb4",
+    "800a86fc",
+    "800a875c",
+    "800a884c",
+    "800a8cd0",
+    "800a8ce4",
+    "800a91c8"
+   ],
+   "import": {
+    "seconds": 15.2,
+    "phases": {
+     "console": 0.260145,
+     "discovery": 6.67734,
+     "flow": 2.974999,
+     "parse": 0.005209,
+     "patterns": 0.045099,
+     "references": 2.747526,
+     "references-only": 2.487374,
+     "settle": 0.00663,
+     "store": 0.396815,
+     "switch": 2.900417,
+     "switch-vsa": 1.932029
+    },
+    "switch_stats": {
+     "vsa_resolved": 94,
+     "vsa_refused": 44,
+     "decompiler_skipped": 0
+    },
+    "diagnostics": []
+   },
+   "facts": {
+    "functions": 3007,
+    "functions_by_producer": {
+     "call": 2274,
+     "flow": 711,
+     "const": 16,
+     "pattern": 6
+    },
+    "xrefs_by_provenance": {
+     "native-import|UNCONDITIONAL_CALL": 10861,
+     "native-analysis:constant-propagation|READ": 6397,
+     "native-analysis:constant-propagation|WRITE": 3374,
+     "native-analysis:constant-propagation|DATA": 3033,
+     "native-import:switch|COMPUTED_JUMP": 1147,
+     "native-import:branch|UNCONDITIONAL_JUMP": 32,
+     "native-import:branch|UNCONDITIONAL_CALL": 8,
+     "native-import|UNCONDITIONAL_JUMP": 5,
+     "native-analysis:constant-propagation|COMPUTED_CALL": 3
+    },
+    "data_definitions_by_provenance": {
+     "native-analysis:data-width": 2653
+    },
+    "flow_overrides_by_provenance": {
+     "native-analysis:shared-return": 8,
+     "native-import:thunk": 9
+    },
+    "prototypes_by_provenance": {},
+    "memory_bytes": 2188829,
+    "symbols_by_source": {},
+    "sample_functions_by_producer": {
+     "call": 155,
+     "flow": 44,
+     "pattern": 1
+    },
+    "sample_instructions": 12510,
+    "sample_bytes": 50068
+   },
+   "switch": {
+    "stored_dispatches": 114,
+    "stored_cases": 1147,
+    "rust_vsa_dispatches": 94,
+    "rust_vsa_cases": 890,
+    "decompiler_dispatches": 20,
+    "decompiler_cases": 257,
+    "vsa_only_import_dispatches": 94,
+    "sample_dispatches": 11,
+    "sample_rust_vsa": 10,
+    "sample_decompiler": 1,
+    "sample_printed_as_switch": 11,
+    "sample_printed_as_switch_rust_vsa": 10,
+    "sample_printed_tables_not_stored": 0
+   },
+   "default_pass": {
+    "wall_seconds": 22.6,
+    "sampled": 200,
+    "decompiled": 199,
+    "failed": [
+     "800a7eb4"
+    ]
+   },
+   "aggregate": {
+    "functions": 199,
+    "tokens": 53484,
+    "fragment_tokens": 45100,
+    "block_layer_tokens": 8384,
+    "spacing_tokens": 48737,
+    "ghidra_constructs": 3341,
+    "printed_constructs": 3358,
+    "kept_constructs": 3305,
+    "gotos_ghidra": 68,
+    "gotos_printed": 34,
+    "labels_ghidra": 33,
+    "labels_printed": 15,
+    "restructured_functions": 16,
+    "operations": 18873,
+    "calls": 627,
+    "calls_with_stored_prototype": 0,
+    "edits": 212,
+    "edits_additive_inverse": 212,
+    "edits_canonical_helpers": 0,
+    "functions_with_edits": 45,
+    "cuts_proposed": 56,
+    "cuts_kept": 3,
+    "functions_with_stored_prototype": 0,
+    "jump_tables_printed": 11,
+    "jump_table_cases_printed": 226,
+    "printed_parameters": 366,
+    "parameters_from_pass": 0,
+    "identifiers": 28602,
+    "renamed_identifiers": 5071,
+    "fragment_tokens_by_kind": {
+     "function_name": 845,
+     "operator": 11684,
+     "paren": 13576,
+     "punctuation": 1449,
+     "type": 3551,
+     "variable": 13503,
+     "comment": 286,
+     "label": 49,
+     "case_label": 157
+    },
+    "fragment_tokens_by_region": {
+     "body": 40763,
+     "declaration": 1872,
+     "locals": 2199,
+     "header": 266
+    },
+    "constructs_created_by_kind": {
+     "condition": 2,
+     "if": 20,
+     "leaf": 31
+    },
+    "constructs_removed_by_kind": {
+     "condition": 2,
+     "goto_block": 17,
+     "if": 17
+    },
+    "structuring_applied": {
+     "else_join": 8,
+     "irreducible_entry": 5,
+     "switch_tails": 18,
+     "loop_exits": 1,
+     "sink_join": 2
+    },
+    "pass_items": {
+     "type_inference:analyze": 26508,
+     "additive_inverse:transform": 212,
+     "canonical_helpers:transform": 0,
+     "structure:structure": 3
+    },
+    "prototype_sources": {}
+   },
+   "counterfactual": {
+    "rust-structuring-none": {
+     "compared": 199,
+     "identical": 183,
+     "different": 16
+    },
+    "ir-none": {
+     "compared": 199,
+     "identical": 154,
+     "different": 45
+    },
+    "either": {
+     "compared": 199,
+     "identical": 145,
+     "different": 54
+    }
+   },
+   "persisted_prototypes": {
+    "origin": "/home/raikaru/.cache/romwright/research-final/projects/gc-animal-crossing-e3166b15b810-4f53cda18c2b-cdbbf0f7d1273898-proto-987ccbd006a9",
+    "origin_tools": "cdbbf0f7d1273898",
+    "job": {
+     "env": {
+      "ROMWRIGHT_INFERRED_TYPES": "1"
+     },
+     "seconds": 51.5,
+     "analyzed": 5963,
+     "changed": 4442,
+     "rounds": 3
+    },
+    "sampled": 200,
+    "decompiled": 199,
+    "prototypes_by_provenance": {
+     "native-decompiler prototype recovery": 2773,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)": 167,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr,param_2:int->ptr)": 12,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:uint->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_1:undefined4->ptr)": 2,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr)": 33,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:int->ptr,param_3:int->ptr)": 3,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:uint->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->int)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_2:undefined4->ptr,param_4:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_3:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:int->ptr)": 7,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_4:int->ptr,param_5:int->ptr)": 1,
+     "native-decompiler prototype recovery+native-prototype:inferred-types(param_5:int->ptr)": 2
+    },
+    "aggregate": {
+     "functions": 199,
+     "tokens": 60473,
+     "fragment_tokens": 52032,
+     "block_layer_tokens": 8441,
+     "spacing_tokens": 55863,
+     "ghidra_constructs": 3333,
+     "printed_constructs": 3350,
+     "kept_constructs": 3300,
+     "gotos_ghidra": 65,
+     "gotos_printed": 34,
+     "labels_ghidra": 31,
+     "labels_printed": 15,
+     "restructured_functions": 14,
+     "operations": 22293,
+     "calls": 627,
+     "calls_with_stored_prototype": 627,
+     "edits": 202,
+     "edits_additive_inverse": 202,
+     "edits_canonical_helpers": 0,
+     "functions_with_edits": 42,
+     "cuts_proposed": 56,
+     "cuts_kept": 3,
+     "functions_with_stored_prototype": 199,
+     "inferred_slot_upgrades": 18,
+     "jump_tables_printed": 11,
+     "jump_table_cases_printed": 226,
+     "printed_parameters": 598,
+     "parameters_from_pass": 0,
+     "identifiers": 33685,
+     "renamed_identifiers": 4564,
+     "fragment_tokens_by_kind": {
+      "function_name": 845,
+      "operator": 14142,
+      "paren": 14978,
+      "punctuation": 1737,
+      "type": 4139,
+      "variable": 15699,
+      "comment": 286,
+      "label": 49,
+      "case_label": 157
+     },
+     "fragment_tokens_by_region": {
+      "body": 46632,
+      "declaration": 2611,
+      "locals": 2523,
+      "header": 266
+     },
+     "constructs_created_by_kind": {
+      "condition": 2,
+      "if": 19,
+      "leaf": 29
+     },
+     "constructs_removed_by_kind": {
+      "condition": 2,
+      "goto_block": 15,
+      "if": 16
+     },
+     "structuring_applied": {
+      "else_join": 7,
+      "irreducible_entry": 4,
+      "switch_tails": 17,
+      "loop_exits": 1,
+      "sink_join": 2
+     },
+     "pass_items": {
+      "type_inference:analyze": 30618,
+      "additive_inverse:transform": 202,
+      "canonical_helpers:transform": 0,
+      "structure:structure": 3
+     },
+     "prototype_sources": {
+      "native-decompiler prototype recovery+native-prototype:inferred-types()": 17,
+      "native-decompiler prototype recovery": 182
+     }
+    }
+   }
+  }
+ },
+ "tools": "ab96daf837699f1a",
+ "coverage": {
+  "profiles": 4,
+  "binaries": {
+   "romwright-cli": {
+    "files": 582
+   },
+   "romwright-worker": {
+    "files": 596
+   },
+   "ghidra_opt": {
+    "files": 166
+   },
+   "decomp_native": {
+    "files": 172
+   }
+  },
+  "cpp_build_matches_tree": true,
+  "by_stage": {
+   "load": {
+    "rust_first_party": {
+     "executable": 10348,
+     "executed": 2979
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 19,
+     "executed": 14
+    },
+    "cpp_vendored": {
+     "executable": 3656,
+     "executed": 1998
+    }
+   },
+   "discovery": {
+    "rust_first_party": {
+     "executable": 6002,
+     "executed": 4179
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 2263,
+     "executed": 1800
+    },
+    "cpp_vendored": {
+     "executable": 0,
+     "executed": 0
+    }
+   },
+   "flow": {
+    "rust_first_party": {
+     "executable": 237,
+     "executed": 225
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 120,
+     "executed": 96
+    },
+    "cpp_vendored": {
+     "executable": 1005,
+     "executed": 770
+    }
+   },
+   "pcode_lift": {
+    "rust_first_party": {
+     "executable": 1110,
+     "executed": 707
+    },
+    "rust_third_party": {
+     "executable": 20927,
+     "executed": 5105
+    },
+    "cpp_ours": {
+     "executable": 69,
+     "executed": 54
+    },
+    "cpp_vendored": {
+     "executable": 9109,
+     "executed": 3544
+    }
+   },
+   "switch_recovery": {
+    "rust_first_party": {
+     "executable": 4632,
+     "executed": 2201
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 2060,
+     "executed": 1455
+    }
+   },
+   "simplification": {
+    "rust_first_party": {
+     "executable": 1000,
+     "executed": 786
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 248,
+     "executed": 205
+    },
+    "cpp_vendored": {
+     "executable": 34516,
+     "executed": 27406
+    }
+   },
+   "type_inference": {
+    "rust_first_party": {
+     "executable": 2123,
+     "executed": 159
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 5604,
+     "executed": 2752
+    }
+   },
+   "prototype": {
+    "rust_first_party": {
+     "executable": 1120,
+     "executed": 321
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 6127,
+     "executed": 3228
+    }
+   },
+   "structuring": {
+    "rust_first_party": {
+     "executable": 2594,
+     "executed": 2126
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 4642,
+     "executed": 3604
+    }
+   },
+   "printing": {
+    "rust_first_party": {
+     "executable": 1841,
+     "executed": 1662
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 401,
+     "executed": 339
+    },
+    "cpp_vendored": {
+     "executable": 6616,
+     "executed": 3865
+    }
+   },
+   "postprocess": {
+    "rust_first_party": {
+     "executable": 1401,
+     "executed": 1022
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_vendored": {
+     "executable": 0,
+     "executed": 0
+    }
+   },
+   "host": {
+    "rust_first_party": {
+     "executable": 25007,
+     "executed": 5933
+    },
+    "rust_third_party": {
+     "executable": 0,
+     "executed": 0
+    },
+    "cpp_ours": {
+     "executable": 288,
+     "executed": 149
+    },
+    "cpp_vendored": {
+     "executable": 12119,
+     "executed": 2573
+    }
+   }
+  },
+  "totals": {
+   "rust_first_party": {
+    "executable": 57415,
+    "executed": 22300
+   },
+   "rust_third_party": {
+    "executable": 20927,
+    "executed": 5105
+   },
+   "cpp_ours": {
+    "executable": 3408,
+    "executed": 2657
+   },
+   "cpp_vendored": {
+    "executable": 85454,
+    "executed": 51195
+   }
+  },
+  "rust_dependencies": {
+   "executable": 71022,
+   "executed": 4086,
+   "note": "other crates and std linked into the Rust binaries; not an owner"
+  },
+  "unassigned_rust_files": {
+   "crates/romwright-db/src/lib.rs": 1474,
+   "crates/romwright-worker/src/worker.rs": 627,
+   "crates/romwright-core/src/native_runtime.rs": 622,
+   "crates/romwright-core/src/native/store.rs": 593,
+   "crates/romwright-worker/src/wire.rs": 301,
+   "crates/romwright-worker/src/doc.rs": 290,
+   "crates/romwright-core/src/opinion.rs": 271,
+   "crates/romwright-core/src/lib.rs": 231,
+   "crates/romwright-core/src/session.rs": 218,
+   "crates/romwright-cli/src/main.rs": 188,
+   "crates/romwright-worker/src/main.rs": 161,
+   "crates/romwright-core/src/exec.rs": 153,
+   "crates/romwright-worker/src/printc/ownership.rs": 94,
+   "crates/romwright-core/src/architecture.rs": 83,
+   "crates/romwright-core/src/inputs.rs": 66
+  },
+  "top_executed_vendored": [
+   [
+    "ruleaction.cc",
+    6693,
+    "simplification"
+   ],
+   [
+    "coreaction.cc",
+    3493,
+    "simplification"
+   ],
+   [
+    "subflow.cc",
+    2706,
+    "simplification"
+   ],
+   [
+    "fspec.cc",
+    2443,
+    "prototype"
+   ],
+   [
+    "double.cc",
+    2237,
+    "simplification"
+   ],
+   [
+    "block.cc",
+    1822,
+    "structuring"
+   ],
+   [
+    "heritage.cc",
+    1734,
+    "simplification"
+   ],
+   [
+    "blockaction.cc",
+    1583,
+    "structuring"
+   ],
+   [
+    "printc.cc",
+    1582,
+    "printing"
+   ],
+   [
+    "jumptable.cc",
+    1392,
+    "switch_recovery"
+   ],
+   [
+    "database.cc",
+    1331,
+    "load"
+   ],
+   [
+    "typeop.cc",
+    1330,
+    "type_inference"
+   ],
+   [
+    "type.cc",
+    1223,
+    "type_inference"
+   ],
+   [
+    "funcdata_varnode.cc",
+    1168,
+    "simplification"
+   ],
+   [
+    "merge.cc",
+    995,
+    "simplification"
+   ],
+   [
+    "varmap.cc",
+    993,
+    "simplification"
+   ],
+   [
+    "varnode.cc",
+    850,
+    "simplification"
+   ],
+   [
+    "grammar.cc",
+    773,
+    "printing"
+   ],
+   [
+    "flow.cc",
+    755,
+    "flow"
+   ],
+   [
+    "funcdata_op.cc",
+    686,
+    "simplification"
+   ],
+   [
+    "op.cc",
+    684,
+    "simplification"
+   ],
+   [
+    "prettyprint.cc",
+    680,
+    "printing"
+   ],
+   [
+    "ruleaction.hh",
+    675,
+    "simplification"
+   ],
+   [
+    "variable.cc",
+    660,
+    "simplification"
+   ],
+   [
+    "funcdata_block.cc",
+    592,
+    "simplification"
+   ]
+  ],
+  "top_executed_first_party": [
+   [
+    "crates/romwright-core/src/native/discovery.rs",
+    1760,
+    "discovery"
+   ],
+   [
+    "crates/romwright-db/src/lib.rs",
+    1474,
+    "host"
+   ],
+   [
+    "crates/romwright-worker/src/printc/structure.rs",
+    1468,
+    "structuring"
+   ],
+   [
+    "crates/romwright-core/src/native/vsa.rs",
+    1104,
+    "switch_recovery"
+   ],
+   [
+    "crates/romwright-core/src/native/switch_tables.rs",
+    1011,
+    "switch_recovery"
+   ],
+   [
+    "crates/romwright-worker/src/provider.rs",
+    948,
+    "load"
+   ],
+   [
+    "crates/romwright-core/src/native.rs",
+    937,
+    "discovery"
+   ],
+   [
+    "crates/romwright-core/src/structuring.rs",
+    658,
+    "structuring"
+   ],
+   [
+    "crates/romwright-worker/src/printc/pretty.rs",
+    656,
+    "printing"
+   ],
+   [
+    "crates/romwright-worker/src/worker.rs",
+    627,
+    "host"
+   ],
+   [
+    "crates/romwright-core/src/native_runtime.rs",
+    622,
+    "host"
+   ],
+   [
+    "crates/romwright-core/src/native/store.rs",
+    593,
+    "host"
+   ],
+   [
+    "crates/romwright-worker/src/printc/printer.rs",
+    580,
+    "printing"
+   ],
+   [
+    "crates/romwright-core/src/emit_m2c.rs",
+    505,
+    "postprocess"
+   ],
+   [
+    "crates/romwright-core/src/native_runtime/lift.rs",
+    495,
+    "pcode_lift"
+   ],
+   [
+    "crates/romwright-core/src/native/discovery/patterns.rs",
+    442,
+    "discovery"
+   ],
+   [
+    "crates/romwright-core/src/native/references.rs",
+    378,
+    "discovery"
+   ],
+   [
+    "crates/romwright-core/src/func_ir.rs",
+    341,
+    "simplification"
+   ],
+   [
+    "crates/romwright-worker/src/printc/ir.rs",
+    324,
+    "printing"
+   ],
+   [
+    "crates/romwright-worker/src/wire.rs",
+    301,
+    "host"
+   ],
+   [
+    "crates/romwright-worker/src/doc.rs",
+    290,
+    "host"
+   ],
+   [
+    "crates/romwright-core/src/native/elf_image.rs",
+    284,
+    "load"
+   ],
+   [
+    "crates/romwright-worker/src/semantic.rs",
+    280,
+    "simplification"
+   ],
+   [
+    "crates/romwright-core/src/opinion.rs",
+    271,
+    "host"
+   ],
+   [
+    "crates/romwright-core/src/native/xex.rs",
+    235,
+    "load"
+   ]
+  ]
+ },
+ "stage_table": [
+  {
+   "stage": "load",
+   "unit": "bytes, symbols and types handed to the decompiler",
+   "basis": "code",
+   "owners": {
+    "rust_first_party": 1.0,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": null
+   },
+   "detail": "provider.rs answers every query the C++ makes for bytes, symbols, types and flow facts; C++ loader lines executed: 1998 vendored (storage of what it is given)"
+  },
+  {
+   "stage": "discovery",
+   "unit": "stored analysis facts (xrefs, data definitions, flow overrides) by provenance",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.5779,
+    "rust_third_party": null,
+    "cpp_ours": 0.4221,
+    "cpp_vendored": null
+   },
+   "detail": "sampled functions by producer: {'pattern': 578, 'call': 712, 'flow': 291, 'const': 13, 'thunk': 6} (all Rust passes); constant-propagation facts (306509 of 726130) are computed by the console's propagation. Import time in console-owned phases: 49.8%"
+  },
+  {
+   "stage": "flow (import walk)",
+   "unit": "flow queries during the discovery walk",
+   "basis": "code",
+   "owners": {
+    "rust_first_party": null,
+    "rust_third_party": 1.0,
+    "cpp_ours": null,
+    "cpp_vendored": null
+   },
+   "detail": "discovery.rs walks with the in-process kuna-sleigh decoder (`SleighFlow`); the console's own flow command only runs under ROMWRIGHT_FLOW_DIFFERENTIAL. The console nevertheless classifies instruction flow inside its reference propagation: native/romwright_flow.hh lines executed 96 of the C++ flow stage's ours"
+  },
+  {
+   "stage": "flow (decompile)",
+   "unit": "instructions followed into the function body and its blocks",
+   "basis": "code + coverage",
+   "owners": {
+    "rust_first_party": null,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "the decompiler's own FlowInfo (flow.cc) builds the function's p-code and block graph on every decompile; vendored flow lines executed 770"
+  },
+  {
+   "stage": "pcode_lift",
+   "unit": "instructions lifted on the printed path",
+   "basis": "run + code",
+   "owners": {
+    "rust_first_party": null,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "88816 instructions in the sampled functions are lifted by the decompiler's own SLEIGH (ghidra_opt, ROMWRIGHT_SLA). Rust-lifted p-code (kuna-sleigh) feeds value-set analysis, SJA, the type solver and the prototype job, never the printed text"
+  },
+  {
+   "stage": "switch_recovery",
+   "unit": "dispatches in the stored import tables",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.7089,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.2911
+   },
+   "detail": "1751 of 2470 dispatches (65.9% of case edges) by Rust VSA; the rest by the decompiler path (a branch the decompiler-off import also stores is Rust's)"
+  },
+  {
+   "stage": "switch_recovery (printed)",
+   "unit": "switch tables the decompiler used when printing",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": null,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "73 printed tables in 1598 functions, all recovered again by jumptable.cc at decompile time; the stored import tables never reach the decompiler. Of the sample's 51 Rust-recovered dispatches 49 also printed as a switch"
+  },
+  {
+   "stage": "simplification",
+   "unit": "final p-code operations",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.0054,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.9946
+   },
+   "detail": "867 Rust edits (867 additive_inverse, 0 canonical_helpers) over 161418 operations; 266 of 1598 functions have an edit"
+  },
+  {
+   "stage": "type_inference (default)",
+   "unit": "printed type tokens",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.0,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "29023 type tokens; the default import stores no persisted prototype, so every printed type is Ghidra's. The Rust type solver still runs per function as an evidence pass whose classes only steer export-c's temporary and global names"
+  },
+  {
+   "stage": "type_inference (persisted prototypes)",
+   "unit": "printed type tokens",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.0092,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.9908
+   },
+   "detail": "282 parameter types upgraded by the Rust merge (provenance `->` records) against 30561 printed type tokens in 1599 functions on 8 images; upper bound, one printed token per upgraded slot"
+  },
+  {
+   "stage": "prototype (default)",
+   "unit": "printed function prototypes; call sites",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.0,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 1.0
+   },
+   "detail": "0 of 1598 printed functions had a stored prototype; 0 of 5467 call sites name a callee with one (type-archive and SDK tables, Rust)"
+  },
+  {
+   "stage": "prototype (persisted prototypes)",
+   "unit": "printed function prototypes",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.1651,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.8349
+   },
+   "detail": "1597 of 1599 printed functions had a stored prototype and 5116 of 5188 call sites name a callee with one, all persisted by Rust. Share here is who decided the signature: a stored row whose provenance is `native-decompiler prototype recovery` alone is Ghidra's recovery stored by Rust; Rust decided the rows that also carry `inferred-types` (at least one slot changed). Source mix: {'native-decompiler prototype recovery': 1333, 'native-decompiler prototype recovery+native-prototype:inferred-types()': 264}"
+  },
+  {
+   "stage": "structuring",
+   "unit": "control-flow constructs in the printed tree",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.0201,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.9799
+   },
+   "detail": "gotos 371 -> 126 and labels 260 -> 92 after the Rust models; 100 of 1598 functions printed a Rust tree; created {'if': 116, 'leaf': 259, 'goto_block': 20, 'switch': 3, 'condition': 7}; IR `structure` cuts kept 30 of 328"
+  },
+  {
+   "stage": "printing",
+   "unit": "visible text tokens",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.1327,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.8673
+   },
+   "detail": "452185 tokens: 392165 replayed from PrintC fragments (by kind {'comment': 6077, 'function_name': 7138, 'operator': 106576, 'paren': 114202, 'punctuation': 13678, 'type': 29023, 'variable': 114589, 'case_label': 664, 'label': 218}), 60020 emitted by the Rust block layer; 415659 spacing tokens laid out by printc/pretty.rs, a Rust port of EmitPrettyPrint (algorithm third-party, code first-party)"
+  },
+  {
+   "stage": "postprocess",
+   "unit": "identifiers in the export-c text",
+   "basis": "run",
+   "owners": {
+    "rust_first_party": 0.1925,
+    "rust_third_party": null,
+    "cpp_ours": null,
+    "cpp_vendored": 0.8075
+   },
+   "detail": "44446 of 230865 identifier tokens are `temp_*`/`sp*` names emit_m2c gave decompiler locals; the rest keep the name the decompiler printed"
+  }
+ ],
+ "headline": {
+  "images_ran": 8,
+  "functions_printed": 1598,
+  "printed_text_tokens_emitted_by_rust": 0.1327,
+  "printed_text_tokens_replayed_from_cpp_fragments": 0.8673,
+  "printed_constructs_created_by_rust": 0.0201,
+  "p_code_operations_edited_by_rust": 0.0054,
+  "functions_whose_text_changes_without_rust_components": 0.204,
+  "functions_changed_by_rust_structuring": 0.0626,
+  "functions_changed_by_rust_ir_passes": 0.1677,
+  "executed_lines": {
+   "rust_first_party": 22300,
+   "rust_third_party": 5105,
+   "cpp_ours": 2657,
+   "cpp_vendored": 51195
+  },
+  "executed_lines_rust_share": 0.3373,
+  "executed_lines_first_party_rust_share": 0.2744
+ }
+}

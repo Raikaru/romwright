@@ -1,0 +1,11 @@
+{
+  "id": "m20-008",
+  "recorded_at": "2026-10-09T04:57:00.413163+00:00",
+  "status": "pass",
+  "passed": true,
+  "summary": "12 modules, locate names 'dol:0', 11 cross-module xrefs",
+  "metrics": {
+    "modules": 12,
+    "cross_module_xrefs": 11
+  }
+}

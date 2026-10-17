@@ -1,0 +1,372 @@
+{
+  "id": "m21-001",
+  "recorded_at": "2026-10-09T04:52:34.449938+00:00",
+  "floors": {
+    "gba-pokeemerald": [
+      0.963,
+      0.987
+    ],
+    "nds-pokeheartgold-arm9": [
+      0.962,
+      0.988
+    ],
+    "ps2-capcom-fighting-evolution": [
+      0.931,
+      0.986
+    ],
+    "ps2-dungeon-game": [
+      0.933,
+      0.978
+    ],
+    "psx-darkstalkers-3": [
+      0.976,
+      0.356
+    ],
+    "psv-need-for-speed-most-wanted": [
+      0.963,
+      0.961
+    ],
+    "x360-black-ops-2": [
+      0.973,
+      0.986
+    ]
+  },
+  "rows": {
+    "gba-pokeemerald": {
+      "truth": 15856,
+      "found": 15484,
+      "recall": 0.9737,
+      "precision": 0.9971,
+      "invented": 45,
+      "sizes_compared": 15437,
+      "size_exact": 5730,
+      "size_short": 9707,
+      "size_long": 0,
+      "missed_sample": [
+        "0x8000708 SetVCountCallback",
+        "0x8001354 Unused_ResetBgControlStruct",
+        "0x8001e40 GetBgX",
+        "0x8002170 Unused_AdjustBgMosaic",
+        "0x800425c DummyWindowBgTilemap8Bit",
+        "0x8004d58 GetLastTextColor",
+        "0x8006338 GetKeypadIconTileOffset",
+        "0x8006358 GetKeypadIconHeight",
+        "0x80073b8 SpriteTileAllocBitmapOp",
+        "0x800a44c GetBerryBlenderKeySendAttempts"
+      ],
+      "invented_sample": [
+        "0x8000000",
+        "0x8000204",
+        "0x8000254",
+        "0x803be9c",
+        "0x803cd12",
+        "0x8040968",
+        "0x804132e",
+        "0x8041338",
+        "0x8060604",
+        "0x8060708"
+      ],
+      "seconds": 73.2,
+      "peak_rss_mb": 1758,
+      "diagnostics": [],
+      "status": "pass",
+      "failures": []
+    },
+    "nds-pokeheartgold-arm9": {
+      "truth": 11078,
+      "found": 10795,
+      "recall": 0.9729,
+      "precision": 0.9984,
+      "invented": 17,
+      "sizes_compared": 10735,
+      "size_exact": 5151,
+      "size_short": 5583,
+      "size_long": 1,
+      "missed_sample": [
+        "0x1ff8000 OS_IrqHandler",
+        "0x1ff8058 OS_IrqHandler_ThreadSwitch",
+        "0x1ff81b4 OSi_DoResetSystem",
+        "0x1ff81e8 OSi_DoBoot",
+        "0x1ff82b4 OSi_CpuClear32",
+        "0x1ff82c8 OSi_ReloadRomData",
+        "0x1ff8370 OSi_ReadCardRom32",
+        "0x1ff8448 MIi_DmaSetParams",
+        "0x1ff8488 MIi_DmaSetParams_wait",
+        "0x1ff84f8 MIi_DmaSetParams_noInt"
+      ],
+      "invented_sample": [
+        "0x20001ba",
+        "0x20002d0",
+        "0x200079e",
+        "0x201e4ac",
+        "0x20e8104",
+        "0x20ed8f8",
+        "0x20f1cc0",
+        "0x2111860",
+        "0x2111a14",
+        "0x2111a48"
+      ],
+      "seconds": 211.0,
+      "peak_rss_mb": null,
+      "diagnostics": [],
+      "status": "pass",
+      "failures": []
+    },
+    "ps2-capcom-fighting-evolution": {
+      "truth": 8794,
+      "found": 8307,
+      "recall": 0.9412,
+      "precision": 0.9964,
+      "invented": 30,
+      "sizes_compared": 8277,
+      "size_exact": 8244,
+      "size_short": 2,
+      "size_long": 31,
+      "missed_sample": [
+        "0x103b18 _rix_000",
+        "0x103b90 _ri0_000",
+        "0x103c28 _rix_001",
+        "0x103ce0 _ri0_001",
+        "0x103db0 _rix_010",
+        "0x103e60 _ri0_010",
+        "0x103f18 _rix_011",
+        "0x104010 _ri0_011",
+        "0x104110 _rix_100",
+        "0x1041b0 _ri0_100"
+      ],
+      "invented_sample": [
+        "0x100008",
+        "0x10cffc",
+        "0x220fe0",
+        "0x221000",
+        "0x221038",
+        "0x221060",
+        "0x221080",
+        "0x2210d8",
+        "0x221110",
+        "0x221138"
+      ],
+      "seconds": 75.0,
+      "peak_rss_mb": null,
+      "diagnostics": [
+        {
+          "severity": "partial",
+          "stage": "switch",
+          "message": "0x182fa0: decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions"
+        },
+        {
+          "severity": "partial",
+          "stage": "references",
+          "message": "1 function ranges the console could not decode for references"
+        }
+      ],
+      "status": "pass",
+      "failures": []
+    },
+    "ps2-dungeon-game": {
+      "truth": 783,
+      "found": 748,
+      "recall": 0.9438,
+      "precision": 0.988,
+      "invented": 9,
+      "sizes_compared": 737,
+      "size_exact": 716,
+      "size_short": 8,
+      "size_long": 13,
+      "missed_sample": [
+        "0x10021c _root",
+        "0x100228 _ZN7ps2math3modEff",
+        "0x101300 _Z21printLoadedIopModulesi",
+        "0x102960 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb21stbi_hdr_to_ldr_gammaEf",
+        "0x102978 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb21stbi_hdr_to_ldr_scaleEf",
+        "0x103720 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb23stbi__resample_row_hv_2EPhS0_S0_ii",
+        "0x107810 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb22stbi__resample_row_v_2EPhS0_S0_ii",
+        "0x1079b0 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb22stbi__resample_row_h_2EPhS0_S0_ii",
+        "0x107c28 _ZN79_GLOBAL__N__Users_Lampert_repos_ps2dev_tests_source_framework_texture.cpp90swKb26stbi__resample_row_genericEPhS0_S0_ii",
+        "0x10e6e0 _ZN12RenderPacketC1EjNS_4TypeE"
+      ],
+      "invented_sample": [
+        "0x100000",
+        "0x100064",
+        "0x100080",
+        "0x1000c0",
+        "0x1011cc",
+        "0x1013a0",
+        "0x102ee4",
+        "0x133d60",
+        "0x133db8"
+      ],
+      "seconds": 5.1,
+      "peak_rss_mb": null,
+      "diagnostics": [],
+      "status": "pass",
+      "failures": []
+    },
+    "psx-darkstalkers-3": {
+      "truth": 818,
+      "found": 2206,
+      "recall": 0.9878,
+      "precision": 0.3663,
+      "invented": 1398,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "missed_sample": [
+        "0x8014f634 pl_nige_check",
+        "0x8016e478 type01_demi_kubi",
+        "0x8016e4c0 type02_demi_kubi",
+        "0x8016fa2c pl06_to_pshl",
+        "0x801727c0 direction_all",
+        "0x80172aa0 nogi_dir32",
+        "0x8017a570 stup1",
+        "0x8017a5ec stup0",
+        "0x8017dd4c _spu_pitch2note",
+        "0x8017eab4 SetAutoPan"
+      ],
+      "invented_sample": [
+        "0x80139cd8",
+        "0x80139d18",
+        "0x80139d9c",
+        "0x8013a0e4",
+        "0x8013b314",
+        "0x8013b390",
+        "0x8013b3cc",
+        "0x8013bc70",
+        "0x8013c3a4",
+        "0x80140f90"
+      ],
+      "precision_corroborated": 0.9968,
+      "invented_corroborated": 1391,
+      "invented_corroborated_by": {
+        "frame+address-taken": 43,
+        "jal": 545,
+        "table": 803
+      },
+      "invented_uncorroborated": 7,
+      "uncorroborated_sample": [
+        "0x8014102c",
+        "0x801632dc",
+        "0x8016d4d8",
+        "0x801835d0",
+        "0x801837f8",
+        "0x801838cc",
+        "0x80189858"
+      ],
+      "corroborated_unfound": 52,
+      "seconds": 4.9,
+      "peak_rss_mb": null,
+      "diagnostics": [],
+      "status": "pass",
+      "failures": []
+    },
+    "psv-need-for-speed-most-wanted": {
+      "truth": 26495,
+      "found": 26545,
+      "recall": 0.9731,
+      "precision": 0.9713,
+      "invented": 762,
+      "sizes_compared": 25783,
+      "size_exact": 16279,
+      "size_short": 9495,
+      "size_long": 9,
+      "missed_sample": [
+        "0x81000000 CgsAnimation::Qtn_EndSwap128",
+        "0x81000012 CgsAnimation::Qtn_EndSwap32",
+        "0x81000018 CgsAnimation::Qtn_PackNoPack",
+        "0x8100001a CgsAnimation::Qtn_PackSmallest3",
+        "0x8100001c CgsAnimation::Qtn_PackPolarEncoded",
+        "0x8100001e CgsAnimation::Qtn_PackPolarEncodedGPG3",
+        "0x81000020 CgsAnimation::Qtn_UnpackNoPack",
+        "0x81001ddc CgsGraphics::GXMDispatchCommands::InvalidCmdFunc",
+        "0x810027cc CgsGraphics::GXMDispatchCommands::SetIndexBufferFunc",
+        "0x810027f0 CgsGraphics::GXMDispatchCommands::SetVertexBufferFunc"
+      ],
+      "invented_sample": [
+        "0x810015a2",
+        "0x81001c16",
+        "0x81003f5e",
+        "0x81005214",
+        "0x81007c66",
+        "0x8100bf5a",
+        "0x8100ccee",
+        "0x8100d3fa",
+        "0x8100d82c",
+        "0x8100e280"
+      ],
+      "seconds": 270.5,
+      "peak_rss_mb": null,
+      "diagnostics": [
+        {
+          "severity": "partial",
+          "stage": "switch",
+          "message": "0x8130ffc0: decompiler timed out after 59s"
+        },
+        {
+          "severity": "partial",
+          "stage": "switch",
+          "message": "0x811cd8be: decompiler timed out after 59s"
+        },
+        {
+          "severity": "partial",
+          "stage": "switch",
+          "message": "0x811d113e: decompiler timed out after 59s"
+        },
+        {
+          "severity": "partial",
+          "stage": "switch",
+          "message": "0x811d10c4: decompiler timed out after 59s"
+        },
+        {
+          "severity": "partial",
+          "stage": "switch",
+          "message": "0x811e99c0: decompiler timed out after 59s"
+        }
+      ],
+      "status": "pass",
+      "failures": []
+    },
+    "x360-black-ops-2": {
+      "truth": 27730,
+      "found": 27364,
+      "recall": 0.9833,
+      "precision": 0.9964,
+      "invented": 98,
+      "sizes_compared": 0,
+      "size_exact": 0,
+      "size_short": 0,
+      "size_long": 0,
+      "missed_sample": [
+        "0x8214fc70 ?KickOffWorkerThreadDpc@D3D@@YAXPAU_KDPC@@PAX11@Z",
+        "0x82157d68 ?DriverCleanup@D3D@@YAXPAX@Z",
+        "0x8215a4e0 ?XMScalarSin@@YAMM@Z",
+        "0x8215abe0 ?Bessi0@D3D@@YAMM@Z",
+        "0x8217ddb0 ?AimAssist_GetScreenTargetCount@@YAHW4LocalClientNum_t@@@Z",
+        "0x8217ddc8 ?AimAssist_GetScreenTargetEntity@@YAHW4LocalClientNum_t@@H@Z",
+        "0x8217fe00 ??0jqBatchGroup@@QAA@XZ",
+        "0x82180010 ?AimTarget_CompareTargets@@YA_NABUAimTarget@@0@Z",
+        "0x82199108 ?CG_SensorGrenadePingPlayer@@YAXW4LocalClientNum_t@@PBUclientInfo_t@@H_N@Z",
+        "0x821a1928 ?compareEntityDist@@YAHPBX0@Z"
+      ],
+      "invented_sample": [
+        "0x824044ac",
+        "0x82712fec",
+        "0x82713880",
+        "0x827138a8",
+        "0x82713b74",
+        "0x82713b9c",
+        "0x82714438",
+        "0x82714458",
+        "0x8271449c",
+        "0x827144c0"
+      ],
+      "seconds": 64.5,
+      "peak_rss_mb": null,
+      "diagnostics": [],
+      "status": "pass",
+      "failures": []
+    }
+  },
+  "status": "pass",
+  "failures": []
+}

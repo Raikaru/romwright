@@ -1,0 +1,10 @@
+{
+  "gate": "m20-012",
+  "status": "pass",
+  "passed": true,
+  "summary": "scalar 849/849, vector 64/64",
+  "metrics": {
+    "scalar": "849/849",
+    "vector": "64/64"
+  }
+}

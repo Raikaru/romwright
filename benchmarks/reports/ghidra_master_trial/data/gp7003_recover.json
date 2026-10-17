@@ -1,0 +1,766 @@
+{
+ "bins": [
+  "base",
+  "cp",
+  "rg",
+  "cf"
+ ],
+ "games": {
+  "gba-kh-chain-of-memories": {
+   "functions": 315,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 363,
+     "targets": 3304,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 359,
+     "targets": 3259,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 359,
+      "lost": 4
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "0800a774",
+        "branch": "0800a7e8"
+       },
+       {
+        "function": "0800ad90",
+        "branch": "0800ae46"
+       },
+       {
+        "function": "080b13d0",
+        "branch": "080b13f6"
+       },
+       {
+        "function": "080c4708",
+        "branch": "080c474e"
+       }
+      ]
+     }
+    },
+    "rg": {
+     "tables": 359,
+     "targets": 3259,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 359,
+      "lost": 4
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "0800a774",
+        "branch": "0800a7e8"
+       },
+       {
+        "function": "0800ad90",
+        "branch": "0800ae46"
+       },
+       {
+        "function": "080b13d0",
+        "branch": "080b13f6"
+       },
+       {
+        "function": "080c4708",
+        "branch": "080c474e"
+       }
+      ]
+     }
+    },
+    "cf": {
+     "tables": 363,
+     "targets": 3304,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 363
+     },
+     "examples": {}
+    }
+   }
+  },
+  "gc-pikmin-2": {
+   "functions": 142,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 161,
+     "targets": 1874,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 161,
+     "targets": 1874,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 161
+     },
+     "examples": {}
+    },
+    "rg": {
+     "tables": 161,
+     "targets": 1874,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 161
+     },
+     "examples": {}
+    },
+    "cf": {
+     "tables": 161,
+     "targets": 1874,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 161
+     },
+     "examples": {}
+    }
+   }
+  },
+  "n64-super-mario-64": {
+   "functions": 123,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 145,
+     "targets": 1202,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 145,
+     "targets": 1202,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 145
+     },
+     "examples": {}
+    },
+    "rg": {
+     "tables": 145,
+     "targets": 1202,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 145
+     },
+     "examples": {}
+    },
+    "cf": {
+     "tables": 145,
+     "targets": 1202,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 145
+     },
+     "examples": {}
+    }
+   }
+  },
+  "nds-kh-358-2-days": {
+   "functions": 924,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 42,
+     "targets": 348,
+     "failed_functions": 887
+    },
+    "cp": {
+     "tables": 42,
+     "targets": 348,
+     "failed_functions": 887,
+     "against_reference": {
+      "same": 42
+     },
+     "examples": {}
+    },
+    "rg": {
+     "tables": 42,
+     "targets": 348,
+     "failed_functions": 887,
+     "against_reference": {
+      "same": 42
+     },
+     "examples": {}
+    },
+    "cf": {
+     "tables": 42,
+     "targets": 348,
+     "failed_functions": 887,
+     "against_reference": {
+      "same": 42
+     },
+     "examples": {}
+    }
+   }
+  },
+  "ps2-dark-chronicle": {
+   "functions": 105,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 118,
+     "targets": 994,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 117,
+     "targets": 983,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 117,
+      "lost": 1
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "00111ad8",
+        "branch": "00111b54"
+       }
+      ]
+     }
+    },
+    "rg": {
+     "tables": 117,
+     "targets": 983,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 117,
+      "lost": 1
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "00111ad8",
+        "branch": "00111b54"
+       }
+      ]
+     }
+    },
+    "cf": {
+     "tables": 118,
+     "targets": 994,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 118
+     },
+     "examples": {}
+    }
+   }
+  },
+  "ps2-dark-cloud": {
+   "functions": 63,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 74,
+     "targets": 598,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 73,
+     "targets": 587,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 73,
+      "lost": 1
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "00115e88",
+        "branch": "00115f04"
+       }
+      ]
+     }
+    },
+    "rg": {
+     "tables": 73,
+     "targets": 587,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 73,
+      "lost": 1
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "00115e88",
+        "branch": "00115f04"
+       }
+      ]
+     }
+    },
+    "cf": {
+     "tables": 74,
+     "targets": 598,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 74
+     },
+     "examples": {}
+    }
+   }
+  },
+  "ps2-digital-devil-saga": {
+   "functions": 260,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 294,
+     "targets": 2013,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 294,
+     "targets": 2013,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 294
+     },
+     "examples": {}
+    },
+    "rg": {
+     "tables": 294,
+     "targets": 2013,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 294
+     },
+     "examples": {}
+    },
+    "cf": {
+     "tables": 294,
+     "targets": 2013,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 294
+     },
+     "examples": {}
+    }
+   }
+  },
+  "ps2-fatal-frame": {
+   "functions": 244,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 272,
+     "targets": 2194,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 275,
+     "targets": 2259,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 272,
+      "gained": 3
+     },
+     "examples": {
+      "gained": [
+       {
+        "function": "001ca528",
+        "branch": "001ca5ec"
+       },
+       {
+        "function": "001ca9d8",
+        "branch": "001caab4"
+       },
+       {
+        "function": "001ca9d8",
+        "branch": "001cab80"
+       }
+      ]
+     }
+    },
+    "rg": {
+     "tables": 275,
+     "targets": 2259,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 272,
+      "gained": 3
+     },
+     "examples": {
+      "gained": [
+       {
+        "function": "001ca528",
+        "branch": "001ca5ec"
+       },
+       {
+        "function": "001ca9d8",
+        "branch": "001caab4"
+       },
+       {
+        "function": "001ca9d8",
+        "branch": "001cab80"
+       }
+      ]
+     }
+    },
+    "cf": {
+     "tables": 275,
+     "targets": 2259,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 272,
+      "gained": 3
+     },
+     "examples": {
+      "gained": [
+       {
+        "function": "001ca528",
+        "branch": "001ca5ec"
+       },
+       {
+        "function": "001ca9d8",
+        "branch": "001caab4"
+       },
+       {
+        "function": "001ca9d8",
+        "branch": "001cab80"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "ps2-god-hand": {
+   "functions": 554,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 990,
+     "targets": 7840,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 982,
+     "targets": 7779,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 979,
+      "lost": 9,
+      "fewer_targets": 2,
+      "gained": 1
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "001471f0",
+        "branch": "00147238"
+       },
+       {
+        "function": "001471f0",
+        "branch": "00147324"
+       },
+       {
+        "function": "00160b90",
+        "branch": "00160c18"
+       },
+       {
+        "function": "00163598",
+        "branch": "00163708"
+       },
+       {
+        "function": "002ff748",
+        "branch": "002ff7a8"
+       },
+       {
+        "function": "002ff8a0",
+        "branch": "002ff918"
+       },
+       {
+        "function": "0037a9c8",
+        "branch": "0037a9f8"
+       },
+       {
+        "function": "003a9d88",
+        "branch": "003a9e10"
+       }
+      ],
+      "fewer_targets": [
+       {
+        "function": "0020f3c0",
+        "branch": "0020f78c",
+        "lost": [
+         "0020f7c4",
+         "0020f7d4",
+         "0020f7ec",
+         "0020f804"
+        ],
+        "gained": []
+       },
+       {
+        "function": "002744e0",
+        "branch": "00274828",
+        "lost": [
+         "00274890"
+        ],
+        "gained": []
+       }
+      ],
+      "gained": [
+       {
+        "function": "0025b6e8",
+        "branch": "0025b830"
+       }
+      ]
+     }
+    },
+    "rg": {
+     "tables": 982,
+     "targets": 7784,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 981,
+      "lost": 9,
+      "gained": 1
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "001471f0",
+        "branch": "00147238"
+       },
+       {
+        "function": "001471f0",
+        "branch": "00147324"
+       },
+       {
+        "function": "00160b90",
+        "branch": "00160c18"
+       },
+       {
+        "function": "00163598",
+        "branch": "00163708"
+       },
+       {
+        "function": "002ff748",
+        "branch": "002ff7a8"
+       },
+       {
+        "function": "002ff8a0",
+        "branch": "002ff918"
+       },
+       {
+        "function": "0037a9c8",
+        "branch": "0037a9f8"
+       },
+       {
+        "function": "003a9d88",
+        "branch": "003a9e10"
+       }
+      ],
+      "gained": [
+       {
+        "function": "0025b6e8",
+        "branch": "0025b830"
+       }
+      ]
+     }
+    },
+    "cf": {
+     "tables": 991,
+     "targets": 7846,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 990,
+      "gained": 1
+     },
+     "examples": {
+      "gained": [
+       {
+        "function": "0025b6e8",
+        "branch": "0025b830"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "ps2-persona-4": {
+   "functions": 293,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 326,
+     "targets": 2601,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 325,
+     "targets": 2582,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 325,
+      "lost": 1
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "004235c8",
+        "branch": "0042367c"
+       }
+      ]
+     }
+    },
+    "rg": {
+     "tables": 325,
+     "targets": 2582,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 325,
+      "lost": 1
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "004235c8",
+        "branch": "0042367c"
+       }
+      ]
+     }
+    },
+    "cf": {
+     "tables": 326,
+     "targets": 2601,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 326
+     },
+     "examples": {}
+    }
+   }
+  },
+  "ps2-ratchet-clank": {
+   "functions": 32,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 40,
+     "targets": 322,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 38,
+     "targets": 305,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 38,
+      "lost": 2
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "00119da0",
+        "branch": "00119e2c"
+       },
+       {
+        "function": "00216c48",
+        "branch": "00216ebc"
+       }
+      ]
+     }
+    },
+    "rg": {
+     "tables": 38,
+     "targets": 305,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 38,
+      "lost": 2
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "00119da0",
+        "branch": "00119e2c"
+       },
+       {
+        "function": "00216c48",
+        "branch": "00216ebc"
+       }
+      ]
+     }
+    },
+    "cf": {
+     "tables": 40,
+     "targets": 322,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 40
+     },
+     "examples": {}
+    }
+   }
+  },
+  "ps2-ratchet-clank-pal": {
+   "functions": 32,
+   "stored_branches": null,
+   "per_bin": {
+    "base": {
+     "tables": 40,
+     "targets": 328,
+     "failed_functions": 0
+    },
+    "cp": {
+     "tables": 38,
+     "targets": 311,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 38,
+      "lost": 2
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "0011a0a0",
+        "branch": "0011a12c"
+       },
+       {
+        "function": "00217ae8",
+        "branch": "00217d5c"
+       }
+      ]
+     }
+    },
+    "rg": {
+     "tables": 38,
+     "targets": 311,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 38,
+      "lost": 2
+     },
+     "examples": {
+      "lost": [
+       {
+        "function": "0011a0a0",
+        "branch": "0011a12c"
+       },
+       {
+        "function": "00217ae8",
+        "branch": "00217d5c"
+       }
+      ]
+     }
+    },
+    "cf": {
+     "tables": 40,
+     "targets": 328,
+     "failed_functions": 0,
+     "against_reference": {
+      "same": 40
+     },
+     "examples": {}
+    }
+   }
+  }
+ }
+}

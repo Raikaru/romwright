@@ -1,0 +1,11 @@
+--- orig-native/romwright_ir.hh	2026-10-11 21:13:37.153577967 -0400
++++ trial-native/romwright_ir.hh	2026-10-11 20:11:20.625689461 -0400
+@@ -203,7 +203,7 @@
+     encoder.openElement(ELEM_DOC);
+     {
+       RomwrightNoReturnHint hint(*data);
+-      data->encode(encoder, 0, true);
++      data->encode(encoder, 0, true, false);
+     }
+     romwrightEncodeCallPrototypes(*data,encoder);
+     // Final printing may negate a condition and swap its outgoing slots.

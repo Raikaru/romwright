@@ -1,0 +1,2313 @@
+{
+ "suffix": "fix2",
+ "suffix_overrides": {
+  "ff": "fix5",
+  "dc": "fix3",
+  "dk": "fix3"
+ },
+ "baseline_suffix": "",
+ "lanes": {
+  "dds": {
+   "functions": 200,
+   "compile_failures": 4,
+   "romwright_exact": 61,
+   "m2c_exact": 49,
+   "exact_rate_among_compiled": 0.311,
+   "failure_classes": {
+    "type mismatch (assignment, operand, return, cast)": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x17c220",
+       "name": "effPcpChargeLongRespawn",
+       "message": "cast specifies array type",
+       "line": 1724,
+       "source": "(-1L << (8 - temp_v1) * 8)) | (*(unsigned long long *)(temp_v2 - temp_v1) >> temp_v1 * 8));"
+      }
+     ]
+    },
+    "member access on a type the context lacks": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x239e30",
+       "name": "func_00239E30",
+       "message": "request for member `_0_8_' in something not a structure or union",
+       "line": 1182,
+       "source": "temp_v7._0_8_ = DAT_003bc2b0;"
+      }
+     ]
+    },
+    "undeclared identifier": {
+     "count": 2,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x284258",
+       "name": "mnuDrawPanelSequenceByRow",
+       "message": "`_iStack_70' undeclared (first use in this function)",
+       "line": 1340,
+       "source": "_iStack_70 = 0x300000006;"
+      },
+      {
+       "address": "0x2848e0",
+       "name": "mnuInitializePanelGroupGridSlots",
+       "message": "`_iStack_50' undeclared (first use in this function)",
+       "line": 1336,
+       "source": "_iStack_50 = 0x200000000;"
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 54,
+    "length differs: control flow (branches, calls)": 38,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 13,
+    "same length, many instructions differ: control flow (branches, calls)": 7,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 4,
+    "same instructions, different order (scheduling)": 4,
+    "single instruction": 3,
+    "register allocation and stack layout": 3,
+    "few instructions differ (<= 4)": 3,
+    "length differs: memory accesses (temporaries, spills, widths)": 2,
+    "register allocation": 2,
+    "length differs: floating-point or vector sequence": 1,
+    "length differs: few instructions (<= 4)": 1
+   }
+  },
+  "ff": {
+   "functions": 200,
+   "compile_failures": 55,
+   "romwright_exact": 20,
+   "m2c_exact": 4,
+   "exact_rate_among_compiled": 0.138,
+   "failure_classes": {
+    "member access on a type the context lacks": {
+     "count": 25,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x107818",
+       "name": "BuffPadMnu",
+       "message": "request for member `u4' in something not a structure or union",
+       "line": 1614,
+       "source": "else if ((((*(unsigned short *)key_now.u4[0] == 1) ||"
+      },
+      {
+       "address": "0x127e40",
+       "name": "InitEffectScr",
+       "message": "structure has no member named `u4'",
+       "line": 1071,
+       "source": "eff_focus.u4[0] = 3;"
+      }
+     ]
+    },
+    "call does not match prototype": {
+     "count": 2,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x10cc08",
+       "name": "EiInitIopDev",
+       "message": "incompatible type for argument 1 of `sceSifCallRpc'",
+       "line": 246,
+       "source": "temp_v0 = sceSifCallRpc(ei_sys,0,0,(void *)0x0,0,(void *)0x0,0,(void *)0x0,(void *)0x0);"
+      },
+      {
+       "address": "0x208ed8",
+       "name": "PhotoPointChkRare",
+       "message": "incompatible type for argument 2 of `PhotoPointCulcRare'",
+       "line": 1796,
+       "source": "PhotoPointCulcRare((unsigned char)temp_v1,photo_wrk,temp_v2,afStack_70[0]);"
+      }
+     ]
+    },
+    "undeclared identifier": {
+     "count": 3,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x119f58",
+       "name": "tes_p20",
+       "message": "`_DAT_00252bf0' undeclared (first use in this function)",
+       "line": 1585,
+       "source": "fStack_70 = (float)_DAT_00252bf0.whole;"
+      },
+      {
+       "address": "0x1ae360",
+       "name": "ZushiBonjiAfterDisp",
+       "message": "`undefined7' undeclared (first use in this function)",
+       "line": 1480,
+       "source": "undefined7 uStack_c0;"
+      }
+     ]
+    },
+    "type mismatch (assignment, operand, return, cast)": {
+     "count": 22,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x12cc88",
+       "name": "SetForcusDepth2",
+       "message": "cast specifies array type",
+       "line": 1004,
+       "source": "temp_v3 = (unsigned char  [8])0x3f3333333f000000;"
+      },
+      {
+       "address": "0x138ff8",
+       "name": "sceVu0ViewClipMatrix",
+       "message": "incompatible types in assignment",
+       "line": 1163,
+       "source": "param_1[0xf] = 0.0f;"
+      }
+     ]
+    },
+    "conflicting types / redeclaration": {
+     "count": 1,
+     "context_only": 1,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x190f88",
+       "name": "EneBlinkCtrl",
+       "message": "conflicting types for `BCommJmpTbl'",
+       "line": 2258,
+       "source": "extern unsigned char BCommJmpTbl[84]; /* 0x322720 */"
+      }
+     ]
+    },
+    "syntax error": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x1f9318",
+       "name": "BtlModSaveInit",
+       "message": "parse error before `undefined7'",
+       "line": 2450,
+       "source": "undefined7 whole;"
+      }
+     ]
+    },
+    "other": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x21d5c0",
+       "name": "StageTitleLoad",
+       "message": "aggregate value used where an integer was expected",
+       "line": 2259,
+       "source": "(unsigned int)(unsigned char)stage_dat[(unsigned int)DAT_00344705[0] * 0xc0 + 0x12] * 4);"
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 73,
+    "length differs: control flow (branches, calls)": 11,
+    "length differs: memory accesses (temporaries, spills, widths)": 10,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 9,
+    "same instructions, different order (scheduling)": 7,
+    "same length, many instructions differ: control flow (branches, calls)": 3,
+    "few instructions differ (<= 4)": 2,
+    "single instruction": 2,
+    "register allocation": 2,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 2,
+    "register allocation and stack layout": 2,
+    "length differs: floating-point or vector sequence": 1,
+    "length differs: few instructions (<= 4)": 1
+   }
+  },
+  "rc": {
+   "functions": 200,
+   "compile_failures": 1,
+   "romwright_exact": 26,
+   "m2c_exact": 14,
+   "exact_rate_among_compiled": 0.131,
+   "failure_classes": {
+    "type mismatch (assignment, operand, return, cast)": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x128d28",
+       "name": "_extensionAndUserData",
+       "message": "cast specifies array type",
+       "line": 151,
+       "source": "temp_v1 = (unsigned char  [8])0x12c9300012cb00;"
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 106,
+    "length differs: control flow (branches, calls)": 23,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 12,
+    "length differs: memory accesses (temporaries, spills, widths)": 11,
+    "same length, many instructions differ: control flow (branches, calls)": 6,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 6,
+    "same instructions, different order (scheduling)": 4,
+    "register allocation": 2,
+    "single instruction": 1,
+    "length differs: extension instructions (type or cast)": 1,
+    "length differs: nops or register copies (allocation or scheduling)": 1
+   }
+  },
+  "dc": {
+   "functions": 200,
+   "compile_failures": 34,
+   "romwright_exact": 35,
+   "m2c_exact": 33,
+   "exact_rate_among_compiled": 0.211,
+   "failure_classes": {
+    "call does not match prototype": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x1371b0",
+       "name": "SetBrother__8mgCFrameFP8mgCFrame",
+       "message": "function call 'SetBrother__8mgCFrameFP8mgCFrame(int)' does not match",
+       "line": 4304,
+       "source": "SetBrother__8mgCFrameFP8mgCFrame(*(int *)(param_1 + 0x5c));"
+      }
+     ]
+    },
+    "type mismatch (assignment, operand, return, cast)": {
+     "count": 8,
+     "context_only": 6,
+     "m2c_exact": 1,
+     "examples": [
+      {
+       "address": "0x137e70",
+       "name": "GetWorldPosition__8mgCFrameFPfPf",
+       "message": "illegal implicit conversion from 'float **' to",
+       "line": 4306,
+       "source": "sceVu0ApplyMatrix(param_2,(float **)afStack_40,param_3);"
+      },
+      {
+       "address": "0x148be0",
+       "name": "SetCurrentDir__FPc",
+       "message": "illegal return value in void/constructor/destructor function",
+       "line": 4313,
+       "source": "return pcVar1;"
+      }
+     ]
+    },
+    "syntax error": {
+     "count": 11,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x1496f0",
+       "name": "GetFullPath__FPcPc",
+       "message": "';' expected",
+       "line": 4296,
+       "source": "extern undefined6 _530; /* 0x366fd8 */"
+      },
+      {
+       "address": "0x15cf50",
+       "name": "MyStrCpyLineFeed__FPcPc",
+       "message": "';' expected",
+       "line": 4295,
+       "source": "extern undefined3 _4574; /* 0x367440 */"
+      }
+     ]
+    },
+    "unit post-processing rejected the candidate object": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x1d4e00",
+       "name": "ChangeSetUnit__Fi",
+       "message": "    raise ValueError(f'dng_main: expected one debug event stack, found {len(storage)}')",
+       "line": null,
+       "source": null
+      }
+     ]
+    },
+    "illegal or unknown type name": {
+     "count": 11,
+     "context_only": 0,
+     "m2c_exact": 2,
+     "examples": [
+      {
+       "address": "0x1e55d0",
+       "name": "_SET_NEXT_ROT__FP12RS_STACKDATAi",
+       "message": "illegal type",
+       "line": 4308,
+       "source": "*(unsigned int *)(nowMonster + 0x1490) = temp_v0;"
+      },
+      {
+       "address": "0x1e8930",
+       "name": "_TRANS_RESERV_IMG__FP12RS_STACKDATAi",
+       "message": "illegal type",
+       "line": 4316,
+       "source": "temp_v0 = (int)((int)temp_v2 * 4 + nowMonster);"
+      }
+     ]
+    },
+    "member access on a type the context lacks": {
+     "count": 2,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x22e390",
+       "name": "Func_MenuItemBrdPosStep__Fi",
+       "message": "not a struct/union/class",
+       "line": 4344,
+       "source": "MenuItemBrdUnderBrdPosXY.f4[0] = (float)((int)uStack_8 + 0x10);"
+      },
+      {
+       "address": "0x2d6670",
+       "name": "_ESM_CREATE__FP12RS_STACKDATAi",
+       "message": "'u4' is not a struct/union/class member",
+       "line": 4338,
+       "source": "if (*(int *)(action_info.u4[0] + 0x7dc) == 0) {"
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 54,
+    "length differs: control flow (branches, calls)": 36,
+    "length differs: memory accesses (temporaries, spills, widths)": 12,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 8,
+    "length differs: floating-point or vector sequence": 4,
+    "few instructions differ (<= 4)": 4,
+    "length differs: few instructions (<= 4)": 3,
+    "same length, many instructions differ: control flow (branches, calls)": 2,
+    "register allocation": 2,
+    "single instruction": 2,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 1,
+    "length differs: nops and register copies": 1,
+    "length differs: nops or register copies (allocation or scheduling)": 1,
+    "register allocation and stack layout": 1
+   }
+  },
+  "dk": {
+   "functions": 200,
+   "compile_failures": 31,
+   "romwright_exact": 27,
+   "m2c_exact": 33,
+   "exact_rate_among_compiled": 0.16,
+   "failure_classes": {
+    "syntax error": {
+     "count": 8,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x130fc0",
+       "name": "Initialize__15CTextureManagerFi",
+       "message": "';' expected",
+       "line": 3221,
+       "source": "extern undefined5 _221; /* 0x298e98 */"
+      },
+      {
+       "address": "0x15ff50",
+       "name": "InitSystemMes__Fv",
+       "message": "';' expected",
+       "line": 3223,
+       "source": "extern undefined5 _333; /* 0x29a078 */"
+      }
+     ]
+    },
+    "member access on a type the context lacks": {
+     "count": 6,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x13dea0",
+       "name": "openGiftag__FP13sceVif1Packet",
+       "message": "'u4' is not a struct/union/class member",
+       "line": 3259,
+       "source": "sceVif1PkOpenGifTag(param_1,GiftagAD.u4[0]);"
+      },
+      {
+       "address": "0x14eff0",
+       "name": "GetMesLen_system__6ClsMesFi",
+       "message": "not a struct/union/class",
+       "line": 3239,
+       "source": "uStack_8._4_4_ = -1;"
+      }
+     ]
+    },
+    "illegal or unknown type name": {
+     "count": 8,
+     "context_only": 0,
+     "m2c_exact": 1,
+     "examples": [
+      {
+       "address": "0x174b60",
+       "name": "CommandAMBIENT__FPPv",
+       "message": "illegal type",
+       "line": 3226,
+       "source": "*(unsigned int *)(light_no * 0x10 + edit_info + 0x70) = *(unsigned int *)*param_1;"
+      },
+      {
+       "address": "0x176e20",
+       "name": "CommandTIME_TABLE__FPPv",
+       "message": "illegal type",
+       "line": 3230,
+       "source": "temp_v0 = (int)(edit_info + week_no * 0x300 + *(int *)*param_1 * 0x40 + 0x18d00);"
+      }
+     ]
+    },
+    "type mismatch (assignment, operand, return, cast)": {
+     "count": 6,
+     "context_only": 3,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x1938b0",
+       "name": "_LOAD_LIGHT__FP12RS_STACKDATAi",
+       "message": "cannot convert",
+       "line": 3252,
+       "source": "sceVu0CopyMatrix((float **)LAB_01d3d500,(float **)(save_l + temp_v2));"
+      },
+      {
+       "address": "0x198f90",
+       "name": "EdTalkModeInit__FP12CNPCharacteri",
+       "message": "illegal operand",
+       "line": 3258,
+       "source": "DAT_01d3d430[0] = ((int)param_1 - (char *)&EdVillager) / 0x14a0;"
+      }
+     ]
+    },
+    "incomplete type": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x19b9a0",
+       "name": "LoadScript__Fv__2",
+       "message": "illegal use of incomplete struct/union/class 'struct CDataAlloc2_1_'",
+       "line": 3277,
+       "source": "EdEventData = (char *)EdScriptBuffer.u4[0];"
+      }
+     ]
+    },
+    "undeclared identifier": {
+     "count": 2,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x1d5b30",
+       "name": "Draw__15CItemBombEffectFP7CCamera",
+       "message": "undefined identifier 'undefined7'",
+       "line": 3277,
+       "source": "undefined7 uStack_f;"
+      },
+      {
+       "address": "0x1d6940",
+       "name": "Draw__13CWeaponEffectFv",
+       "message": "undefined identifier 'undefined7'",
+       "line": 3242,
+       "source": "undefined7 uStack_f;"
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 61,
+    "length differs: control flow (branches, calls)": 24,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 13,
+    "length differs: memory accesses (temporaries, spills, widths)": 9,
+    "same length, many instructions differ: control flow (branches, calls)": 7,
+    "register allocation": 6,
+    "single instruction": 5,
+    "few instructions differ (<= 4)": 5,
+    "register allocation and stack layout": 4,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 3,
+    "same length, many instructions differ: floating-point or vector sequence": 2,
+    "length differs: floating-point or vector sequence": 1,
+    "same instructions, different order (scheduling)": 1,
+    "access width or signedness (type or cast)": 1
+   }
+  },
+  "gh": {
+   "functions": 200,
+   "compile_failures": 1,
+   "romwright_exact": 78,
+   "m2c_exact": 47,
+   "exact_rate_among_compiled": 0.392,
+   "failure_classes": {
+    "no candidate produced": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x297c20",
+       "name": "cEvent__isPlaying",
+       "message": "no candidate",
+       "line": null,
+       "source": null
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 32,
+    "length differs: control flow (branches, calls)": 29,
+    "few instructions differ (<= 4)": 13,
+    "length differs: memory accesses (temporaries, spills, widths)": 12,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 9,
+    "same length, many instructions differ: control flow (branches, calls)": 8,
+    "same instructions, different order (scheduling)": 4,
+    "register allocation and stack layout": 3,
+    "register allocation": 3,
+    "single instruction": 3,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 2,
+    "length differs: floating-point or vector sequence": 1,
+    "length differs: few instructions (<= 4)": 1,
+    "length differs: nops and register copies": 1
+   }
+  },
+  "rcpal": {
+   "functions": 200,
+   "compile_failures": 9,
+   "romwright_exact": 28,
+   "m2c_exact": 34,
+   "exact_rate_among_compiled": 0.147,
+   "failure_classes": {
+    "no candidate produced": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x11dd68",
+       "name": "func_0011DD68",
+       "message": "no candidate",
+       "line": null,
+       "source": null
+      }
+     ]
+    },
+    "undeclared identifier": {
+     "count": 3,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x1f5148",
+       "name": "func_001F5148",
+       "message": "`_DAT_00160920' undeclared (first use in this function)",
+       "line": 455,
+       "source": "temp_v0 = _DAT_00160920.whole;"
+      },
+      {
+       "address": "0x1f5800",
+       "name": "func_001F5800",
+       "message": "`_DAT_00160940' undeclared (first use in this function)",
+       "line": 429,
+       "source": "temp_v1 = _DAT_00160940.whole;"
+      }
+     ]
+    },
+    "member access on a type the context lacks": {
+     "count": 2,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x2175c8",
+       "name": "func_002175C8",
+       "message": "request for member `_0_2_' in something not a structure or union",
+       "line": 413,
+       "source": "temp_v1._0_2_ = (unsigned short)(DAT_00151800[0] >> 0x10);"
+      },
+      {
+       "address": "0x23e0d8",
+       "name": "func_0023E0D8",
+       "message": "request for member `_0_4_' in something not a structure or union",
+       "line": 231,
+       "source": "temp_v2._0_4_ = DAT_00161320;"
+      }
+     ]
+    },
+    "type mismatch (assignment, operand, return, cast)": {
+     "count": 3,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x217ae8",
+       "name": "func_00217AE8",
+       "message": "cast specifies array type",
+       "line": 486,
+       "source": "temp_v6 = (unsigned char  [8])DAT_001e89b0[0];"
+      },
+      {
+       "address": "0x21b138",
+       "name": "func_0021B138",
+       "message": "cast specifies array type",
+       "line": 833,
+       "source": "temp_v4 = (unsigned char  [8])DAT_001e8a60[0];"
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 104,
+    "length differs: control flow (branches, calls)": 18,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 12,
+    "length differs: memory accesses (temporaries, spills, widths)": 8,
+    "few instructions differ (<= 4)": 7,
+    "same length, many instructions differ: control flow (branches, calls)": 3,
+    "register allocation and stack layout": 3,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 2,
+    "length differs: extension instructions (type or cast)": 1,
+    "same instructions, different order (scheduling)": 1,
+    "register allocation": 1,
+    "single instruction": 1,
+    "length differs: nops and register copies": 1,
+    "length differs: floating-point or vector sequence": 1
+   }
+  },
+  "p4": {
+   "functions": 200,
+   "compile_failures": 7,
+   "romwright_exact": 60,
+   "m2c_exact": 41,
+   "exact_rate_among_compiled": 0.311,
+   "failure_classes": {
+    "call does not match prototype": {
+     "count": 1,
+     "context_only": 1,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x21ae80",
+       "name": "func_0021ae80",
+       "message": "function call 'func_0021b310(unsigned char *)' does not match",
+       "line": 414,
+       "source": "func_0021b310((u8 *)(param_1 + 0xa3c));"
+      }
+     ]
+    },
+    "undeclared identifier": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x25fbb0",
+       "name": "func_0025fbb0",
+       "message": "undefined identifier 'stack0x00000000'",
+       "line": 163,
+       "source": "if (&stack0x00000000 != (unsigned char *)0x30) {"
+      }
+     ]
+    },
+    "type mismatch (assignment, operand, return, cast)": {
+     "count": 5,
+     "context_only": 2,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x317240",
+       "name": "func_00317240",
+       "message": "illegal implicit conversion from 'int' to",
+       "line": 402,
+       "source": "func_002b6c30(0x42ce0000,0x1e4,uStack_8,0xbc);"
+      },
+      {
+       "address": "0x317320",
+       "name": "func_00317320",
+       "message": "illegal implicit conversion from 'int' to",
+       "line": 401,
+       "source": "func_002b6c30(0x42ce0000,0x1e4,uStack_8,0xbc);"
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 59,
+    "length differs: control flow (branches, calls)": 34,
+    "length differs: memory accesses (temporaries, spills, widths)": 8,
+    "register allocation": 6,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 5,
+    "single instruction": 4,
+    "length differs: floating-point or vector sequence": 4,
+    "same instructions, different order (scheduling)": 3,
+    "same length, many instructions differ: control flow (branches, calls)": 3,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 3,
+    "length differs: few instructions (<= 4)": 1,
+    "register allocation and stack layout": 1,
+    "stack layout": 1,
+    "few instructions differ (<= 4)": 1
+   }
+  },
+  "p4-eegcc": {
+   "functions": 200,
+   "compile_failures": 1,
+   "romwright_exact": 96,
+   "m2c_exact": 85,
+   "exact_rate_among_compiled": 0.482,
+   "failure_classes": {
+    "call does not match prototype": {
+     "count": 1,
+     "context_only": 0,
+     "m2c_exact": 0,
+     "examples": [
+      {
+       "address": "0x4e19a0",
+       "name": "toUpperStr",
+       "message": "too few arguments to function `strlen'",
+       "line": 198,
+       "source": "temp_v0 = strlen();"
+      }
+     ]
+    }
+   },
+   "byte_difference_classes_of_compiled_not_exact": {
+    "length differs: mixed arithmetic (expression shape)": 35,
+    "length differs: control flow (branches, calls)": 23,
+    "same length, many instructions differ: mixed arithmetic (expression shape)": 10,
+    "length differs: memory accesses (temporaries, spills, widths)": 10,
+    "same length, many instructions differ: control flow (branches, calls)": 6,
+    "same length, many instructions differ: memory accesses (temporaries, spills, widths)": 5,
+    "register allocation": 5,
+    "few instructions differ (<= 4)": 4,
+    "same instructions, different order (scheduling)": 4,
+    "single instruction": 1
+   }
+  }
+ },
+ "classes": {
+  "bytes: few instructions differ (<= 4)": {
+   "functions": 39,
+   "m2c_exact": 7,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 3,
+    "ff": 2,
+    "dc": 4,
+    "dk": 5,
+    "gh": 13,
+    "rcpal": 7,
+    "p4": 1,
+    "p4-eegcc": 4
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "at most four instructions differ: expression shape.",
+   "plausible_exact_gain": 39
+  },
+  "bytes: register allocation": {
+   "functions": 29,
+   "m2c_exact": 4,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 2,
+    "ff": 2,
+    "rc": 2,
+    "dc": 2,
+    "dk": 6,
+    "gh": 3,
+    "rcpal": 1,
+    "p4": 6,
+    "p4-eegcc": 5
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "same instructions, different registers: temporaries and expression order.",
+   "plausible_exact_gain": 29
+  },
+  "bytes: same instructions, different order (scheduling)": {
+   "functions": 28,
+   "m2c_exact": 2,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 4,
+    "ff": 7,
+    "rc": 4,
+    "dk": 1,
+    "gh": 4,
+    "rcpal": 1,
+    "p4": 3,
+    "p4-eegcc": 4
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "statement and expression order (scheduling).",
+   "plausible_exact_gain": 28
+  },
+  "bytes: single instruction": {
+   "functions": 22,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 3,
+    "ff": 2,
+    "rc": 1,
+    "dc": 2,
+    "dk": 5,
+    "gh": 3,
+    "rcpal": 1,
+    "p4": 4,
+    "p4-eegcc": 1
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "one instruction differs (register, immediate or opcode): expression shape or a constant's spelling.",
+   "plausible_exact_gain": 22
+  },
+  "bytes: register allocation and stack layout": {
+   "functions": 17,
+   "m2c_exact": 5,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 3,
+    "ff": 2,
+    "dc": 1,
+    "dk": 4,
+    "gh": 3,
+    "rcpal": 3,
+    "p4": 1
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "same instructions, different registers and frame slots: local variable count, order and lifetimes.",
+   "plausible_exact_gain": 17
+  },
+  "compile: type mismatch (assignment, operand, return, cast)": {
+   "functions": 46,
+   "context_only": 11,
+   "m2c_exact": 1,
+   "expected_exact_recovered": 8.1,
+   "lanes": {
+    "dds": 1,
+    "ff": 22,
+    "rc": 1,
+    "dc": 8,
+    "dk": 6,
+    "rcpal": 3,
+    "p4": 5
+   },
+   "kind": "compile failure",
+   "owner": "types/prototypes; printer for the array casts",
+   "owner_evidence": "ff: constants printed as array casts `(unsigned char [8])0x3f3333333f000000`; struct arrays indexed as scalars (`ene_wrk[temp_v2 + 0x11] = param_2`, `door_keep[..] = 1` with the context's struct-array types); VU intrinsic `_vrnext(in_vuR)` assigned to an int. dc/dk: `(float **)` casts passed for `sceVu0FMATRIX` parameters.",
+   "plausible_exact_gain": 8.1
+  },
+  "compile: member access on a type the context lacks": {
+   "functions": 36,
+   "context_only": 0,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 5.4,
+   "lanes": {
+    "dds": 1,
+    "ff": 25,
+    "dc": 2,
+    "dk": 6,
+    "rcpal": 2
+   },
+   "kind": "compile failure",
+   "owner": "types/prototypes",
+   "owner_evidence": "the printed access uses Ghidra's synthetic storage members (`key_now.u4[0]`, `eff_focus.u4[0]`, `GiftagAD.u4[0]`, `uStack_8._4_4_`) although the context declares the global with its real type (`extern u_short *key_now[32]`, `extern EFF_FOCUS eff_focus`, `extern sceGifTag GiftagAD`, `extern float SysCur[3]`); standalone compiles fail too, none are context-only.",
+   "plausible_exact_gain": 5.4
+  },
+  "compile: syntax error": {
+   "functions": 20,
+   "context_only": 0,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 3.7,
+   "lanes": {
+    "ff": 1,
+    "dc": 11,
+    "dk": 8
+   },
+   "kind": "compile failure",
+   "owner": "printer (printc)",
+   "owner_evidence": "Ghidra placeholder types printed as C types: `extern undefined6 _530;`, `extern undefined3 _4574;`, `undefined7 whole;` (sizes 3/5/6/7 have no C type); the same text fails standalone.",
+   "plausible_exact_gain": 3.7
+  },
+  "compile: illegal or unknown type name": {
+   "functions": 19,
+   "context_only": 0,
+   "m2c_exact": 3,
+   "expected_exact_recovered": 3.6,
+   "lanes": {
+    "dc": 11,
+    "dk": 8
+   },
+   "kind": "compile failure",
+   "owner": "printer (printc)",
+   "owner_evidence": "address arithmetic on a `void *` global (`*(unsigned int *)(nowMonster + 0x1490)`, `edit_info + 0x70`, `edit_info + week_no * 0x300`): MWCC rejects void-pointer arithmetic, m2c's text for the same functions compiles and is exact in 3 (the cast to `char *`/`int` is missing).",
+   "plausible_exact_gain": 3.6
+  },
+  "compile: undeclared identifier": {
+   "functions": 11,
+   "context_only": 0,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 2.1,
+   "lanes": {
+    "dds": 2,
+    "ff": 3,
+    "dk": 2,
+    "rcpal": 3,
+    "p4": 1
+   },
+   "kind": "compile failure",
+   "owner": "printer (printc)",
+   "owner_evidence": "locals the text uses but does not declare (`undefined7 uStack_c0`, `_DAT_00252bf0.whole`, `_iStack_70`, `_abStack_170`).",
+   "plausible_exact_gain": 2.1
+  },
+  "compile: call does not match prototype": {
+   "functions": 5,
+   "context_only": 1,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 1.3,
+   "lanes": {
+    "ff": 2,
+    "dc": 1,
+    "p4": 1,
+    "p4-eegcc": 1
+   },
+   "kind": "compile failure",
+   "owner": "types/prototypes",
+   "owner_evidence": "calls whose argument count or types disagree with the context's callee prototype (`sceVu0CopyVector(float *)` with a 2-parameter prototype; `sceVu0UnitMatrix()`); romwright guessed the callee because the harness could not assert array-typedef parameters (harness artifact, fixed: `typedef_table_with_arrays`, see the fixed-artifacts table); what remains is the printer's call arguments.",
+   "plausible_exact_gain": 1.3
+  },
+  "bytes: access width or signedness (type or cast)": {
+   "functions": 1,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dk": 1
+   },
+   "kind": "byte difference",
+   "owner": "types/prototypes",
+   "owner_evidence": "load/store width or signedness differs: the declared type of the object.",
+   "plausible_exact_gain": 1
+  },
+  "bytes: stack layout": {
+   "functions": 1,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "p4": 1
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "same instructions, different frame offsets: local declaration order and arrays.",
+   "plausible_exact_gain": 1
+  },
+  "compile: no candidate produced": {
+   "functions": 2,
+   "context_only": 0,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.5,
+   "lanes": {
+    "gh": 1,
+    "rcpal": 1
+   },
+   "kind": "compile failure",
+   "owner": "printer (printc)",
+   "owner_evidence": "export-c emitted no function for the address (gh 1, rcpal 1).",
+   "plausible_exact_gain": 0.5
+  },
+  "compile: unit post-processing rejected the candidate object": {
+   "functions": 1,
+   "context_only": 0,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.2,
+   "lanes": {
+    "dc": 1
+   },
+   "kind": "compile failure",
+   "owner": "lane harness",
+   "owner_evidence": "dc `ChangeSetUnit`: the repo's postprocess_object.py for dng_main.cpp raises 'expected one debug event stack' on any candidate that lacks the unit's own static; the unit's build step cannot be dropped without changing the object (left, 1 function).",
+   "plausible_exact_gain": 0.2
+  },
+  "compile: incomplete type": {
+   "functions": 1,
+   "context_only": 0,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.2,
+   "lanes": {
+    "dk": 1
+   },
+   "kind": "compile failure",
+   "owner": "types/prototypes",
+   "owner_evidence": "dk `LoadScript`: `EdScriptBuffer.u4[0]` on a context type that is an incomplete struct.",
+   "plausible_exact_gain": 0.2
+  },
+  "compile: conflicting types / redeclaration": {
+   "functions": 1,
+   "context_only": 1,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.1,
+   "lanes": {
+    "ff": 1
+   },
+   "kind": "compile failure",
+   "owner": "export context (emit_m2c declarations/dependencies); the K&R share is harness-owned and fixed",
+   "owner_evidence": "20 of 23 first-round ff failures were `T f();` K&R declarations against romwright's `unsigned int f(void)` head: the harness asserted no signature but compiled against the declaration (fixed: the unasserted target declaration is dropped from romwright's compile context). Left: `extern unsigned char BCommJmpTbl[84]` re-declaring a global the context already declares as `void (*BCommJmpTbl[])(ENE_WRK *)`.",
+   "plausible_exact_gain": 0.1
+  },
+  "compile: other": {
+   "functions": 1,
+   "context_only": 0,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.1,
+   "lanes": {
+    "ff": 1
+   },
+   "kind": "compile failure",
+   "owner": "printer (printc)",
+   "owner_evidence": "ff `SetMyLight` uses the value of a `void` call, `StageTitleLoad` an aggregate as an integer.",
+   "plausible_exact_gain": 0.1
+  },
+  "bytes: length differs: mixed arithmetic (expression shape)": {
+   "functions": 578,
+   "m2c_exact": 25,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 54,
+    "ff": 73,
+    "rc": 106,
+    "dc": 54,
+    "dk": 61,
+    "gh": 32,
+    "rcpal": 104,
+    "p4": 59,
+    "p4-eegcc": 35
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "different instruction count: control-flow shape, expression shape, loop forms.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: length differs: control flow (branches, calls)": {
+   "functions": 236,
+   "m2c_exact": 23,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 38,
+    "ff": 11,
+    "rc": 23,
+    "dc": 36,
+    "dk": 24,
+    "gh": 29,
+    "rcpal": 18,
+    "p4": 34,
+    "p4-eegcc": 23
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "different instruction count: control-flow shape, expression shape, loop forms.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: same length, many instructions differ: control flow (branches, calls)": {
+   "functions": 45,
+   "m2c_exact": 6,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 7,
+    "ff": 3,
+    "rc": 6,
+    "dc": 2,
+    "dk": 7,
+    "gh": 8,
+    "rcpal": 3,
+    "p4": 3,
+    "p4-eegcc": 6
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "same size, different code: expression shape or control-flow form.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: length differs: memory accesses (temporaries, spills, widths)": {
+   "functions": 82,
+   "m2c_exact": 4,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 2,
+    "ff": 10,
+    "rc": 11,
+    "dc": 12,
+    "dk": 9,
+    "gh": 12,
+    "rcpal": 8,
+    "p4": 8,
+    "p4-eegcc": 10
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "different instruction count: control-flow shape, expression shape, loop forms.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: same length, many instructions differ: mixed arithmetic (expression shape)": {
+   "functions": 91,
+   "m2c_exact": 3,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 13,
+    "ff": 9,
+    "rc": 12,
+    "dc": 8,
+    "dk": 13,
+    "gh": 9,
+    "rcpal": 12,
+    "p4": 5,
+    "p4-eegcc": 10
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "same size, different code: expression shape or control-flow form.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: same length, many instructions differ: memory accesses (temporaries, spills, widths)": {
+   "functions": 28,
+   "m2c_exact": 1,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 4,
+    "ff": 2,
+    "rc": 6,
+    "dc": 1,
+    "dk": 3,
+    "gh": 2,
+    "rcpal": 2,
+    "p4": 3,
+    "p4-eegcc": 5
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "same size, different code: expression shape or control-flow form.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: length differs: few instructions (<= 4)": {
+   "functions": 7,
+   "m2c_exact": 1,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 1,
+    "ff": 1,
+    "dc": 3,
+    "gh": 1,
+    "p4": 1
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "a few instructions more or fewer: redundant temporaries or folded expressions.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: same length, many instructions differ: floating-point or vector sequence": {
+   "functions": 2,
+   "m2c_exact": 1,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dk": 2
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "same size, different code: expression shape or control-flow form.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: length differs: floating-point or vector sequence": {
+   "functions": 13,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dds": 1,
+    "ff": 1,
+    "dc": 4,
+    "dk": 1,
+    "gh": 1,
+    "rcpal": 1,
+    "p4": 4
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "different instruction count: control-flow shape, expression shape, loop forms.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: length differs: nops and register copies": {
+   "functions": 3,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "dc": 1,
+    "gh": 1,
+    "rcpal": 1
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "different instruction count: control-flow shape, expression shape, loop forms.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: length differs: extension instructions (type or cast)": {
+   "functions": 2,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "rc": 1,
+    "rcpal": 1
+   },
+   "kind": "byte difference",
+   "owner": "types/prototypes",
+   "owner_evidence": "sign/zero extension differs: the declared type or a cast.",
+   "plausible_exact_gain": 0
+  },
+  "bytes: length differs: nops or register copies (allocation or scheduling)": {
+   "functions": 2,
+   "m2c_exact": 0,
+   "expected_exact_recovered": 0.0,
+   "lanes": {
+    "rc": 1,
+    "dc": 1
+   },
+   "kind": "byte difference",
+   "owner": "printer (printc)",
+   "owner_evidence": "different instruction count: control-flow shape, expression shape, loop forms.",
+   "plausible_exact_gain": 0
+  }
+ },
+ "m2c_ahead": {
+  "dds": [
+   {
+    "address": "0x101818",
+    "name": "kwlnTaskGetRegisteredState",
+    "size": 60,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "11 word(s), 84.3%",
+    "romwright_percent": 84.3
+   },
+   {
+    "address": "0x164a30",
+    "name": "effThunderReleaseSparkWork",
+    "size": 100,
+    "cause": "register allocation and stack layout",
+    "detail": "12 word(s), 96.5%",
+    "romwright_percent": 96.5
+   },
+   {
+    "address": "0x1a1448",
+    "name": "btlIsCurrentActorFullyMarked",
+    "size": 56,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "10 word(s), 81.1%",
+    "romwright_percent": 81.1
+   },
+   {
+    "address": "0x1f1c78",
+    "name": "sndAddSourceReferences",
+    "size": 76,
+    "cause": "same instructions, different order (scheduling)",
+    "detail": "6 word(s), 88.8%",
+    "romwright_percent": 88.8
+   },
+   {
+    "address": "0x1f9d48",
+    "name": "func_001F9D48",
+    "size": 140,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "22 word(s), 88.0%",
+    "romwright_percent": 88.0
+   },
+   {
+    "address": "0x1fa2b0",
+    "name": "btlCmdRememberUpperQueuedQuery",
+    "size": 140,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "22 word(s), 88.0%",
+    "romwright_percent": 88.0
+   },
+   {
+    "address": "0x213bc0",
+    "name": "btlMarkRuntimeUpdatePending",
+    "size": 32,
+    "cause": "few instructions differ (<= 4)",
+    "detail": "4 word(s), 73.8%",
+    "romwright_percent": 73.8
+   },
+   {
+    "address": "0x288148",
+    "name": "evtStageTestCreateModelEffect",
+    "size": 68,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "9 word(s), 78.7%",
+    "romwright_percent": 78.7
+   },
+   {
+    "address": "0x2aaf70",
+    "name": "effCreateStripNode",
+    "size": 128,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "15 word(s), 94.7%",
+    "romwright_percent": 94.7
+   },
+   {
+    "address": "0x2cb058",
+    "name": "sdfSwapLinkedListNodes",
+    "size": 156,
+    "cause": "length differs: memory accesses (temporaries, spills, widths)",
+    "detail": "36 word(s), 87.1%",
+    "romwright_percent": 87.1
+   },
+   {
+    "address": "0x2daa68",
+    "name": "sdfQueueAssetRelease",
+    "size": 52,
+    "cause": "same length, many instructions differ: control flow (branches, calls)",
+    "detail": "7 word(s), 64.6%",
+    "romwright_percent": 64.6
+   }
+  ],
+  "ff": [
+   {
+    "address": "0x15a088",
+    "name": "Tim2GetMipMapPictureSize",
+    "size": 136,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "48 word(s), 33.9%",
+    "romwright_percent": 33.9
+   },
+   {
+    "address": "0x21e510",
+    "name": "BattleModeScoreRecord",
+    "size": 32,
+    "cause": "length differs: memory accesses (temporaries, spills, widths)",
+    "detail": "14 word(s), 75.0%",
+    "romwright_percent": 75.0
+   }
+  ],
+  "rc": [
+   {
+    "address": "0x11b3b8",
+    "name": "SceSifCheckStatRpc",
+    "size": 60,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "14 word(s), 64.0%",
+    "romwright_percent": 64.0
+   },
+   {
+    "address": "0x124a48",
+    "name": "scePad2Init",
+    "size": 60,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "12 word(s), 64.3%",
+    "romwright_percent": 64.3
+   },
+   {
+    "address": "0x12ba68",
+    "name": "sceMpegReset",
+    "size": 80,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "17 word(s), 91.0%",
+    "romwright_percent": 91.0
+   }
+  ],
+  "dc": [
+   {
+    "address": "0x164050",
+    "name": "mapPARTS_GROUP__FP9SPI_STACKi",
+    "size": 60,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "23 word(s), 54.1%",
+    "romwright_percent": 54.1
+   },
+   {
+    "address": "0x1a2790",
+    "name": "CheckItemOver__Fv",
+    "size": 156,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "28 word(s), 91.3%",
+    "romwright_percent": 91.3
+   },
+   {
+    "address": "0x1b6f20",
+    "name": "IsBurn__10CEditPartsFv",
+    "size": 40,
+    "cause": "single instruction: different instruction",
+    "detail": "1 word(s), 94.0%",
+    "romwright_percent": 94.0
+   },
+   {
+    "address": "0x253f20",
+    "name": "CalcMenuAdd2__FPiii",
+    "size": 112,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "27 word(s), 70.0%",
+    "romwright_percent": 70.0
+   },
+   {
+    "address": "0x258380",
+    "name": "GetActiveCamera__Fv",
+    "size": 40,
+    "cause": "compile failure: illegal or unknown type name",
+    "detail": "illegal type",
+    "romwright_percent": 0.0
+   },
+   {
+    "address": "0x270480",
+    "name": "_MES_CLOSE__FP12RS_STACKDATAi",
+    "size": 104,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "20 word(s), 63.8%",
+    "romwright_percent": 63.8
+   },
+   {
+    "address": "0x279bd0",
+    "name": "_SPHIDA_SET_BALL_COL__FP12RS_STACKDATAi",
+    "size": 56,
+    "cause": "compile failure: illegal or unknown type name",
+    "detail": "illegal type",
+    "romwright_percent": 0.0
+   },
+   {
+    "address": "0x28fd60",
+    "name": "CheckArea__13CRandomCircleFPff",
+    "size": 164,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "37 word(s), 31.1%",
+    "romwright_percent": 31.1
+   },
+   {
+    "address": "0x29f580",
+    "name": "changeMasterVolume__FUi",
+    "size": 100,
+    "cause": "compile failure: type mismatch (assignment, operand, return, cast)",
+    "detail": "illegal return value in void/constructor/destructor function",
+    "romwright_percent": 0.0
+   },
+   {
+    "address": "0x2a1710",
+    "name": "Search__14CFuncPointMngrFPc",
+    "size": 168,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "30 word(s), 87.7%",
+    "romwright_percent": 87.7
+   },
+   {
+    "address": "0x2dd8b0",
+    "name": "emGetPenkiItemNo__Fi",
+    "size": 52,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "11 word(s), 41.5%",
+    "romwright_percent": 41.5
+   },
+   {
+    "address": "0x2dda20",
+    "name": "SystemMesStep__FP6CScene",
+    "size": 68,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "13 word(s), 90.6%",
+    "romwright_percent": 90.6
+   },
+   {
+    "address": "0x31bdd0",
+    "name": "AnalyzeEditMap__FiP8CEditMap",
+    "size": 200,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "27 word(s), 96.6%",
+    "romwright_percent": 96.6
+   }
+  ],
+  "dk": [
+   {
+    "address": "0x124770",
+    "name": "__dt__7CCameraFv",
+    "size": 84,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "5 word(s), 92.4%",
+    "romwright_percent": 92.4
+   },
+   {
+    "address": "0x124bf0",
+    "name": "__ct__13CCameraFollowFffff",
+    "size": 136,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "14 word(s), 88.2%",
+    "romwright_percent": 88.2
+   },
+   {
+    "address": "0x12b8b0",
+    "name": "Down2__8CGamePadFi",
+    "size": 56,
+    "cause": "register allocation",
+    "detail": "2 word(s), 98.9%",
+    "romwright_percent": 98.9
+   },
+   {
+    "address": "0x1312d0",
+    "name": "GetTexture__15CTextureManagerFPci",
+    "size": 80,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "108 word(s), 0.0%",
+    "romwright_percent": 0.0
+   },
+   {
+    "address": "0x169ab0",
+    "name": "GetLYf__Fv",
+    "size": 64,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "7 word(s), 77.5%",
+    "romwright_percent": 77.5
+   },
+   {
+    "address": "0x174b10",
+    "name": "CommandLIGHT_NO__FPPv",
+    "size": 72,
+    "cause": "length differs: memory accesses (temporaries, spills, widths)",
+    "detail": "12 word(s), 88.9%",
+    "romwright_percent": 88.9
+   },
+   {
+    "address": "0x177550",
+    "name": "CommandTALK_DIR__FPPv",
+    "size": 32,
+    "cause": "compile failure: illegal or unknown type name",
+    "detail": "illegal type",
+    "romwright_percent": 0.0
+   },
+   {
+    "address": "0x178170",
+    "name": "EdSetClock__Ff",
+    "size": 96,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "12 word(s), 84.2%",
+    "romwright_percent": 84.2
+   },
+   {
+    "address": "0x187dd0",
+    "name": "EdCheckTime__Ffff",
+    "size": 132,
+    "cause": "same length, many instructions differ: floating-point or vector sequence",
+    "detail": "8 word(s), 72.6%",
+    "romwright_percent": 72.6
+   },
+   {
+    "address": "0x191da0",
+    "name": "_SET_CAMERA_SPEED__FP12RS_STACKDATAi",
+    "size": 96,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "33 word(s), 62.1%",
+    "romwright_percent": 62.1
+   },
+   {
+    "address": "0x1950f0",
+    "name": "_SITEM_GET__FP12RS_STACKDATAi",
+    "size": 104,
+    "cause": "register allocation and stack layout",
+    "detail": "6 word(s), 98.8%",
+    "romwright_percent": 98.8
+   },
+   {
+    "address": "0x19a210",
+    "name": "GetNextParts__14CEditPartsInfoFi",
+    "size": 112,
+    "cause": "same length, many instructions differ: control flow (branches, calls)",
+    "detail": "8 word(s), 57.9%",
+    "romwright_percent": 57.9
+   },
+   {
+    "address": "0x1f2db0",
+    "name": "FishingExchangeLoop__Fv",
+    "size": 84,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "5 word(s), 82.6%",
+    "romwright_percent": 82.6
+   },
+   {
+    "address": "0x2223b0",
+    "name": "SaveMenuKeyEndSaveEnding__Fv",
+    "size": 88,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "18 word(s), 90.7%",
+    "romwright_percent": 90.7
+   },
+   {
+    "address": "0x225530",
+    "name": "PlayerAllItemCheck__Fi",
+    "size": 156,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "44 word(s), 73.2%",
+    "romwright_percent": 73.2
+   },
+   {
+    "address": "0x233520",
+    "name": "GetNowManualPartTgaNum__Fv",
+    "size": 56,
+    "cause": "same length, many instructions differ: mixed arithmetic (expression shape)",
+    "detail": "10 word(s), 52.1%",
+    "romwright_percent": 52.1
+   },
+   {
+    "address": "0x2356d0",
+    "name": "LoopStep__13CMenuItemStepFi",
+    "size": 76,
+    "cause": "register allocation",
+    "detail": "2 word(s), 99.5%",
+    "romwright_percent": 99.5
+   },
+   {
+    "address": "0x2410f0",
+    "name": "DeleteReference__5CFishFv",
+    "size": 76,
+    "cause": "register allocation",
+    "detail": "4 word(s), 98.9%",
+    "romwright_percent": 98.9
+   }
+  ],
+  "gh": [
+   {
+    "address": "0x1492c8",
+    "name": "Forward149378_1492C8",
+    "size": 32,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "5 word(s), 80.0%",
+    "romwright_percent": 80.0
+   },
+   {
+    "address": "0x1f6d38",
+    "name": "CasinoWork_ResetWarmUpRoom",
+    "size": 224,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "65 word(s), 79.7%",
+    "romwright_percent": 79.7
+   },
+   {
+    "address": "0x28ed28",
+    "name": "func_0028ED28",
+    "size": 76,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "7 word(s), 80.8%",
+    "romwright_percent": 80.8
+   },
+   {
+    "address": "0x31af40",
+    "name": "func_0031AF40",
+    "size": 48,
+    "cause": "same length, many instructions differ: control flow (branches, calls)",
+    "detail": "8 word(s), 56.2%",
+    "romwright_percent": 56.2
+   },
+   {
+    "address": "0x331ce0",
+    "name": "func_00331CE0",
+    "size": 84,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "20 word(s), 70.8%",
+    "romwright_percent": 70.8
+   },
+   {
+    "address": "0x337b30",
+    "name": "func_00337B30",
+    "size": 76,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "9 word(s), 83.4%",
+    "romwright_percent": 83.4
+   },
+   {
+    "address": "0x34cdb0",
+    "name": "SFCON_IsVideoEndcodeSkip",
+    "size": 72,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "5 word(s), 90.6%",
+    "romwright_percent": 90.6
+   },
+   {
+    "address": "0x3588b0",
+    "name": "func_003588B0",
+    "size": 128,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "22 word(s), 60.6%",
+    "romwright_percent": 60.6
+   },
+   {
+    "address": "0x35d918",
+    "name": "SFH_IsExistStmId",
+    "size": 108,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "13 word(s), 78.5%",
+    "romwright_percent": 78.5
+   }
+  ],
+  "rcpal": [
+   {
+    "address": "0x12d340",
+    "name": "func_0012D340",
+    "size": 64,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "22 word(s), 57.6%",
+    "romwright_percent": 57.6
+   },
+   {
+    "address": "0x1ec038",
+    "name": "func_001EC038",
+    "size": 92,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "35 word(s), 46.3%",
+    "romwright_percent": 46.3
+   },
+   {
+    "address": "0x1f4b68",
+    "name": "func_001F4B68",
+    "size": 80,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "17 word(s), 73.0%",
+    "romwright_percent": 73.0
+   },
+   {
+    "address": "0x207e28",
+    "name": "func_00207E28",
+    "size": 52,
+    "cause": "register allocation and stack layout",
+    "detail": "2 word(s), 90.8%",
+    "romwright_percent": 90.8
+   },
+   {
+    "address": "0x208208",
+    "name": "func_00208208",
+    "size": 48,
+    "cause": "register allocation and stack layout",
+    "detail": "2 word(s), 90.0%",
+    "romwright_percent": 90.0
+   },
+   {
+    "address": "0x209620",
+    "name": "func_00209620",
+    "size": 120,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "39 word(s), 65.7%",
+    "romwright_percent": 65.7
+   },
+   {
+    "address": "0x2098a8",
+    "name": "func_002098A8",
+    "size": 32,
+    "cause": "few instructions differ (<= 4)",
+    "detail": "3 word(s), 74.4%",
+    "romwright_percent": 74.4
+   },
+   {
+    "address": "0x20e180",
+    "name": "func_0020E180",
+    "size": 128,
+    "cause": "same length, many instructions differ: mixed arithmetic (expression shape)",
+    "detail": "27 word(s), 71.3%",
+    "romwright_percent": 71.3
+   },
+   {
+    "address": "0x215c00",
+    "name": "func_00215C00",
+    "size": 156,
+    "cause": "register allocation and stack layout",
+    "detail": "21 word(s), 95.9%",
+    "romwright_percent": 95.9
+   },
+   {
+    "address": "0x216028",
+    "name": "func_00216028",
+    "size": 112,
+    "cause": "same length, many instructions differ: mixed arithmetic (expression shape)",
+    "detail": "7 word(s), 84.8%",
+    "romwright_percent": 84.8
+   },
+   {
+    "address": "0x216098",
+    "name": "func_00216098",
+    "size": 72,
+    "cause": "few instructions differ (<= 4)",
+    "detail": "2 word(s), 93.3%",
+    "romwright_percent": 93.3
+   },
+   {
+    "address": "0x23bf70",
+    "name": "func_0023BF70",
+    "size": 44,
+    "cause": "few instructions differ (<= 4)",
+    "detail": "3 word(s), 80.9%",
+    "romwright_percent": 80.9
+   },
+   {
+    "address": "0x23c960",
+    "name": "func_0023C960",
+    "size": 76,
+    "cause": "few instructions differ (<= 4)",
+    "detail": "4 word(s), 88.9%",
+    "romwright_percent": 88.9
+   },
+   {
+    "address": "0x23d2e8",
+    "name": "func_0023D2E8",
+    "size": 84,
+    "cause": "few instructions differ (<= 4)",
+    "detail": "3 word(s), 91.4%",
+    "romwright_percent": 91.4
+   },
+   {
+    "address": "0x23e450",
+    "name": "func_0023E450",
+    "size": 40,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "5 word(s), 84.0%",
+    "romwright_percent": 84.0
+   },
+   {
+    "address": "0x23e4e0",
+    "name": "func_0023E4E0",
+    "size": 48,
+    "cause": "few instructions differ (<= 4)",
+    "detail": "3 word(s), 82.5%",
+    "romwright_percent": 82.5
+   }
+  ],
+  "p4": [
+   {
+    "address": "0x170b50",
+    "name": "func_00170b50",
+    "size": 112,
+    "cause": "same length, many instructions differ: control flow (branches, calls)",
+    "detail": "7 word(s), 92.3%",
+    "romwright_percent": 92.3
+   },
+   {
+    "address": "0x18a170",
+    "name": "func_0018a170",
+    "size": 136,
+    "cause": "length differs: few instructions (<= 4)",
+    "detail": "4 word(s), 94.0%",
+    "romwright_percent": 94.0
+   },
+   {
+    "address": "0x199e70",
+    "name": "func_00199e70",
+    "size": 80,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "5 word(s), 92.0%",
+    "romwright_percent": 92.0
+   },
+   {
+    "address": "0x1e3270",
+    "name": "func_001e3270",
+    "size": 172,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "32 word(s), 75.2%",
+    "romwright_percent": 75.2
+   },
+   {
+    "address": "0x1f6220",
+    "name": "func_001f6220",
+    "size": 100,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "17 word(s), 66.4%",
+    "romwright_percent": 66.4
+   },
+   {
+    "address": "0x2238f0",
+    "name": "func_002238f0",
+    "size": 168,
+    "cause": "same length, many instructions differ: control flow (branches, calls)",
+    "detail": "24 word(s), 14.3%",
+    "romwright_percent": 14.3
+   },
+   {
+    "address": "0x2bc060",
+    "name": "func_002bc060",
+    "size": 76,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "5 word(s), 91.6%",
+    "romwright_percent": 91.6
+   },
+   {
+    "address": "0x474a90",
+    "name": "func_00474a90",
+    "size": 56,
+    "cause": "same length, many instructions differ: memory accesses (temporaries, spills, widths)",
+    "detail": "12 word(s), 48.6%",
+    "romwright_percent": 48.6
+   },
+   {
+    "address": "0x4aec50",
+    "name": "func_004aec50",
+    "size": 44,
+    "cause": "register allocation",
+    "detail": "2 word(s), 99.1%",
+    "romwright_percent": 99.1
+   },
+   {
+    "address": "0x4b6da0",
+    "name": "func_004b6da0",
+    "size": 64,
+    "cause": "length differs: memory accesses (temporaries, spills, widths)",
+    "detail": "9 word(s), 93.4%",
+    "romwright_percent": 93.4
+   }
+  ],
+  "p4-eegcc": [
+   {
+    "address": "0x4d1068",
+    "name": "ADXSJE_Destroy",
+    "size": 104,
+    "cause": "same instructions, different order (scheduling)",
+    "detail": "2 word(s), 99.5%",
+    "romwright_percent": 99.5
+   },
+   {
+    "address": "0x4d41b0",
+    "name": "ADXT_StartSj",
+    "size": 132,
+    "cause": "same length, many instructions differ: control flow (branches, calls)",
+    "detail": "24 word(s), 55.6%",
+    "romwright_percent": 55.6
+   },
+   {
+    "address": "0x4d9148",
+    "name": "func_004d9148",
+    "size": 56,
+    "cause": "context variant only (standalone is exact)",
+    "detail": "7 word(s), 78.6%",
+    "romwright_percent": 78.6
+   },
+   {
+    "address": "0x4d91b8",
+    "name": "func_004d91b8",
+    "size": 56,
+    "cause": "context variant only (standalone is exact)",
+    "detail": "7 word(s), 78.6%",
+    "romwright_percent": 78.6
+   },
+   {
+    "address": "0x4d91f0",
+    "name": "func_004d91f0",
+    "size": 40,
+    "cause": "context variant only (standalone is exact)",
+    "detail": "7 word(s), 84.0%",
+    "romwright_percent": 84.0
+   },
+   {
+    "address": "0x4d9240",
+    "name": "func_004d9240",
+    "size": 40,
+    "cause": "context variant only (standalone is exact)",
+    "detail": "7 word(s), 84.0%",
+    "romwright_percent": 84.0
+   },
+   {
+    "address": "0x4e43b0",
+    "name": "func_004e43b0",
+    "size": 56,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "11 word(s), 45.3%",
+    "romwright_percent": 45.3
+   },
+   {
+    "address": "0x4e44d8",
+    "name": "func_004e44d8",
+    "size": 76,
+    "cause": "length differs: mixed arithmetic (expression shape)",
+    "detail": "9 word(s), 93.7%",
+    "romwright_percent": 93.7
+   },
+   {
+    "address": "0x515c80",
+    "name": "SFCON_IsSystemEndcodeSkip",
+    "size": 72,
+    "cause": "length differs: control flow (branches, calls)",
+    "detail": "26 word(s), 64.8%",
+    "romwright_percent": 64.8
+   }
+  ]
+ },
+ "harness_fixes": {
+  "dds": {
+   "romwright": {
+    "before": {
+     "exact": 61,
+     "compiled": 193,
+     "mean_percent": 75.62,
+     "functions": 200
+    },
+    "after": {
+     "exact": 61,
+     "compiled": 196,
+     "mean_percent": 76.802,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 49,
+     "compiled": 152,
+     "mean_percent": 62.25,
+     "functions": 200
+    },
+    "after": {
+     "exact": 49,
+     "compiled": 153,
+     "mean_percent": 62.736,
+     "functions": 200
+    }
+   }
+  },
+  "ff": {
+   "romwright": {
+    "before": {
+     "exact": 20,
+     "compiled": 134,
+     "mean_percent": 46.34,
+     "functions": 200
+    },
+    "after": {
+     "exact": 20,
+     "compiled": 145,
+     "mean_percent": 49.247,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 4,
+     "compiled": 19,
+     "mean_percent": 7.566,
+     "functions": 200
+    },
+    "after": {
+     "exact": 4,
+     "compiled": 18,
+     "mean_percent": 7.62,
+     "functions": 200
+    }
+   }
+  },
+  "rc": {
+   "romwright": {
+    "before": {
+     "exact": 24,
+     "compiled": 191,
+     "mean_percent": 65.216,
+     "functions": 200
+    },
+    "after": {
+     "exact": 26,
+     "compiled": 199,
+     "mean_percent": 68.095,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 11,
+     "compiled": 112,
+     "mean_percent": 40.672,
+     "functions": 200
+    },
+    "after": {
+     "exact": 14,
+     "compiled": 116,
+     "mean_percent": 42.377,
+     "functions": 200
+    }
+   }
+  },
+  "dc": {
+   "romwright": {
+    "before": {
+     "exact": 32,
+     "compiled": 159,
+     "mean_percent": 60.489,
+     "functions": 200
+    },
+    "after": {
+     "exact": 35,
+     "compiled": 166,
+     "mean_percent": 62.571,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 33,
+     "compiled": 108,
+     "mean_percent": 45.246,
+     "functions": 200
+    },
+    "after": {
+     "exact": 33,
+     "compiled": 109,
+     "mean_percent": 45.711,
+     "functions": 200
+    }
+   }
+  },
+  "dk": {
+   "romwright": {
+    "before": {
+     "exact": 26,
+     "compiled": 164,
+     "mean_percent": 65.303,
+     "functions": 200
+    },
+    "after": {
+     "exact": 27,
+     "compiled": 169,
+     "mean_percent": 67.358,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 33,
+     "compiled": 98,
+     "mean_percent": 43.67,
+     "functions": 200
+    },
+    "after": {
+     "exact": 33,
+     "compiled": 98,
+     "mean_percent": 43.67,
+     "functions": 200
+    }
+   }
+  },
+  "gh": {
+   "romwright": {
+    "before": {
+     "exact": 78,
+     "compiled": 183,
+     "mean_percent": 75.112,
+     "functions": 200
+    },
+    "after": {
+     "exact": 78,
+     "compiled": 199,
+     "mean_percent": 81.988,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 47,
+     "compiled": 134,
+     "mean_percent": 56.542,
+     "functions": 200
+    },
+    "after": {
+     "exact": 47,
+     "compiled": 135,
+     "mean_percent": 56.992,
+     "functions": 200
+    }
+   }
+  },
+  "rcpal": {
+   "romwright": {
+    "before": {
+     "exact": 15,
+     "compiled": 104,
+     "mean_percent": 36.515,
+     "functions": 200
+    },
+    "after": {
+     "exact": 28,
+     "compiled": 191,
+     "mean_percent": 63.732,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 23,
+     "compiled": 76,
+     "mean_percent": 30.41,
+     "functions": 200
+    },
+    "after": {
+     "exact": 34,
+     "compiled": 117,
+     "mean_percent": 46.921,
+     "functions": 200
+    }
+   }
+  },
+  "p4": {
+   "romwright": {
+    "before": {
+     "exact": 59,
+     "compiled": 189,
+     "mean_percent": 77.655,
+     "functions": 200
+    },
+    "after": {
+     "exact": 60,
+     "compiled": 193,
+     "mean_percent": 79.121,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 41,
+     "compiled": 129,
+     "mean_percent": 54.288,
+     "functions": 200
+    },
+    "after": {
+     "exact": 41,
+     "compiled": 130,
+     "mean_percent": 54.717,
+     "functions": 200
+    }
+   }
+  },
+  "p4-eegcc": {
+   "romwright": {
+    "before": {
+     "exact": 96,
+     "compiled": 197,
+     "mean_percent": 83.972,
+     "functions": 200
+    },
+    "after": {
+     "exact": 96,
+     "compiled": 199,
+     "mean_percent": 84.763,
+     "functions": 200
+    }
+   },
+   "m2c": {
+    "before": {
+     "exact": 85,
+     "compiled": 164,
+     "mean_percent": 72.68,
+     "functions": 200
+    },
+    "after": {
+     "exact": 85,
+     "compiled": 165,
+     "mean_percent": 73.177,
+     "functions": 200
+    }
+   }
+  }
+ }
+}

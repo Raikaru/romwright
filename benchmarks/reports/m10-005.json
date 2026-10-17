@@ -1,0 +1,151 @@
+{
+  "id": "m10-005",
+  "recorded_at": "2026-10-15T09:57:33.346549+00:00",
+  "parts": {
+    "isolation": {
+      "pairs": [
+        {
+          "address": "021e5900",
+          "renamed_in": "pokeheartgold.us.nds.ov1",
+          "checked_unchanged": "pokeheartgold.us.nds.ov122",
+          "holders": 22,
+          "listings_compared": 5,
+          "follow_caller": null,
+          "module_ids": {
+            "pokeheartgold.us.nds.ov1": 7,
+            "pokeheartgold.us.nds.ov122": 128
+          }
+        },
+        {
+          "address": "021e6d80",
+          "renamed_in": "pokeheartgold.us.nds.ov76",
+          "checked_unchanged": "pokeheartgold.us.nds.ov121",
+          "holders": 3,
+          "listings_compared": 4,
+          "follow_caller": "021e6426",
+          "module_ids": {
+            "pokeheartgold.us.nds.ov76": 82,
+            "pokeheartgold.us.nds.ov121": 127
+          }
+        },
+        {
+          "address": "021ec240",
+          "renamed_in": "pokeheartgold.us.nds.ov1",
+          "checked_unchanged": "pokeheartgold.us.nds.ov102",
+          "holders": 2,
+          "listings_compared": 3,
+          "follow_caller": "021ebfec",
+          "module_ids": {
+            "pokeheartgold.us.nds.ov1": 7,
+            "pokeheartgold.us.nds.ov102": 108
+          }
+        },
+        {
+          "address": "0221fc54",
+          "renamed_in": "pokeheartgold.us.nds.ov13",
+          "checked_unchanged": "pokeheartgold.us.nds.ov97",
+          "holders": 3,
+          "listings_compared": 4,
+          "follow_caller": "0223cb4c",
+          "module_ids": {
+            "pokeheartgold.us.nds.ov13": 19,
+            "pokeheartgold.us.nds.ov97": 103
+          }
+        },
+        {
+          "address": "0223ae20",
+          "renamed_in": "pokeheartgold.us.nds.ov59",
+          "checked_unchanged": "pokeheartgold.us.nds.ov72",
+          "holders": 2,
+          "listings_compared": 3,
+          "follow_caller": "0223aa3a",
+          "module_ids": {
+            "pokeheartgold.us.nds.ov59": 65,
+            "pokeheartgold.us.nds.ov72": 78
+          }
+        }
+      ]
+    },
+    "nds_offsets": {
+      "overlays": 129,
+      "packed": 127,
+      "spot_checks": [
+        {
+          "overlay": 35,
+          "packed": false,
+          "file_off": 1708544,
+          "bytes": "08b5052916d84918"
+        },
+        {
+          "overlay": 64,
+          "packed": true,
+          "file_off": 2194944,
+          "bytes": "c510b119340d0634"
+        },
+        {
+          "overlay": 124,
+          "packed": false,
+          "file_off": 3107328,
+          "bytes": "f8b5354f061c0d1c"
+        }
+      ]
+    },
+    "gc_offsets": {
+      "modules": 2,
+      "spot_checks": [
+        {
+          "module": "main.dol",
+          "file_off": 122880
+        },
+        {
+          "module": "foresta",
+          "file_id": "foresta.rel.szs",
+          "file_off": 1447155436,
+          "magic": "59617a30"
+        }
+      ]
+    },
+    "n64_offsets": {
+      "modules": 7,
+      "spot_checks": [
+        {
+          "segment": "preamble",
+          "file_off": 4096,
+          "file_id": "rom:0x1000-0x1050",
+          "bytes": "3c088009"
+        },
+        {
+          "segment": "lib-boot",
+          "file_off": 4176,
+          "file_id": "rom:0x1050-0x3050",
+          "bytes": "3c08007f"
+        },
+        {
+          "segment": "lib",
+          "file_off": 4176,
+          "file_id": "rom:0x1050-0x39850",
+          "bytes": "3c08007f"
+        },
+        {
+          "segment": "data",
+          "file_off": 235600,
+          "file_id": "rom:0x39850-0x4e850",
+          "bytes": "1173030e"
+        },
+        {
+          "segment": "inflate",
+          "file_off": 321616,
+          "file_id": "rom:0x4e850-0x4fc40",
+          "bytes": "27bdfa18"
+        },
+        {
+          "segment": "game",
+          "file_off": 326720,
+          "file_id": "rom:0x4fc40-0x194b20",
+          "bytes": "000006ec"
+        }
+      ]
+    }
+  },
+  "status": "pass"
+}

@@ -1,0 +1,44 @@
+{
+ "schema": "m22-003-functions/1",
+ "lane": "dk",
+ "game": "ps2-dark-cloud",
+ "tag": "bis-nofs",
+ "env": {},
+ "layers": [
+  "romwright"
+ ],
+ "seed": 20261012,
+ "n": 1,
+ "matched_count": 3091,
+ "functions": {
+  "001b7840": {
+   "name": "Set__14CWeaponElementFPA4_fPffif",
+   "address": "0x1b7840",
+   "size": 244,
+   "file": "ps2/src/weaponelement.cpp",
+   "compiler": "mwcps2-2.3.3-000906",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.95082
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.95082
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 46.95082
+     }
+    }
+   }
+  }
+ }
+}

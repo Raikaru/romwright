@@ -1,0 +1,720 @@
+{
+ "lane": "dds",
+ "build": "bin-f1",
+ "functions": [
+  "btlCmdRememberUpperQueuedQuery",
+  "btlHasIdleLinkedSlotKindTwo",
+  "btlHasOtherGroup400DifferentUnitMode",
+  "btlReleaseModelEntry",
+  "btlUpdateActorModelColorAndLinks",
+  "dds3AdminActivateRequestedMode",
+  "effCreateStripNode",
+  "effPcpGroupSetInitEntry",
+  "effThunderReleaseSparkWork",
+  "evtAdvanceSolarShortLayerTimer",
+  "evtCommandSetMagatuhiSourcePoints",
+  "evtPrintDeveloperConsoleMessage",
+  "fldDestroySceneTasksAndBuffers",
+  "fldGetCurrentSceneSelectionId",
+  "fldSetSceneObjectAndGroupStates",
+  "func_00129900",
+  "func_001F9D48",
+  "func_00243BF0",
+  "func_00253778",
+  "func_002649B0",
+  "itfReleasePoolNode",
+  "mnuShutdownContext",
+  "ptyComputeMaxMp",
+  "ptyMarkPresetSkillPool",
+  "scrPushInteger",
+  "sdfAppendFormattedDebugLogPair",
+  "sdfBuildPrimaryAlphaAdditiveDmaPacket",
+  "sdfGridReleaseAllCells",
+  "sdfInitSecondaryAlphaSubtractiveRegisters",
+  "sndAddSourceReferences"
+ ],
+ "variants": {
+  "default": {
+   "functions": 30,
+   "exact": 0,
+   "compiled": 30,
+   "mean_percent": 93.066,
+   "spec": "default"
+  },
+  "adjacent-off": {
+   "functions": 30,
+   "exact": 0,
+   "compiled": 30,
+   "mean_percent": 93.066,
+   "spec": "adjacent=off"
+  },
+  "datatype-off": {
+   "functions": 30,
+   "exact": 1,
+   "compiled": 30,
+   "mean_percent": 93.223,
+   "spec": "datatype=off"
+  },
+  "copy-off": {
+   "functions": 30,
+   "exact": 0,
+   "compiled": 30,
+   "mean_percent": 93.066,
+   "spec": "copy=off"
+  },
+  "adjoff-typeoff": {
+   "functions": 30,
+   "exact": 1,
+   "compiled": 30,
+   "mean_percent": 93.018,
+   "spec": "adjacent=off,datatype=off"
+  },
+  "dominant-off": {
+   "functions": 30,
+   "exact": 0,
+   "compiled": 30,
+   "mean_percent": 93.066,
+   "spec": "dominant=off"
+  },
+  "hideshadow-off": {
+   "functions": 30,
+   "exact": 0,
+   "compiled": 30,
+   "mean_percent": 93.066,
+   "spec": "hideshadow=off"
+  },
+  "maxref1": {
+   "functions": 30,
+   "exact": 1,
+   "compiled": 30,
+   "mean_percent": 93.364,
+   "spec": "maxref=1"
+  },
+  "maxref4": {
+   "functions": 30,
+   "exact": 0,
+   "compiled": 30,
+   "mean_percent": 93.075,
+   "spec": "maxref=4"
+  },
+  "maxdup1": {
+   "functions": 30,
+   "exact": 0,
+   "compiled": 30,
+   "mean_percent": 92.992,
+   "spec": "maxdup=1"
+  },
+  "maxdup4": {
+   "functions": 30,
+   "exact": 0,
+   "compiled": 30,
+   "mean_percent": 92.694,
+   "spec": "maxdup=4"
+  },
+  "all-spec-off": {
+   "functions": 30,
+   "exact": 1,
+   "compiled": 30,
+   "mean_percent": 93.018,
+   "spec": "adjacent=off,datatype=off,copy=off"
+  }
+ },
+ "changed": {
+  "dds3AdminActivateRequestedMode": {
+   "address": "00102ae0",
+   "by_variant": {
+    "default": {
+     "percent": 92.074,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 92.074,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 92.34,
+     "exact": false,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 92.074,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 92.34,
+     "exact": false,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 92.074,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 92.074,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 89.83,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 92.34,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 89.83,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 92.074,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 92.34,
+     "exact": false,
+     "compiled": true
+    }
+   }
+  },
+  "ptyComputeMaxMp": {
+   "address": "00118408",
+   "by_variant": {
+    "default": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 86.41,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 90.769,
+     "exact": false,
+     "compiled": true
+    }
+   }
+  },
+  "effPcpGroupSetInitEntry": {
+   "address": "00181708",
+   "by_variant": {
+    "default": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 98.01,
+     "exact": false,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 98.01,
+     "exact": false,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 98.538,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 98.01,
+     "exact": false,
+     "compiled": true
+    }
+   }
+  },
+  "itfReleasePoolNode": {
+   "address": "00198528",
+   "by_variant": {
+    "default": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 96.571,
+     "exact": false,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 96.571,
+     "exact": false,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 94.667,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 96.571,
+     "exact": false,
+     "compiled": true
+    }
+   }
+  },
+  "btlUpdateActorModelColorAndLinks": {
+   "address": "001da780",
+   "by_variant": {
+    "default": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 89.783,
+     "exact": false,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 83.641,
+     "exact": false,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 90.109,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 83.641,
+     "exact": false,
+     "compiled": true
+    }
+   }
+  },
+  "sndAddSourceReferences": {
+   "address": "001f1c78",
+   "by_variant": {
+    "default": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 100.0,
+     "exact": true,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 88.842,
+     "exact": false,
+     "compiled": true
+    }
+   }
+  },
+  "btlReleaseModelEntry": {
+   "address": "00211390",
+   "by_variant": {
+    "default": {
+     "percent": 99.646,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 99.646,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 99.958,
+     "exact": true,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 99.646,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 99.958,
+     "exact": true,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 99.646,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 99.646,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 99.646,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 99.646,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 99.646,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 93.5,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 99.958,
+     "exact": true,
+     "compiled": true
+    }
+   }
+  },
+  "evtAdvanceSolarShortLayerTimer": {
+   "address": "002294c0",
+   "by_variant": {
+    "default": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 96.0,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 96.667,
+     "exact": false,
+     "compiled": true
+    }
+   }
+  },
+  "func_00243BF0": {
+   "address": "00243bf0",
+   "by_variant": {
+    "default": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "adjacent-off": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "datatype-off": {
+     "percent": 93.019,
+     "exact": false,
+     "compiled": true
+    },
+    "copy-off": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "adjoff-typeoff": {
+     "percent": 93.019,
+     "exact": false,
+     "compiled": true
+    },
+    "dominant-off": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "hideshadow-off": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref1": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "maxref4": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup1": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "maxdup4": {
+     "percent": 89.962,
+     "exact": false,
+     "compiled": true
+    },
+    "all-spec-off": {
+     "percent": 93.019,
+     "exact": false,
+     "compiled": true
+    }
+   }
+  }
+ },
+ "c_diffs": {
+  "sndAddSourceReferences/maxref1": "--- out/variants-vs1/default/001f1c78_sndAddSourceReferences/raw.c\t2026-10-14 08:04:13.855629552 +0000\n+++ out/variants-vs1/maxref1/001f1c78_sndAddSourceReferences/raw.c\t2026-10-14 08:15:19.490236942 +0000\n@@ -4,12 +4,14 @@\n \n {\n   int temp_v0;\n+  int temp_v1;\n   \n   *(unsigned int *)((int)param_1 + 4) = 0;\n   sndCreateSystemEffect(*(void **)param_1);\n-  temp_v0 = *(int *)((int)param_1 + 8);\n-  *(int *)(*(int *)param_1 + 4) = *(int *)(*(int *)param_1 + 4) + 1;\n-  *(int *)(temp_v0 + 0x314) = *(int *)(temp_v0 + 0x314) + 1;\n+  temp_v0 = *(int *)param_1;\n+  temp_v1 = *(int *)((int)param_1 + 8);\n+  *(int *)(temp_v0 + 4) = *(int *)(temp_v0 + 4) + 1;\n+  *(int *)(temp_v1 + 0x314) = *(int *)(temp_v1 + 0x314) + 1;\n   return;\n }\n \n",
+  "btlReleaseModelEntry/datatype-off": "--- out/variants-vs1/default/00211390_btlReleaseModelEntry/raw.c\t2026-10-14 08:04:14.059300151 +0000\n+++ out/variants-vs1/datatype-off/00211390_btlReleaseModelEntry/raw.c\t2026-10-14 08:06:36.358307171 +0000\n@@ -16,38 +16,41 @@\n \n {\n   int temp_v0;\n-  void *pvVar2;\n+  int temp_v1;\n+  int temp_v2;\n+  int temp_v3;\n+  void *pvVar5;\n   \n   temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x8 - 1;\n   ((fn_00211390_arg0 *)param_1)->field_0x8 = temp_v0;\n   if (temp_v0 == 0) {\n     if ((void *)((fn_00211390_arg0 *)param_1)->field_0x10 == (void *)0x0) {\n-      pvVar2 = (void *)((fn_00211390_arg0 *)param_1)->field_0x14;\n+      pvVar5 = (void *)((fn_00211390_arg0 *)param_1)->field_0x14;\n     }\n     else {\n       func_00288788((void *)((fn_00211390_arg0 *)param_1)->field_0x10);\n-      pvVar2 = (void *)((fn_00211390_arg0 *)param_1)->field_0x14;\n+      pvVar5 = (void *)((fn_00211390_arg0 *)param_1)->field_0x14;\n     }\n-    if (pvVar2 == (void *)0x0) {\n-      temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n+    if (pvVar5 == (void *)0x0) {\n+      temp_v2 = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n     }\n     else {\n-      sndReleaseSlotOwner(pvVar2);\n-      temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n+      sndReleaseSlotOwner(pvVar5);\n+      temp_v2 = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n     }\n-    if (temp_v0 == 0) {\n-      temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x18;\n+    if (temp_v2 == 0) {\n+      temp_v3 = ((fn_00211390_arg0 *)param_1)->field_0x18;\n     }\n     else {\n-      *(int *)(temp_v0 + 0x18) = ((fn_00211390_arg0 *)param_1)->field_0x18;\n-      temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x18;\n+      *(int *)(temp_v2 + 0x18) = ((fn_00211390_arg0 *)param_1)->field_0x18;\n+      temp_v3 = ((fn_00211390_arg0 *)param_1)->field_0x18;\n     }\n-    if (temp_v0 != 0) {\n-      *(int *)(temp_v0 + 0x1c) = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n+    if (temp_v3 != 0) {\n+      *(int *)(temp_v3 + 0x1c) = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n     }\n     else {\n-      temp_v0 = btlGetRuntime();\n-      *(int *)(temp_v0 + 0x240) = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n+      temp_v1 = btlGetRuntime();\n+      *(int *)(temp_v1 + 0x240) = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n     }\n     sdfReleaseChipBlock(((fn_00211390_arg0 *)param_1));\n     btlBossDebugPrintf(\"btl:pack free[%X,%X]\\n\",((fn_00211390_arg0 *)param_1)->field_0x0,((fn_00211390_arg0 *)param_1)->field_0x4);\n"
+ },
+ "oracle_best_of_variants": {
+  "functions": 30,
+  "mean_percent": 93.623,
+  "exact": 2,
+  "functions_improved_by_some_variant": 5,
+  "default_mean_percent": 93.066
+ }
+}

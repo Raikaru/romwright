@@ -1,0 +1,19 @@
+{
+ "notes": "../../../ghidra_master_trial_notes.json",
+ "environment": "environment.json",
+ "wave": {"base": "wave_base.json", "master": "wave_master.json"},
+ "wave_fix": "wave_fix_n64.json",
+ "prior_wave": "../../console_research_wave_20261011_ps2.json",
+ "switchdiff": "switchdiff.json",
+ "ps2_success": {"base": "ps2_success_base.json", "master": "ps2_success_master.json"},
+ "m21": {"base": "m21_base.json", "master": "m21_master.json"},
+ "m22": {
+  "MWCC seed 20261010": {"base": "m22_base_s1.json", "master": "m22_master_s1.json"},
+  "MWCC seed 20261011": {"base": "m22_base_s2.json", "master": "m22_master_s2.json"},
+  "ee-gcc 2.96, seed 20261010": {"base": "m22_base_ee.json", "master": "m22_master_ee.json"}
+ },
+ "classified": "classified.json",
+ "classified_n64_fixed": "classified_n64_fixed.json",
+ "printer_diff": {"base": "printer_diff_base.json", "master": "printer_diff_master.json"},
+ "attribution": "attribution.json"
+}

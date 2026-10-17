@@ -1,0 +1,4341 @@
+{
+  "benchmark": "spurious_gotos",
+  "date": "2026-10-08",
+  "commit": "7e29f17c211f732c7001d01778fe56ad52c42b50",
+  "ghidra_opt": "native/build/ghidra_opt",
+  "ir_passes": null,
+  "configs": {
+    "baseline": "none",
+    "default": "all"
+  },
+  "images": {
+    "gba-pokeemerald": {
+      "sample": 200,
+      "m22_extra": 33,
+      "configs": {
+        "baseline": {
+          "totals": {
+            "functions": 230,
+            "print_gotos": 58,
+            "source_gotos": 0,
+            "source_goto_functions": 0,
+            "spurious_functions": 28,
+            "spurious_gotos": 58,
+            "no-source": 2
+          },
+          "functions": {
+            "08000f00": {
+              "name": "RequestDma3Fill",
+              "printed": 1,
+              "source": 0
+            },
+            "08006348": {
+              "name": "GetKeypadIconWidth",
+              "printed": 0,
+              "source": 0
+            },
+            "08006648": {
+              "name": "DecompressGlyph_SmallNarrow",
+              "printed": 0,
+              "source": 0
+            },
+            "08007df8": {
+              "name": "GetSpriteMatrixNum",
+              "printed": 0,
+              "source": 0
+            },
+            "080082b8": {
+              "name": "ChangeSpriteAffineAnim",
+              "printed": 0,
+              "source": 0
+            },
+            "08008744": {
+              "name": "LoadSpritePalette",
+              "printed": 0,
+              "source": 0
+            },
+            "0800d434": {
+              "name": "rfu_LMAN_checkNICommunicateStatus",
+              "printed": 0,
+              "source": 0
+            },
+            "0800f1e0": {
+              "name": "RfuMain2_Parent",
+              "printed": 1,
+              "source": 0
+            },
+            "080124e8": {
+              "name": "Task_Idle",
+              "printed": 0,
+              "source": 0
+            },
+            "0801a43c": {
+              "name": "CB2_InitWirelessCommunicationScreen",
+              "printed": 0,
+              "source": 0
+            },
+            "0801d1f0": {
+              "name": "Server_Run",
+              "printed": 1,
+              "source": 0
+            },
+            "0801f0d0": {
+              "name": "GetMessageEntryBuffer",
+              "printed": 0,
+              "source": 0
+            },
+            "0801f5b8": {
+              "name": "RunDisplaySubtasks",
+              "printed": 0,
+              "source": 0
+            },
+            "0801fd30": {
+              "name": "Display_PrintSavedTheGame",
+              "printed": 1,
+              "source": 0
+            },
+            "08020af4": {
+              "name": "SpriteCB_TextEntryArrow",
+              "printed": 0,
+              "source": 0
+            },
+            "08021944": {
+              "name": "FramesToMinSec",
+              "printed": 0,
+              "source": 0
+            },
+            "08022cb0": {
+              "name": "Cmd_WaitPaletteFade",
+              "printed": 6,
+              "source": 0
+            },
+            "080261cc": {
+              "name": "CB2_DodrioGame",
+              "printed": 0,
+              "source": 0
+            },
+            "08027554": {
+              "name": "HandleWaitPlayAgainInput",
+              "printed": 1,
+              "source": 0
+            },
+            "08028a88": {
+              "name": "CreateBerrySprites",
+              "printed": 0,
+              "source": 0
+            },
+            "08028b80": {
+              "name": "FreeBerrySprites",
+              "printed": 0,
+              "source": 0
+            },
+            "0802d598": {
+              "name": "EraseMessage",
+              "printed": 0,
+              "source": 0
+            },
+            "0802e120": {
+              "name": "SendPacket_Unused",
+              "printed": 0,
+              "source": 0
+            },
+            "08031580": {
+              "name": "Task_NewGameBirchSpeech_WaitForPlayerShrink",
+              "printed": 0,
+              "source": 0
+            },
+            "08031c88": {
+              "name": "NewGameBirchSpeech_StartFadePlatformIn",
+              "printed": 0,
+              "source": 0
+            },
+            "08033efc": {
+              "name": "BtlController_EmitHealthBarUpdate",
+              "printed": 0,
+              "source": 0
+            },
+            "0804b658": {
+              "name": "Cmd_return",
+              "printed": 0,
+              "source": 0
+            },
+            "0804de14": {
+              "name": "Cmd_fanfare",
+              "printed": 0,
+              "source": 0
+            },
+            "08051064": {
+              "name": "TryDoForceSwitchOut",
+              "printed": 1,
+              "source": 0
+            },
+            "08055dfc": {
+              "name": "Cmd_docastformchangeanimation",
+              "printed": 0,
+              "source": 0
+            },
+            "08062ac4": {
+              "name": "OpponentHandleEndBounceEffect",
+              "printed": 0,
+              "source": 0
+            },
+            "08063364": {
+              "name": "FindMonWithFlagsAndSuperEffective",
+              "printed": 1,
+              "source": 0
+            },
+            "080662f8": {
+              "name": "LinkOpponentHandleLoadMonSprite",
+              "printed": 0,
+              "source": 0
+            },
+            "080672dc": {
+              "name": "LinkOpponentHandleOneReturnValue_Duplicate",
+              "printed": 0,
+              "source": 0
+            },
+            "0806782c": {
+              "name": "EndDrawPartyStatusSummary",
+              "printed": 0,
+              "source": 0
+            },
+            "08070728": {
+              "name": "RejectEggFromDayCare",
+              "printed": 0,
+              "source": 0
+            },
+            "080712c0": {
+              "name": "ShowDaycareLevelMenu",
+              "printed": 0,
+              "source": 0
+            },
+            "08077288": {
+              "name": "SetTradeLinkStandbyCallback",
+              "printed": 0,
+              "source": 0
+            },
+            "0807811c": {
+              "name": "VBlankCB_TradeMenu",
+              "printed": 0,
+              "source": 0
+            },
+            "0807ab04": {
+              "name": "SpriteCB_GbaScreen",
+              "printed": 0,
+              "source": 0
+            },
+            "08081be0": {
+              "name": "CalculatePokeblock",
+              "printed": 0,
+              "source": 0
+            },
+            "080824fc": {
+              "name": "LinkPlayAgainHandleSaving",
+              "printed": 3,
+              "source": 0
+            },
+            "08084b1c": {
+              "name": "LoadSaveblockMapHeader",
+              "printed": 0,
+              "source": 0
+            },
+            "08086ce0": {
+              "name": "IsAnyPlayerInLinkState",
+              "printed": 1,
+              "source": 0
+            },
+            "08089588": {
+              "name": "MetatileBehavior_IsIndoorEncounter",
+              "printed": 0,
+              "source": 0
+            },
+            "080897a0": {
+              "name": "MetatileBehavior_IsPacifidlogHorizontalLogRight",
+              "printed": 0,
+              "source": 0
+            },
+            "0808aaf8": {
+              "name": "PlayerAllowForcedMovementIfMovingSameDirection",
+              "printed": 0,
+              "source": 0
+            },
+            "0808b95c": {
+              "name": "PlayerAcroTurnJump",
+              "printed": 0,
+              "source": 0
+            },
+            "0808b9ec": {
+              "name": "PlayCollisionSoundIfNotFacingWarp",
+              "printed": 0,
+              "source": 0
+            },
+            "0808df80": {
+              "name": "TrySpawnObjectEvents",
+              "printed": 0,
+              "source": 0
+            },
+            "0808e594": {
+              "name": "ObjectEventTurnByLocalIdAndMap",
+              "printed": 0,
+              "source": 0
+            },
+            "08090148": {
+              "name": "MovementType_FaceDownAndUp_Step4",
+              "printed": 0,
+              "source": 0
+            },
+            "08091d84": {
+              "name": "MovementType_WalkSequenceLeftUpRightDown_Step1",
+              "printed": 0,
+              "source": 0
+            },
+            "08093c44": {
+              "name": "MovementAction_WalkSlowDiagonalDownLeft_Step0",
+              "printed": 0,
+              "source": 0
+            },
+            "080948d8": {
+              "name": "MovementAction_WalkInPlaceFasterUp_Step0",
+              "printed": 0,
+              "source": 0
+            },
+            "08094d20": {
+              "name": "MovementAction_PlayerRunLeft_Step1",
+              "printed": 0,
+              "source": 0
+            },
+            "08095070": {
+              "name": "MovementAction_JumpUp_Step0",
+              "printed": 0,
+              "source": 0
+            },
+            "080951a4": {
+              "name": "MovementAction_JumpInPlaceDown_Step1",
+              "printed": 0,
+              "source": 0
+            },
+            "080954dc": {
+              "name": "MovementAction_EmoteExclamationMark_Step0",
+              "printed": 0,
+              "source": 0
+            },
+            "080971c0": {
+              "name": "GroundEffect_JumpOnWater",
+              "printed": 0,
+              "source": 0
+            },
+            "08097d9c": {
+              "name": "IsVirtualObjectAnimating",
+              "printed": 0,
+              "source": 0
+            },
+            "0809b3b0": {
+              "name": "ScrCmd_setmonmove",
+              "printed": 0,
+              "source": 0
+            },
+            "0809b458": {
+              "name": "ScrCmd_addmoney",
+              "printed": 0,
+              "source": 0
+            },
+            "080a14c0": {
+              "name": "QueueAnimTiles_EverGrande_Flowers",
+              "printed": 0,
+              "source": 0
+            },
+            "080a2390": {
+              "name": "BeginFastPaletteFade",
+              "printed": 0,
+              "source": 0
+            },
+            "080a64ec": {
+              "name": "ConvertPosDataToTranslateLinearData",
+              "printed": 0,
+              "source": 0
+            },
+            "080a67bc": {
+              "name": "RunStoredCallbackWhenAffineAnimEnds",
+              "printed": 0,
+              "source": 0
+            },
+            "080a7a74": {
+              "name": "AnimTask_AlphaFadeIn",
+              "printed": 0,
+              "source": 0
+            },
+            "080ab3a8": {
+              "name": "UpdateWeatherColorMap",
+              "printed": 0,
+              "source": 0
+            },
+            "080addbc": {
+              "name": "Ash_InitVars",
+              "printed": 0,
+              "source": 0
+            },
+            "080af314": {
+              "name": "FieldCB_ReturnToFieldWirelessLink",
+              "printed": 0,
+              "source": 0
+            },
+            "080af87c": {
+              "name": "DoMossdeepGymWarp",
+              "printed": 0,
+              "source": 0
+            },
+            "080afbf4": {
+              "name": "Task_DoContestHallWarp",
+              "printed": 3,
+              "source": 0
+            },
+            "080b08ec": {
+              "name": "BattleSetup_StartLatiBattle",
+              "printed": 0,
+              "source": 0
+            },
+            "080b6fa8": {
+              "name": "EscalatorWarpOut_Down_End",
+              "printed": 0,
+              "source": 0
+            },
+            "080b72f4": {
+              "name": "EscalatorWarpIn_End",
+              "printed": 0,
+              "source": 0
+            },
+            "080b86ec": {
+              "name": "FieldMoveShowMonOutdoorsEffect_WaitForMon",
+              "printed": 0,
+              "source": 0
+            },
+            "080bab08": {
+              "name": "Task_OptionMenuFadeOut",
+              "printed": 0,
+              "source": 0
+            },
+            "080c5a48": {
+              "name": "Task_HandleFrontierPassInput",
+              "printed": 1,
+              "source": 0
+            },
+            "080c63fc": {
+              "name": "FreeCursorAndSymbolSprites",
+              "printed": 0,
+              "source": 0
+            },
+            "080ca9c0": {
+              "name": "StartFlashingCloseBoxButton",
+              "printed": 0,
+              "source": 0
+            },
+            "080d5c20": {
+              "name": "SlideMonToOffsetAndBack_End",
+              "printed": 0,
+              "source": 0
+            },
+            "080d622c": {
+              "name": "AnimTask_RotateMonToSideAndRestore",
+              "printed": 0,
+              "source": 0
+            },
+            "080d656c": {
+              "name": "SetBagItemQuantity",
+              "printed": 0,
+              "source": 0
+            },
+            "080da198": {
+              "name": "Task_FinishRoundOfAppeals",
+              "printed": 4,
+              "source": 0
+            },
+            "080dbaa0": {
+              "name": "SetContestantStatusesForNextRound",
+              "printed": 0,
+              "source": 0
+            },
+            "080de424": {
+              "name": "Task_StartDropCurtainAtRoundEnd",
+              "printed": 0,
+              "source": 0
+            },
+            "080e5384": {
+              "name": "HideMoneyBox",
+              "printed": 0,
+              "source": 0
+            },
+            "080e5664": {
+              "name": "ContestEffect_StartlePrevMons",
+              "printed": 0,
+              "source": 0
+            },
+            "080e5a10": {
+              "name": "ContestEffect_StartleMonsSmartAppeal",
+              "printed": 0,
+              "source": 0
+            },
+            "080e9214": {
+              "name": "CurMapIsSecretBase",
+              "printed": 0,
+              "source": 0
+            },
+            "080e9238": {
+              "name": "InitSecretBaseAppearance",
+              "printed": 0,
+              "source": 0
+            },
+            "080f0ecc": {
+              "name": "GetPokeNewsSlotIfActive",
+              "printed": 0,
+              "source": 0
+            },
+            "080f6404": {
+              "name": "Task_ShowWinnerMonBanner",
+              "printed": 1,
+              "source": 0
+            },
+            "080f8ee8": {
+              "name": "Task_ShowContestEntryMonPic",
+              "printed": 2,
+              "source": 0
+            },
+            "080f9438": {
+              "name": "ChooseHalfPartyForBattle",
+              "printed": 0,
+              "source": 0
+            },
+            "081005d4": {
+              "name": "AnimTask_LeafBlade_Step2_Callback",
+              "printed": 0,
+              "source": 0
+            },
+            "08101440": {
+              "name": "AnimBubbleBurst",
+              "printed": 0,
+              "source": 0
+            },
+            "08102584": {
+              "name": "AnimMoonlightSparkle_Step",
+              "printed": 0,
+              "source": 0
+            },
+            "08102de4": {
+              "name": "AnimWavyMusicNotes_Step",
+              "printed": 0,
+              "source": 0
+            },
+            "081052a4": {
+              "name": "AnimHyperVoiceRing",
+              "printed": 3,
+              "source": 0
+            },
+            "0810916c": {
+              "name": "AnimSunlight",
+              "printed": 0,
+              "source": 0
+            },
+            "0810d308": {
+              "name": "AnimStompFoot_Step",
+              "printed": 0,
+              "source": 0
+            },
+            "0810da10": {
+              "name": "AnimRevengeScratch",
+              "printed": 0,
+              "source": 0
+            },
+            "081157fc": {
+              "name": "AnimSimplePaletteBlend",
+              "printed": 0,
+              "source": 0
+            },
+            "081194c8": {
+              "name": "AcroBikeHandleInputTurning",
+              "printed": 0,
+              "source": 0
+            },
+            "08120160": {
+              "name": "SetMauvilleOldMan",
+              "printed": 0,
+              "source": 0
+            },
+            "0812220c": {
+              "name": "SetItemListPerPageCount",
+              "printed": 0,
+              "source": 0
+            },
+            "08123190": {
+              "name": "MoveRegionMapCursor_Full",
+              "printed": 0,
+              "source": 0
+            },
+            "08125b5c": {
+              "name": "QuantizePixel_PersonalityColor",
+              "printed": 0,
+              "source": 0
+            },
+            "08126dcc": {
+              "name": "SecretBasePC_PrepMenuForSelectingStoredDecors",
+              "printed": 0,
+              "source": 0
+            },
+            "0812a750": {
+              "name": "SlotMachineSetup_InitBgsWindows",
+              "printed": 0,
+              "source": 0
+            },
+            "0812e230": {
+              "name": "CreateCoinNumberSprite",
+              "printed": 0,
+              "source": 0
+            },
+            "08131cec": {
+              "name": "Cmd_if_user_has_no_attacking_moves",
+              "printed": 0,
+              "source": 0
+            },
+            "08131d5c": {
+              "name": "Cmd_get_turn_count",
+              "printed": 0,
+              "source": 0
+            },
+            "08134ce8": {
+              "name": "Task_SetClock_HandleInput",
+              "printed": 0,
+              "source": 0
+            },
+            "081371d4": {
+              "name": "CB2_ChangeMapMain",
+              "printed": 0,
+              "source": 0
+            },
+            "08138d10": {
+              "name": "PCTurnOnEffect",
+              "printed": 3,
+              "source": 0
+            },
+            "0813a46c": {
+              "name": "ScrollableMultichoice_MoveCursor",
+              "printed": 0,
+              "source": 0
+            },
+            "0813d824": {
+              "name": "DestroyAreaScreenSprites",
+              "printed": 0,
+              "source": 0
+            },
+            "08142a88": {
+              "name": "Task_PrintRouletteEntryMsg",
+              "printed": 0,
+              "source": 0
+            },
+            "08144d94": {
+              "name": "SpriteCB_ShroomishFall",
+              "printed": 0,
+              "source": 0
+            },
+            "08149864": {
+              "name": "SpriteCB_WhiteBarFade",
+              "printed": 2,
+              "source": 0
+            },
+            "0814d288": {
+              "name": "LinkPartnerHandlePaletteFade",
+              "printed": 0,
+              "source": 0
+            },
+            "08153430": {
+              "name": "WriteSaveBlock2",
+              "printed": 0,
+              "source": 0
+            },
+            "08153850": {
+              "name": "RunMysteryEventScriptCommand",
+              "printed": 0,
+              "source": 0
+            },
+            "08153970": {
+              "name": "SetRecordMixingGift",
+              "printed": 0,
+              "source": 0
+            },
+            "08157644": {
+              "name": "ContestAICmd_if_most_used_count_not_eq",
+              "printed": 0,
+              "source": 0
+            },
+            "08159c08": {
+              "name": "SafariHandleTwoReturnValues",
+              "printed": 0,
+              "source": 0
+            },
+            "0815c3a8": {
+              "name": "AnimTask_StrongFrustrationGrowAndShrink",
+              "printed": 0,
+              "source": 0
+            },
+            "0815e34c": {
+              "name": "GetGlareEyeDotCoords",
+              "printed": 0,
+              "source": 0
+            },
+            "08161d00": {
+              "name": "RoamerMoveToOtherLocationSet",
+              "printed": 0,
+              "source": 0
+            },
+            "081621c0": {
+              "name": "SetTowerBattleWon",
+              "printed": 0,
+              "source": 0
+            },
+            "08164ed8": {
+              "name": "ValidateBattleTowerRecordChecksums",
+              "printed": 0,
+              "source": 0
+            },
+            "08167ba0": {
+              "name": "UpdateMonInfoText",
+              "printed": 0,
+              "source": 0
+            },
+            "08168610": {
+              "name": "CompleteOnChosenItem",
+              "printed": 0,
+              "source": 0
+            },
+            "08168af8": {
+              "name": "WallyBufferExecCompleted",
+              "printed": 0,
+              "source": 0
+            },
+            "0816a788": {
+              "name": "WallyHandleToggleUnkFlag",
+              "printed": 0,
+              "source": 0
+            },
+            "0816bfe0": {
+              "name": "ItemStorage_DrawSwapArrow",
+              "printed": 0,
+              "source": 0
+            },
+            "0816d12c": {
+              "name": "Task_Scene1_FadeIn",
+              "printed": 0,
+              "source": 0
+            },
+            "0816f6d0": {
+              "name": "SpriteCB_WaterDrop_Fall",
+              "printed": 0,
+              "source": 0
+            },
+            "08175ae4": {
+              "name": "Task_CreditsTheEnd2",
+              "printed": 0,
+              "source": 0
+            },
+            "0817603c": {
+              "name": "CheckChangeScene",
+              "printed": 0,
+              "source": 0
+            },
+            "0817c7dc": {
+              "name": "GetWordPitch",
+              "printed": 0,
+              "source": 0
+            },
+            "0817f3f0": {
+              "name": "SetPosForRotation",
+              "printed": 0,
+              "source": 0
+            },
+            "08180f2c": {
+              "name": "BackFlip_2",
+              "printed": 0,
+              "source": 0
+            },
+            "08183574": {
+              "name": "VerticalShakeLowTwice",
+              "printed": 0,
+              "source": 0
+            },
+            "0818bfac": {
+              "name": "RecordedPlayerHandleTrainerSlide",
+              "printed": 0,
+              "source": 0
+            },
+            "0818bfb8": {
+              "name": "RecordedPlayerHandleTrainerSlideBack",
+              "printed": 0,
+              "source": 0
+            },
+            "0818fa20": {
+              "name": "InitDomeOpponentParty",
+              "printed": 0,
+              "source": 0
+            },
+            "0819a25c": {
+              "name": "LoadMonIconPalAtOffset",
+              "printed": 0,
+              "source": 0
+            },
+            "081a09d0": {
+              "name": "IsFinalQuestion",
+              "printed": 0,
+              "source": 0
+            },
+            "081a16b4": {
+              "name": "Task_SwitchToFollowupFuncAfterButtonPress",
+              "printed": 0,
+              "source": 0
+            },
+            "081a2560": {
+              "name": "PikeGetWinStreak",
+              "printed": 0,
+              "source": 0
+            },
+            "081a6a08": {
+              "name": "GetOpponentMostCommonMonType",
+              "printed": 0,
+              "source": 0
+            },
+            "081a7140": {
+              "name": "GetBattlePikeData",
+              "printed": 0,
+              "source": 0
+            },
+            "081a7974": {
+              "name": "AtLeastOneHealthyMon",
+              "printed": 0,
+              "source": 0
+            },
+            "081a9134": {
+              "name": "SavePyramidChallenge",
+              "printed": 0,
+              "source": 0
+            },
+            "081aa760": {
+              "name": "TrySetPyramidObjectEventPositionInSquare",
+              "printed": 3,
+              "source": 0
+            },
+            "081ac23c": {
+              "name": "DrawItemListBgRow",
+              "printed": 0,
+              "source": 0
+            },
+            "081ac2e8": {
+              "name": "StartItemSwap",
+              "printed": 0,
+              "source": 0
+            },
+            "081ad044": {
+              "name": "Task_ChooseHowManyToToss",
+              "printed": 0,
+              "source": 0
+            },
+            "081ad9ec": {
+              "name": "Task_ItemContext_Deposit",
+              "printed": 0,
+              "source": 0
+            },
+            "081adc0c": {
+              "name": "WaitDepositErrorMessage",
+              "printed": 0,
+              "source": 0
+            },
+            "081b0ef4": {
+              "name": "CreatePartyMonSpritesLoop",
+              "printed": 0,
+              "source": 0
+            },
+            "081b31b0": {
+              "name": "DisplaySelectionWindow",
+              "printed": 2,
+              "source": 0
+            },
+            "081b5d4c": {
+              "name": "DrawHeldItemIconsForTrade",
+              "printed": 0,
+              "source": 0
+            },
+            "081b9030": {
+              "name": "UpdatePartyToBattleOrder",
+              "printed": 0,
+              "source": 0
+            },
+            "081b951c": {
+              "name": "ChooseMonForMoveRelearner",
+              "printed": 0,
+              "source": 0
+            },
+            "081b9d98": {
+              "name": "SetSlateportTentPrize",
+              "printed": 0,
+              "source": 0
+            },
+            "081bc484": {
+              "name": "PlayerPartnerHandleGetRawMonData",
+              "printed": 0,
+              "source": 0
+            },
+            "081bd778": {
+              "name": "PlayerPartnerHandleBallThrowAnim",
+              "printed": 0,
+              "source": 0
+            },
+            "081bd784": {
+              "name": "PlayerPartnerHandlePause",
+              "printed": 0,
+              "source": 0
+            },
+            "081bdff8": {
+              "name": "PlayerPartnerHandlePlaySE",
+              "printed": 0,
+              "source": 0
+            },
+            "081c1da4": {
+              "name": "PositionPowerAccSlidingWindow",
+              "printed": 0,
+              "source": 0
+            },
+            "081c4484": {
+              "name": "SetContestMoveTypeIcons",
+              "printed": 0,
+              "source": 0
+            },
+            "081c4c60": {
+              "name": "DestroyMoveSelectorSprites",
+              "printed": 0,
+              "source": 0
+            },
+            "081c5518": {
+              "name": "PrintItemQuantity",
+              "printed": 0,
+              "source": 0
+            },
+            "081c742c": {
+              "name": "Task_Pokenav",
+              "printed": 1,
+              "source": 0
+            },
+            "081c7ba4": {
+              "name": "PrintHelpBarText",
+              "printed": 0,
+              "source": 0
+            },
+            "081ca3b4": {
+              "name": "StartOptionZoom",
+              "printed": 0,
+              "source": 0
+            },
+            "081cbe88": {
+              "name": "PrintMatchCallInfoLabel",
+              "printed": 0,
+              "source": 0
+            },
+            "081cc6f4": {
+              "name": "LoopedTask_OpenRegionMap",
+              "printed": 9,
+              "source": 0
+            },
+            "081cf0c0": {
+              "name": "GetReturningFromGraph",
+              "printed": 0,
+              "source": 0
+            },
+            "081d2c3c": {
+              "name": "MoveRelearnerRunTextPrinters",
+              "printed": 0,
+              "source": 0
+            },
+            "081d5520": {
+              "name": "GetFloorId",
+              "printed": 0,
+              "source": 0
+            },
+            "081d74c8": {
+              "name": "DuoFight_LightningLong",
+              "printed": 0,
+              "source": 0
+            },
+            "081d93d8": {
+              "name": "ChasesAway_GroudonStartLeave",
+              "printed": 0,
+              "source": 0
+            },
+            "081d961c": {
+              "name": "SpriteCB_ChasesAway_Rayquaza",
+              "printed": 2,
+              "source": 0
+            },
+            "081da9bc": {
+              "name": "SpriteCB_LogoCircleSpiral",
+              "printed": 0,
+              "source": 0
+            },
+            "082e0130": {
+              "name": "m4aSongNumStart",
+              "printed": 0,
+              "source": 0
+            },
+            "082e15a0": {
+              "name": "ply_xiecv",
+              "printed": 0,
+              "source": 0
+            },
+            "082e2c78": {
+              "name": "STWI_set_Callback_S",
+              "printed": 0,
+              "source": 0
+            },
+            "082e2e70": {
+              "name": "STWI_send_SC_EndREQ",
+              "printed": 0,
+              "source": 0
+            },
+            "082e46ac": {
+              "name": "rfu_REQ_endSearchChild",
+              "printed": 0,
+              "source": 0
+            },
+            "082e530c": {
+              "name": "rfu_CB_CHILD_pollConnectRecovery",
+              "printed": 0,
+              "source": 0
+            },
+            "082e5c34": {
+              "name": "rfu_UNI_changeAndReadySendData",
+              "printed": 0,
+              "source": 0
+            },
+            "082e5cc8": {
+              "name": "rfu_UNI_readySendData",
+              "printed": 0,
+              "source": 0
+            },
+            "08008ba0": {
+              "name": "StringCopy",
+              "printed": 0,
+              "source": 0
+            },
+            "08008bc0": {
+              "name": "StringAppend",
+              "printed": 0,
+              "source": 0
+            },
+            "08008bd8": {
+              "name": "StringCopyN",
+              "printed": 0,
+              "source": 0
+            },
+            "08008c24": {
+              "name": "StringLength",
+              "printed": 0,
+              "source": 0
+            },
+            "08008c44": {
+              "name": "StringCompare",
+              "printed": 1,
+              "source": 0
+            },
+            "08008cc0": {
+              "name": "ConvertIntToDecimalStringN",
+              "printed": 0,
+              "source": 0
+            },
+            "080090fc": {
+              "name": "StringFill",
+              "printed": 0,
+              "source": 0
+            },
+            "0800927c": {
+              "name": "GetExtCtrlCodeLength",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f534": {
+              "name": "Sin",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f550": {
+              "name": "Cos",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f570": {
+              "name": "Sin2",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f5b4": {
+              "name": "Cos2",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f5cc": {
+              "name": "Random",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f5f8": {
+              "name": "SeedRng",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f620": {
+              "name": "Random2",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f8a8": {
+              "name": "CountTrailingZeroBits",
+              "printed": 1,
+              "source": 0
+            },
+            "0806f8d0": {
+              "name": "CalcCRC16",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f928": {
+              "name": "CalcCRC16WithTable",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f96c": {
+              "name": "CalcByteArraySum",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d648": {
+              "name": "GetVarPointer",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d694": {
+              "name": "VarGet",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d6b0": {
+              "name": "VarSet",
+              "printed": 0,
+              "source": 0
+            },
+            "08151534": {
+              "name": "MathUtil_Mul16",
+              "printed": 0,
+              "source": 0
+            },
+            "08151574": {
+              "name": "MathUtil_Mul32",
+              "printed": 0,
+              "source": 0
+            },
+            "080458e0": {
+              "name": "GetMoveTarget",
+              "printed": 1,
+              "source": 0
+            },
+            "0806d088": {
+              "name": "GetNatureFromPersonality",
+              "printed": 0,
+              "source": 0
+            },
+            "0806ebd0": {
+              "name": "IsShinyOtIdPersonality",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d740": {
+              "name": "FlagSet",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d790": {
+              "name": "FlagGet",
+              "printed": 0,
+              "source": 0
+            },
+            "080a8fb0": {
+              "name": "CreateTask",
+              "printed": 1,
+              "source": 0
+            },
+            "080a909c": {
+              "name": "DestroyTask",
+              "printed": 0,
+              "source": 0
+            },
+            "080a921c": {
+              "name": "FindTaskIdByFunc",
+              "printed": 1,
+              "source": 0
+            }
+          },
+          "decompiled": 232
+        },
+        "default": {
+          "totals": {
+            "functions": 230,
+            "print_gotos": 1,
+            "source_gotos": 0,
+            "source_goto_functions": 0,
+            "spurious_functions": 1,
+            "spurious_gotos": 1,
+            "no-source": 2
+          },
+          "functions": {
+            "08000f00": {
+              "name": "RequestDma3Fill",
+              "printed": 0,
+              "source": 0
+            },
+            "08006348": {
+              "name": "GetKeypadIconWidth",
+              "printed": 0,
+              "source": 0
+            },
+            "08006648": {
+              "name": "DecompressGlyph_SmallNarrow",
+              "printed": 0,
+              "source": 0
+            },
+            "08007df8": {
+              "name": "GetSpriteMatrixNum",
+              "printed": 0,
+              "source": 0
+            },
+            "080082b8": {
+              "name": "ChangeSpriteAffineAnim",
+              "printed": 0,
+              "source": 0
+            },
+            "08008744": {
+              "name": "LoadSpritePalette",
+              "printed": 0,
+              "source": 0
+            },
+            "0800d434": {
+              "name": "rfu_LMAN_checkNICommunicateStatus",
+              "printed": 0,
+              "source": 0
+            },
+            "0800f1e0": {
+              "name": "RfuMain2_Parent",
+              "printed": 0,
+              "source": 0
+            },
+            "080124e8": {
+              "name": "Task_Idle",
+              "printed": 0,
+              "source": 0
+            },
+            "0801a43c": {
+              "name": "CB2_InitWirelessCommunicationScreen",
+              "printed": 0,
+              "source": 0
+            },
+            "0801d1f0": {
+              "name": "Server_Run",
+              "printed": 0,
+              "source": 0
+            },
+            "0801f0d0": {
+              "name": "GetMessageEntryBuffer",
+              "printed": 0,
+              "source": 0
+            },
+            "0801f5b8": {
+              "name": "RunDisplaySubtasks",
+              "printed": 0,
+              "source": 0
+            },
+            "0801fd30": {
+              "name": "Display_PrintSavedTheGame",
+              "printed": 0,
+              "source": 0
+            },
+            "08020af4": {
+              "name": "SpriteCB_TextEntryArrow",
+              "printed": 0,
+              "source": 0
+            },
+            "08021944": {
+              "name": "FramesToMinSec",
+              "printed": 0,
+              "source": 0
+            },
+            "08022cb0": {
+              "name": "Cmd_WaitPaletteFade",
+              "printed": 0,
+              "source": 0
+            },
+            "080261cc": {
+              "name": "CB2_DodrioGame",
+              "printed": 0,
+              "source": 0
+            },
+            "08027554": {
+              "name": "HandleWaitPlayAgainInput",
+              "printed": 0,
+              "source": 0
+            },
+            "08028a88": {
+              "name": "CreateBerrySprites",
+              "printed": 0,
+              "source": 0
+            },
+            "08028b80": {
+              "name": "FreeBerrySprites",
+              "printed": 0,
+              "source": 0
+            },
+            "0802d598": {
+              "name": "EraseMessage",
+              "printed": 0,
+              "source": 0
+            },
+            "0802e120": {
+              "name": "SendPacket_Unused",
+              "printed": 0,
+              "source": 0
+            },
+            "08031580": {
+              "name": "Task_NewGameBirchSpeech_WaitForPlayerShrink",
+              "printed": 0,
+              "source": 0
+            },
+            "08031c88": {
+              "name": "NewGameBirchSpeech_StartFadePlatformIn",
+              "printed": 0,
+              "source": 0
+            },
+            "08033efc": {
+              "name": "BtlController_EmitHealthBarUpdate",
+              "printed": 0,
+              "source": 0
+            },
+            "0804b658": {
+              "name": "Cmd_return",
+              "printed": 0,
+              "source": 0
+            },
+            "0804de14": {
+              "name": "Cmd_fanfare",
+              "printed": 0,
+              "source": 0
+            },
+            "08051064": {
+              "name": "TryDoForceSwitchOut",
+              "printed": 0,
+              "source": 0
+            },
+            "08055dfc": {
+              "name": "Cmd_docastformchangeanimation",
+              "printed": 0,
+              "source": 0
+            },
+            "08062ac4": {
+              "name": "OpponentHandleEndBounceEffect",
+              "printed": 0,
+              "source": 0
+            },
+            "08063364": {
+              "name": "FindMonWithFlagsAndSuperEffective",
+              "printed": 0,
+              "source": 0
+            },
+            "080662f8": {
+              "name": "LinkOpponentHandleLoadMonSprite",
+              "printed": 0,
+              "source": 0
+            },
+            "080672dc": {
+              "name": "LinkOpponentHandleOneReturnValue_Duplicate",
+              "printed": 0,
+              "source": 0
+            },
+            "0806782c": {
+              "name": "EndDrawPartyStatusSummary",
+              "printed": 0,
+              "source": 0
+            },
+            "08070728": {
+              "name": "RejectEggFromDayCare",
+              "printed": 0,
+              "source": 0
+            },
+            "080712c0": {
+              "name": "ShowDaycareLevelMenu",
+              "printed": 0,
+              "source": 0
+            },
+            "08077288": {
+              "name": "SetTradeLinkStandbyCallback",
+              "printed": 0,
+              "source": 0
+            },
+            "0807811c": {
+              "name": "VBlankCB_TradeMenu",
+              "printed": 0,
+              "source": 0
+            },
+            "0807ab04": {
+              "name": "SpriteCB_GbaScreen",
+              "printed": 0,
+              "source": 0
+            },
+            "08081be0": {
+              "name": "CalculatePokeblock",
+              "printed": 0,
+              "source": 0
+            },
+            "080824fc": {
+              "name": "LinkPlayAgainHandleSaving",
+              "printed": 0,
+              "source": 0
+            },
+            "08084b1c": {
+              "name": "LoadSaveblockMapHeader",
+              "printed": 0,
+              "source": 0
+            },
+            "08086ce0": {
+              "name": "IsAnyPlayerInLinkState",
+              "printed": 0,
+              "source": 0
+            },
+            "08089588": {
+              "name": "MetatileBehavior_IsIndoorEncounter",
+              "printed": 0,
+              "source": 0
+            },
+            "080897a0": {
+              "name": "MetatileBehavior_IsPacifidlogHorizontalLogRight",
+              "printed": 0,
+              "source": 0
+            },
+            "0808aaf8": {
+              "name": "PlayerAllowForcedMovementIfMovingSameDirection",
+              "printed": 0,
+              "source": 0
+            },
+            "0808b95c": {
+              "name": "PlayerAcroTurnJump",
+              "printed": 0,
+              "source": 0
+            },
+            "0808b9ec": {
+              "name": "PlayCollisionSoundIfNotFacingWarp",
+              "printed": 0,
+              "source": 0
+            },
+            "0808df80": {
+              "name": "TrySpawnObjectEvents",
+              "printed": 0,
+              "source": 0
+            },
+            "0808e594": {
+              "name": "ObjectEventTurnByLocalIdAndMap",
+              "printed": 0,
+              "source": 0
+            },
+            "08090148": {
+              "name": "MovementType_FaceDownAndUp_Step4",
+              "printed": 0,
+              "source": 0
+            },
+            "08091d84": {
+              "name": "MovementType_WalkSequenceLeftUpRightDown_Step1",
+              "printed": 0,
+              "source": 0
+            },
+            "08093c44": {
+              "name": "MovementAction_WalkSlowDiagonalDownLeft_Step0",
+              "printed": 0,
+              "source": 0
+            },
+            "080948d8": {
+              "name": "MovementAction_WalkInPlaceFasterUp_Step0",
+              "printed": 0,
+              "source": 0
+            },
+            "08094d20": {
+              "name": "MovementAction_PlayerRunLeft_Step1",
+              "printed": 0,
+              "source": 0
+            },
+            "08095070": {
+              "name": "MovementAction_JumpUp_Step0",
+              "printed": 0,
+              "source": 0
+            },
+            "080951a4": {
+              "name": "MovementAction_JumpInPlaceDown_Step1",
+              "printed": 0,
+              "source": 0
+            },
+            "080954dc": {
+              "name": "MovementAction_EmoteExclamationMark_Step0",
+              "printed": 0,
+              "source": 0
+            },
+            "080971c0": {
+              "name": "GroundEffect_JumpOnWater",
+              "printed": 0,
+              "source": 0
+            },
+            "08097d9c": {
+              "name": "IsVirtualObjectAnimating",
+              "printed": 0,
+              "source": 0
+            },
+            "0809b3b0": {
+              "name": "ScrCmd_setmonmove",
+              "printed": 0,
+              "source": 0
+            },
+            "0809b458": {
+              "name": "ScrCmd_addmoney",
+              "printed": 0,
+              "source": 0
+            },
+            "080a14c0": {
+              "name": "QueueAnimTiles_EverGrande_Flowers",
+              "printed": 0,
+              "source": 0
+            },
+            "080a2390": {
+              "name": "BeginFastPaletteFade",
+              "printed": 0,
+              "source": 0
+            },
+            "080a64ec": {
+              "name": "ConvertPosDataToTranslateLinearData",
+              "printed": 0,
+              "source": 0
+            },
+            "080a67bc": {
+              "name": "RunStoredCallbackWhenAffineAnimEnds",
+              "printed": 0,
+              "source": 0
+            },
+            "080a7a74": {
+              "name": "AnimTask_AlphaFadeIn",
+              "printed": 0,
+              "source": 0
+            },
+            "080ab3a8": {
+              "name": "UpdateWeatherColorMap",
+              "printed": 0,
+              "source": 0
+            },
+            "080addbc": {
+              "name": "Ash_InitVars",
+              "printed": 0,
+              "source": 0
+            },
+            "080af314": {
+              "name": "FieldCB_ReturnToFieldWirelessLink",
+              "printed": 0,
+              "source": 0
+            },
+            "080af87c": {
+              "name": "DoMossdeepGymWarp",
+              "printed": 0,
+              "source": 0
+            },
+            "080afbf4": {
+              "name": "Task_DoContestHallWarp",
+              "printed": 0,
+              "source": 0
+            },
+            "080b08ec": {
+              "name": "BattleSetup_StartLatiBattle",
+              "printed": 0,
+              "source": 0
+            },
+            "080b6fa8": {
+              "name": "EscalatorWarpOut_Down_End",
+              "printed": 0,
+              "source": 0
+            },
+            "080b72f4": {
+              "name": "EscalatorWarpIn_End",
+              "printed": 0,
+              "source": 0
+            },
+            "080b86ec": {
+              "name": "FieldMoveShowMonOutdoorsEffect_WaitForMon",
+              "printed": 0,
+              "source": 0
+            },
+            "080bab08": {
+              "name": "Task_OptionMenuFadeOut",
+              "printed": 0,
+              "source": 0
+            },
+            "080c5a48": {
+              "name": "Task_HandleFrontierPassInput",
+              "printed": 0,
+              "source": 0
+            },
+            "080c63fc": {
+              "name": "FreeCursorAndSymbolSprites",
+              "printed": 0,
+              "source": 0
+            },
+            "080ca9c0": {
+              "name": "StartFlashingCloseBoxButton",
+              "printed": 0,
+              "source": 0
+            },
+            "080d5c20": {
+              "name": "SlideMonToOffsetAndBack_End",
+              "printed": 0,
+              "source": 0
+            },
+            "080d622c": {
+              "name": "AnimTask_RotateMonToSideAndRestore",
+              "printed": 0,
+              "source": 0
+            },
+            "080d656c": {
+              "name": "SetBagItemQuantity",
+              "printed": 0,
+              "source": 0
+            },
+            "080da198": {
+              "name": "Task_FinishRoundOfAppeals",
+              "printed": 0,
+              "source": 0
+            },
+            "080dbaa0": {
+              "name": "SetContestantStatusesForNextRound",
+              "printed": 0,
+              "source": 0
+            },
+            "080de424": {
+              "name": "Task_StartDropCurtainAtRoundEnd",
+              "printed": 0,
+              "source": 0
+            },
+            "080e5384": {
+              "name": "HideMoneyBox",
+              "printed": 0,
+              "source": 0
+            },
+            "080e5664": {
+              "name": "ContestEffect_StartlePrevMons",
+              "printed": 0,
+              "source": 0
+            },
+            "080e5a10": {
+              "name": "ContestEffect_StartleMonsSmartAppeal",
+              "printed": 0,
+              "source": 0
+            },
+            "080e9214": {
+              "name": "CurMapIsSecretBase",
+              "printed": 0,
+              "source": 0
+            },
+            "080e9238": {
+              "name": "InitSecretBaseAppearance",
+              "printed": 0,
+              "source": 0
+            },
+            "080f0ecc": {
+              "name": "GetPokeNewsSlotIfActive",
+              "printed": 0,
+              "source": 0
+            },
+            "080f6404": {
+              "name": "Task_ShowWinnerMonBanner",
+              "printed": 0,
+              "source": 0
+            },
+            "080f8ee8": {
+              "name": "Task_ShowContestEntryMonPic",
+              "printed": 0,
+              "source": 0
+            },
+            "080f9438": {
+              "name": "ChooseHalfPartyForBattle",
+              "printed": 0,
+              "source": 0
+            },
+            "081005d4": {
+              "name": "AnimTask_LeafBlade_Step2_Callback",
+              "printed": 0,
+              "source": 0
+            },
+            "08101440": {
+              "name": "AnimBubbleBurst",
+              "printed": 0,
+              "source": 0
+            },
+            "08102584": {
+              "name": "AnimMoonlightSparkle_Step",
+              "printed": 0,
+              "source": 0
+            },
+            "08102de4": {
+              "name": "AnimWavyMusicNotes_Step",
+              "printed": 0,
+              "source": 0
+            },
+            "081052a4": {
+              "name": "AnimHyperVoiceRing",
+              "printed": 0,
+              "source": 0
+            },
+            "0810916c": {
+              "name": "AnimSunlight",
+              "printed": 0,
+              "source": 0
+            },
+            "0810d308": {
+              "name": "AnimStompFoot_Step",
+              "printed": 0,
+              "source": 0
+            },
+            "0810da10": {
+              "name": "AnimRevengeScratch",
+              "printed": 0,
+              "source": 0
+            },
+            "081157fc": {
+              "name": "AnimSimplePaletteBlend",
+              "printed": 0,
+              "source": 0
+            },
+            "081194c8": {
+              "name": "AcroBikeHandleInputTurning",
+              "printed": 0,
+              "source": 0
+            },
+            "08120160": {
+              "name": "SetMauvilleOldMan",
+              "printed": 0,
+              "source": 0
+            },
+            "0812220c": {
+              "name": "SetItemListPerPageCount",
+              "printed": 0,
+              "source": 0
+            },
+            "08123190": {
+              "name": "MoveRegionMapCursor_Full",
+              "printed": 0,
+              "source": 0
+            },
+            "08125b5c": {
+              "name": "QuantizePixel_PersonalityColor",
+              "printed": 0,
+              "source": 0
+            },
+            "08126dcc": {
+              "name": "SecretBasePC_PrepMenuForSelectingStoredDecors",
+              "printed": 0,
+              "source": 0
+            },
+            "0812a750": {
+              "name": "SlotMachineSetup_InitBgsWindows",
+              "printed": 0,
+              "source": 0
+            },
+            "0812e230": {
+              "name": "CreateCoinNumberSprite",
+              "printed": 0,
+              "source": 0
+            },
+            "08131cec": {
+              "name": "Cmd_if_user_has_no_attacking_moves",
+              "printed": 0,
+              "source": 0
+            },
+            "08131d5c": {
+              "name": "Cmd_get_turn_count",
+              "printed": 0,
+              "source": 0
+            },
+            "08134ce8": {
+              "name": "Task_SetClock_HandleInput",
+              "printed": 0,
+              "source": 0
+            },
+            "081371d4": {
+              "name": "CB2_ChangeMapMain",
+              "printed": 0,
+              "source": 0
+            },
+            "08138d10": {
+              "name": "PCTurnOnEffect",
+              "printed": 0,
+              "source": 0
+            },
+            "0813a46c": {
+              "name": "ScrollableMultichoice_MoveCursor",
+              "printed": 0,
+              "source": 0
+            },
+            "0813d824": {
+              "name": "DestroyAreaScreenSprites",
+              "printed": 0,
+              "source": 0
+            },
+            "08142a88": {
+              "name": "Task_PrintRouletteEntryMsg",
+              "printed": 0,
+              "source": 0
+            },
+            "08144d94": {
+              "name": "SpriteCB_ShroomishFall",
+              "printed": 0,
+              "source": 0
+            },
+            "08149864": {
+              "name": "SpriteCB_WhiteBarFade",
+              "printed": 0,
+              "source": 0
+            },
+            "0814d288": {
+              "name": "LinkPartnerHandlePaletteFade",
+              "printed": 0,
+              "source": 0
+            },
+            "08153430": {
+              "name": "WriteSaveBlock2",
+              "printed": 0,
+              "source": 0
+            },
+            "08153850": {
+              "name": "RunMysteryEventScriptCommand",
+              "printed": 0,
+              "source": 0
+            },
+            "08153970": {
+              "name": "SetRecordMixingGift",
+              "printed": 0,
+              "source": 0
+            },
+            "08157644": {
+              "name": "ContestAICmd_if_most_used_count_not_eq",
+              "printed": 0,
+              "source": 0
+            },
+            "08159c08": {
+              "name": "SafariHandleTwoReturnValues",
+              "printed": 0,
+              "source": 0
+            },
+            "0815c3a8": {
+              "name": "AnimTask_StrongFrustrationGrowAndShrink",
+              "printed": 0,
+              "source": 0
+            },
+            "0815e34c": {
+              "name": "GetGlareEyeDotCoords",
+              "printed": 0,
+              "source": 0
+            },
+            "08161d00": {
+              "name": "RoamerMoveToOtherLocationSet",
+              "printed": 0,
+              "source": 0
+            },
+            "081621c0": {
+              "name": "SetTowerBattleWon",
+              "printed": 0,
+              "source": 0
+            },
+            "08164ed8": {
+              "name": "ValidateBattleTowerRecordChecksums",
+              "printed": 0,
+              "source": 0
+            },
+            "08167ba0": {
+              "name": "UpdateMonInfoText",
+              "printed": 0,
+              "source": 0
+            },
+            "08168610": {
+              "name": "CompleteOnChosenItem",
+              "printed": 0,
+              "source": 0
+            },
+            "08168af8": {
+              "name": "WallyBufferExecCompleted",
+              "printed": 0,
+              "source": 0
+            },
+            "0816a788": {
+              "name": "WallyHandleToggleUnkFlag",
+              "printed": 0,
+              "source": 0
+            },
+            "0816bfe0": {
+              "name": "ItemStorage_DrawSwapArrow",
+              "printed": 0,
+              "source": 0
+            },
+            "0816d12c": {
+              "name": "Task_Scene1_FadeIn",
+              "printed": 0,
+              "source": 0
+            },
+            "0816f6d0": {
+              "name": "SpriteCB_WaterDrop_Fall",
+              "printed": 0,
+              "source": 0
+            },
+            "08175ae4": {
+              "name": "Task_CreditsTheEnd2",
+              "printed": 0,
+              "source": 0
+            },
+            "0817603c": {
+              "name": "CheckChangeScene",
+              "printed": 0,
+              "source": 0
+            },
+            "0817c7dc": {
+              "name": "GetWordPitch",
+              "printed": 0,
+              "source": 0
+            },
+            "0817f3f0": {
+              "name": "SetPosForRotation",
+              "printed": 0,
+              "source": 0
+            },
+            "08180f2c": {
+              "name": "BackFlip_2",
+              "printed": 0,
+              "source": 0
+            },
+            "08183574": {
+              "name": "VerticalShakeLowTwice",
+              "printed": 0,
+              "source": 0
+            },
+            "0818bfac": {
+              "name": "RecordedPlayerHandleTrainerSlide",
+              "printed": 0,
+              "source": 0
+            },
+            "0818bfb8": {
+              "name": "RecordedPlayerHandleTrainerSlideBack",
+              "printed": 0,
+              "source": 0
+            },
+            "0818fa20": {
+              "name": "InitDomeOpponentParty",
+              "printed": 0,
+              "source": 0
+            },
+            "0819a25c": {
+              "name": "LoadMonIconPalAtOffset",
+              "printed": 0,
+              "source": 0
+            },
+            "081a09d0": {
+              "name": "IsFinalQuestion",
+              "printed": 0,
+              "source": 0
+            },
+            "081a16b4": {
+              "name": "Task_SwitchToFollowupFuncAfterButtonPress",
+              "printed": 0,
+              "source": 0
+            },
+            "081a2560": {
+              "name": "PikeGetWinStreak",
+              "printed": 0,
+              "source": 0
+            },
+            "081a6a08": {
+              "name": "GetOpponentMostCommonMonType",
+              "printed": 0,
+              "source": 0
+            },
+            "081a7140": {
+              "name": "GetBattlePikeData",
+              "printed": 0,
+              "source": 0
+            },
+            "081a7974": {
+              "name": "AtLeastOneHealthyMon",
+              "printed": 0,
+              "source": 0
+            },
+            "081a9134": {
+              "name": "SavePyramidChallenge",
+              "printed": 0,
+              "source": 0
+            },
+            "081aa760": {
+              "name": "TrySetPyramidObjectEventPositionInSquare",
+              "printed": 0,
+              "source": 0
+            },
+            "081ac23c": {
+              "name": "DrawItemListBgRow",
+              "printed": 0,
+              "source": 0
+            },
+            "081ac2e8": {
+              "name": "StartItemSwap",
+              "printed": 0,
+              "source": 0
+            },
+            "081ad044": {
+              "name": "Task_ChooseHowManyToToss",
+              "printed": 0,
+              "source": 0
+            },
+            "081ad9ec": {
+              "name": "Task_ItemContext_Deposit",
+              "printed": 0,
+              "source": 0
+            },
+            "081adc0c": {
+              "name": "WaitDepositErrorMessage",
+              "printed": 0,
+              "source": 0
+            },
+            "081b0ef4": {
+              "name": "CreatePartyMonSpritesLoop",
+              "printed": 0,
+              "source": 0
+            },
+            "081b31b0": {
+              "name": "DisplaySelectionWindow",
+              "printed": 1,
+              "source": 0
+            },
+            "081b5d4c": {
+              "name": "DrawHeldItemIconsForTrade",
+              "printed": 0,
+              "source": 0
+            },
+            "081b9030": {
+              "name": "UpdatePartyToBattleOrder",
+              "printed": 0,
+              "source": 0
+            },
+            "081b951c": {
+              "name": "ChooseMonForMoveRelearner",
+              "printed": 0,
+              "source": 0
+            },
+            "081b9d98": {
+              "name": "SetSlateportTentPrize",
+              "printed": 0,
+              "source": 0
+            },
+            "081bc484": {
+              "name": "PlayerPartnerHandleGetRawMonData",
+              "printed": 0,
+              "source": 0
+            },
+            "081bd778": {
+              "name": "PlayerPartnerHandleBallThrowAnim",
+              "printed": 0,
+              "source": 0
+            },
+            "081bd784": {
+              "name": "PlayerPartnerHandlePause",
+              "printed": 0,
+              "source": 0
+            },
+            "081bdff8": {
+              "name": "PlayerPartnerHandlePlaySE",
+              "printed": 0,
+              "source": 0
+            },
+            "081c1da4": {
+              "name": "PositionPowerAccSlidingWindow",
+              "printed": 0,
+              "source": 0
+            },
+            "081c4484": {
+              "name": "SetContestMoveTypeIcons",
+              "printed": 0,
+              "source": 0
+            },
+            "081c4c60": {
+              "name": "DestroyMoveSelectorSprites",
+              "printed": 0,
+              "source": 0
+            },
+            "081c5518": {
+              "name": "PrintItemQuantity",
+              "printed": 0,
+              "source": 0
+            },
+            "081c742c": {
+              "name": "Task_Pokenav",
+              "printed": 0,
+              "source": 0
+            },
+            "081c7ba4": {
+              "name": "PrintHelpBarText",
+              "printed": 0,
+              "source": 0
+            },
+            "081ca3b4": {
+              "name": "StartOptionZoom",
+              "printed": 0,
+              "source": 0
+            },
+            "081cbe88": {
+              "name": "PrintMatchCallInfoLabel",
+              "printed": 0,
+              "source": 0
+            },
+            "081cc6f4": {
+              "name": "LoopedTask_OpenRegionMap",
+              "printed": 0,
+              "source": 0
+            },
+            "081cf0c0": {
+              "name": "GetReturningFromGraph",
+              "printed": 0,
+              "source": 0
+            },
+            "081d2c3c": {
+              "name": "MoveRelearnerRunTextPrinters",
+              "printed": 0,
+              "source": 0
+            },
+            "081d5520": {
+              "name": "GetFloorId",
+              "printed": 0,
+              "source": 0
+            },
+            "081d74c8": {
+              "name": "DuoFight_LightningLong",
+              "printed": 0,
+              "source": 0
+            },
+            "081d93d8": {
+              "name": "ChasesAway_GroudonStartLeave",
+              "printed": 0,
+              "source": 0
+            },
+            "081d961c": {
+              "name": "SpriteCB_ChasesAway_Rayquaza",
+              "printed": 0,
+              "source": 0
+            },
+            "081da9bc": {
+              "name": "SpriteCB_LogoCircleSpiral",
+              "printed": 0,
+              "source": 0
+            },
+            "082e0130": {
+              "name": "m4aSongNumStart",
+              "printed": 0,
+              "source": 0
+            },
+            "082e15a0": {
+              "name": "ply_xiecv",
+              "printed": 0,
+              "source": 0
+            },
+            "082e2c78": {
+              "name": "STWI_set_Callback_S",
+              "printed": 0,
+              "source": 0
+            },
+            "082e2e70": {
+              "name": "STWI_send_SC_EndREQ",
+              "printed": 0,
+              "source": 0
+            },
+            "082e46ac": {
+              "name": "rfu_REQ_endSearchChild",
+              "printed": 0,
+              "source": 0
+            },
+            "082e530c": {
+              "name": "rfu_CB_CHILD_pollConnectRecovery",
+              "printed": 0,
+              "source": 0
+            },
+            "082e5c34": {
+              "name": "rfu_UNI_changeAndReadySendData",
+              "printed": 0,
+              "source": 0
+            },
+            "082e5cc8": {
+              "name": "rfu_UNI_readySendData",
+              "printed": 0,
+              "source": 0
+            },
+            "08008ba0": {
+              "name": "StringCopy",
+              "printed": 0,
+              "source": 0
+            },
+            "08008bc0": {
+              "name": "StringAppend",
+              "printed": 0,
+              "source": 0
+            },
+            "08008bd8": {
+              "name": "StringCopyN",
+              "printed": 0,
+              "source": 0
+            },
+            "08008c24": {
+              "name": "StringLength",
+              "printed": 0,
+              "source": 0
+            },
+            "08008c44": {
+              "name": "StringCompare",
+              "printed": 0,
+              "source": 0
+            },
+            "08008cc0": {
+              "name": "ConvertIntToDecimalStringN",
+              "printed": 0,
+              "source": 0
+            },
+            "080090fc": {
+              "name": "StringFill",
+              "printed": 0,
+              "source": 0
+            },
+            "0800927c": {
+              "name": "GetExtCtrlCodeLength",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f534": {
+              "name": "Sin",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f550": {
+              "name": "Cos",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f570": {
+              "name": "Sin2",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f5b4": {
+              "name": "Cos2",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f5cc": {
+              "name": "Random",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f5f8": {
+              "name": "SeedRng",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f620": {
+              "name": "Random2",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f8a8": {
+              "name": "CountTrailingZeroBits",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f8d0": {
+              "name": "CalcCRC16",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f928": {
+              "name": "CalcCRC16WithTable",
+              "printed": 0,
+              "source": 0
+            },
+            "0806f96c": {
+              "name": "CalcByteArraySum",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d648": {
+              "name": "GetVarPointer",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d694": {
+              "name": "VarGet",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d6b0": {
+              "name": "VarSet",
+              "printed": 0,
+              "source": 0
+            },
+            "08151534": {
+              "name": "MathUtil_Mul16",
+              "printed": 0,
+              "source": 0
+            },
+            "08151574": {
+              "name": "MathUtil_Mul32",
+              "printed": 0,
+              "source": 0
+            },
+            "080458e0": {
+              "name": "GetMoveTarget",
+              "printed": 0,
+              "source": 0
+            },
+            "0806d088": {
+              "name": "GetNatureFromPersonality",
+              "printed": 0,
+              "source": 0
+            },
+            "0806ebd0": {
+              "name": "IsShinyOtIdPersonality",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d740": {
+              "name": "FlagSet",
+              "printed": 0,
+              "source": 0
+            },
+            "0809d790": {
+              "name": "FlagGet",
+              "printed": 0,
+              "source": 0
+            },
+            "080a8fb0": {
+              "name": "CreateTask",
+              "printed": 0,
+              "source": 0
+            },
+            "080a909c": {
+              "name": "DestroyTask",
+              "printed": 0,
+              "source": 0
+            },
+            "080a921c": {
+              "name": "FindTaskIdByFunc",
+              "printed": 0,
+              "source": 0
+            }
+          },
+          "decompiled": 232
+        }
+      }
+    },
+    "nds-pokeheartgold-arm9": {
+      "sample": 200,
+      "m22_extra": 0,
+      "configs": {
+        "baseline": {
+          "totals": {
+            "functions": 194,
+            "print_gotos": 9,
+            "source_gotos": 0,
+            "source_goto_functions": 0,
+            "spurious_functions": 3,
+            "spurious_gotos": 9,
+            "no-source": 6
+          },
+          "functions": {
+            "02001f20": {
+              "name": "CreateYesNoMenu",
+              "printed": 0,
+              "source": 0
+            },
+            "02002ba8": {
+              "name": "TextFlags_SetAlternateDownArrow",
+              "printed": 0,
+              "source": 0
+            },
+            "02002f30": {
+              "name": "FontID_String_GetWidth",
+              "printed": 0,
+              "source": 0
+            },
+            "020030b8": {
+              "name": "FontID_GetGlyphWidth",
+              "printed": 0,
+              "source": 0
+            },
+            "020035f0": {
+              "name": "SelectedPaletteData_SetTimedFadeParams",
+              "printed": 0,
+              "source": 0
+            },
+            "020047c8": {
+              "name": "GF_Snd_LoadBank",
+              "printed": 0,
+              "source": 0
+            },
+            "02007974": {
+              "name": "GfGfxLoader_PartiallyLoadPalette",
+              "printed": 0,
+              "source": 0
+            },
+            "02007c60": {
+              "name": "GfGfxLoader_GetCellBankFromOpenNarc",
+              "printed": 0,
+              "source": 0
+            },
+            "02009138": {
+              "name": "Pokepic_ResumePaletteFade",
+              "printed": 0,
+              "source": 0
+            },
+            "0200a790": {
+              "name": "destroyAllObjects",
+              "printed": 0,
+              "source": 0
+            },
+            "0200b9f8": {
+              "name": "ReadMsgData_ExistingNarc_NewString",
+              "printed": 0,
+              "source": 0
+            },
+            "0200bc4c": {
+              "name": "ReadMsgData_ExpandPlaceholders",
+              "printed": 0,
+              "source": 0
+            },
+            "0200c3e8": {
+              "name": "BufferTrainerNameFromDataStruct",
+              "printed": 0,
+              "source": 0
+            },
+            "0200c578": {
+              "name": "BufferSealNamePlural",
+              "printed": 0,
+              "source": 0
+            },
+            "0200cad8": {
+              "name": "BufferPokewalkerCourseName",
+              "printed": 0,
+              "source": 0
+            },
+            "0200cf6c": {
+              "name": "SpriteSystem_GetRenderer",
+              "printed": 0,
+              "source": 0
+            },
+            "0200d934": {
+              "name": "SpriteManager_FindPlttResourceProxy",
+              "printed": 0,
+              "source": 0
+            },
+            "0200dc34": {
+              "name": "ManagedSprite_TickNFrames",
+              "printed": 0,
+              "source": 0
+            },
+            "0200dd60": {
+              "name": "thunk_Sprite_SetDrawPriority",
+              "printed": 0,
+              "source": 0
+            },
+            "0200dd68": {
+              "name": "ManagedSprite_SetDrawPriority",
+              "printed": 0,
+              "source": 0
+            },
+            "0200de00": {
+              "name": "Sprite_GetPositionXY",
+              "printed": 0,
+              "source": 0
+            },
+            "020143e0": {
+              "name": "sub_020143E0",
+              "printed": 0,
+              "source": 0
+            },
+            "02014708": {
+              "name": "GF_RTC_CopyDateTime",
+              "printed": 0,
+              "source": 0
+            },
+            "020149a4": {
+              "name": "ListMenuItems_SeekEnd",
+              "printed": 0,
+              "source": 0
+            },
+            "02015834": {
+              "name": "MailMsg_Init_WithBank",
+              "printed": 0,
+              "source": 0
+            },
+            "020159e4": {
+              "name": "MailMsg_GetMsgBank",
+              "printed": 0,
+              "source": 0
+            },
+            "02015a5c": {
+              "name": "MailMsg_SetFieldI",
+              "printed": 0,
+              "source": 0
+            },
+            "02015cc8": {
+              "name": "TrendyWordIdxToECWord",
+              "printed": 0,
+              "source": 0
+            },
+            "02016748": {
+              "name": "YesNoPrompt_HandleInputForSave",
+              "printed": 0,
+              "source": 0
+            },
+            "020169cc": {
+              "name": "YesNoPrompt_Reset",
+              "printed": 0,
+              "source": 0
+            },
+            "02019014": {
+              "name": "CreateCameraTranslationWrapper",
+              "printed": 0,
+              "source": 0
+            },
+            "0201a928": {
+              "name": "CreateHeapInternal",
+              "printed": 0,
+              "source": 0
+            },
+            "0201aa38": {
+              "name": "AllocFromHeapInternal",
+              "printed": 0,
+              "source": 0
+            },
+            "0201ab0c": {
+              "name": "Heap_Free",
+              "printed": 0,
+              "source": 0
+            },
+            "0201ace8": {
+              "name": "SetScreenModeAndDisable",
+              "printed": 0,
+              "source": 0
+            },
+            "0201ad0c": {
+              "name": "InitBgFromTemplateEx",
+              "printed": 4,
+              "source": 0
+            },
+            "0201cc2c": {
+              "name": "GetBgPriority",
+              "printed": 0,
+              "source": 0
+            },
+            "0201eeb4": {
+              "name": "DoScheduledBgGpuUpdates",
+              "printed": 0,
+              "source": 0
+            },
+            "0201f5b8": {
+              "name": "initializeSimple3DVramManager",
+              "printed": 0,
+              "source": 0
+            },
+            "0201f984": {
+              "name": "SysTask_SetFunc",
+              "printed": 0,
+              "source": 0
+            },
+            "0201fd2c": {
+              "name": "GetLCRNGSeed",
+              "printed": 0,
+              "source": 0
+            },
+            "02020020": {
+              "name": "DestroyTextPrinterSysTask",
+              "printed": 0,
+              "source": 0
+            },
+            "02020aa0": {
+              "name": "Ascii_StrLen",
+              "printed": 0,
+              "source": 0
+            },
+            "020216f4": {
+              "name": "ObjCharTransfer_SetReservedRegion",
+              "printed": 0,
+              "source": 0
+            },
+            "02021dd0": {
+              "name": "ObjCharTransferTask_SetBaseAddrs",
+              "printed": 0,
+              "source": 0
+            },
+            "02022238": {
+              "name": "ObjCharTransfer_FreeBlockTransferBuffer",
+              "printed": 0,
+              "source": 0
+            },
+            "02022260": {
+              "name": "ObjCharTransfer_GetBlocksCountFromBufferPtr",
+              "printed": 0,
+              "source": 0
+            },
+            "020223c4": {
+              "name": "ObjCharTransferTask_ResetBlockTransferFlags",
+              "printed": 0,
+              "source": 0
+            },
+            "02023214": {
+              "name": "Camera_SetFixedTarget",
+              "printed": 0,
+              "source": 0
+            },
+            "020245fc": {
+              "name": "Sprite_Init",
+              "printed": 0,
+              "source": 0
+            },
+            "020248ac": {
+              "name": "Sprite_GetMatrixPtr",
+              "printed": 0,
+              "source": 0
+            },
+            "02024a6c": {
+              "name": "Sprite_GetPalIndex",
+              "printed": 0,
+              "source": 0
+            },
+            "02024b34": {
+              "name": "Sprite_GetPaletteProxy",
+              "printed": 0,
+              "source": 0
+            },
+            "02025404": {
+              "name": "Init_Timer3",
+              "printed": 0,
+              "source": 0
+            },
+            "02025b40": {
+              "name": "ResTexAllocVramAndGetKeys",
+              "printed": 0,
+              "source": 0
+            },
+            "020274e0": {
+              "name": "Save_FileExists",
+              "printed": 0,
+              "source": 0
+            },
+            "02027744": {
+              "name": "SaveSlotCheckCompare",
+              "printed": 0,
+              "source": 0
+            },
+            "02027d6c": {
+              "name": "CancelAsyncSave",
+              "printed": 0,
+              "source": 0
+            },
+            "02028d30": {
+              "name": "Save_SysInfo_Get",
+              "printed": 0,
+              "source": 0
+            },
+            "02028dc4": {
+              "name": "Save_SysInfo_GetBirthDay",
+              "printed": 0,
+              "source": 0
+            },
+            "020290c8": {
+              "name": "Save_LinkBattleRuleset_Init",
+              "printed": 0,
+              "source": 0
+            },
+            "020296c8": {
+              "name": "Pokedex_SetSeenForm_2max",
+              "printed": 0,
+              "source": 0
+            },
+            "0202984c": {
+              "name": "Pokedex_SetSeenForm_3max",
+              "printed": 0,
+              "source": 0
+            },
+            "02029ef4": {
+              "name": "Pokedex_CountJohtoDexSeen",
+              "printed": 0,
+              "source": 0
+            },
+            "0202a57c": {
+              "name": "Pokedex_EnableFormDetection",
+              "printed": 0,
+              "source": 0
+            },
+            "0202aed4": {
+              "name": "Save_PalPad_Init",
+              "printed": 0,
+              "source": 0
+            },
+            "0202b3f0": {
+              "name": "Mail_GetType",
+              "printed": 0,
+              "source": 0
+            },
+            "0202cc5c": {
+              "name": "SealCaseInventory_GetSealQuantity",
+              "printed": 0,
+              "source": 0
+            },
+            "0202d9f4": {
+              "name": "PlayerLocationHistoryGetBack",
+              "printed": 0,
+              "source": 0
+            },
+            "0202debc": {
+              "name": "SaveMysteryGift_SpecialCardTagIsValid",
+              "printed": 0,
+              "source": 0
+            },
+            "0202e0ac": {
+              "name": "SaveMGDataPtr_GetDataByIndex",
+              "printed": 0,
+              "source": 0
+            },
+            "0202e4b0": {
+              "name": "RankingsViewSys_GetNumRecordsPerPage",
+              "printed": 0,
+              "source": 0
+            },
+            "0202f720": {
+              "name": "SafariZone_GetObjectUnlockLevel",
+              "printed": 0,
+              "source": 0
+            },
+            "0202f888": {
+              "name": "SafariZone_IsCurrentlyLinked",
+              "printed": 0,
+              "source": 0
+            },
+            "0202fa64": {
+              "name": "Save_PhotoAlbum_Get",
+              "printed": 0,
+              "source": 0
+            },
+            "0202fab0": {
+              "name": "PhotoAlbum_GetNumSaved",
+              "printed": 0,
+              "source": 0
+            },
+            "02031774": {
+              "name": "sub_02031774",
+              "printed": 0,
+              "source": 0
+            },
+            "0203197c": {
+              "name": "PokeathlonSave_GetRecordsSolo",
+              "printed": 0,
+              "source": 0
+            },
+            "020327ac": {
+              "name": "TrainerHouseMon_SetZero",
+              "printed": 0,
+              "source": 0
+            },
+            "0203b014": {
+              "name": "MapMatrix_GetHeight",
+              "printed": 0,
+              "source": 0
+            },
+            "0203b470": {
+              "name": "MapHeader_IsBikeAllowed",
+              "printed": 0,
+              "source": 0
+            },
+            "0203ca44": {
+              "name": "Task_StartMenu_HandleSelection_Pokemon",
+              "printed": 0,
+              "source": 0
+            },
+            "0203d264": {
+              "name": "sub_0203D264",
+              "printed": 0,
+              "source": 0
+            },
+            "0203d488": {
+              "name": "Task_StartMenu_HandleSelection_Retire",
+              "printed": 0,
+              "source": 0
+            },
+            "0203e344": {
+              "name": "FieldSystem_GetSaveData",
+              "printed": 0,
+              "source": 0
+            },
+            "0203e3d4": {
+              "name": "Bag_LaunchApp",
+              "printed": 0,
+              "source": 0
+            },
+            "0203ea5c": {
+              "name": "PokegearTownMap_LaunchApp_Impl",
+              "printed": 0,
+              "source": 0
+            },
+            "0203f050": {
+              "name": "sub_0203F050",
+              "printed": 0,
+              "source": 0
+            },
+            "02040ff0": {
+              "name": "ScrCmd_WaitABPress",
+              "printed": 0,
+              "source": 0
+            },
+            "02041040": {
+              "name": "sub_02041040",
+              "printed": 0,
+              "source": 0
+            },
+            "0204146c": {
+              "name": "ScrCmd_TrainerTips",
+              "printed": 0,
+              "source": 0
+            },
+            "02041fb8": {
+              "name": "ScrCmd_ShowPerson",
+              "printed": 0,
+              "source": 0
+            },
+            "0204236c": {
+              "name": "ScrCmd_GetPlayerFacing",
+              "printed": 0,
+              "source": 0
+            },
+            "02044658": {
+              "name": "sub_02044658",
+              "printed": 0,
+              "source": 0
+            },
+            "020447cc": {
+              "name": "ScrCmd_SetObjectMovementType",
+              "printed": 0,
+              "source": 0
+            },
+            "02045394": {
+              "name": "ScrCmd_GiveLoanMon",
+              "printed": 0,
+              "source": 0
+            },
+            "0204592c": {
+              "name": "ScrCmd_518",
+              "printed": 0,
+              "source": 0
+            },
+            "0204720c": {
+              "name": "ScrCmd_462",
+              "printed": 0,
+              "source": 0
+            },
+            "0204749c": {
+              "name": "ScrCmd_AlphPuzzle",
+              "printed": 0,
+              "source": 0
+            },
+            "02047518": {
+              "name": "ScrCmd_723",
+              "printed": 0,
+              "source": 0
+            },
+            "02047b6c": {
+              "name": "ScrCmd_LegendCutsceneClearBellAnimEnd",
+              "printed": 0,
+              "source": 0
+            },
+            "02049344": {
+              "name": "ScrCmd_ChatotHasCry",
+              "printed": 0,
+              "source": 0
+            },
+            "02049460": {
+              "name": "ScrCmd_GetTrainerPathToPlayer",
+              "printed": 0,
+              "source": 0
+            },
+            "0204a424": {
+              "name": "SpeciesAndItem_Contains",
+              "printed": 0,
+              "source": 0
+            },
+            "0204a6a0": {
+              "name": "sub_0204A6A0",
+              "printed": 0,
+              "source": 0
+            },
+            "0204a824": {
+              "name": "FrontierFieldSystem_New",
+              "printed": 0,
+              "source": 0
+            },
+            "0204babc": {
+              "name": "FrontierFieldSystem_0204BABC",
+              "printed": 3,
+              "source": 0
+            },
+            "0204bc98": {
+              "name": "ScrCmd_AnimApricornTree",
+              "printed": 0,
+              "source": 0
+            },
+            "0204bfd0": {
+              "name": "MGMessageSuccess_ManaphyEgg",
+              "printed": 0,
+              "source": 0
+            },
+            "0204c630": {
+              "name": "MGMessageFailure_MonDeco",
+              "printed": 0,
+              "source": 0
+            },
+            "0204c63c": {
+              "name": "MGCheck_MemberCard",
+              "printed": 0,
+              "source": 0
+            },
+            "0204c658": {
+              "name": "MGGive_OaksLetter",
+              "printed": 0,
+              "source": 0
+            },
+            "0204c91c": {
+              "name": "ScrCmd_510",
+              "printed": 0,
+              "source": 0
+            },
+            "0204cb7c": {
+              "name": "ScrCmd_GetDaycareState",
+              "printed": 0,
+              "source": 0
+            },
+            "0204d248": {
+              "name": "ScrCmd_GiveEgg",
+              "printed": 0,
+              "source": 0
+            },
+            "0204dfe4": {
+              "name": "ScrCmd_CountPartyMonsOfSpecies",
+              "printed": 0,
+              "source": 0
+            },
+            "0204e4e0": {
+              "name": "ScrCmd_GetPartyMonForm2",
+              "printed": 0,
+              "source": 0
+            },
+            "0204e7dc": {
+              "name": "ScrCmd_RocketCostumeFlagCheck",
+              "printed": 0,
+              "source": 0
+            },
+            "02050aac": {
+              "name": "CallTask_020509F0",
+              "printed": 0,
+              "source": 0
+            },
+            "02050d1c": {
+              "name": "Task_SafariEncounter",
+              "printed": 0,
+              "source": 0
+            },
+            "02051114": {
+              "name": "Task_PalParkEncounter",
+              "printed": 0,
+              "source": 0
+            },
+            "02051660": {
+              "name": "sub_02051660",
+              "printed": 0,
+              "source": 0
+            },
+            "02052544": {
+              "name": "sub_02052544",
+              "printed": 0,
+              "source": 0
+            },
+            "02053e08": {
+              "name": "sub_02053E08",
+              "printed": 0,
+              "source": 0
+            },
+            "020541b0": {
+              "name": "MonNotFaintedOrEgg",
+              "printed": 0,
+              "source": 0
+            },
+            "020543f0": {
+              "name": "GetFirstNonEggInParty",
+              "printed": 0,
+              "source": 0
+            },
+            "02055640": {
+              "name": "FieldSystem_GetGameClearTime",
+              "printed": 0,
+              "source": 0
+            },
+            "02055828": {
+              "name": "CatchingShow_End",
+              "printed": 0,
+              "source": 0
+            },
+            "020560c4": {
+              "name": "sub_020560C4",
+              "printed": 0,
+              "source": 0
+            },
+            "0205b63c": {
+              "name": "DialogBox_AddWindowToLayer3WithXOffset",
+              "printed": 0,
+              "source": 0
+            },
+            "0205b858": {
+              "name": "MetatileBehavior_IsSmallBookshelf2",
+              "printed": 0,
+              "source": 0
+            },
+            "0205b8a0": {
+              "name": "MetatileBehavior_IsMartShelf3",
+              "printed": 0,
+              "source": 0
+            },
+            "0205ba00": {
+              "name": "MetatileBehavior_IsSlideSouth",
+              "printed": 0,
+              "source": 0
+            },
+            "0205c390": {
+              "name": "PlayerAvatar_CreateWithParams",
+              "printed": 0,
+              "source": 0
+            },
+            "0205c6a0": {
+              "name": "PlayerAvatar_GetPreviousZCoord",
+              "printed": 0,
+              "source": 0
+            },
+            "0205c810": {
+              "name": "sub_0205C810",
+              "printed": 0,
+              "source": 0
+            },
+            "0205e2b4": {
+              "name": "MapObject_CreateWithParams",
+              "printed": 0,
+              "source": 0
+            },
+            "0205e400": {
+              "name": "MapObject_Delete",
+              "printed": 0,
+              "source": 0
+            },
+            "0205ee10": {
+              "name": "MapObjectManager_GetFirstObjectWithIDAndMap",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f340": {
+              "name": "sub_0205F340",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f414": {
+              "name": "sub_0205F414",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f498": {
+              "name": "sub_0205F498",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f5f8": {
+              "name": "MapObjectManager_SetEndMovement",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f690": {
+              "name": "MapObject_SetVisible",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f89c": {
+              "name": "MapObject_SetFlag29",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f908": {
+              "name": "MapObject_SetPreviousY",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f954": {
+              "name": "MapObject_SetPositionVector",
+              "printed": 0,
+              "source": 0
+            },
+            "0205fcb8": {
+              "name": "sub_0205FCB8",
+              "printed": 0,
+              "source": 0
+            },
+            "02064910": {
+              "name": "Gymmick_Free",
+              "printed": 0,
+              "source": 0
+            },
+            "02064eb8": {
+              "name": "ItemMenuUseFunc_Mail",
+              "printed": 0,
+              "source": 0
+            },
+            "020650e8": {
+              "name": "ItemCheckUseFunc_FishingRod",
+              "printed": 0,
+              "source": 0
+            },
+            "0206536c": {
+              "name": "ItemCheckUseFunc_EscapeRope",
+              "printed": 0,
+              "source": 0
+            },
+            "02065670": {
+              "name": "KeyItemIdSpawnsSubprocess",
+              "printed": 0,
+              "source": 0
+            },
+            "0206659c": {
+              "name": "SetScriptFlag",
+              "printed": 0,
+              "source": 0
+            },
+            "020667a4": {
+              "name": "GetOverriddenMapMusic",
+              "printed": 0,
+              "source": 0
+            },
+            "02066860": {
+              "name": "Save_VarsFlags_CheckSafariSysFlag",
+              "printed": 0,
+              "source": 0
+            },
+            "02066b60": {
+              "name": "Save_VarsFlags_SetFishingCompetitionLengthRecord",
+              "printed": 0,
+              "source": 0
+            },
+            "02066d60": {
+              "name": "sub_02066D60",
+              "printed": 0,
+              "source": 0
+            },
+            "02067f4c": {
+              "name": "FieldMove_DeleteUseEnvironment",
+              "printed": 0,
+              "source": 0
+            },
+            "02068968": {
+              "name": "Task_UseHeadbuttInField",
+              "printed": 0,
+              "source": 0
+            },
+            "02068f00": {
+              "name": "InitBlackthornGym",
+              "printed": 0,
+              "source": 0
+            },
+            "0206a798": {
+              "name": "FieldSystem_TakePhoto",
+              "printed": 0,
+              "source": 0
+            },
+            "0206d8d0": {
+              "name": "MonIsFromTogepiEgg",
+              "printed": 0,
+              "source": 0
+            },
+            "0206db94": {
+              "name": "BugContest_PromptSwapPokemon",
+              "printed": 0,
+              "source": 0
+            },
+            "0206e5b8": {
+              "name": "GetMonDataInternal",
+              "printed": 0,
+              "source": 0
+            },
+            "0206fd30": {
+              "name": "GetExpByGrowthRateAndLevel",
+              "printed": 0,
+              "source": 0
+            },
+            "0206ffc8": {
+              "name": "GetGenderBySpeciesAndPersonality",
+              "printed": 0,
+              "source": 0
+            },
+            "02070068": {
+              "name": "CalcShininessByOtIdAndPersonality",
+              "printed": 0,
+              "source": 0
+            },
+            "02070438": {
+              "name": "sub_02070438",
+              "printed": 0,
+              "source": 0
+            },
+            "02070588": {
+              "name": "DP_GetMonSpriteCharAndPlttNarcIdsEx",
+              "printed": 0,
+              "source": 0
+            },
+            "02070e34": {
+              "name": "GetMonEvolution",
+              "printed": 0,
+              "source": 0
+            },
+            "02071bd0": {
+              "name": "BoxMon_UpdateArceusForm",
+              "printed": 0,
+              "source": 0
+            },
+            "0207280c": {
+              "name": "TrainerClassToBackpicID",
+              "printed": 2,
+              "source": 0
+            },
+            "020733c0": {
+              "name": "EnemyTrainerSet_Init",
+              "printed": 0,
+              "source": 0
+            },
+            "02073f00": {
+              "name": "PCStorage_GetBoxName",
+              "printed": 0,
+              "source": 0
+            },
+            "02073ff8": {
+              "name": "PCStorage_CountMonsInAllBoxes",
+              "printed": 0,
+              "source": 0
+            },
+            "02074490": {
+              "name": "sub_02074490",
+              "printed": 0,
+              "source": 0
+            },
+            "020778dc": {
+              "name": "sub_020778DC",
+              "printed": 0,
+              "source": 0
+            },
+            "02077924": {
+              "name": "GetCoinCount",
+              "printed": 0,
+              "source": 0
+            },
+            "02078724": {
+              "name": "Bag_GetPocketSlotN",
+              "printed": 0,
+              "source": 0
+            },
+            "0207997c": {
+              "name": "Create3dVramManForPartyMenu",
+              "printed": 0,
+              "source": 0
+            },
+            "0207bb14": {
+              "name": "PartyMenu_CheckBattleHallTeamSameSpecies",
+              "printed": 0,
+              "source": 0
+            },
+            "0207d1c8": {
+              "name": "sub_0207D1C8",
+              "printed": 0,
+              "source": 0
+            },
+            "02080040": {
+              "name": "PartyMenu_SwapMonsSpritesStep",
+              "printed": 0,
+              "source": 0
+            },
+            "0208421c": {
+              "name": "NamingScreen_SetPageBgPriorities",
+              "printed": 0,
+              "source": 0
+            },
+            "02084430": {
+              "name": "NamingScreen_UpdateCursorSpritePosition",
+              "printed": 0,
+              "source": 0
+            },
+            "0208f550": {
+              "name": "BoxMon_SetMetDateAndLocation",
+              "printed": 0,
+              "source": 0
+            },
+            "02090dc0": {
+              "name": "sub_02090DC0",
+              "printed": 0,
+              "source": 0
+            },
+            "02090e5c": {
+              "name": "sub_02090E5C",
+              "printed": 0,
+              "source": 0
+            },
+            "02090f00": {
+              "name": "sub_02090F00",
+              "printed": 0,
+              "source": 0
+            },
+            "02091240": {
+              "name": "CallTask_HatchEggInParty",
+              "printed": 0,
+              "source": 0
+            },
+            "02093134": {
+              "name": "sub_02093134",
+              "printed": 0,
+              "source": 0
+            },
+            "02097230": {
+              "name": "sub_02097230",
+              "printed": 0,
+              "source": 0
+            },
+            "020972c4": {
+              "name": "encSlotArraysEqual",
+              "printed": 0,
+              "source": 0
+            }
+          },
+          "decompiled": 200
+        },
+        "default": {
+          "totals": {
+            "functions": 194,
+            "print_gotos": 0,
+            "source_gotos": 0,
+            "source_goto_functions": 0,
+            "spurious_functions": 0,
+            "spurious_gotos": 0,
+            "no-source": 6
+          },
+          "functions": {
+            "02001f20": {
+              "name": "CreateYesNoMenu",
+              "printed": 0,
+              "source": 0
+            },
+            "02002ba8": {
+              "name": "TextFlags_SetAlternateDownArrow",
+              "printed": 0,
+              "source": 0
+            },
+            "02002f30": {
+              "name": "FontID_String_GetWidth",
+              "printed": 0,
+              "source": 0
+            },
+            "020030b8": {
+              "name": "FontID_GetGlyphWidth",
+              "printed": 0,
+              "source": 0
+            },
+            "020035f0": {
+              "name": "SelectedPaletteData_SetTimedFadeParams",
+              "printed": 0,
+              "source": 0
+            },
+            "020047c8": {
+              "name": "GF_Snd_LoadBank",
+              "printed": 0,
+              "source": 0
+            },
+            "02007974": {
+              "name": "GfGfxLoader_PartiallyLoadPalette",
+              "printed": 0,
+              "source": 0
+            },
+            "02007c60": {
+              "name": "GfGfxLoader_GetCellBankFromOpenNarc",
+              "printed": 0,
+              "source": 0
+            },
+            "02009138": {
+              "name": "Pokepic_ResumePaletteFade",
+              "printed": 0,
+              "source": 0
+            },
+            "0200a790": {
+              "name": "destroyAllObjects",
+              "printed": 0,
+              "source": 0
+            },
+            "0200b9f8": {
+              "name": "ReadMsgData_ExistingNarc_NewString",
+              "printed": 0,
+              "source": 0
+            },
+            "0200bc4c": {
+              "name": "ReadMsgData_ExpandPlaceholders",
+              "printed": 0,
+              "source": 0
+            },
+            "0200c3e8": {
+              "name": "BufferTrainerNameFromDataStruct",
+              "printed": 0,
+              "source": 0
+            },
+            "0200c578": {
+              "name": "BufferSealNamePlural",
+              "printed": 0,
+              "source": 0
+            },
+            "0200cad8": {
+              "name": "BufferPokewalkerCourseName",
+              "printed": 0,
+              "source": 0
+            },
+            "0200cf6c": {
+              "name": "SpriteSystem_GetRenderer",
+              "printed": 0,
+              "source": 0
+            },
+            "0200d934": {
+              "name": "SpriteManager_FindPlttResourceProxy",
+              "printed": 0,
+              "source": 0
+            },
+            "0200dc34": {
+              "name": "ManagedSprite_TickNFrames",
+              "printed": 0,
+              "source": 0
+            },
+            "0200dd60": {
+              "name": "thunk_Sprite_SetDrawPriority",
+              "printed": 0,
+              "source": 0
+            },
+            "0200dd68": {
+              "name": "ManagedSprite_SetDrawPriority",
+              "printed": 0,
+              "source": 0
+            },
+            "0200de00": {
+              "name": "Sprite_GetPositionXY",
+              "printed": 0,
+              "source": 0
+            },
+            "020143e0": {
+              "name": "sub_020143E0",
+              "printed": 0,
+              "source": 0
+            },
+            "02014708": {
+              "name": "GF_RTC_CopyDateTime",
+              "printed": 0,
+              "source": 0
+            },
+            "020149a4": {
+              "name": "ListMenuItems_SeekEnd",
+              "printed": 0,
+              "source": 0
+            },
+            "02015834": {
+              "name": "MailMsg_Init_WithBank",
+              "printed": 0,
+              "source": 0
+            },
+            "020159e4": {
+              "name": "MailMsg_GetMsgBank",
+              "printed": 0,
+              "source": 0
+            },
+            "02015a5c": {
+              "name": "MailMsg_SetFieldI",
+              "printed": 0,
+              "source": 0
+            },
+            "02015cc8": {
+              "name": "TrendyWordIdxToECWord",
+              "printed": 0,
+              "source": 0
+            },
+            "02016748": {
+              "name": "YesNoPrompt_HandleInputForSave",
+              "printed": 0,
+              "source": 0
+            },
+            "020169cc": {
+              "name": "YesNoPrompt_Reset",
+              "printed": 0,
+              "source": 0
+            },
+            "02019014": {
+              "name": "CreateCameraTranslationWrapper",
+              "printed": 0,
+              "source": 0
+            },
+            "0201a928": {
+              "name": "CreateHeapInternal",
+              "printed": 0,
+              "source": 0
+            },
+            "0201aa38": {
+              "name": "AllocFromHeapInternal",
+              "printed": 0,
+              "source": 0
+            },
+            "0201ab0c": {
+              "name": "Heap_Free",
+              "printed": 0,
+              "source": 0
+            },
+            "0201ace8": {
+              "name": "SetScreenModeAndDisable",
+              "printed": 0,
+              "source": 0
+            },
+            "0201ad0c": {
+              "name": "InitBgFromTemplateEx",
+              "printed": 0,
+              "source": 0
+            },
+            "0201cc2c": {
+              "name": "GetBgPriority",
+              "printed": 0,
+              "source": 0
+            },
+            "0201eeb4": {
+              "name": "DoScheduledBgGpuUpdates",
+              "printed": 0,
+              "source": 0
+            },
+            "0201f5b8": {
+              "name": "initializeSimple3DVramManager",
+              "printed": 0,
+              "source": 0
+            },
+            "0201f984": {
+              "name": "SysTask_SetFunc",
+              "printed": 0,
+              "source": 0
+            },
+            "0201fd2c": {
+              "name": "GetLCRNGSeed",
+              "printed": 0,
+              "source": 0
+            },
+            "02020020": {
+              "name": "DestroyTextPrinterSysTask",
+              "printed": 0,
+              "source": 0
+            },
+            "02020aa0": {
+              "name": "Ascii_StrLen",
+              "printed": 0,
+              "source": 0
+            },
+            "020216f4": {
+              "name": "ObjCharTransfer_SetReservedRegion",
+              "printed": 0,
+              "source": 0
+            },
+            "02021dd0": {
+              "name": "ObjCharTransferTask_SetBaseAddrs",
+              "printed": 0,
+              "source": 0
+            },
+            "02022238": {
+              "name": "ObjCharTransfer_FreeBlockTransferBuffer",
+              "printed": 0,
+              "source": 0
+            },
+            "02022260": {
+              "name": "ObjCharTransfer_GetBlocksCountFromBufferPtr",
+              "printed": 0,
+              "source": 0
+            },
+            "020223c4": {
+              "name": "ObjCharTransferTask_ResetBlockTransferFlags",
+              "printed": 0,
+              "source": 0
+            },
+            "02023214": {
+              "name": "Camera_SetFixedTarget",
+              "printed": 0,
+              "source": 0
+            },
+            "020245fc": {
+              "name": "Sprite_Init",
+              "printed": 0,
+              "source": 0
+            },
+            "020248ac": {
+              "name": "Sprite_GetMatrixPtr",
+              "printed": 0,
+              "source": 0
+            },
+            "02024a6c": {
+              "name": "Sprite_GetPalIndex",
+              "printed": 0,
+              "source": 0
+            },
+            "02024b34": {
+              "name": "Sprite_GetPaletteProxy",
+              "printed": 0,
+              "source": 0
+            },
+            "02025404": {
+              "name": "Init_Timer3",
+              "printed": 0,
+              "source": 0
+            },
+            "02025b40": {
+              "name": "ResTexAllocVramAndGetKeys",
+              "printed": 0,
+              "source": 0
+            },
+            "020274e0": {
+              "name": "Save_FileExists",
+              "printed": 0,
+              "source": 0
+            },
+            "02027744": {
+              "name": "SaveSlotCheckCompare",
+              "printed": 0,
+              "source": 0
+            },
+            "02027d6c": {
+              "name": "CancelAsyncSave",
+              "printed": 0,
+              "source": 0
+            },
+            "02028d30": {
+              "name": "Save_SysInfo_Get",
+              "printed": 0,
+              "source": 0
+            },
+            "02028dc4": {
+              "name": "Save_SysInfo_GetBirthDay",
+              "printed": 0,
+              "source": 0
+            },
+            "020290c8": {
+              "name": "Save_LinkBattleRuleset_Init",
+              "printed": 0,
+              "source": 0
+            },
+            "020296c8": {
+              "name": "Pokedex_SetSeenForm_2max",
+              "printed": 0,
+              "source": 0
+            },
+            "0202984c": {
+              "name": "Pokedex_SetSeenForm_3max",
+              "printed": 0,
+              "source": 0
+            },
+            "02029ef4": {
+              "name": "Pokedex_CountJohtoDexSeen",
+              "printed": 0,
+              "source": 0
+            },
+            "0202a57c": {
+              "name": "Pokedex_EnableFormDetection",
+              "printed": 0,
+              "source": 0
+            },
+            "0202aed4": {
+              "name": "Save_PalPad_Init",
+              "printed": 0,
+              "source": 0
+            },
+            "0202b3f0": {
+              "name": "Mail_GetType",
+              "printed": 0,
+              "source": 0
+            },
+            "0202cc5c": {
+              "name": "SealCaseInventory_GetSealQuantity",
+              "printed": 0,
+              "source": 0
+            },
+            "0202d9f4": {
+              "name": "PlayerLocationHistoryGetBack",
+              "printed": 0,
+              "source": 0
+            },
+            "0202debc": {
+              "name": "SaveMysteryGift_SpecialCardTagIsValid",
+              "printed": 0,
+              "source": 0
+            },
+            "0202e0ac": {
+              "name": "SaveMGDataPtr_GetDataByIndex",
+              "printed": 0,
+              "source": 0
+            },
+            "0202e4b0": {
+              "name": "RankingsViewSys_GetNumRecordsPerPage",
+              "printed": 0,
+              "source": 0
+            },
+            "0202f720": {
+              "name": "SafariZone_GetObjectUnlockLevel",
+              "printed": 0,
+              "source": 0
+            },
+            "0202f888": {
+              "name": "SafariZone_IsCurrentlyLinked",
+              "printed": 0,
+              "source": 0
+            },
+            "0202fa64": {
+              "name": "Save_PhotoAlbum_Get",
+              "printed": 0,
+              "source": 0
+            },
+            "0202fab0": {
+              "name": "PhotoAlbum_GetNumSaved",
+              "printed": 0,
+              "source": 0
+            },
+            "02031774": {
+              "name": "sub_02031774",
+              "printed": 0,
+              "source": 0
+            },
+            "0203197c": {
+              "name": "PokeathlonSave_GetRecordsSolo",
+              "printed": 0,
+              "source": 0
+            },
+            "020327ac": {
+              "name": "TrainerHouseMon_SetZero",
+              "printed": 0,
+              "source": 0
+            },
+            "0203b014": {
+              "name": "MapMatrix_GetHeight",
+              "printed": 0,
+              "source": 0
+            },
+            "0203b470": {
+              "name": "MapHeader_IsBikeAllowed",
+              "printed": 0,
+              "source": 0
+            },
+            "0203ca44": {
+              "name": "Task_StartMenu_HandleSelection_Pokemon",
+              "printed": 0,
+              "source": 0
+            },
+            "0203d264": {
+              "name": "sub_0203D264",
+              "printed": 0,
+              "source": 0
+            },
+            "0203d488": {
+              "name": "Task_StartMenu_HandleSelection_Retire",
+              "printed": 0,
+              "source": 0
+            },
+            "0203e344": {
+              "name": "FieldSystem_GetSaveData",
+              "printed": 0,
+              "source": 0
+            },
+            "0203e3d4": {
+              "name": "Bag_LaunchApp",
+              "printed": 0,
+              "source": 0
+            },
+            "0203ea5c": {
+              "name": "PokegearTownMap_LaunchApp_Impl",
+              "printed": 0,
+              "source": 0
+            },
+            "0203f050": {
+              "name": "sub_0203F050",
+              "printed": 0,
+              "source": 0
+            },
+            "02040ff0": {
+              "name": "ScrCmd_WaitABPress",
+              "printed": 0,
+              "source": 0
+            },
+            "02041040": {
+              "name": "sub_02041040",
+              "printed": 0,
+              "source": 0
+            },
+            "0204146c": {
+              "name": "ScrCmd_TrainerTips",
+              "printed": 0,
+              "source": 0
+            },
+            "02041fb8": {
+              "name": "ScrCmd_ShowPerson",
+              "printed": 0,
+              "source": 0
+            },
+            "0204236c": {
+              "name": "ScrCmd_GetPlayerFacing",
+              "printed": 0,
+              "source": 0
+            },
+            "02044658": {
+              "name": "sub_02044658",
+              "printed": 0,
+              "source": 0
+            },
+            "020447cc": {
+              "name": "ScrCmd_SetObjectMovementType",
+              "printed": 0,
+              "source": 0
+            },
+            "02045394": {
+              "name": "ScrCmd_GiveLoanMon",
+              "printed": 0,
+              "source": 0
+            },
+            "0204592c": {
+              "name": "ScrCmd_518",
+              "printed": 0,
+              "source": 0
+            },
+            "0204720c": {
+              "name": "ScrCmd_462",
+              "printed": 0,
+              "source": 0
+            },
+            "0204749c": {
+              "name": "ScrCmd_AlphPuzzle",
+              "printed": 0,
+              "source": 0
+            },
+            "02047518": {
+              "name": "ScrCmd_723",
+              "printed": 0,
+              "source": 0
+            },
+            "02047b6c": {
+              "name": "ScrCmd_LegendCutsceneClearBellAnimEnd",
+              "printed": 0,
+              "source": 0
+            },
+            "02049344": {
+              "name": "ScrCmd_ChatotHasCry",
+              "printed": 0,
+              "source": 0
+            },
+            "02049460": {
+              "name": "ScrCmd_GetTrainerPathToPlayer",
+              "printed": 0,
+              "source": 0
+            },
+            "0204a424": {
+              "name": "SpeciesAndItem_Contains",
+              "printed": 0,
+              "source": 0
+            },
+            "0204a6a0": {
+              "name": "sub_0204A6A0",
+              "printed": 0,
+              "source": 0
+            },
+            "0204a824": {
+              "name": "FrontierFieldSystem_New",
+              "printed": 0,
+              "source": 0
+            },
+            "0204babc": {
+              "name": "FrontierFieldSystem_0204BABC",
+              "printed": 0,
+              "source": 0
+            },
+            "0204bc98": {
+              "name": "ScrCmd_AnimApricornTree",
+              "printed": 0,
+              "source": 0
+            },
+            "0204bfd0": {
+              "name": "MGMessageSuccess_ManaphyEgg",
+              "printed": 0,
+              "source": 0
+            },
+            "0204c630": {
+              "name": "MGMessageFailure_MonDeco",
+              "printed": 0,
+              "source": 0
+            },
+            "0204c63c": {
+              "name": "MGCheck_MemberCard",
+              "printed": 0,
+              "source": 0
+            },
+            "0204c658": {
+              "name": "MGGive_OaksLetter",
+              "printed": 0,
+              "source": 0
+            },
+            "0204c91c": {
+              "name": "ScrCmd_510",
+              "printed": 0,
+              "source": 0
+            },
+            "0204cb7c": {
+              "name": "ScrCmd_GetDaycareState",
+              "printed": 0,
+              "source": 0
+            },
+            "0204d248": {
+              "name": "ScrCmd_GiveEgg",
+              "printed": 0,
+              "source": 0
+            },
+            "0204dfe4": {
+              "name": "ScrCmd_CountPartyMonsOfSpecies",
+              "printed": 0,
+              "source": 0
+            },
+            "0204e4e0": {
+              "name": "ScrCmd_GetPartyMonForm2",
+              "printed": 0,
+              "source": 0
+            },
+            "0204e7dc": {
+              "name": "ScrCmd_RocketCostumeFlagCheck",
+              "printed": 0,
+              "source": 0
+            },
+            "02050aac": {
+              "name": "CallTask_020509F0",
+              "printed": 0,
+              "source": 0
+            },
+            "02050d1c": {
+              "name": "Task_SafariEncounter",
+              "printed": 0,
+              "source": 0
+            },
+            "02051114": {
+              "name": "Task_PalParkEncounter",
+              "printed": 0,
+              "source": 0
+            },
+            "02051660": {
+              "name": "sub_02051660",
+              "printed": 0,
+              "source": 0
+            },
+            "02052544": {
+              "name": "sub_02052544",
+              "printed": 0,
+              "source": 0
+            },
+            "02053e08": {
+              "name": "sub_02053E08",
+              "printed": 0,
+              "source": 0
+            },
+            "020541b0": {
+              "name": "MonNotFaintedOrEgg",
+              "printed": 0,
+              "source": 0
+            },
+            "020543f0": {
+              "name": "GetFirstNonEggInParty",
+              "printed": 0,
+              "source": 0
+            },
+            "02055640": {
+              "name": "FieldSystem_GetGameClearTime",
+              "printed": 0,
+              "source": 0
+            },
+            "02055828": {
+              "name": "CatchingShow_End",
+              "printed": 0,
+              "source": 0
+            },
+            "020560c4": {
+              "name": "sub_020560C4",
+              "printed": 0,
+              "source": 0
+            },
+            "0205b63c": {
+              "name": "DialogBox_AddWindowToLayer3WithXOffset",
+              "printed": 0,
+              "source": 0
+            },
+            "0205b858": {
+              "name": "MetatileBehavior_IsSmallBookshelf2",
+              "printed": 0,
+              "source": 0
+            },
+            "0205b8a0": {
+              "name": "MetatileBehavior_IsMartShelf3",
+              "printed": 0,
+              "source": 0
+            },
+            "0205ba00": {
+              "name": "MetatileBehavior_IsSlideSouth",
+              "printed": 0,
+              "source": 0
+            },
+            "0205c390": {
+              "name": "PlayerAvatar_CreateWithParams",
+              "printed": 0,
+              "source": 0
+            },
+            "0205c6a0": {
+              "name": "PlayerAvatar_GetPreviousZCoord",
+              "printed": 0,
+              "source": 0
+            },
+            "0205c810": {
+              "name": "sub_0205C810",
+              "printed": 0,
+              "source": 0
+            },
+            "0205e2b4": {
+              "name": "MapObject_CreateWithParams",
+              "printed": 0,
+              "source": 0
+            },
+            "0205e400": {
+              "name": "MapObject_Delete",
+              "printed": 0,
+              "source": 0
+            },
+            "0205ee10": {
+              "name": "MapObjectManager_GetFirstObjectWithIDAndMap",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f340": {
+              "name": "sub_0205F340",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f414": {
+              "name": "sub_0205F414",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f498": {
+              "name": "sub_0205F498",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f5f8": {
+              "name": "MapObjectManager_SetEndMovement",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f690": {
+              "name": "MapObject_SetVisible",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f89c": {
+              "name": "MapObject_SetFlag29",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f908": {
+              "name": "MapObject_SetPreviousY",
+              "printed": 0,
+              "source": 0
+            },
+            "0205f954": {
+              "name": "MapObject_SetPositionVector",
+              "printed": 0,
+              "source": 0
+            },
+            "0205fcb8": {
+              "name": "sub_0205FCB8",
+              "printed": 0,
+              "source": 0
+            },
+            "02064910": {
+              "name": "Gymmick_Free",
+              "printed": 0,
+              "source": 0
+            },
+            "02064eb8": {
+              "name": "ItemMenuUseFunc_Mail",
+              "printed": 0,
+              "source": 0
+            },
+            "020650e8": {
+              "name": "ItemCheckUseFunc_FishingRod",
+              "printed": 0,
+              "source": 0
+            },
+            "0206536c": {
+              "name": "ItemCheckUseFunc_EscapeRope",
+              "printed": 0,
+              "source": 0
+            },
+            "02065670": {
+              "name": "KeyItemIdSpawnsSubprocess",
+              "printed": 0,
+              "source": 0
+            },
+            "0206659c": {
+              "name": "SetScriptFlag",
+              "printed": 0,
+              "source": 0
+            },
+            "020667a4": {
+              "name": "GetOverriddenMapMusic",
+              "printed": 0,
+              "source": 0
+            },
+            "02066860": {
+              "name": "Save_VarsFlags_CheckSafariSysFlag",
+              "printed": 0,
+              "source": 0
+            },
+            "02066b60": {
+              "name": "Save_VarsFlags_SetFishingCompetitionLengthRecord",
+              "printed": 0,
+              "source": 0
+            },
+            "02066d60": {
+              "name": "sub_02066D60",
+              "printed": 0,
+              "source": 0
+            },
+            "02067f4c": {
+              "name": "FieldMove_DeleteUseEnvironment",
+              "printed": 0,
+              "source": 0
+            },
+            "02068968": {
+              "name": "Task_UseHeadbuttInField",
+              "printed": 0,
+              "source": 0
+            },
+            "02068f00": {
+              "name": "InitBlackthornGym",
+              "printed": 0,
+              "source": 0
+            },
+            "0206a798": {
+              "name": "FieldSystem_TakePhoto",
+              "printed": 0,
+              "source": 0
+            },
+            "0206d8d0": {
+              "name": "MonIsFromTogepiEgg",
+              "printed": 0,
+              "source": 0
+            },
+            "0206db94": {
+              "name": "BugContest_PromptSwapPokemon",
+              "printed": 0,
+              "source": 0
+            },
+            "0206e5b8": {
+              "name": "GetMonDataInternal",
+              "printed": 0,
+              "source": 0
+            },
+            "0206fd30": {
+              "name": "GetExpByGrowthRateAndLevel",
+              "printed": 0,
+              "source": 0
+            },
+            "0206ffc8": {
+              "name": "GetGenderBySpeciesAndPersonality",
+              "printed": 0,
+              "source": 0
+            },
+            "02070068": {
+              "name": "CalcShininessByOtIdAndPersonality",
+              "printed": 0,
+              "source": 0
+            },
+            "02070438": {
+              "name": "sub_02070438",
+              "printed": 0,
+              "source": 0
+            },
+            "02070588": {
+              "name": "DP_GetMonSpriteCharAndPlttNarcIdsEx",
+              "printed": 0,
+              "source": 0
+            },
+            "02070e34": {
+              "name": "GetMonEvolution",
+              "printed": 0,
+              "source": 0
+            },
+            "02071bd0": {
+              "name": "BoxMon_UpdateArceusForm",
+              "printed": 0,
+              "source": 0
+            },
+            "0207280c": {
+              "name": "TrainerClassToBackpicID",
+              "printed": 0,
+              "source": 0
+            },
+            "020733c0": {
+              "name": "EnemyTrainerSet_Init",
+              "printed": 0,
+              "source": 0
+            },
+            "02073f00": {
+              "name": "PCStorage_GetBoxName",
+              "printed": 0,
+              "source": 0
+            },
+            "02073ff8": {
+              "name": "PCStorage_CountMonsInAllBoxes",
+              "printed": 0,
+              "source": 0
+            },
+            "02074490": {
+              "name": "sub_02074490",
+              "printed": 0,
+              "source": 0
+            },
+            "020778dc": {
+              "name": "sub_020778DC",
+              "printed": 0,
+              "source": 0
+            },
+            "02077924": {
+              "name": "GetCoinCount",
+              "printed": 0,
+              "source": 0
+            },
+            "02078724": {
+              "name": "Bag_GetPocketSlotN",
+              "printed": 0,
+              "source": 0
+            },
+            "0207997c": {
+              "name": "Create3dVramManForPartyMenu",
+              "printed": 0,
+              "source": 0
+            },
+            "0207bb14": {
+              "name": "PartyMenu_CheckBattleHallTeamSameSpecies",
+              "printed": 0,
+              "source": 0
+            },
+            "0207d1c8": {
+              "name": "sub_0207D1C8",
+              "printed": 0,
+              "source": 0
+            },
+            "02080040": {
+              "name": "PartyMenu_SwapMonsSpritesStep",
+              "printed": 0,
+              "source": 0
+            },
+            "0208421c": {
+              "name": "NamingScreen_SetPageBgPriorities",
+              "printed": 0,
+              "source": 0
+            },
+            "02084430": {
+              "name": "NamingScreen_UpdateCursorSpritePosition",
+              "printed": 0,
+              "source": 0
+            },
+            "0208f550": {
+              "name": "BoxMon_SetMetDateAndLocation",
+              "printed": 0,
+              "source": 0
+            },
+            "02090dc0": {
+              "name": "sub_02090DC0",
+              "printed": 0,
+              "source": 0
+            },
+            "02090e5c": {
+              "name": "sub_02090E5C",
+              "printed": 0,
+              "source": 0
+            },
+            "02090f00": {
+              "name": "sub_02090F00",
+              "printed": 0,
+              "source": 0
+            },
+            "02091240": {
+              "name": "CallTask_HatchEggInParty",
+              "printed": 0,
+              "source": 0
+            },
+            "02093134": {
+              "name": "sub_02093134",
+              "printed": 0,
+              "source": 0
+            },
+            "02097230": {
+              "name": "sub_02097230",
+              "printed": 0,
+              "source": 0
+            },
+            "020972c4": {
+              "name": "encSlotArraysEqual",
+              "printed": 0,
+              "source": 0
+            }
+          },
+          "decompiled": 200
+        }
+      }
+    }
+  },
+  "totals": {
+    "baseline": {
+      "functions": 424,
+      "print_gotos": 67,
+      "source_gotos": 0,
+      "source_goto_functions": 0,
+      "spurious_functions": 31,
+      "spurious_gotos": 67,
+      "no-source": 8
+    },
+    "default": {
+      "functions": 424,
+      "print_gotos": 1,
+      "source_gotos": 0,
+      "source_goto_functions": 0,
+      "spurious_functions": 1,
+      "spurious_gotos": 1,
+      "no-source": 8
+    }
+  }
+}

@@ -1,0 +1,2192 @@
+{
+ "benchmark": "stage3_gates",
+ "date": "20261014",
+ "tag": "f1",
+ "gates": [
+  {
+   "gate": "m22-002 MWCC seed 20261010",
+   "off": {
+    "functions": 200,
+    "exact": 55,
+    "compiled": 193,
+    "mean_percent": 76.968
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-002 MWCC seed 20261011",
+   "off": {
+    "functions": 200,
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.316
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 57,
+      "compiled": 194,
+      "mean_percent": 78.316
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-002 ee-gcc",
+   "off": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.403
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 106,
+      "compiled": 197,
+      "mean_percent": 86.403
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dds",
+   "off": {
+    "functions": 200,
+    "exact": 61,
+    "compiled": 200,
+    "mean_percent": 77.224,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 61,
+      "compiled": 200,
+      "mean_percent": 77.224,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 rc",
+   "off": {
+    "functions": 200,
+    "exact": 26,
+    "compiled": 200,
+    "mean_percent": 68.158,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 26,
+      "compiled": 200,
+      "mean_percent": 68.158,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 p4",
+   "off": {
+    "functions": 200,
+    "exact": 60,
+    "compiled": 193,
+    "mean_percent": 79.4,
+    "classes": {
+     "call does not match prototype": 1,
+     "undeclared identifier": 1,
+     "type mismatch (assignment, operand, return, cast)": 5
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 60,
+      "compiled": 193,
+      "mean_percent": 79.4,
+      "classes": {
+       "call does not match prototype": 1,
+       "undeclared identifier": 1,
+       "type mismatch (assignment, operand, return, cast)": 5
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 gh (harness clone)",
+   "off": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 199,
+    "mean_percent": 82.119,
+    "classes": {}
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 78,
+      "compiled": 199,
+      "mean_percent": 82.119,
+      "classes": {}
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 ff",
+   "off": {
+    "functions": 200,
+    "exact": 21,
+    "compiled": 195,
+    "mean_percent": 61.753,
+    "classes": {
+     "type mismatch (assignment, operand, return, cast)": 5
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 21,
+      "compiled": 195,
+      "mean_percent": 61.753,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 5
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dc",
+   "off": {
+    "functions": 200,
+    "exact": 38,
+    "compiled": 186,
+    "mean_percent": 69.844,
+    "classes": {
+     "call does not match prototype": 2,
+     "type mismatch (assignment, operand, return, cast)": 10,
+     "undeclared identifier": 1,
+     "unit post-processing rejected the candidate object": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 38,
+      "compiled": 186,
+      "mean_percent": 69.844,
+      "classes": {
+       "call does not match prototype": 2,
+       "type mismatch (assignment, operand, return, cast)": 10,
+       "undeclared identifier": 1,
+       "unit post-processing rejected the candidate object": 1
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dk",
+   "off": {
+    "functions": 200,
+    "exact": 29,
+    "compiled": 189,
+    "mean_percent": 75.561,
+    "classes": {
+     "type mismatch (assignment, operand, return, cast)": 6,
+     "undeclared identifier": 2,
+     "illegal or unknown type name": 1,
+     "member access on a type the context lacks": 2
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 29,
+      "compiled": 189,
+      "mean_percent": 75.561,
+      "classes": {
+       "type mismatch (assignment, operand, return, cast)": 6,
+       "undeclared identifier": 2,
+       "illegal or unknown type name": 1,
+       "member access on a type the context lacks": 2
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  }
+ ],
+ "extra": {
+  "merge_diff_f1": {
+   "benchmark": "merge_diff",
+   "date": "2026-10-14",
+   "ghidra_opt": "/home/raikaru/runs/Stage3/bin-f1/ghidra_opt",
+   "decompiled": 1600,
+   "identical": 1600,
+   "images": [
+    {
+     "image": "gba-pokeemerald",
+     "sampled": 200,
+     "decompiled": 200,
+     "identical": 200,
+     "different": 0,
+     "worker_merge_functions": 201,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "worker_did": {
+      "merges": 4170,
+      "speculative": 193,
+      "explicit": 5078,
+      "implied": 3342,
+      "new_ops": 47,
+      "entries": 13335
+     },
+     "one_arm_failed": [],
+     "differences": [],
+     "verify_mismatches": 0,
+     "verify_verified": 201,
+     "verify_examples": []
+    },
+    {
+     "image": "gc-animal-crossing",
+     "sampled": 200,
+     "decompiled": 200,
+     "identical": 200,
+     "different": 0,
+     "worker_merge_functions": 206,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "worker_did": {
+      "merges": 11751,
+      "speculative": 601,
+      "explicit": 13257,
+      "implied": 7999,
+      "new_ops": 394,
+      "entries": 36456
+     },
+     "one_arm_failed": [],
+     "differences": [],
+     "verify_mismatches": 0,
+     "verify_verified": 206,
+     "verify_examples": []
+    },
+    {
+     "image": "nds-pokeheartgold-arm9",
+     "sampled": 200,
+     "decompiled": 200,
+     "identical": 200,
+     "different": 0,
+     "worker_merge_functions": 200,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "worker_did": {
+      "merges": 3282,
+      "speculative": 150,
+      "explicit": 4279,
+      "implied": 2974,
+      "new_ops": 87,
+      "entries": 11558
+     },
+     "one_arm_failed": [],
+     "differences": [],
+     "verify_mismatches": 0,
+     "verify_verified": 200,
+     "verify_examples": []
+    },
+    {
+     "image": "ps2-capcom-fighting-evolution",
+     "sampled": 200,
+     "decompiled": 200,
+     "identical": 200,
+     "different": 0,
+     "worker_merge_functions": 202,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "worker_did": {
+      "merges": 2895,
+      "speculative": 265,
+      "explicit": 3962,
+      "implied": 5164,
+      "new_ops": 120,
+      "entries": 13133
+     },
+     "one_arm_failed": [],
+     "differences": [],
+     "verify_mismatches": 0,
+     "verify_verified": 202,
+     "verify_examples": []
+    },
+    {
+     "image": "ps2-dungeon-game",
+     "sampled": 200,
+     "decompiled": 200,
+     "identical": 200,
+     "different": 0,
+     "worker_merge_functions": 207,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "worker_did": {
+      "merges": 41576,
+      "speculative": 1120,
+      "explicit": 43556,
+      "implied": 9785,
+      "new_ops": 463,
+      "entries": 98950
+     },
+     "one_arm_failed": [],
+     "differences": [],
+     "verify_mismatches": 0,
+     "verify_verified": 207,
+     "verify_examples": []
+    },
+    {
+     "image": "psv-need-for-speed-most-wanted",
+     "sampled": 200,
+     "decompiled": 200,
+     "identical": 200,
+     "different": 0,
+     "worker_merge_functions": 220,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "worker_did": {
+      "merges": 29539,
+      "speculative": 2281,
+      "explicit": 33738,
+      "implied": 12018,
+      "new_ops": 758,
+      "entries": 82277
+     },
+     "one_arm_failed": [],
+     "differences": [],
+     "verify_mismatches": 0,
+     "verify_verified": 220,
+     "verify_examples": []
+    },
+    {
+     "image": "psx-darkstalkers-3",
+     "sampled": 200,
+     "decompiled": 200,
+     "identical": 200,
+     "different": 0,
+     "worker_merge_functions": 204,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "worker_did": {
+      "merges": 8644,
+      "speculative": 458,
+      "explicit": 9794,
+      "implied": 6288,
+      "new_ops": 205,
+      "entries": 26807
+     },
+     "one_arm_failed": [],
+     "differences": [],
+     "verify_mismatches": 0,
+     "verify_verified": 204,
+     "verify_examples": []
+    },
+    {
+     "image": "x360-black-ops-2",
+     "sampled": 200,
+     "decompiled": 200,
+     "identical": 200,
+     "different": 0,
+     "worker_merge_functions": 207,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "worker_did": {
+      "merges": 7910,
+      "speculative": 492,
+      "explicit": 9881,
+      "implied": 6871,
+      "new_ops": 418,
+      "entries": 28253
+     },
+     "one_arm_failed": [],
+     "differences": [],
+     "verify_mismatches": 0,
+     "verify_verified": 207,
+     "verify_examples": []
+    }
+   ]
+  },
+  "printer_diff_f1": {
+   "benchmark": "printer_diff",
+   "date": "2026-10-14",
+   "commit": "",
+   "ghidra_opt": "/home/raikaru/runs/Stage3/bin-f1/ghidra_opt",
+   "decompiled": 1800,
+   "identical": 1800,
+   "identical_rate": 1.0,
+   "images": [
+    {
+     "image": "gba-pokeemerald",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/runs/Stage3/cache/projects/gba-pokeemerald-a9dec84dfe7f-4f53cda18c2b-23c94218619e781c",
+     "differences": []
+    },
+    {
+     "image": "gc-animal-crossing",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/runs/Stage3/cache/projects/gc-animal-crossing-e3166b15b810-4f53cda18c2b-23c94218619e781c",
+     "differences": []
+    },
+    {
+     "image": "nds-pokeheartgold-arm9",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/runs/Stage3/cache/projects/nds-pokeheartgold-arm9-65f02a56842b-4f53cda18c2b-23c94218619e781c",
+     "differences": []
+    },
+    {
+     "image": "ps2-capcom-fighting-evolution",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/runs/Stage3/cache/projects/ps2-capcom-fighting-evolution-84b53104d505-4f53cda18c2b-23c94218619e781c",
+     "differences": []
+    },
+    {
+     "image": "ps2-dungeon-game",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/runs/Stage3/cache/projects/ps2-dungeon-game-25faee2f9848-4f53cda18c2b-23c94218619e781c",
+     "differences": []
+    },
+    {
+     "image": "psv-need-for-speed-most-wanted",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/runs/Stage3/cache/projects/psv-need-for-speed-most-wanted-d15fc4d950ff-4f53cda18c2b-23c94218619e781c",
+     "differences": []
+    },
+    {
+     "image": "psx-darkstalkers-3",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/runs/Stage3/cache/projects/psx-darkstalkers-3-f933f98f1c35-4f53cda18c2b-23c94218619e781c",
+     "differences": []
+    },
+    {
+     "image": "x360-black-ops-2",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/runs/Stage3/cache/projects/x360-black-ops-2-bbf68c880351-4f53cda18c2b-23c94218619e781c",
+     "differences": []
+    },
+    {
+     "image": "x86-libc",
+     "sampled": 200,
+     "decompiled": 200,
+     "decompile_errors": 0,
+     "identical": 200,
+     "identical_rate": 1.0,
+     "categories": {},
+     "examples": {},
+     "project": "/home/raikaru/.cache/romwright/printer-diff/libc-01cccbe278d898ad",
+     "differences": []
+    }
+   ]
+  },
+  "wave_text_diff_f1": {
+   "benchmark": "wave_text_diff",
+   "date": "2026-10-14",
+   "bin": "/home/raikaru/runs/Stage3/bin-f1",
+   "a_env": {},
+   "b_env": {
+    "ROMWRIGHT_NATIVE_MERGE": "1"
+   },
+   "totals": {
+    "compared": 7409,
+    "identical": 7409,
+    "different": 0,
+    "missing": 91,
+    "missing_a": 91,
+    "missing_b": 91
+   },
+   "images": {
+    "ps2-fatal-frame": {
+     "compared": 942,
+     "identical": 942,
+     "different": 0,
+     "missing": 0,
+     "missing_a": 0,
+     "missing_b": 0,
+     "differences": []
+    },
+    "ps2-ratchet-clank-pal": {
+     "compared": 858,
+     "identical": 858,
+     "different": 0,
+     "missing": 1,
+     "missing_a": 1,
+     "missing_b": 1,
+     "differences": []
+    },
+    "ps2-god-hand": {
+     "compared": 980,
+     "identical": 980,
+     "different": 0,
+     "missing": 0,
+     "missing_a": 0,
+     "missing_b": 0,
+     "differences": []
+    },
+    "ps2-digital-devil-saga": {
+     "compared": 977,
+     "identical": 977,
+     "different": 0,
+     "missing": 0,
+     "missing_a": 0,
+     "missing_b": 0,
+     "differences": []
+    },
+    "ps2-dark-chronicle": {
+     "compared": 969,
+     "identical": 969,
+     "different": 0,
+     "missing": 0,
+     "missing_a": 0,
+     "missing_b": 0,
+     "differences": []
+    },
+    "ps2-ratchet-clank": {
+     "compared": 860,
+     "identical": 860,
+     "different": 0,
+     "missing": 1,
+     "missing_a": 1,
+     "missing_b": 1,
+     "differences": []
+    },
+    "ps2-persona-4": {
+     "compared": 935,
+     "identical": 935,
+     "different": 0,
+     "missing": 40,
+     "missing_a": 40,
+     "missing_b": 40,
+     "differences": []
+    },
+    "ps2-dark-cloud": {
+     "compared": 888,
+     "identical": 888,
+     "different": 0,
+     "missing": 49,
+     "missing_a": 49,
+     "missing_b": 49,
+     "differences": []
+    }
+   }
+  },
+  "merge_verify_f1": {
+   "benchmark": "merge_verify",
+   "date": "2026-10-14",
+   "bin": "/home/raikaru/runs/Stage3/bin-f1",
+   "totals": {
+    "decided": 7619,
+    "verified": 7619,
+    "mismatch": 0,
+    "declined": 0
+   },
+   "images": {
+    "ps2-fatal-frame": {
+     "decided": 988,
+     "verified": 988,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {},
+     "chunk_failures": [],
+     "examples": []
+    },
+    "ps2-ratchet-clank-pal": {
+     "decided": 893,
+     "verified": 893,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {},
+     "chunk_failures": [],
+     "examples": []
+    },
+    "ps2-god-hand": {
+     "decided": 1016,
+     "verified": 1016,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {},
+     "chunk_failures": [],
+     "examples": []
+    },
+    "ps2-digital-devil-saga": {
+     "decided": 991,
+     "verified": 991,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {},
+     "chunk_failures": [],
+     "examples": []
+    },
+    "ps2-dark-chronicle": {
+     "decided": 981,
+     "verified": 981,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {},
+     "chunk_failures": [],
+     "examples": []
+    },
+    "ps2-ratchet-clank": {
+     "decided": 902,
+     "verified": 902,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {},
+     "chunk_failures": [],
+     "examples": []
+    },
+    "ps2-persona-4": {
+     "decided": 951,
+     "verified": 951,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {},
+     "chunk_failures": [
+      "error: decompiler timed out after 60s\n"
+     ],
+     "examples": []
+    },
+    "ps2-dark-cloud": {
+     "decided": 897,
+     "verified": 897,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {},
+     "chunk_failures": [],
+     "examples": []
+    }
+   }
+  },
+  "merge_port_measure_f1": {
+   "benchmark": "merge_port_measure",
+   "date": "2026-10-14",
+   "ghidra_opt": "/home/raikaru/runs/Stage3/bin-f1/ghidra_opt",
+   "totals": {
+    "functions": 1600,
+    "worker": 1600,
+    "decompiler": 0,
+    "merges": 109767,
+    "speculative": 5560,
+    "explicit": 123545,
+    "implied": 54441,
+    "new_ops": 2492,
+    "entries": 310769,
+    "named": 9034
+   },
+   "images": [
+    {
+     "image": "gba-pokeemerald",
+     "functions_logged": 200,
+     "merge_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "decided_by_worker": 201,
+     "declined": {},
+     "worker_did": {
+      "merges": 4170,
+      "speculative": 193,
+      "explicit": 5078,
+      "implied": 3342,
+      "new_ops": 47,
+      "entries": 13335
+     },
+     "variables_named_by_worker": 595,
+     "worker_decide_microseconds": 24476,
+     "decompile_wall_seconds": 8.9,
+     "decide_share_of_wall": 0.0027
+    },
+    {
+     "image": "gc-animal-crossing",
+     "functions_logged": 200,
+     "merge_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "decided_by_worker": 206,
+     "declined": {},
+     "worker_did": {
+      "merges": 11751,
+      "speculative": 601,
+      "explicit": 13257,
+      "implied": 7999,
+      "new_ops": 394,
+      "entries": 36456
+     },
+     "variables_named_by_worker": 1004,
+     "worker_decide_microseconds": 64019,
+     "decompile_wall_seconds": 4.8,
+     "decide_share_of_wall": 0.0134
+    },
+    {
+     "image": "nds-pokeheartgold-arm9",
+     "functions_logged": 200,
+     "merge_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "decided_by_worker": 200,
+     "declined": {},
+     "worker_did": {
+      "merges": 3282,
+      "speculative": 150,
+      "explicit": 4279,
+      "implied": 2974,
+      "new_ops": 87,
+      "entries": 11558
+     },
+     "variables_named_by_worker": 784,
+     "worker_decide_microseconds": 22683,
+     "decompile_wall_seconds": 7.1,
+     "decide_share_of_wall": 0.0032
+    },
+    {
+     "image": "ps2-capcom-fighting-evolution",
+     "functions_logged": 200,
+     "merge_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "decided_by_worker": 202,
+     "declined": {},
+     "worker_did": {
+      "merges": 2895,
+      "speculative": 265,
+      "explicit": 3962,
+      "implied": 5164,
+      "new_ops": 120,
+      "entries": 13133
+     },
+     "variables_named_by_worker": 852,
+     "worker_decide_microseconds": 23400,
+     "decompile_wall_seconds": 4.2,
+     "decide_share_of_wall": 0.0056
+    },
+    {
+     "image": "ps2-dungeon-game",
+     "functions_logged": 200,
+     "merge_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "decided_by_worker": 207,
+     "declined": {},
+     "worker_did": {
+      "merges": 41576,
+      "speculative": 1120,
+      "explicit": 43556,
+      "implied": 9785,
+      "new_ops": 463,
+      "entries": 98950
+     },
+     "variables_named_by_worker": 1586,
+     "worker_decide_microseconds": 175071,
+     "decompile_wall_seconds": 9.5,
+     "decide_share_of_wall": 0.0185
+    },
+    {
+     "image": "psv-need-for-speed-most-wanted",
+     "functions_logged": 200,
+     "merge_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "decided_by_worker": 220,
+     "declined": {},
+     "worker_did": {
+      "merges": 29539,
+      "speculative": 2281,
+      "explicit": 33738,
+      "implied": 12018,
+      "new_ops": 758,
+      "entries": 82277
+     },
+     "variables_named_by_worker": 2170,
+     "worker_decide_microseconds": 157692,
+     "decompile_wall_seconds": 17.4,
+     "decide_share_of_wall": 0.009
+    },
+    {
+     "image": "psx-darkstalkers-3",
+     "functions_logged": 200,
+     "merge_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "decided_by_worker": 204,
+     "declined": {},
+     "worker_did": {
+      "merges": 8644,
+      "speculative": 458,
+      "explicit": 9794,
+      "implied": 6288,
+      "new_ops": 205,
+      "entries": 26807
+     },
+     "variables_named_by_worker": 669,
+     "worker_decide_microseconds": 42705,
+     "decompile_wall_seconds": 2.8,
+     "decide_share_of_wall": 0.0151
+    },
+    {
+     "image": "x360-black-ops-2",
+     "functions_logged": 200,
+     "merge_functions": {
+      "worker": 200,
+      "decompiler": 0
+     },
+     "decided_by_worker": 207,
+     "declined": {},
+     "worker_did": {
+      "merges": 7910,
+      "speculative": 492,
+      "explicit": 9881,
+      "implied": 6871,
+      "new_ops": 418,
+      "entries": 28253
+     },
+     "variables_named_by_worker": 1374,
+     "worker_decide_microseconds": 52044,
+     "decompile_wall_seconds": 15.3,
+     "decide_share_of_wall": 0.0034
+    }
+   ]
+  },
+  "variant_smoke_stage3_20261014": {
+   "lane": "dds",
+   "build": "bin-f1",
+   "functions": [
+    "btlCmdRememberUpperQueuedQuery",
+    "btlHasIdleLinkedSlotKindTwo",
+    "btlHasOtherGroup400DifferentUnitMode",
+    "btlReleaseModelEntry",
+    "btlUpdateActorModelColorAndLinks",
+    "dds3AdminActivateRequestedMode",
+    "effCreateStripNode",
+    "effPcpGroupSetInitEntry",
+    "effThunderReleaseSparkWork",
+    "evtAdvanceSolarShortLayerTimer",
+    "evtCommandSetMagatuhiSourcePoints",
+    "evtPrintDeveloperConsoleMessage",
+    "fldDestroySceneTasksAndBuffers",
+    "fldGetCurrentSceneSelectionId",
+    "fldSetSceneObjectAndGroupStates",
+    "func_00129900",
+    "func_001F9D48",
+    "func_00243BF0",
+    "func_00253778",
+    "func_002649B0",
+    "itfReleasePoolNode",
+    "mnuShutdownContext",
+    "ptyComputeMaxMp",
+    "ptyMarkPresetSkillPool",
+    "scrPushInteger",
+    "sdfAppendFormattedDebugLogPair",
+    "sdfBuildPrimaryAlphaAdditiveDmaPacket",
+    "sdfGridReleaseAllCells",
+    "sdfInitSecondaryAlphaSubtractiveRegisters",
+    "sndAddSourceReferences"
+   ],
+   "variants": {
+    "default": {
+     "functions": 30,
+     "exact": 0,
+     "compiled": 30,
+     "mean_percent": 93.066,
+     "spec": "default"
+    },
+    "adjacent-off": {
+     "functions": 30,
+     "exact": 0,
+     "compiled": 30,
+     "mean_percent": 93.066,
+     "spec": "adjacent=off"
+    },
+    "datatype-off": {
+     "functions": 30,
+     "exact": 1,
+     "compiled": 30,
+     "mean_percent": 93.223,
+     "spec": "datatype=off"
+    },
+    "copy-off": {
+     "functions": 30,
+     "exact": 0,
+     "compiled": 30,
+     "mean_percent": 93.066,
+     "spec": "copy=off"
+    },
+    "adjoff-typeoff": {
+     "functions": 30,
+     "exact": 1,
+     "compiled": 30,
+     "mean_percent": 93.018,
+     "spec": "adjacent=off,datatype=off"
+    },
+    "dominant-off": {
+     "functions": 30,
+     "exact": 0,
+     "compiled": 30,
+     "mean_percent": 93.066,
+     "spec": "dominant=off"
+    },
+    "hideshadow-off": {
+     "functions": 30,
+     "exact": 0,
+     "compiled": 30,
+     "mean_percent": 93.066,
+     "spec": "hideshadow=off"
+    },
+    "maxref1": {
+     "functions": 30,
+     "exact": 1,
+     "compiled": 30,
+     "mean_percent": 93.364,
+     "spec": "maxref=1"
+    },
+    "maxref4": {
+     "functions": 30,
+     "exact": 0,
+     "compiled": 30,
+     "mean_percent": 93.075,
+     "spec": "maxref=4"
+    },
+    "maxdup1": {
+     "functions": 30,
+     "exact": 0,
+     "compiled": 30,
+     "mean_percent": 92.992,
+     "spec": "maxdup=1"
+    },
+    "maxdup4": {
+     "functions": 30,
+     "exact": 0,
+     "compiled": 30,
+     "mean_percent": 92.694,
+     "spec": "maxdup=4"
+    },
+    "all-spec-off": {
+     "functions": 30,
+     "exact": 1,
+     "compiled": 30,
+     "mean_percent": 93.018,
+     "spec": "adjacent=off,datatype=off,copy=off"
+    }
+   },
+   "changed": {
+    "dds3AdminActivateRequestedMode": {
+     "address": "00102ae0",
+     "by_variant": {
+      "default": {
+       "percent": 92.074,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 92.074,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 92.34,
+       "exact": false,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 92.074,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 92.34,
+       "exact": false,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 92.074,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 92.074,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 89.83,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 92.34,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 89.83,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 92.074,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 92.34,
+       "exact": false,
+       "compiled": true
+      }
+     }
+    },
+    "ptyComputeMaxMp": {
+     "address": "00118408",
+     "by_variant": {
+      "default": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 86.41,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 90.769,
+       "exact": false,
+       "compiled": true
+      }
+     }
+    },
+    "effPcpGroupSetInitEntry": {
+     "address": "00181708",
+     "by_variant": {
+      "default": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 98.01,
+       "exact": false,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 98.01,
+       "exact": false,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 98.538,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 98.01,
+       "exact": false,
+       "compiled": true
+      }
+     }
+    },
+    "itfReleasePoolNode": {
+     "address": "00198528",
+     "by_variant": {
+      "default": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 96.571,
+       "exact": false,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 96.571,
+       "exact": false,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 94.667,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 96.571,
+       "exact": false,
+       "compiled": true
+      }
+     }
+    },
+    "btlUpdateActorModelColorAndLinks": {
+     "address": "001da780",
+     "by_variant": {
+      "default": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 89.783,
+       "exact": false,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 83.641,
+       "exact": false,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 90.109,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 83.641,
+       "exact": false,
+       "compiled": true
+      }
+     }
+    },
+    "sndAddSourceReferences": {
+     "address": "001f1c78",
+     "by_variant": {
+      "default": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 100.0,
+       "exact": true,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 88.842,
+       "exact": false,
+       "compiled": true
+      }
+     }
+    },
+    "btlReleaseModelEntry": {
+     "address": "00211390",
+     "by_variant": {
+      "default": {
+       "percent": 99.646,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 99.646,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 99.958,
+       "exact": true,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 99.646,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 99.958,
+       "exact": true,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 99.646,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 99.646,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 99.646,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 99.646,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 99.646,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 93.5,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 99.958,
+       "exact": true,
+       "compiled": true
+      }
+     }
+    },
+    "evtAdvanceSolarShortLayerTimer": {
+     "address": "002294c0",
+     "by_variant": {
+      "default": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 96.0,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 96.667,
+       "exact": false,
+       "compiled": true
+      }
+     }
+    },
+    "func_00243BF0": {
+     "address": "00243bf0",
+     "by_variant": {
+      "default": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "adjacent-off": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "datatype-off": {
+       "percent": 93.019,
+       "exact": false,
+       "compiled": true
+      },
+      "copy-off": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "adjoff-typeoff": {
+       "percent": 93.019,
+       "exact": false,
+       "compiled": true
+      },
+      "dominant-off": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "hideshadow-off": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref1": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "maxref4": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup1": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "maxdup4": {
+       "percent": 89.962,
+       "exact": false,
+       "compiled": true
+      },
+      "all-spec-off": {
+       "percent": 93.019,
+       "exact": false,
+       "compiled": true
+      }
+     }
+    }
+   },
+   "c_diffs": {
+    "sndAddSourceReferences/maxref1": "--- out/variants-vs1/default/001f1c78_sndAddSourceReferences/raw.c\t2026-10-14 08:04:13.855629552 +0000\n+++ out/variants-vs1/maxref1/001f1c78_sndAddSourceReferences/raw.c\t2026-10-14 08:15:19.490236942 +0000\n@@ -4,12 +4,14 @@\n \n {\n   int temp_v0;\n+  int temp_v1;\n   \n   *(unsigned int *)((int)param_1 + 4) = 0;\n   sndCreateSystemEffect(*(void **)param_1);\n-  temp_v0 = *(int *)((int)param_1 + 8);\n-  *(int *)(*(int *)param_1 + 4) = *(int *)(*(int *)param_1 + 4) + 1;\n-  *(int *)(temp_v0 + 0x314) = *(int *)(temp_v0 + 0x314) + 1;\n+  temp_v0 = *(int *)param_1;\n+  temp_v1 = *(int *)((int)param_1 + 8);\n+  *(int *)(temp_v0 + 4) = *(int *)(temp_v0 + 4) + 1;\n+  *(int *)(temp_v1 + 0x314) = *(int *)(temp_v1 + 0x314) + 1;\n   return;\n }\n \n",
+    "btlReleaseModelEntry/datatype-off": "--- out/variants-vs1/default/00211390_btlReleaseModelEntry/raw.c\t2026-10-14 08:04:14.059300151 +0000\n+++ out/variants-vs1/datatype-off/00211390_btlReleaseModelEntry/raw.c\t2026-10-14 08:06:36.358307171 +0000\n@@ -16,38 +16,41 @@\n \n {\n   int temp_v0;\n-  void *pvVar2;\n+  int temp_v1;\n+  int temp_v2;\n+  int temp_v3;\n+  void *pvVar5;\n   \n   temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x8 - 1;\n   ((fn_00211390_arg0 *)param_1)->field_0x8 = temp_v0;\n   if (temp_v0 == 0) {\n     if ((void *)((fn_00211390_arg0 *)param_1)->field_0x10 == (void *)0x0) {\n-      pvVar2 = (void *)((fn_00211390_arg0 *)param_1)->field_0x14;\n+      pvVar5 = (void *)((fn_00211390_arg0 *)param_1)->field_0x14;\n     }\n     else {\n       func_00288788((void *)((fn_00211390_arg0 *)param_1)->field_0x10);\n-      pvVar2 = (void *)((fn_00211390_arg0 *)param_1)->field_0x14;\n+      pvVar5 = (void *)((fn_00211390_arg0 *)param_1)->field_0x14;\n     }\n-    if (pvVar2 == (void *)0x0) {\n-      temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n+    if (pvVar5 == (void *)0x0) {\n+      temp_v2 = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n     }\n     else {\n-      sndReleaseSlotOwner(pvVar2);\n-      temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n+      sndReleaseSlotOwner(pvVar5);\n+      temp_v2 = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n     }\n-    if (temp_v0 == 0) {\n-      temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x18;\n+    if (temp_v2 == 0) {\n+      temp_v3 = ((fn_00211390_arg0 *)param_1)->field_0x18;\n     }\n     else {\n-      *(int *)(temp_v0 + 0x18) = ((fn_00211390_arg0 *)param_1)->field_0x18;\n-      temp_v0 = ((fn_00211390_arg0 *)param_1)->field_0x18;\n+      *(int *)(temp_v2 + 0x18) = ((fn_00211390_arg0 *)param_1)->field_0x18;\n+      temp_v3 = ((fn_00211390_arg0 *)param_1)->field_0x18;\n     }\n-    if (temp_v0 != 0) {\n-      *(int *)(temp_v0 + 0x1c) = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n+    if (temp_v3 != 0) {\n+      *(int *)(temp_v3 + 0x1c) = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n     }\n     else {\n-      temp_v0 = btlGetRuntime();\n-      *(int *)(temp_v0 + 0x240) = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n+      temp_v1 = btlGetRuntime();\n+      *(int *)(temp_v1 + 0x240) = ((fn_00211390_arg0 *)param_1)->field_0x1c;\n     }\n     sdfReleaseChipBlock(((fn_00211390_arg0 *)param_1));\n     btlBossDebugPrintf(\"btl:pack free[%X,%X]\\n\",((fn_00211390_arg0 *)param_1)->field_0x0,((fn_00211390_arg0 *)param_1)->field_0x4);\n"
+   },
+   "oracle_best_of_variants": {
+    "functions": 30,
+    "mean_percent": 93.623,
+    "exact": 2,
+    "functions_improved_by_some_variant": 5,
+    "default_mean_percent": 93.066
+   }
+  },
+  "variant_quality_stage3_20261014": {
+   "build": "bin-f1",
+   "variants": [
+    "default",
+    "datatype-off",
+    "adjoff-typeoff",
+    "maxref1",
+    "maxref4",
+    "maxdup1"
+   ],
+   "lanes": {
+    "ff": {
+     "non_compiling_functions": {
+      "sceVu0ViewClipMatrix": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "incompatible types in assignment"
+      },
+      "GetSmokePartAddr": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "incompatible types in assignment"
+      },
+      "printLMatC": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "incompatible types in assignment"
+      },
+      "SgSortGroupP": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "invalid operands to binary &"
+      },
+      "PSAchk3": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "invalid operands to binary |"
+      }
+     },
+     "compiled_by_variant": {
+      "default": 0,
+      "datatype-off": 0,
+      "adjoff-typeoff": 0,
+      "maxref1": 0,
+      "maxref4": 0,
+      "maxdup1": 0
+     }
+    },
+    "dk": {
+     "non_compiling_functions": {
+      "_LOAD_LIGHT__FP12RS_STACKDATAi": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "cannot convert"
+      },
+      "EdTalkModeInit__FP12CNPCharacteri": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "illegal operand"
+      },
+      "CheckBox2__9CMapPartsFP7CBoxVu0": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "cannot convert"
+      },
+      "FishingLoad__FP14CDataAlloc2_1_i": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "cannot convert"
+      },
+      "setShotVector__FPffff": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "cannot convert"
+      },
+      "Draw__15CItemBombEffectFP7CCamera": {
+       "class": "undeclared identifier",
+       "message": "undefined identifier 'int7'"
+      },
+      "Draw__13CWeaponEffectFv": {
+       "class": "undeclared identifier",
+       "message": "undefined identifier 'int7'"
+      },
+      "_CHK_USER_INNER_PRODUCT__FP12RS_STACKDATAi": {
+       "class": "type mismatch (assignment, operand, return, cast)",
+       "message": "cannot convert"
+      },
+      "MonsterNamePosSet__Fii": {
+       "class": "illegal or unknown type name",
+       "message": "illegal type"
+      },
+      "__sinit_mglib.cpp": {
+       "class": "member access on a type the context lacks",
+       "message": "illegal use of 'void'"
+      },
+      "__sinit_editloop3.cpp": {
+       "class": "member access on a type the context lacks",
+       "message": "illegal use of 'void'"
+      }
+     },
+     "compiled_by_variant": {
+      "default": 0,
+      "datatype-off": 0,
+      "adjoff-typeoff": 0,
+      "maxref1": 0,
+      "maxref4": 0,
+      "maxdup1": 0
+     }
+    }
+   },
+   "conclusion": "no merge variant makes any of the 16 non-compiling functions compile; the failures are type mismatches / undeclared type names (type inference, stage 4)"
+  },
+  "ps2_decompile_success": {
+   "off": {
+    "ps2-fatal-frame": {
+     "sampled": 942,
+     "decompiled": 942
+    },
+    "ps2-ratchet-clank-pal": {
+     "sampled": 859,
+     "decompiled": 858
+    },
+    "ps2-god-hand": {
+     "sampled": 980,
+     "decompiled": 980
+    },
+    "ps2-digital-devil-saga": {
+     "sampled": 977,
+     "decompiled": 977
+    },
+    "ps2-dark-chronicle": {
+     "sampled": 969,
+     "decompiled": 969
+    },
+    "ps2-ratchet-clank": {
+     "sampled": 861,
+     "decompiled": 860
+    },
+    "ps2-persona-4": {
+     "sampled": 975,
+     "decompiled": 974
+    },
+    "ps2-dark-cloud": {
+     "sampled": 937,
+     "decompiled": 888
+    }
+   },
+   "def": {
+    "ps2-fatal-frame": {
+     "sampled": 942,
+     "decompiled": 942
+    },
+    "ps2-ratchet-clank-pal": {
+     "sampled": 859,
+     "decompiled": 858
+    },
+    "ps2-god-hand": {
+     "sampled": 980,
+     "decompiled": 980
+    },
+    "ps2-digital-devil-saga": {
+     "sampled": 977,
+     "decompiled": 977
+    },
+    "ps2-dark-chronicle": {
+     "sampled": 969,
+     "decompiled": 969
+    },
+    "ps2-ratchet-clank": {
+     "sampled": 861,
+     "decompiled": 860
+    },
+    "ps2-persona-4": {
+     "sampled": 975,
+     "decompiled": 974
+    },
+    "ps2-dark-cloud": {
+     "sampled": 937,
+     "decompiled": 888
+    }
+   }
+  },
+  "ps2_decompile_success_total": {
+   "off [decompiled, sampled]": [
+    7448,
+    7500
+   ],
+   "def [decompiled, sampled]": [
+    7448,
+    7500
+   ],
+   "games that differ": []
+  },
+  "m21-001_off": {
+   "status": "pass",
+   "failures": [],
+   "rows": {
+    "gba-pokeemerald": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "size_exact": 15421
+    },
+    "nds-pokeheartgold-arm9": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "size_exact": 9888
+    },
+    "ps2-capcom-fighting-evolution": {
+     "truth": 8794,
+     "found": 8598,
+     "recall": 0.9724,
+     "precision": 0.9945,
+     "size_exact": 8534
+    },
+    "ps2-dungeon-game": {
+     "truth": 783,
+     "found": 786,
+     "recall": 0.9872,
+     "precision": 0.9835,
+     "size_exact": 751
+    },
+    "psx-darkstalkers-3": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "size_exact": 0
+    },
+    "psv-need-for-speed-most-wanted": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "size_exact": 16300
+    },
+    "x360-black-ops-2": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "size_exact": 0
+    }
+   }
+  },
+  "m21-001_def": {
+   "status": "pass",
+   "failures": [],
+   "rows": {
+    "gba-pokeemerald": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "size_exact": 15421
+    },
+    "nds-pokeheartgold-arm9": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "size_exact": 9888
+    },
+    "ps2-capcom-fighting-evolution": {
+     "truth": 8794,
+     "found": 8598,
+     "recall": 0.9724,
+     "precision": 0.9945,
+     "size_exact": 8534
+    },
+    "ps2-dungeon-game": {
+     "truth": 783,
+     "found": 786,
+     "recall": 0.9872,
+     "precision": 0.9835,
+     "size_exact": 751
+    },
+    "psx-darkstalkers-3": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "size_exact": 0
+    },
+    "psv-need-for-speed-most-wanted": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "size_exact": 16300
+    },
+    "x360-black-ops-2": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "size_exact": 0
+    }
+   }
+  },
+  "printer_differential": {
+   "decompiled": 1800,
+   "identical": 1800,
+   "identical_rate": 1.0
+  },
+  "merge_differential": {
+   "decompiled": 1600,
+   "identical": 1600,
+   "images": {
+    "gba-pokeemerald": {
+     "decompiled": 200,
+     "identical": 200,
+     "worker_merge_functions": 201,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "verify_mismatches": 0,
+     "verify_verified": 201
+    },
+    "gc-animal-crossing": {
+     "decompiled": 200,
+     "identical": 200,
+     "worker_merge_functions": 206,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "verify_mismatches": 0,
+     "verify_verified": 206
+    },
+    "nds-pokeheartgold-arm9": {
+     "decompiled": 200,
+     "identical": 200,
+     "worker_merge_functions": 200,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "verify_mismatches": 0,
+     "verify_verified": 200
+    },
+    "ps2-capcom-fighting-evolution": {
+     "decompiled": 200,
+     "identical": 200,
+     "worker_merge_functions": 202,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "verify_mismatches": 0,
+     "verify_verified": 202
+    },
+    "ps2-dungeon-game": {
+     "decompiled": 200,
+     "identical": 200,
+     "worker_merge_functions": 207,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "verify_mismatches": 0,
+     "verify_verified": 207
+    },
+    "psv-need-for-speed-most-wanted": {
+     "decompiled": 200,
+     "identical": 200,
+     "worker_merge_functions": 220,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "verify_mismatches": 0,
+     "verify_verified": 220
+    },
+    "psx-darkstalkers-3": {
+     "decompiled": 200,
+     "identical": 200,
+     "worker_merge_functions": 204,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "verify_mismatches": 0,
+     "verify_verified": 204
+    },
+    "x360-black-ops-2": {
+     "decompiled": 200,
+     "identical": 200,
+     "worker_merge_functions": 207,
+     "declined_functions": 0,
+     "decline_reasons": {},
+     "verify_mismatches": 0,
+     "verify_verified": 207
+    }
+   }
+  },
+  "merge_verify_ps2_wave": {
+   "totals": {
+    "decided": 7619,
+    "verified": 7619,
+    "mismatch": 0,
+    "declined": 0
+   },
+   "images": {
+    "ps2-fatal-frame": {
+     "decided": 988,
+     "verified": 988,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {}
+    },
+    "ps2-ratchet-clank-pal": {
+     "decided": 893,
+     "verified": 893,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {}
+    },
+    "ps2-god-hand": {
+     "decided": 1016,
+     "verified": 1016,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {}
+    },
+    "ps2-digital-devil-saga": {
+     "decided": 991,
+     "verified": 991,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {}
+    },
+    "ps2-dark-chronicle": {
+     "decided": 981,
+     "verified": 981,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {}
+    },
+    "ps2-ratchet-clank": {
+     "decided": 902,
+     "verified": 902,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {}
+    },
+    "ps2-persona-4": {
+     "decided": 951,
+     "verified": 951,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {}
+    },
+    "ps2-dark-cloud": {
+     "decided": 897,
+     "verified": 897,
+     "mismatch": 0,
+     "declined": 0,
+     "decline_reasons": {}
+    }
+   }
+  }
+ }
+}

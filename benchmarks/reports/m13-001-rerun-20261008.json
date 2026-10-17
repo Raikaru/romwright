@@ -1,0 +1,90 @@
+{
+  "id": "m13-001",
+  "milestone": "M13",
+  "criterion": "jump tables recovered from p-code without the decompiler, scored against stock",
+  "recorded_at": "2026-10-08T21:28:40.961118+00:00",
+  "thresholds": {
+    "vsa_soundness": 0.99,
+    "vsa_seconds": 5.0,
+    "interpreted_parity_soundness": 0.9989,
+    "interpreted_seconds": 5.0,
+    "combined_branches_over_stock": 1.0,
+    "combined_soundness_over_stock": 1.0,
+    "combined_missed_ceiling": 3
+  },
+  "binary": "/usr/lib64/libc.so.6",
+  "measured": {
+    "stock": {
+      "branches": 132,
+      "targets": 1891,
+      "sound_targets": 1855,
+      "outside_function": 31,
+      "undecodable": 5,
+      "soundness": 0.981,
+      "agree_with_stock": 132,
+      "shared_with_stock": 132,
+      "beyond_stock": 0,
+      "missed_of_stock": 0
+    },
+    "vsa": {
+      "branches": 41,
+      "targets": 369,
+      "sound_targets": 369,
+      "outside_function": 0,
+      "undecodable": 0,
+      "soundness": 1.0,
+      "agree_with_stock": 30,
+      "shared_with_stock": 41,
+      "beyond_stock": 0,
+      "missed_of_stock": 91,
+      "wall_s": 34.0,
+      "phase_s": 2.604
+    },
+    "interpreted": {
+      "branches": 67,
+      "targets": 968,
+      "sound_targets": 968,
+      "outside_function": 0,
+      "undecodable": 0,
+      "soundness": 1.0,
+      "agree_with_stock": 34,
+      "shared_with_stock": 48,
+      "beyond_stock": 19,
+      "missed_of_stock": 84,
+      "wall_s": 22.0,
+      "phase_s": 3.057
+    },
+    "decompiler": {
+      "branches": 126,
+      "targets": 1751,
+      "sound_targets": 1747,
+      "outside_function": 4,
+      "undecodable": 0,
+      "soundness": 0.9977,
+      "agree_with_stock": 109,
+      "shared_with_stock": 125,
+      "beyond_stock": 1,
+      "missed_of_stock": 7,
+      "wall_s": 107.1
+    },
+    "combined": {
+      "branches": 130,
+      "targets": 1798,
+      "sound_targets": 1794,
+      "outside_function": 4,
+      "undecodable": 0,
+      "soundness": 0.9978,
+      "agree_with_stock": 114,
+      "shared_with_stock": 129,
+      "beyond_stock": 1,
+      "missed_of_stock": 3,
+      "wall_s": 71.3,
+      "phase_s": 1.924
+    }
+  },
+  "status": "fail",
+  "failures": [
+    "the interpreter answered 67 dispatches, short of the decompiler's 126",
+    "combined answers 130 dispatches, not more than stock's 132"
+  ]
+}

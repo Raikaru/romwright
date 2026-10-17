@@ -1,0 +1,20 @@
+{
+ "progress_summary": {
+  "functions": 1293,
+  "scored": 1293,
+  "compiled": 1189,
+  "matched": 231,
+  "near_90": 100,
+  "mean_percent": 64.536,
+  "compiler": "msvc4.2",
+  "whole_image_rebuild": false
+ },
+ "compile": {
+  "compiler": "msvc4.2",
+  "family": "msvc",
+  "units": 1293,
+  "compiled": 1189,
+  "failed": 104,
+  "seconds": 997.6
+ }
+}

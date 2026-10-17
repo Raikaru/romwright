@@ -1,0 +1,12 @@
+{
+  "benchmark": "structuring_compile",
+  "compiler": "gcc",
+  "configs": {
+    "all": {
+      "functions": 1800,
+      "rewritten": 177,
+      "error_free": 1580,
+      "regressions": []
+    }
+  }
+}

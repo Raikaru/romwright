@@ -1,0 +1,5196 @@
+{
+ "schema": 1,
+ "generated": "2026-10-12T04:50:34+00:00",
+ "environment": {
+  "base": {
+   "upstream": "Ghidra 12.1.3 PUBLIC (Ghidra_12.1.3_build 8b4c91d4), third_party/ghidra/decompiler verbatim",
+   "ghidra_opt": "dbd7e74bdd7d04a52da4e5390d7d32a9ad8d1df4f1dc218be805a2868212e32e",
+   "patch": "native/ghidra-opt-sleigh.patch sha256 d70f9a20... (snapshot 2026-10-10 05:14 UTC build, the patch behind dbd7e74b)"
+  },
+  "master": {
+   "upstream": "upstream master 918d44e (2026-10-08, application.version 12.3; Ghidra_12.2 merged 2026-10-07)",
+   "ghidra_opt": "57efa6b2b704caa9093beb22a6330654f197ef0a386c20b3a80c667290f4175c",
+   "patch": "rebased patch sha256 270bff66..., 36 files (benchmarks/reports/ghidra_master_trial/ghidra-opt-sleigh.master.patch)"
+  },
+  "cli": "6aaab51b9179559a...",
+  "worker": "d2fc11fc33cc8985...",
+  "host": "nih-vps-u, 8 vCPU, 31 GB, shared with other agents' builds and gates",
+  "load": "1-minute load average sampled each minute from 27 samples: median 26.3, max 36.8",
+  "load_samples": 27
+ },
+ "notes": {
+  "rebase": {
+   "intro_md": "The patch was rebased by a three-way merge: base = the 12.1.3 `cpp` tree, ours = base + `native/ghidra-opt-sleigh.patch` (the snapshot behind `ghidra_opt` sha256 `dbd7e74b`, md5 `765c93cc`), theirs = upstream master `918d44e`. Upstream changed 119 decompiler C++ files; the patch touches 35 files, 33 of them among those. Three hunks conflicted textually; four more sites stopped compiling and two broke the worker's wire without any textual conflict. The rebased patch is 36 files (`marshal.cc` is new) and keeps every hook. Its text is in `benchmarks/reports/ghidra_master_trial/ghidra-opt-sleigh.master.patch`.",
+   "conflicts": [
+    {
+     "file": "context.hh",
+     "commit": "5328fa2c6 GP-6554 Refactor ConstructState allocation in ParserContext",
+     "collision": "The patch bounded ParserWalker at Ghidra's depth 64 (breadcrumb[65]), threw when the fixed 75-state array ran out, and resized each ConstructState's operand vector (PowerPC lmw/stmw name up to 32 registers, one nested sub-constructor each). Upstream made `state` a growable vector of pointers and the per-state operand array a fixed `MAX_OPERAND`=20, depth `MAX_DEPTH`=32.",
+     "resolution": "Took upstream's allocation and re-expressed the two bounds as its constants: `MAX_DEPTH`=65 (throws at depth 64, as Ghidra's ParserWalker.java and the old patch) and `MAX_OPERAND`=64. Upstream's own limits (depth 32, 20 operands) would reject Gekko lmw/stmw by construction (not run without the raise).",
+     "behaviour": "Equivalent for every valid instruction; a runaway walk now ends at the depth bound instead of the state bound."
+    },
+    {
+     "file": "fspec.cc",
+     "commit": "bb33bad19 GP-7136, 092f8b573 GP-7272 (rework of FuncProto::updateInputTypes)",
+     "collision": "The patch added an input-register float override inside `updateInputTypes`, next to the persist/findDisjointCover branch and the `isMark` de-duplication. Upstream moved both into ActionInputPrototype (the types arrive as `typeList`, trials are already disjoint) and left one path.",
+     "resolution": "Re-applied the override after `pieces.type = typeList[slot-1]`: an unknown/int/uint 4- or 8-byte parameter whose address lies in a float-class entry of the model becomes float.",
+     "behaviour": "Now also applies to persist (global) trials; those do not live in float registers, so no observable difference is expected."
+    },
+    {
+     "file": "ghidra_process.cc",
+     "commit": "da5c0f2f3 GP-7010 (Funcdata::encode gained `saveOverrides`)",
+     "collision": "`fd->encode(encoder,0,sendSyntaxTree)` inside the patch's `RomwrightNoReturnHint` scope.",
+     "resolution": "Kept the hint scope and the call to `romwrightEncodeCallPrototypes`; passed `false` for `saveOverrides` as upstream's own caller does.",
+     "behaviour": "Identical (12.1.3 had no override export)."
+    }
+   ],
+   "breaks": [
+    {
+     "where": "variable.cc (HighVariable::encode, a Romwright symbol export)",
+     "commit": "6740b8992 GP-7063",
+     "break": "`SymbolEntry` is now an abstract base; `getAddr()` lives on `MapEntry`.",
+     "fix": "Export the address only for `isMapEntry()` entries (a dynamic or unassigned entry had an invalid address before, and nothing was written)."
+    },
+    {
+     "where": "romwright_printir.hh `partialLeaf`",
+     "commit": "6740b8992 GP-7063",
+     "break": "Same `SymbolEntry::getAddr`; also PrintC::pushPartialSymbol now takes the byte order from `vn->getHigh()->getNameRepresentative()->getSpace()`.",
+     "fix": "Mirror upstream's source of the space so the IR carries the endianness PrintC uses."
+    },
+    {
+     "where": "romwright_printir.hh `node`",
+     "commit": "fefe791da GP-7115",
+     "break": "`BlockIf` no longer has `getGotoType/getGotoTarget` (they moved to `BlockIfGoto`); `t_ifelse`, `t_ifnoexit`, `t_ifgoto` were added to `FlowBlock::block_type` and shifted `t_whiledo`..`t_infloop` by 3, and the IR writes the numeric type.",
+     "fix": "`wireKind()` maps master's enum back to the 12.1.3 numbering the Rust decoder (`printc/ir.rs kind::`) fixes: if/ifelse/ifgoto are kind 8, loops and switch shift back. `t_ifnoexit` has no wire kind (PrintC prints `if (c) { A } B`, no else): it is exported as the list it prints as (an if without else, then B). Without that the Rust printer printed an `else` upstream does not (103 of 1,520 differential functions); with it all 1,520 print the same text as PrintC."
+    },
+    {
+     "where": "romwright_ir.hh (structured document)",
+     "commit": "da5c0f2f3 GP-7010",
+     "break": "`Funcdata::encode(encoder,id,saveTree)` became `encode(encoder,id,saveTree,saveOverrides)`.",
+     "fix": "Pass `false`."
+    },
+    {
+     "where": "wire: packed data-type metatype",
+     "commit": "747d581b1 GP-7253 (with 5540df9d8)",
+     "break": "Master reads and writes `ATTRIB_METATYPE` of a packed `<type>` as a signed integer (`readDatatypeMeta`/`writeDatatypeMeta`); 12.1.3 and the Rust worker (`wire.rs`, `provider.rs`) use the metatype's name. Every decompile died with `Marshaling error: Expecting signed integer attribute`.",
+     "fix": "Compat hunk in marshal.cc (below)."
+    },
+    {
+     "where": "wire: warnings",
+     "commit": "05c8a9c31 GP-6985",
+     "break": "12.1.3 collected warnings in `ArchitectureGhidra::warnings` and returned them in the 0x10..0x11 result frame; master writes each as it occurs in a new 0x12..0x13 packet and returns only the error in the frame. The worker (`provider.rs run_command`) accepts nothing else mid-command: `unexpected burst 0x12`.",
+     "fix": "Compat hunk in ghidra_arch/ghidra_process (below)."
+    }
+   ],
+   "compat": [
+    {
+     "hook": "marshal.cc: PackedDecode::readDatatypeMeta / PackedEncode::writeDatatypeMeta",
+     "commit": "747d581b1 GP-7253",
+     "why": "The worker's type elements carry the metatype as a string, and the Rust code is unchanged in both arms.",
+     "does": "Reads and writes the metatype's name (`string2metatype`, `metatype2string`) as 12.1.3 did. A re-pin that wants upstream's form changes `wire.rs`, `provider.rs` and every Rust reader of `<type>` instead."
+    },
+    {
+     "hook": "ghidra_arch.hh/.cc, ghidra_process.cc: warnings",
+     "commit": "05c8a9c31 GP-6985",
+     "why": "As above, for the 0x12 packet.",
+     "does": "`printWarning` appends to `warnings` (cleared by `loadParameters`); `GhidraCommand::sendResult` writes the warnings and then the error text in the result frame, which is what 12.1.3's `printMessage` produced."
+    }
+   ],
+   "tail_md": "Not carried over by the trial: the in-flight edits to `native/ghidra-opt-sleigh.patch` and `native/romwright_*.hh` of 2026-10-11 20:18-20:31 EDT (RustStructure: `romwright_structure.hh`, `romwright_bytes.hh`, hooks in `blockaction.cc`, `ghidra_process.cc`). A dry-run merge of that newer patch onto master gives four conflicts instead of three: the same three plus `blockaction.cc`, where upstream's `ActionStructureTransform::apply` (`finalTransform(data, allowOpMoves)`, GP-6788) and `ActionPreferComplement::apply` (`graph.hasFinalTransform()`, GP-6788) sit on the lines the patch's `romwrightNativeStructure()` / `romwrightStructureMode()` guards use. Languages: upstream changed none of MIPS, R5900, ARM, AArch64-for-us, Gekko or the vendored console languages except PowerPC `ppc_isa.sinc` (the `dcbz` user op was renamed `DataCaseBlockSetToZero` -> `DataCacheBlockSetToZero`; the vendored Gekko language does not include it). The `.sla` format version is 4 on both sides, so the trial reuses the 12.1.3 install's compiled `.sla` files for every language."
+  },
+  "attribution_groups": {
+   "jtnz": {
+    "commits": "GP-7003 64606271a (non-zero mask off)",
+    "what": "master with `JumpBasic::getInitialRange` ignoring the non-zero mask; the rest of GP-7003 stays"
+   },
+   "cp7003": {
+    "commits": "GP-7003 only, on 12.1.3 + patch",
+    "what": "the cherry-pick: `gp7003-12.1.3.patch` applied to the pinned decompiler (restores = prints the 12.1.3 text, i.e. GP-7003 does not touch that function)"
+   },
+   "no7310": {
+    "commits": "GP-7310 bc858e1ec reverted",
+    "what": "assignment-to-constant check back in `VarnodeBank::setDef` only"
+   },
+   "rules": {
+    "commits": "GP-7353, 7346, 7309, 7280, 7272, 7227, 7210, 7126, 7058 reverted (not 7310, not 7166)",
+    "what": "rule, subflow and transform fixes"
+   },
+   "thunk": {
+    "commits": "GP-6946 ff4f0ed1f reverted",
+    "what": "thunk test back to `any single target > 0xffff away`"
+   },
+   "nosym7038": {
+    "commits": "GP-7038 7f538e0af off (toggle)",
+    "what": "a constant checked once is never re-tested when it turns out to be a pointer"
+   },
+   "nonear7080": {
+    "commits": "GP-7080 792e529e7 off (toggle)",
+    "what": "no nearby-symbol search before/after an address (`type.cc` arrayed-component search)"
+   },
+   "nobaddata6945": {
+    "commits": "GP-6945 d424b6ff9 off (default)",
+    "what": "`max_baddata` unlimited as in 12.1.3"
+   },
+   "noexitpref": {
+    "commits": "GP-7115 fefe791da, `BlockIfNoExit::preferComplement` (toggle)",
+    "what": "arm preference of an if-without-exit as for if/else"
+   },
+   "noexitrule": {
+    "commits": "GP-7115 fefe791da, `ruleBlockIfNoExit` branch for two exit-less arms (toggle)",
+    "what": "that branch disabled"
+   },
+   "nocopyimm": {
+    "commits": "GP-6788 4661fc0be, `BlockBasic::hasNoImmediateCopy` (toggle)",
+    "what": "a block with an immediate COPY out of it may be removed again"
+   }
+  },
+  "port_reference": [
+   {
+    "stage": "Structuring and printing (stage 1, in progress)",
+    "scope_md": "`printc/collapse.rs` ports `CollapseStructure`/`ActionFinalStructure`; `printc/printer.rs` and `render.rs` port PrintC. These are the commits that change what those two files must reproduce.",
+    "commits": [
+     {
+      "commit": "fefe791da",
+      "title": "GP-7115 Split out BlockIfElse BlockIfGoto BlockIfNoExit",
+      "reason": "`BlockIf` becomes if / ifelse / ifnoexit / ifgoto; `ruleBlockIfNoExit` also fires when both out edges of a decision go to exit-less blocks; `BlockIfNoExit::preferComplement` orders the arms by structure depth, then basic-block count, then halt type; blocks gain `structureDepth`, `leafCount`, `getHaltType`; PrintC prints no `else` for ifnoexit; `typeToName` now names ifelse/ifnoexit/ifgoto (the `structure.rs` kind names)."
+     },
+     {
+      "commit": "4661fc0be",
+      "title": "GP-6788 Keep track of immediate COPY propagation",
+      "reason": "`finalTransform(data, allowOpMoves)` with `f_final_transform`; `BlockBasic::finalTransform` normalises a flipped CBRANCH (`opNormalizeFlip`) instead of flipping ops; `ActionPreferComplement` stops after the final transform; `hasNoImmediateCopy` keeps a block whose COPY the merge must put back out of the do-nothing removal in structuring; `flipInPlaceTest` gets `allowOpRemoval`."
+     },
+     {
+      "commit": "9aa2fdaef",
+      "title": "GP-7329 add pushMismatchSymbol to pushAnnotation",
+      "reason": "A symbol smaller than the annotated range prints through `pushMismatchSymbol` instead of a bogus partial."
+     },
+     {
+      "commit": "6740b8992",
+      "title": "GP-7063 New detection of symbol conflicts (the printc.cc part)",
+      "reason": "`pushPartialSymbol` takes the byte order from the name representative's space; symbol colour comes from `getSymbolHighlight`."
+     },
+     {
+      "commit": "e37c57f3d",
+      "title": "GP-7251 getCodePoint range check",
+      "reason": "String literals never read past the buffer; truncated UTF-16/32 prints as before-the-end text instead of garbage."
+     }
+    ]
+   },
+   {
+    "stage": "Types and casts",
+    "scope_md": "`ActionInferTypes`, `ActionSetCasts`, `typeop.cc`, `type.cc`, pointer and symbol-reference recovery (`ActionConstantPtr`).",
+    "commits": [
+     {
+      "commit": "7f538e0af",
+      "title": "GP-7038 Do additional symbol reference check if pointer is discovered",
+      "reason": "`ptrcheck` is replaced by `symcheck_incomplete/complete`: a constant tested too early is re-tested once its type turns out to be a pointer (the offcut case `read_sub(&glob1.d)`; `datatests/offcut.xml`)."
+     },
+     {
+      "commit": "792e529e7",
+      "title": "GP-7080 Nearby symbol search",
+      "reason": "`Scope::findSymbolBefore/After` (8-byte steps) feed `TypePointer`'s arrayed-component search, so an access just before or after a symbol resolves into its array/struct instead of a stack-corner or raw offset (`datatests/stackcorner.xml`)."
+     },
+     {
+      "commit": "6740b8992",
+      "title": "GP-7063 New detection of symbol conflicts",
+      "reason": "`SymbolEntry` is split into `MapEntry`, `MapEntryConflict`, `DynamicEntry`, `UnassignedEntry`; conflicts are decided when a Varnode is mapped (`Funcdata::syncVarnodesWithSymbols`), which changes which symbol a shared address prints as."
+     },
+     {
+      "commit": "f17a0b571",
+      "title": "GP-7167 highPtrPossible in ActionConstantPtr",
+      "reason": "`highPtrPossible` decides from the space's pointer width (`space.cc`, `address.cc`) which constants `ActionConstantPtr` may treat as pointers; every 32-bit console constant passes through it."
+     },
+     {
+      "commit": "7cfdb5031",
+      "title": "Do not apply rule ptrsubundo for pointers targeting ARM Thumb functions",
+      "reason": "A PTRSUB into a TYPE_CODE target is kept when the offset is non-negative: Thumb function pointers keep their `+1`, GBA/NDS callbacks print as pointers to the function."
+     },
+     {
+      "commit": "86f4daefc",
+      "title": "Handle TYPE_CODE in isPtrsubMatching",
+      "reason": "Completes the previous commit for the `TYPE_CODE` metatype case."
+     },
+     {
+      "commit": "9e547d2b5",
+      "title": "GP-5525 More targeted data-type warnings",
+      "reason": "Changes when the `WARNING: ... data-type` comments appear in the printed text."
+     },
+     {
+      "commit": "e12d821d8",
+      "title": "GP-6492 Adjustments to union scoring",
+      "reason": "Union resolution scoring (`funcdata.cc` +143, `float.cc`, `unionresolve.cc`) decides which union member a use prints as."
+     },
+     {
+      "commit": "3e6eddca0",
+      "title": "GP-7126 RuleAndStructure",
+      "reason": "`and(x,#mask)` on a structure-typed value becomes a field extraction (`Datatype::findSmallestContainer`); `RuleDumptyHumpLate` also folds SUBPIECE of SUBPIECE."
+     },
+     {
+      "commit": "5540df9d8, 747d581b1",
+      "title": "Split out type_metatype / GP-7253 Adjustments to Encode Decode",
+      "reason": "Not decisions, but the Rust data-type model must know the metatype is now a signed integer on the packed wire (the trial reverts that on the wire)."
+     }
+    ]
+   },
+   {
+    "stage": "Merge (HighVariable, symbol assignment)",
+    "scope_md": "`merge.cc`, `variable.cc`, `Funcdata::syncVarnodesWithSymbols`.",
+    "commits": [
+     {
+      "commit": "6740b8992",
+      "title": "GP-7063 New detection of symbol conflicts",
+      "reason": "Which Varnodes may share one symbol is decided in `funcdata_varnode.cc` (+92/-70) before merge; the port must agree or the merged names differ."
+     },
+     {
+      "commit": "4661fc0be",
+      "title": "GP-6788 Keep track of immediate COPY propagation",
+      "reason": "`MULTIEQUAL` inputs remember an immediate COPY (`hasCopyImmed`); `Funcdata::createReplaceVarnode` keeps a replacement in its HighVariable when blocks are removed; merge puts the COPY back."
+     },
+     {
+      "commit": "e12d821d8",
+      "title": "GP-6492 Adjustments to union scoring",
+      "reason": "`merge.cc` (3 lines) and `variable.cc` change with the union scoring."
+     },
+     {
+      "commit": "bb33bad19",
+      "title": "GP-7136 join_per_primitive padding and shared stack",
+      "reason": "`merge.cc` and `variable.cc` change in the same commit as the join-address work (the diff was not read line by line); the port's merge must agree with heritage on how a join is split and rejoined."
+     }
+    ]
+   },
+   {
+    "stage": "Rules (ruleaction.cc, subflow, transform, prefersplit)",
+    "scope_md": "Every rule or transform whose result or failure mode changed.",
+    "commits": [
+     {
+      "commit": "bc858e1ec",
+      "title": "GP-7310 Prevent all assignments to a constant",
+      "reason": "`Varnode::setDef` (and so `VarnodeBank::createDef`) throws `Assignment to constant` for any op whose output is in the constant space; 12.1.3 only checked in `VarnodeBank::setDef`. The Xenon language produced such ops: 80 of 200 sampled x360 functions fail. The port must either throw the same error (it is a language defect to fix) or tolerate it deliberately."
+     },
+     {
+      "commit": "0b0a8ac0a",
+      "title": "GP-7346 Preserve least significant offset in createReplacement",
+      "reason": "Piece replacement transfers Varnode properties with the least-significant offset, not the endian-adjusted one: wrong properties on big-endian targets (GameCube, N64, Xbox 360) before."
+     },
+     {
+      "commit": "54ffbc94c",
+      "title": "GP-7353 Check for size consistency in RuleSignForm",
+      "reason": "RuleSignForm no longer fires when the extended source is not the output's size."
+     },
+     {
+      "commit": "f5dd65d18",
+      "title": "GP-7309 Reinsert collapsed MULTIEQUAL",
+      "reason": "`ActionStackPtrFlow::analyzeExtraPop` re-inserts a MULTIEQUAL at the block start after rewriting its inputs (op order was broken)."
+     },
+     {
+      "commit": "4df2c14ac",
+      "title": "GP-7280 Check for non-zero bits outside terminal variable",
+      "reason": "`SubvariableFlow` terminal patches require the non-zero mask to fit; `RuleSubvarCompZero` uses `popcount(wholemask) >= 8` instead of two byte tests."
+     },
+     {
+      "commit": "8cb5167ad",
+      "title": "GP-7227 Check for output descendants when splitting read COPY",
+      "reason": "`PreferSplitManager` (prefersplit.cc +236/-130) no longer splits a COPY whose output has other descendants."
+     },
+     {
+      "commit": "8492bf14b",
+      "title": "GP-7210 Check for negative shift amount to leftshift",
+      "reason": "Division-by-multiplication recognition (`RuleDivOpt`, `RuleDivTermAdd*`) uses unsigned shift amounts and rejects n > 127."
+     },
+     {
+      "commit": "3e6eddca0",
+      "title": "GP-7126 RuleAndStructure",
+      "reason": "New cleanup rule, see types."
+     },
+     {
+      "commit": "b1cb6573b",
+      "title": "GP-7058 Fix COPY path",
+      "reason": "`ConditionalExecution::resolveIblockRead` returns the COPY's input when its definition is not in the block."
+     },
+     {
+      "commit": "6732a6ad6",
+      "title": "GP-7166 More efficient versions of RulePropagateCopy and RuleIndirectCollapse",
+      "reason": "Same results, much less scanning (`funcdata_op.cc` +165); port the new traversal, not the old one, or the port is the slow part."
+     },
+     {
+      "commit": "590c94926",
+      "title": "GP-2917 Move INDIRECTs into separate container",
+      "reason": "INDIRECT ops live in their own list; actions that iterate ops (bitfield, constseq, double precision, comment, dynamic hash) changed their loops; `DynamicHash` lists the ops of both containers (`listOps`)."
+     }
+    ]
+   },
+   {
+    "stage": "Heritage",
+    "scope_md": "`heritage.cc`, SSA construction, join and input handling.",
+    "commits": [
+     {
+      "commit": "bb33bad19",
+      "title": "GP-7136 join_per_primitive padding and shared stack",
+      "reason": "`splitJoinWrite` and `ActionReturnRecovery::buildReturnOutput` handle a join of N pieces (a 64-bit value in two 32-bit registers, a double in a register pair) with `joinPieces`; constants are no longer split; `ProtoParameter::hasStorage` guards every parameter loop. Directly relevant to o32/GC doubles and `long long`."
+     },
+     {
+      "commit": "092f8b573",
+      "title": "GP-7272 Adjust writemask on input Varnodes. Add check for unlocked trials",
+      "reason": "`markRangeHeritaged` replaces `setWriteMask` on inputs; `placeMultiequals`/`rename` are skipped when there is nothing disjoint; locked varargs prototypes keep their unlocked trials (`collectUnlockedTrials`): matters for every library `printf`-style prototype Romwright asserts."
+     },
+     {
+      "commit": "590c94926",
+      "title": "GP-2917 Move INDIRECTs into separate container",
+      "reason": "INDIRECT ops (created by heritage's call guards) now live in their own container; the actions that iterate ops changed their loops (bitfield, constseq, double precision, comment, dynamic hash)."
+     },
+     {
+      "commit": "f17a0b571",
+      "title": "GP-7167 highPtrPossible in ActionConstantPtr",
+      "reason": "One line in heritage beside the main change (the pointer-range test)."
+     }
+    ]
+   },
+   {
+    "stage": "Flow (flow.cc, jump tables)",
+    "scope_md": "What the decompiler's own `FlowInfo` and `jumptable.cc` do; the import walk is already Rust.",
+    "commits": [
+     {
+      "commit": "d424b6ff9",
+      "title": "GP-6945 Count bad data exceptions",
+      "reason": "`max_baddata` defaults to 4: the fifth undecodable instruction in a function throws `Bad instruction count exceeded` instead of getting a `halt_baddata` per site (12.1.3 had no limit). Console code can carry data in code. The option `baddatacount` (empty = unlimited) restores 12.1.3; the port must pick the limit on purpose."
+     },
+     {
+      "commit": "48f4c0b04",
+      "title": "GP-6957 Relative branch to next instruction is more flexible",
+      "reason": "A relative p-code branch past the instruction's last op is a branch to the next instruction (`PcodeOpBank::findLastOp`) rather than only one op past the previous seqnum: SLEIGH `goto inst_next`-style forms."
+     },
+     {
+      "commit": "da5c0f2f3",
+      "title": "GP-7010 Add support for CALLOTHER -> CALL overrides",
+      "reason": "A CALLOTHER (syscall, `swi`) can be overridden into a CALL with a destination (`<calldest>` replaces `<indirectoverride>`, `Override::insertDestinationOverride`); would let the Rust layer name syscall stubs instead of printing a userop."
+     },
+     {
+      "commit": "64606271a",
+      "title": "GP-7003 Use non-zero mask in jumptable recovery",
+      "reason": "`JumpBasic::getInitialRange` starts from the non-zero mask (and INT_REM/INT_SREM constants) instead of only a top-level INT_AND: switches with no guard whose index is masked or taken modulo are recovered (`datatests/switchmask.xml`); `findSmallestNormal` compares against the previous model's range."
+     },
+     {
+      "commit": "ff4f0ed1f",
+      "title": "GP-6946 Refactor JumpTable thunk check",
+      "reason": "A single-entry table is a thunk only when the function is just branches (`JumpTable::isThunk`); 12.1.3 called any single-target jump more than 0xffff away a thunk and threw `Likely thunk`."
+     },
+     {
+      "commit": "376ac1a0a, e5ee5ed77, 5328fa2c6, 827ebe6a0, 031cdcaa4, e465f9b3d",
+      "title": "GP-6995, 6545, 6554, 6608, 7155, 6967 (SLEIGH)",
+      "reason": "Not decompiler stages: decode checks, a deque for PcodeCacher, the ParserContext state refactor, integer parsing and `optimizeGather` size in the SLEIGH compiler. `kuna-sleigh` (the Rust SLEIGH) should take GP-6995 (bad symbol id, invalid space element) and GP-6554 (state growth, depth bound) as its reference."
+     }
+    ]
+   }
+  ],
+  "summary_md": "**Verdict: do not re-pin to upstream master now. Cherry-pick GP-7003, with the two corrections of the follow-up (`gp7003-12.1.3.cpfix.patch`), into the current patch now, and re-run this trial when a 12.2 release exists.**\n\nSame Rust, same `.sla` files, two decompilers (12.1.3 + patch against master `918d44e` + the same patch rebased):\n\n- **Master as it stands breaks two console images.** GP-7310 (`Varnode::setDef` now throws `Assignment to constant`, also for a Varnode created with a constant output) fails **262 of 390** sampled Nintendo 64 functions (decompile success 1.000 -> 0.328) and **80 of 200** sampled Xbox 360 functions; the failing instructions are loads from a constant address (`lwz r30,0x9c8(r11)`, `lfs f0,0xca4(r10)`); the worker sets `readonly on` for every program and flags each image's read-only ranges. With the commit's added check removed, N64 is back at 1.000 and 182 of its 200 paired functions print identically. PS2 (8 games), GameCube, GBA and NDS are unaffected: decompile success is the same in every sampled game (and on the 7,500 PS2 wave-sample functions of `benchmarks/ps2_decompile_success.py`, 7,495 decompile with both and the same 5 fail with both), recall and precision are identical in all 11, and the import's stored switch tables are identical in 10 of 12 games (N64 loses 3 through GP-7310; one God Hand table loses a target through GP-7003, below; stored tables only, the follow-up measures more).\n- **Everywhere else the output moves a little, in both directions.** Of 2,043 paired functions 1,643 (80.4%) print the same text; 400 changed: 64 better, 167 worse, 169 neutral by the printed-text measure. 134 of the worse are Nintendo 64 (133 of them failures); the other 261 changed functions are 64 better, 33 worse, 164 neutral. Gotos in the 11 unaffected wave samples go 515 -> 492 (Fatal Frame 108 -> 86, Dark Cloud 97 -> 87), labels 220 -> 229, printed lines 1.0% fewer (Dark Cloud 5%).\n- **Compiled against retail bytes (m22-002, Persona 4, romwright layer):** MWCC lanes +1 exact on both seeds (55 -> 56, 57 -> 58; mean percent +0.97, +0.61; paired by function 9 better / 2 worse on the first seed, 4 / 7 on the second; GP-6788's immediate-copy protection accounts for 6 of the 11 changed functions per seed) but the **ee-gcc lane loses 7 exact (106 -> 99, mean 86.406 -> 84.665)**: GP-7115's new `ruleBlockIfNoExit` branch prints the returning arm first, and disabling just that branch restores 9 of the 14 functions whose score moved.\n- **The one decompiler gain that matters is GP-7003** (non-zero mask in jump-table recovery): Fatal Frame `FActExecOccur` goes from a 72-line stub ending at an unrecovered `BRANCHIND` to a 507-line body with three jump tables (33, 34 and 10 entries). It is separable: GP-7003 alone cherry-picked onto 12.1.3 + the patch (`gp7003-12.1.3.patch`, 6 files, applies with fuzz 2) gives master's exact output for it and changes nothing else on the m22 lanes (it brings the lost tables of the follow-up with it, which the corrections remove). God Hand `cIDManager_getLocalFileName` and `func_0039A140` are **not** helped (no table in either decompiler), and GP-7003 as written costs tables (follow-up, `gp7003_cherrypick.md`): the God Hand table at 0x274828 recovers 5 targets instead of the retail 6 because `x % 5` is read as [0,5) under a guard of [0,6), and 20 whole tables are lost in seven games through an empty range after a stride wrap in `CircleRange::newStride`; master has both flaws. `cpfix` removes both (0 lost, 4 gained).\n- **A re-pin also costs:** three textual conflicts, four compile breaks, and two wire changes (the packed data-type metatype became an integer, GP-7253; warnings moved to a new burst, GP-6985) that the unchanged worker cannot read; the trial carries compat hunks for both. Master is not a release (no 12.2 tag; it reports 12.3), and the patch RustStructure is editing already collides with master in a fourth file (`blockaction.cc`).\n",
+  "wave_intro_md": "Each arm imports the image and decompiles its own sample (`benchmarks/console_research.py --corpus-wave`, `-n 200`, seeds 1 and 2, default configuration; `baseline-off` and `--stock` not run: stock Ghidra does not touch the decompiler under test, its prior-wave numbers are in the last column; the sample is smaller than the 500 per seed of the published wave and the reference configuration was dropped for time). Same `romwright-cli`/`worker` binaries in both arms. Nintendo 64 is the row GP-7310 breaks; the line under the table is the same wave with master minus that added check.",
+  "m22_intro_md": "Same Rust, same imported ELF per arm, the harness's own sample (`--layers romwright`, context variant is the headline; m2c and stock are unchanged by the decompiler and were not run). Differences below one function are within the noise of a 200-function sample; the per-function pairing is the better read.",
+  "printer_intro_md": "The Rust printer prints from an IR the patch exports after PrintC; `benchmarks/printer_diff.py` compares its output with the same decompiler's PrintC markup byte for byte. It is the check that the rebased export is faithful. Base: 1,800 of 1,800 identical. Master: every difference is `markup-only` (the DecompDoc tokens, i.e. the printed text, are equal; block ids differ because upstream's `BlockIfNoExit` is exported as the list it prints as) and the 80 x360 functions GP-7310 fails are decompile errors, not differences. Before the `ifnoexit` export was fixed the same run had 103 `text` differences (an `else` upstream does not print).",
+  "port_intro_md": "Taken from the 45 non-merge commits that touch `Ghidra/Features/Decompiler/src/decompile/cpp` between `Ghidra_12.1.3_build` and master `918d44e`, read in the diffs, not the titles. Stages follow `docs/ownership.md` (back to front). A commit appears under every stage it changes; mechanical or SLEIGH-compiler-only commits are at the end of the flow list. `12806006b` (custom `printRaw` for ambiguous TypeOps) only changes debug printing and is not needed.",
+  "findings": [
+   {
+    "title": "GP-7310 fails every constant load on images with a read-only region",
+    "body_md": "The trial's single regression class. `Varnode::setDef` (master) throws `Assignment to constant at <addr>` for any definition of a constant Varnode, and `VarnodeBank::createDef` reaches it; 12.1.3 checked only in `VarnodeBank::setDef`. The worker sets `readonly on` for every program and the provider flags each image's read-only ranges; a load from a constant address in one is folded to its value (inferred path: `ActionDeadCode` -> `Funcdata::fillinReadOnly`), and on those functions master throws. The failing instructions seen: `lwz r30,0x9c8(r11)`, `lwz r9,-0x37d0(r11)`, `lfs f0,0xca4(r10)` (Xbox 360), constant-address `lw` in the Mario 64 ROM. Measured: N64 262 of 390 sampled functions fail (all of them `Assignment to constant`), x360 80 of 200; both are restored 262/262 and 80/80 by the build with the added check removed (`no7310`), and the printed text of the rest of N64 is within 18 functions of 12.1.3. The import's switch stage hits it too: N64 stores 142 tables instead of 145, x360 recall 0.9833 -> 0.9823 with one `partial` switch-stage diagnostic. PS2, GC, GBA and NDS images were not affected (no read-only loads resolved)."
+   },
+   {
+    "title": "GP-7003: FActExecOccur, and what it does not fix",
+    "body_md": "`FActExecOccur` (Fatal Frame 0x1ca9d8, 2,932 bytes) holds three computed jumps. 12.1.3 recovers the one at 0x1caa54 (33 entries, 5 distinct) and stops: `Could not recover jumptable ... Too many branches`, `Treating indirect jump as call`, 72 printed lines. Master also recovers 0x1caab4 (34 entries, 30 distinct targets in 0x1caabc..0x1cb51c) and 0x1cab80 (10 entries, 3 distinct) and prints the whole function: 507 lines, 70 `case` labels, no jump-table warning. Turning off only the non-zero mask in `JumpBasic::getInitialRange` (`jtnz`) gives 12.1.3's single table (33 entries) again; adding only GP-7003 to 12.1.3 (`cp7003`) gives master's 507. The import does not see it: the stored tables of Fatal Frame are identical in both arms because the import's switch stage only asks the decompiler about branches discovery has marked; the decompile run finds the others itself, so the gain appears in the printed C, not in recall or precision. God Hand `cIDManager_getLocalFileName` (0x2acfa8, `jr` at 0x2ad018) and `func_0039A140`: no table from 12.1.3, master, `jtnz` or `cp7003`; the model recovery fails in all four. The cost: God Hand's table at 0x274828 (function 0x2744e0) has six targets in 12.1.3 (0x274830, 848, 860, 878, 890 and the default 0x274c80) and five in master, `cp7003` and every variant that keeps GP-7003 (0x274890 is missing, though it continues the table's 0x18 stride): the import stores 7,901 edges instead of 7,902. Cause (follow-up, `gp7003_cherrypick.md`): `x % 5` is read as [0,5) although the retail guard is `sltiu a0,6`, the table has six words and the decomp source has cases 0 to 5, so six is right; turning off the non-zero mask (`jtnz`), the exact INT_AND bound (`jtand`) or the range preference (`jtpref`) did not restore it, only dropping the REM bound did. A silently missing case is a worse failure than a visible `Could not recover jumptable`, and the same commit loses 20 whole tables elsewhere; both are corrected in `gp7003-12.1.3.cpfix.patch`. `SetRoomDirecPazzEne`: both recover its 7 targets (the stored project already had them)."
+   },
+   {
+    "title": "GP-7115 changes the arm order and loses ee-gcc matches",
+    "body_md": "`ruleBlockIfNoExit` gained a branch for a decision whose two out-edges both lead to exit-less blocks (both return): upstream builds a `BlockIfNoExit` and prints the returning arm first, no `else`. ee-gcc 2.96 (the CRI middleware, 568 of the 592 matched functions of the lane) emits the error return out of line, so 12.1.3's `if (x != 0) { error; return -3; } work;` matched and master's `if (x == 0) { work; return; } error; return -3;` does not: ADXF_ReadNw 100 -> 42.67, SFD_SetSpeed 100 -> 0. Disabling that one branch (`noexitrule`) restores 9 of the 14 changed ee-gcc functions; disabling only the new `BlockIfNoExit::preferComplement` (`noexitpref`) restores none. The MWCC lanes are untouched by it (0 of 11 restored). The same arm swap is the commonest neutral change in the function diff (`!= 1 return 0` first became `== 1 return x` first)."
+   },
+   {
+    "title": "GP-6788 and GP-7115 account for most of the text that moves",
+    "body_md": "Re-decompiling the 261 changed non-N64 functions with one commit's effect switched off: the new `ruleBlockIfNoExit` branch of GP-7115 restores 44 (and changes 13 more); GP-6788's block-removal protection for a block with an immediate COPY (`hasNoImmediateCopy`) restores 44 (and changes 24 more); the arm-preference of `BlockIfNoExit` restores 3; GP-7080's nearby-symbol search 2; the rules group 1 (God Hand 0x33a730); GP-7003 changes 4 (and restores none); GP-7038, GP-6946, GP-6945 and GP-7310 change none of them. Four functions are explained by no single switch. GP-6788 is the source of the MWCC gains in m22 (6 of 11 changed functions per seed), e.g. `func_001056e0` 40 -> 100: the base keeps a `temp_v0` copy across the branch (`temp_v0 = param_2; if (param_1 != 1) { ...; temp_v0 = DAT_007973cc[0]; } DAT_007973cc[0] = temp_v0;`) where master writes `if (param_1 == 1) DAT_007973cc[0] = param_2; else *(short *)(...) = param_2;`."
+   },
+   {
+    "title": "Wire and protocol changes the unchanged worker cannot read",
+    "body_md": "Both were found by the first smoke test, not by the compiler. GP-7253 (`747d581b1`): `ATTRIB_METATYPE` of a packed `<type>` is a signed integer in master, a name in 12.1.3 and in `wire.rs`/`provider.rs`: every decompile died with `Marshaling error: Expecting signed integer attribute`. GP-6985 (`05c8a9c31`): each warning is a burst `0x12 ... 0x13` mid-command in master; the worker accepts only the response frame and fails with `unexpected burst 0x12`. The trial restores both on the C++ side (marshal.cc, ghidra_arch/ghidra_process: 36 patch files, +807/-80 lines against master). A re-pin that wants upstream's forms changes `wire.rs`, `provider.rs` and the readers of `<type>` instead; the new elements `calldest`, `baddatacount`, `sharestack` and attributes `backfill`, `minelements`, `maxelements` are additive."
+   },
+   {
+    "title": "GP-6945: the bad-data limit defaults to 4",
+    "body_md": "`max_baddata = 4`: the fifth undecodable instruction in a function throws `Bad instruction count exceeded` instead of becoming a `halt_baddata`. 12.1.3 had no limit. No sampled function reaches it (no output of either arm carries a bad-data message; the `nobaddata6945` build prints the same text as master on all 261 changed functions), so it is a source-level risk for code with data in it (literal pools, VU0 macro words), unmeasured here. The `baddatacount` option (empty = no limit) restores 12.1.3."
+   },
+   {
+    "title": "Address-as-number printing and symbol references",
+    "body_md": "GP-7038/7080/7063 change which symbols a constant resolves to. In the paired diff the visible effects are: `&LAB_002ab080` printed as `(char *)&DAT_002ab080` (the label and the data symbol at one address are no longer both created), the warning `Globals starting with '_' overlap smaller symbols` gone, and a Romwright storage-view union for `DAT_01c752c0` replaced by two plain globals. GP-7080 alone (`nonear7080`) restores 1 function of the m22 lanes; GP-7038 (`nosym7038`) none. The printed-text measure counts raw 6-or-more-digit hex constants: base 0 net change in most games (see the reasons table), so the claimed gain from named references is small on these images; GP-7063 could not be isolated (reverting it does not build)."
+   },
+   {
+    "title": "The hooks behave the same",
+    "body_md": "Counting hook-specific text over the 1,842 non-N64 functions both arms print (`work/export/c`): `Switch table taken from the stored dispatch table` 3 / 3, `Treating indirect jump as return` (the nonreturn and PowerPC return hooks) 175 / 175, `Treating indirect jump as call` 3 / 3, `Could not recover jumptable` 3 / 3, `/* irregular` markers 1,301 / 1,301, `Removing unreachable block` 208 / 208, `switch(` statements 81 / 81. The printer differential is 1,800 / 1,800 identical for base and, for master, every one of the 1,720 decompiled functions has equal tokens. `native/dynamic_hash_test.cc` (legacy and 128-entry collision hashes) passes in the master build (the build script runs it); upstream's change to `dynamic.cc` is GP-2917's `listOps` for the INDIRECT container, which lists the ops at an address from two containers; whether any stored hash moves was not measured. What does move is not a hook: raw gotos 182 -> 152, Romwright storage-view unions for globals 1,796 -> 1,004 (fewer globals need a multi-width view after the symbol changes), piece macros 54 -> 56."
+   },
+   {
+    "title": "The in-flight patch",
+    "body_md": "The shared tree's `native/ghidra-opt-sleigh.patch` and `native/romwright_*.hh` changed after this trial's snapshot (RustStructure: `romwright_structure.hh`, `romwright_bytes.hh`, hooks in `blockaction.cc`). A dry-run merge of that newer patch onto master gives four conflicts: the three above plus `blockaction.cc` (`ActionStructureTransform::apply`, `ActionPreferComplement::apply`). Both are the places upstream's GP-6788 added `finalTransform(data, allowOpMoves)` and `hasFinalTransform()`; the Rust structuring that replaces them has to decide the same two questions (does the final transform run, may it move ops)."
+   }
+  ],
+  "recommendation_md": "**Do not re-pin now. Cherry-pick GP-7003 with its two corrections; take the rest as the Rust port's reference; re-run this trial on the 12.2 release.**\n\n1. *Re-pin to master now: no.* Measured against the pin it is worse on two console images (N64 decompile success 1.000 -> 0.328, x360 40% of a sample failing: GP-7310), worse on one compiled-output lane (ee-gcc \u22127 exact: GP-7115), neutral-to-slightly-better elsewhere (MWCC +1 exact per seed, gotos \u22124.5% on the unaffected wave samples), and it needs a rebased patch with two wire compat hunks. Master is also a moving target: no 12.2 tag exists, the branch reports 12.3, and the GP-7310 defect is in the tip.\n2. *Cherry-pick into the patch: GP-7003 with the two corrections, `gp7003-12.1.3.cpfix.patch`.* The original `gp7003-12.1.3.patch` (6 files, fuzz 2) reproduces master's recovery of Fatal Frame `FActExecOccur`'s two missed tables (72 -> 507 printed lines) and leaves the m22 functions as they were, but loses jump tables 12.1.3 recovers (God Hand 0x274828 6 -> 5 targets, 20 whole tables in seven games); the corrected patch loses none, gains 4 and is measured in `gp7003_cherrypick.md`. It needs no Rust change and no wire change. Not worth taking: GP-6946 (the thunk test) and GP-6945 (the bad-data limit) change none of the 261 changed functions when reverted; GP-7010 and GP-6957 were not isolated.\n3. *Wait for a release: yes, for everything else.* When 12.2 is tagged re-run `benchmarks/ghidra_master_trial.py` (sample, export, classify, report) with the new tag as the master arm; adopt it only if GP-7310 is fixed upstream (or the check is moved back in the patch, one line), the arm-order change in GP-7115 has a switch or is accepted for ee-gcc code, and the two wire changes are taken into `wire.rs`/`provider.rs` rather than reverted in C++.\n4. *The Rust port should take master, not 12.1.3, as its reference for the stages in the list below.* It is cheaper to port GP-7115/GP-6788 (structuring) and GP-7136/GP-7272 (heritage and call arguments) once, from the newer source, than to port 12.1.3 and port the delta later; the trial's evidence that the delta matters is the ee-gcc lane, Fatal Frame and the two N64/x360 failures.",
+  "limits": [
+   "One snapshot of the shared tree (2026-10-11 23:50 UTC) for the Rust and the patch; edits that landed later (RustStructure's structuring hooks, other agents' Rust changes) are not in either arm.",
+   "The trial shares one host with other agents; the load was 11-56 (median 26-33) while it ran, so seconds are indicative only. The paired timing reads: median master/base ratio about 1.0, master slower in about half the pairs; neither decompiler is measurably faster.",
+   "The wave uses 200 functions per seed instead of 500 and no `baseline-off` or `--stock` run; stock Ghidra is untouched by the trial and its prior-wave numbers are shown for reference.",
+   "The verdict classes (better/worse/neutral) are a measure of printed text (gotos, irregular markers, casts, raw address constants), not of correctness; the compiled lanes of m22-002 are the correctness evidence and cover 200 functions per lane.",
+   "NDS contributes 38 paired functions: the overlay modules of a wave image are projects of their own that the report does not record, so only the main module is paired.",
+   "The variants isolate a commit only where a source toggle or a clean revert exists: GP-7115 (the new branch and the arm preference), GP-7003, GP-7310, GP-7038, GP-7080, GP-6945 and the rules group were isolated; GP-6788 (its block-removal protection), GP-7063, GP-7136, GP-2917, GP-7166, GP-7167, GP-6957, GP-7010 and the types group do not revert cleanly or have no clean toggle and are attributed by reading the diffs only (GP-6788's other half, the boolean-flip normalisation, was not toggled).",
+   "The `ifnoexit` export builds a list node the C++ block tree does not have; the printed text is checked against PrintC (all 1,720 decompiled functions have equal tokens) but block ids in the markup differ.",
+   "The Hex-Rays and stock figures of earlier waves are not part of this trial."
+  ]
+ },
+ "wave": [
+  {
+   "game": "gba-kh-chain-of-memories",
+   "sampled": {
+    "base": 394,
+    "master": 394
+   },
+   "decompiled": {
+    "base": 394,
+    "master": 394
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.9582,
+    "master": 0.9582
+   },
+   "precision": {
+    "base": 0.964,
+    "master": 0.964
+   },
+   "discovered": {
+    "base": 5225,
+    "master": 5225
+   },
+   "gotos": {
+    "base": 26,
+    "master": 26
+   },
+   "labels": {
+    "base": 13,
+    "master": 13
+   },
+   "irregular_functions": {
+    "base": 353,
+    "master": 353
+   },
+   "native_warnings": {
+    "base": 1311,
+    "master": 1312
+   },
+   "lines": {
+    "base": 17467,
+    "master": 17458
+   },
+   "median_seconds": {
+    "base": 1.21,
+    "master": 0.999
+   },
+   "recall_verified": {
+    "base": 0.9634,
+    "master": 0.9634
+   },
+   "precision_verified": {
+    "base": 0.9924,
+    "master": 0.9924
+   },
+   "import_seconds": {
+    "base": 12.5,
+    "master": 14.2
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 2,
+     "vsa_refused": 86,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 2,
+     "vsa_refused": 86,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": null
+  },
+  {
+   "game": "gc-pikmin-2",
+   "sampled": {
+    "base": 399,
+    "master": 399
+   },
+   "decompiled": {
+    "base": 399,
+    "master": 399
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.9998,
+    "master": 0.9998
+   },
+   "precision": {
+    "base": 0.9984,
+    "master": 0.9984
+   },
+   "discovered": {
+    "base": 24991,
+    "master": 24991
+   },
+   "gotos": {
+    "base": 25,
+    "master": 30
+   },
+   "labels": {
+    "base": 10,
+    "master": 14
+   },
+   "irregular_functions": {
+    "base": 263,
+    "master": 263
+   },
+   "native_warnings": {
+    "base": 935,
+    "master": 935
+   },
+   "lines": {
+    "base": 13765,
+    "master": 13776
+   },
+   "median_seconds": {
+    "base": 0.893,
+    "master": 1.053
+   },
+   "recall_verified": {
+    "base": 0.9998,
+    "master": 0.9998
+   },
+   "precision_verified": {
+    "base": 0.9985,
+    "master": 0.9985
+   },
+   "import_seconds": {
+    "base": 21.6,
+    "master": 38.2
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 6,
+     "vsa_refused": 5,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 6,
+     "vsa_refused": 5,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": null
+  },
+  {
+   "game": "n64-super-mario-64",
+   "sampled": {
+    "base": 390,
+    "master": 390
+   },
+   "decompiled": {
+    "base": 390,
+    "master": 128
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 0.3282
+   },
+   "recall": {
+    "base": 0.9974,
+    "master": 0.9974
+   },
+   "precision": {
+    "base": 0.9053,
+    "master": 0.9053
+   },
+   "discovered": {
+    "base": 3888,
+    "master": 3888
+   },
+   "gotos": {
+    "base": 7,
+    "master": 3
+   },
+   "labels": {
+    "base": 4,
+    "master": 2
+   },
+   "irregular_functions": {
+    "base": 271,
+    "master": 86
+   },
+   "native_warnings": {
+    "base": 719,
+    "master": 163
+   },
+   "lines": {
+    "base": 10433,
+    "master": 2605
+   },
+   "median_seconds": {
+    "base": 0.526,
+    "master": 0.972
+   },
+   "recall_verified": {
+    "base": 0.9974,
+    "master": 0.9974
+   },
+   "precision_verified": {
+    "base": 0.9052,
+    "master": 0.9052
+   },
+   "import_seconds": {
+    "base": 10.8,
+    "master": 18.6
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 6,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 6,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": null
+  },
+  {
+   "game": "nds-kh-358-2-days",
+   "sampled": {
+    "base": 396,
+    "master": 396
+   },
+   "decompiled": {
+    "base": 396,
+    "master": 396
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.8863,
+    "master": 0.8863
+   },
+   "precision": {
+    "base": 0.9922,
+    "master": 0.9922
+   },
+   "discovered": {
+    "base": 20753,
+    "master": 20753
+   },
+   "gotos": {
+    "base": 8,
+    "master": 8
+   },
+   "labels": {
+    "base": 3,
+    "master": 3
+   },
+   "irregular_functions": {
+    "base": 348,
+    "master": 348
+   },
+   "native_warnings": {
+    "base": 980,
+    "master": 979
+   },
+   "lines": {
+    "base": 16263,
+    "master": 16209
+   },
+   "median_seconds": {
+    "base": 1.845,
+    "master": 2.202
+   },
+   "recall_verified": {
+    "base": 0.8863,
+    "master": 0.8863
+   },
+   "precision_verified": {
+    "base": 0.9993,
+    "master": 0.9993
+   },
+   "import_seconds": {
+    "base": 42.8,
+    "master": 70.0
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 3,
+     "vsa_refused": 327,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 3,
+     "vsa_refused": 327,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": null
+  },
+  {
+   "game": "ps2-dark-chronicle",
+   "sampled": {
+    "base": 394,
+    "master": 394
+   },
+   "decompiled": {
+    "base": 394,
+    "master": 394
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.9987,
+    "master": 0.9987
+   },
+   "precision": {
+    "base": 0.9963,
+    "master": 0.9963
+   },
+   "discovered": {
+    "base": 7856,
+    "master": 7856
+   },
+   "gotos": {
+    "base": 15,
+    "master": 16
+   },
+   "labels": {
+    "base": 8,
+    "master": 9
+   },
+   "irregular_functions": {
+    "base": 262,
+    "master": 260
+   },
+   "native_warnings": {
+    "base": 1078,
+    "master": 1069
+   },
+   "lines": {
+    "base": 18350,
+    "master": 17934
+   },
+   "median_seconds": {
+    "base": 0.734,
+    "master": 0.426
+   },
+   "recall_verified": {
+    "base": 0.9987,
+    "master": 0.9987
+   },
+   "precision_verified": {
+    "base": 0.9996,
+    "master": 0.9996
+   },
+   "import_seconds": {
+    "base": 54.1,
+    "master": 33.5
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 6,
+     "vsa_refused": 40,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 6,
+     "vsa_refused": 40,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": {
+    "sampled": 969,
+    "decompiled": 969,
+    "success_rate": 1.0,
+    "stock_functions_existing": 903,
+    "recall": 0.9288,
+    "precision": 0.9982,
+    "recall_verified": 0.9278,
+    "precision_verified": 0.9997,
+    "discovered": 7292
+   }
+  },
+  {
+   "game": "ps2-dark-cloud",
+   "sampled": {
+    "base": 392,
+    "master": 392
+   },
+   "decompiled": {
+    "base": 392,
+    "master": 392
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.9988,
+    "master": 0.9988
+   },
+   "precision": {
+    "base": 0.9907,
+    "master": 0.9907
+   },
+   "discovered": {
+    "base": 4215,
+    "master": 4215
+   },
+   "gotos": {
+    "base": 97,
+    "master": 87
+   },
+   "labels": {
+    "base": 30,
+    "master": 30
+   },
+   "irregular_functions": {
+    "base": 277,
+    "master": 277
+   },
+   "native_warnings": {
+    "base": 1157,
+    "master": 1135
+   },
+   "lines": {
+    "base": 21916,
+    "master": 20821
+   },
+   "median_seconds": {
+    "base": 0.434,
+    "master": 0.281
+   },
+   "recall_verified": {
+    "base": 0.9988,
+    "master": 0.9988
+   },
+   "precision_verified": {
+    "base": 0.999,
+    "master": 0.999
+   },
+   "import_seconds": {
+    "base": 21.3,
+    "master": 15.3
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 7,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 7,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": {
+    "sampled": 888,
+    "decompiled": 888,
+    "success_rate": 1.0,
+    "stock_functions_existing": 805,
+    "recall": 0.9173,
+    "precision": 0.985,
+    "recall_verified": 0.9173,
+    "precision_verified": 0.9856,
+    "discovered": 3671
+   }
+  },
+  {
+   "game": "ps2-digital-devil-saga",
+   "sampled": {
+    "base": 397,
+    "master": 397
+   },
+   "decompiled": {
+    "base": 397,
+    "master": 397
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.9974,
+    "master": 0.9974
+   },
+   "precision": {
+    "base": 0.9991,
+    "master": 0.9991
+   },
+   "discovered": {
+    "base": 10334,
+    "master": 10334
+   },
+   "gotos": {
+    "base": 27,
+    "master": 29
+   },
+   "labels": {
+    "base": 11,
+    "master": 12
+   },
+   "irregular_functions": {
+    "base": 250,
+    "master": 250
+   },
+   "native_warnings": {
+    "base": 1100,
+    "master": 1099
+   },
+   "lines": {
+    "base": 15599,
+    "master": 15613
+   },
+   "median_seconds": {
+    "base": 0.713,
+    "master": 1.198
+   },
+   "recall_verified": {
+    "base": 0.9976,
+    "master": 0.9976
+   },
+   "precision_verified": {
+    "base": 0.9997,
+    "master": 0.9997
+   },
+   "import_seconds": {
+    "base": 32.8,
+    "master": 57.8
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 50,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 50,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": {
+    "sampled": 977,
+    "decompiled": 977,
+    "success_rate": 1.0,
+    "stock_functions_existing": 843,
+    "recall": 0.863,
+    "precision": 1.0,
+    "recall_verified": 0.8585,
+    "precision_verified": 1.0,
+    "discovered": 8934
+   }
+  },
+  {
+   "game": "ps2-fatal-frame",
+   "sampled": {
+    "base": 388,
+    "master": 388
+   },
+   "decompiled": {
+    "base": 388,
+    "master": 388
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.9958,
+    "master": 0.9958
+   },
+   "precision": {
+    "base": 0.9993,
+    "master": 0.9993
+   },
+   "discovered": {
+    "base": 4235,
+    "master": 4235
+   },
+   "gotos": {
+    "base": 108,
+    "master": 86
+   },
+   "labels": {
+    "base": 34,
+    "master": 35
+   },
+   "irregular_functions": {
+    "base": 273,
+    "master": 274
+   },
+   "native_warnings": {
+    "base": 1382,
+    "master": 1397
+   },
+   "lines": {
+    "base": 25902,
+    "master": 25812
+   },
+   "median_seconds": {
+    "base": 0.458,
+    "master": 1.031
+   },
+   "recall_verified": {
+    "base": 0.9959,
+    "master": 0.9959
+   },
+   "precision_verified": {
+    "base": 0.9997,
+    "master": 0.9997
+   },
+   "import_seconds": {
+    "base": 22.9,
+    "master": 39.6
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 5,
+     "vsa_refused": 25,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 5,
+     "vsa_refused": 25,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": {
+    "sampled": 942,
+    "decompiled": 942,
+    "success_rate": 1.0,
+    "stock_functions_existing": 777,
+    "recall": 0.8334,
+    "precision": 1.0,
+    "recall_verified": 0.8484,
+    "precision_verified": 1.0,
+    "discovered": 3542
+   }
+  },
+  {
+   "game": "ps2-god-hand",
+   "sampled": {
+    "base": 396,
+    "master": 396
+   },
+   "decompiled": {
+    "base": 396,
+    "master": 396
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.9976,
+    "master": 0.9976
+   },
+   "precision": {
+    "base": 0.9943,
+    "master": 0.9943
+   },
+   "discovered": {
+    "base": 11270,
+    "master": 11270
+   },
+   "gotos": {
+    "base": 71,
+    "master": 72
+   },
+   "labels": {
+    "base": 40,
+    "master": 42
+   },
+   "irregular_functions": {
+    "base": 290,
+    "master": 290
+   },
+   "native_warnings": {
+    "base": 833,
+    "master": 833
+   },
+   "lines": {
+    "base": 18113,
+    "master": 18118
+   },
+   "median_seconds": {
+    "base": 0.726,
+    "master": 1.337
+   },
+   "recall_verified": {
+    "base": 0.998,
+    "master": 0.998
+   },
+   "precision_verified": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "import_seconds": {
+    "base": 45.4,
+    "master": 151.7
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 7,
+     "vsa_refused": 125,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 7,
+     "vsa_refused": 126,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": {
+    "sampled": 980,
+    "decompiled": 980,
+    "success_rate": 1.0,
+    "stock_functions_existing": 837,
+    "recall": 0.8552,
+    "precision": 0.9988,
+    "recall_verified": 0.8919,
+    "precision_verified": 1.0,
+    "discovered": 9618
+   }
+  },
+  {
+   "game": "ps2-persona-4",
+   "sampled": {
+    "base": 397,
+    "master": 397
+   },
+   "decompiled": {
+    "base": 397,
+    "master": 397
+   },
+   "success_rate": {
+    "base": 1.0,
+    "master": 1.0
+   },
+   "recall": {
+    "base": 0.9992,
+    "master": 0.9992
+   },
+   "precision": {
+    "base": 0.9967,
+    "master": 0.9967
+   },
+   "discovered": {
+    "base": 13134,
+    "master": 13134
+   },
+   "gotos": {
+    "base": 26,
+    "master": 26
+   },
+   "labels": {
+    "base": 14,
+    "master": 14
+   },
+   "irregular_functions": {
+    "base": 276,
+    "master": 276
+   },
+   "native_warnings": {
+    "base": 882,
+    "master": 880
+   },
+   "lines": {
+    "base": 16320,
+    "master": 16308
+   },
+   "median_seconds": {
+    "base": 1.53,
+    "master": 1.204
+   },
+   "recall_verified": {
+    "base": 0.9993,
+    "master": 0.9993
+   },
+   "precision_verified": {
+    "base": 0.999,
+    "master": 0.999
+   },
+   "import_seconds": {
+    "base": 60.8,
+    "master": 69.4
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 4,
+     "vsa_refused": 48,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 4,
+     "vsa_refused": 48,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": {
+    "sampled": 975,
+    "decompiled": 975,
+    "success_rate": 1.0,
+    "stock_functions_existing": 873,
+    "recall": 0.9028,
+    "precision": 0.9997,
+    "recall_verified": 0.8991,
+    "precision_verified": 0.9997,
+    "discovered": 11831
+   }
+  },
+  {
+   "game": "ps2-ratchet-clank",
+   "sampled": {
+    "base": 379,
+    "master": 379
+   },
+   "decompiled": {
+    "base": 378,
+    "master": 378
+   },
+   "success_rate": {
+    "base": 0.9974,
+    "master": 0.9974
+   },
+   "recall": {
+    "base": 0.9281,
+    "master": 0.9281
+   },
+   "precision": {
+    "base": 0.9965,
+    "master": 0.9965
+   },
+   "discovered": {
+    "base": 1698,
+    "master": 1698
+   },
+   "gotos": {
+    "base": 61,
+    "master": 61
+   },
+   "labels": {
+    "base": 30,
+    "master": 30
+   },
+   "irregular_functions": {
+    "base": 255,
+    "master": 253
+   },
+   "native_warnings": {
+    "base": 1664,
+    "master": 1654
+   },
+   "lines": {
+    "base": 23314,
+    "master": 23037
+   },
+   "median_seconds": {
+    "base": 0.569,
+    "master": 0.416
+   },
+   "recall_verified": {
+    "base": 0.9245,
+    "master": 0.9245
+   },
+   "precision_verified": {
+    "base": 0.9993,
+    "master": 0.9993
+   },
+   "import_seconds": {
+    "base": 78.6,
+    "master": 42.0
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 16,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 16,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": {
+    "sampled": 861,
+    "decompiled": 859,
+    "success_rate": 0.9977,
+    "stock_functions_existing": 668,
+    "recall": 0.7175,
+    "precision": 1.0,
+    "recall_verified": 0.7961,
+    "precision_verified": 1.0,
+    "discovered": 1308
+   }
+  },
+  {
+   "game": "ps2-ratchet-clank-pal",
+   "sampled": {
+    "base": 374,
+    "master": 374
+   },
+   "decompiled": {
+    "base": 373,
+    "master": 373
+   },
+   "success_rate": {
+    "base": 0.9973,
+    "master": 0.9973
+   },
+   "recall": {
+    "base": 0.9276,
+    "master": 0.9276
+   },
+   "precision": {
+    "base": 0.9947,
+    "master": 0.9947
+   },
+   "discovered": {
+    "base": 1699,
+    "master": 1699
+   },
+   "gotos": {
+    "base": 51,
+    "master": 51
+   },
+   "labels": {
+    "base": 27,
+    "master": 27
+   },
+   "irregular_functions": {
+    "base": 246,
+    "master": 245
+   },
+   "native_warnings": {
+    "base": 1456,
+    "master": 1450
+   },
+   "lines": {
+    "base": 23375,
+    "master": 23114
+   },
+   "median_seconds": {
+    "base": 0.517,
+    "master": 0.434
+   },
+   "recall_verified": {
+    "base": 0.9184,
+    "master": 0.9184
+   },
+   "precision_verified": {
+    "base": 0.9986,
+    "master": 0.9986
+   },
+   "import_seconds": {
+    "base": 92.0,
+    "master": 42.2
+   },
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 15,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 15,
+     "decompiler_skipped": 0
+    }
+   },
+   "stock_reference": {
+    "sampled": 859,
+    "decompiled": 857,
+    "success_rate": 0.9977,
+    "stock_functions_existing": 667,
+    "recall": 0.7184,
+    "precision": 1.0,
+    "recall_verified": 0.696,
+    "precision_verified": 1.0,
+    "discovered": 1309
+   }
+  }
+ ],
+ "wave_master_without_gp7310": {
+  "n64-super-mario-64": {
+   "sampled": 390,
+   "decompiled": 390,
+   "success_rate": 1.0,
+   "gotos": 7,
+   "labels": 4,
+   "irregular_functions": 272,
+   "native_warnings": 724,
+   "text_warnings": 11,
+   "lines": 10453,
+   "median_seconds": 1.27,
+   "max_seconds": 1.79,
+   "wall_seconds": 165.0,
+   "recall": 0.9974,
+   "precision": 0.9053,
+   "discovered": 3888,
+   "recall_verified": 0.9974,
+   "precision_verified": 0.9052,
+   "recall_main": 0.9974,
+   "precision_main": 0.9053,
+   "recall_verified_main": 0.9974,
+   "precision_verified_main": 0.9052,
+   "verified_truth": 3522
+  }
+ },
+ "switchdiff": {
+  "gba-kh-chain-of-memories": {
+   "tables": {
+    "base": 368,
+    "master": 368
+   },
+   "edges": {
+    "base": 3327,
+    "master": 3327
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 2,
+     "vsa_refused": 86,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 2,
+     "vsa_refused": 86,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "gc-pikmin-2": {
+   "tables": {
+    "base": 161,
+    "master": 161
+   },
+   "edges": {
+    "base": 1890,
+    "master": 1890
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 6,
+     "vsa_refused": 5,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 6,
+     "vsa_refused": 5,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "n64-super-mario-64": {
+   "tables": {
+    "base": 145,
+    "master": 142
+   },
+   "edges": {
+    "base": 1202,
+    "master": 1179
+   },
+   "only_base": [
+    "80176518",
+    "8031c1d8",
+    "8031c1f8"
+   ],
+   "only_master": [],
+   "only_base_count": 3,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 6,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 6,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "nds-kh-358-2-days": {
+   "tables": {
+    "base": 988,
+    "master": 988
+   },
+   "edges": {
+    "base": 11335,
+    "master": 11335
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 3,
+     "vsa_refused": 327,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 3,
+     "vsa_refused": 327,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "ps2-dark-chronicle": {
+   "tables": {
+    "base": 127,
+    "master": 127
+   },
+   "edges": {
+    "base": 1057,
+    "master": 1057
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 6,
+     "vsa_refused": 40,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 6,
+     "vsa_refused": 40,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "ps2-dark-cloud": {
+   "tables": {
+    "base": 80,
+    "master": 80
+   },
+   "edges": {
+    "base": 626,
+    "master": 626
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 7,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 7,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "ps2-digital-devil-saga": {
+   "tables": {
+    "base": 315,
+    "master": 315
+   },
+   "edges": {
+    "base": 2168,
+    "master": 2168
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 50,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 50,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "ps2-fatal-frame": {
+   "tables": {
+    "base": 278,
+    "master": 278
+   },
+   "edges": {
+    "base": 2286,
+    "master": 2286
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 5,
+     "vsa_refused": 25,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 5,
+     "vsa_refused": 25,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "ps2-god-hand": {
+   "tables": {
+    "base": 992,
+    "master": 992
+   },
+   "edges": {
+    "base": 7902,
+    "master": 7901
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [
+    "00274828"
+   ],
+   "different_targets_count": 1,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 7,
+     "vsa_refused": 125,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 7,
+     "vsa_refused": 126,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "ps2-persona-4": {
+   "tables": {
+    "base": 346,
+    "master": 346
+   },
+   "edges": {
+    "base": 2809,
+    "master": 2809
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 4,
+     "vsa_refused": 48,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 4,
+     "vsa_refused": 48,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "ps2-ratchet-clank": {
+   "tables": {
+    "base": 41,
+    "master": 41
+   },
+   "edges": {
+    "base": 326,
+    "master": 326
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 16,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 16,
+     "decompiler_skipped": 0
+    }
+   }
+  },
+  "ps2-ratchet-clank-pal": {
+   "tables": {
+    "base": 41,
+    "master": 41
+   },
+   "edges": {
+    "base": 332,
+    "master": 332
+   },
+   "only_base": [],
+   "only_master": [],
+   "only_base_count": 0,
+   "only_master_count": 0,
+   "different_targets": [],
+   "different_targets_count": 0,
+   "switch_stats": {
+    "base": {
+     "vsa_resolved": 0,
+     "vsa_refused": 15,
+     "decompiler_skipped": 0
+    },
+    "master": {
+     "vsa_resolved": 0,
+     "vsa_refused": 15,
+     "decompiler_skipped": 0
+    }
+   }
+  }
+ },
+ "ps2_success": {
+  "ps2-dark-chronicle": {
+   "sampled": 969,
+   "base": 969,
+   "master": 969,
+   "base_classes": {},
+   "master_classes": {},
+   "base_wall": 713.2,
+   "master_wall": 716.2
+  },
+  "ps2-dark-cloud": {
+   "sampled": 937,
+   "base": 936,
+   "master": 936,
+   "base_classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "master_classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "base_wall": 357.1,
+   "master_wall": 356.9
+  },
+  "ps2-digital-devil-saga": {
+   "sampled": 977,
+   "base": 977,
+   "master": 977,
+   "base_classes": {},
+   "master_classes": {},
+   "base_wall": 629.8,
+   "master_wall": 620.6
+  },
+  "ps2-fatal-frame": {
+   "sampled": 942,
+   "base": 942,
+   "master": 942,
+   "base_classes": {},
+   "master_classes": {},
+   "base_wall": 329.1,
+   "master_wall": 332.4
+  },
+  "ps2-god-hand": {
+   "sampled": 980,
+   "base": 980,
+   "master": 980,
+   "base_classes": {},
+   "master_classes": {},
+   "base_wall": 706.3,
+   "master_wall": 701.3
+  },
+  "ps2-persona-4": {
+   "sampled": 975,
+   "base": 974,
+   "master": 974,
+   "base_classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "master_classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1
+   },
+   "base_wall": 631.0,
+   "master_wall": 636.1
+  },
+  "ps2-ratchet-clank": {
+   "sampled": 861,
+   "base": 859,
+   "master": 859,
+   "base_classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1,
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "master_classes": {
+    "native runtime: native runtime: execution deadline exceeded": 1,
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "base_wall": 196.5,
+   "master_wall": 195.5
+  },
+  "ps2-ratchet-clank-pal": {
+   "sampled": 859,
+   "base": 858,
+   "master": 858,
+   "base_classes": {
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "master_classes": {
+    "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not": 1
+   },
+   "base_wall": 298.0,
+   "master_wall": 294.3
+  }
+ },
+ "m21": {
+  "gba-pokeemerald": {
+   "base": {
+    "status": "pass",
+    "recall": 0.9761,
+    "precision": 0.9972,
+    "seconds": 63.0,
+    "failures": []
+   },
+   "master": {
+    "status": "pass",
+    "recall": 0.9761,
+    "precision": 0.9972,
+    "seconds": 71.9,
+    "failures": []
+   }
+  },
+  "nds-pokeheartgold-arm9": {
+   "base": {
+    "status": "pass",
+    "recall": 0.9735,
+    "precision": 0.9984,
+    "seconds": 145.2,
+    "failures": []
+   },
+   "master": {
+    "status": "pass",
+    "recall": 0.9735,
+    "precision": 0.9984,
+    "seconds": 118.1,
+    "failures": []
+   }
+  },
+  "ps2-capcom-fighting-evolution": {
+   "base": {
+    "status": "fail",
+    "recall": 0.9652,
+    "precision": 0.9954,
+    "seconds": 288.6,
+    "failures": [
+     "recall 0.9652 < 0.966"
+    ]
+   },
+   "master": {
+    "status": "fail",
+    "recall": 0.9652,
+    "precision": 0.9954,
+    "seconds": 199.3,
+    "failures": [
+     "recall 0.9652 < 0.966"
+    ]
+   }
+  },
+  "ps2-dungeon-game": {
+   "base": {
+    "status": "pass",
+    "recall": 0.9885,
+    "precision": 0.9835,
+    "seconds": 4.9,
+    "failures": []
+   },
+   "master": {
+    "status": "pass",
+    "recall": 0.9885,
+    "precision": 0.9835,
+    "seconds": 3.8,
+    "failures": []
+   }
+  },
+  "psx-darkstalkers-3": {
+   "base": {
+    "status": "pass",
+    "recall": 0.9866,
+    "precision": 0.366,
+    "seconds": 7.9,
+    "failures": []
+   },
+   "master": {
+    "status": "pass",
+    "recall": 0.9866,
+    "precision": 0.366,
+    "seconds": 5.6,
+    "failures": []
+   }
+  },
+  "psv-need-for-speed-most-wanted": {
+   "base": {
+    "status": "pass",
+    "recall": 0.9734,
+    "precision": 0.9719,
+    "seconds": 305.0,
+    "failures": []
+   },
+   "master": {
+    "status": "pass",
+    "recall": 0.9734,
+    "precision": 0.9719,
+    "seconds": 244.5,
+    "failures": []
+   }
+  },
+  "x360-black-ops-2": {
+   "base": {
+    "status": "pass",
+    "recall": 0.9833,
+    "precision": 0.9964,
+    "seconds": 97.1,
+    "failures": []
+   },
+   "master": {
+    "status": "pass",
+    "recall": 0.9823,
+    "precision": 0.9964,
+    "seconds": 104.8,
+    "failures": []
+   }
+  }
+ },
+ "m22": {
+  "MWCC seed 20261010": {
+   "context": {
+    "base": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 193,
+     "compile_failure_share": 0.035,
+     "exact": 55,
+     "exact_symbols": 55,
+     "mean_percent": 76.976,
+     "mean_percent_compiled": 79.768,
+     "percent_ge_90": 91,
+     "percent_100": 55
+    },
+    "master": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 194,
+     "compile_failure_share": 0.03,
+     "exact": 56,
+     "exact_symbols": 56,
+     "mean_percent": 77.943,
+     "mean_percent_compiled": 80.354,
+     "percent_ge_90": 92,
+     "percent_100": 56
+    }
+   },
+   "standalone": {
+    "base": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 148,
+     "compile_failure_share": 0.26,
+     "exact": 42,
+     "exact_symbols": 42,
+     "mean_percent": 56.976,
+     "mean_percent_compiled": 76.995,
+     "percent_ge_90": 63,
+     "percent_100": 42
+    },
+    "master": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 149,
+     "compile_failure_share": 0.255,
+     "exact": 43,
+     "exact_symbols": 43,
+     "mean_percent": 57.91,
+     "mean_percent_compiled": 77.732,
+     "percent_ge_90": 64,
+     "percent_100": 43
+    }
+   },
+   "best": {
+    "base": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 196,
+     "compile_failure_share": 0.02,
+     "exact": 56,
+     "exact_symbols": 56,
+     "mean_percent": 78.144,
+     "mean_percent_compiled": 79.739,
+     "percent_ge_90": 91,
+     "percent_100": 56
+    },
+    "master": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 197,
+     "compile_failure_share": 0.015,
+     "exact": 57,
+     "exact_symbols": 57,
+     "mean_percent": 79.146,
+     "mean_percent_compiled": 80.351,
+     "percent_ge_90": 92,
+     "percent_100": 57
+    }
+   },
+   "paired_context": {
+    "master_better": 9,
+    "master_worse": 2,
+    "same": 189
+   }
+  },
+  "MWCC seed 20261011": {
+   "context": {
+    "base": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 194,
+     "compile_failure_share": 0.03,
+     "exact": 57,
+     "exact_symbols": 57,
+     "mean_percent": 78.321,
+     "mean_percent_compiled": 80.744,
+     "percent_ge_90": 95,
+     "percent_100": 57
+    },
+    "master": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 195,
+     "compile_failure_share": 0.025,
+     "exact": 58,
+     "exact_symbols": 58,
+     "mean_percent": 78.929,
+     "mean_percent_compiled": 80.953,
+     "percent_ge_90": 94,
+     "percent_100": 58
+    }
+   },
+   "standalone": {
+    "base": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 148,
+     "compile_failure_share": 0.26,
+     "exact": 38,
+     "exact_symbols": 38,
+     "mean_percent": 56.463,
+     "mean_percent_compiled": 76.302,
+     "percent_ge_90": 64,
+     "percent_100": 38
+    },
+    "master": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 148,
+     "compile_failure_share": 0.26,
+     "exact": 39,
+     "exact_symbols": 39,
+     "mean_percent": 56.861,
+     "mean_percent_compiled": 76.839,
+     "percent_ge_90": 64,
+     "percent_100": 39
+    }
+   },
+   "best": {
+    "base": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 198,
+     "compile_failure_share": 0.01,
+     "exact": 57,
+     "exact_symbols": 57,
+     "mean_percent": 79.501,
+     "mean_percent_compiled": 80.304,
+     "percent_ge_90": 96,
+     "percent_100": 57
+    },
+    "master": {
+     "functions": 200,
+     "produced": 200,
+     "compiled": 199,
+     "compile_failure_share": 0.005,
+     "exact": 58,
+     "exact_symbols": 58,
+     "mean_percent": 80.109,
+     "mean_percent_compiled": 80.512,
+     "percent_ge_90": 95,
+     "percent_100": 58
+    }
+   },
+   "paired_context": {
+    "master_better": 4,
+    "master_worse": 7,
+    "same": 189
+   }
+  },
+  "ee-gcc 2.96, seed 20261010": {
+   "context": {
+    "base": {
+     "functions": 200,
+     "produced": 199,
+     "compiled": 197,
+     "compile_failure_share": 0.015,
+     "exact": 106,
+     "exact_symbols": 106,
+     "mean_percent": 86.406,
+     "mean_percent_compiled": 87.722,
+     "percent_ge_90": 126,
+     "percent_100": 106
+    },
+    "master": {
+     "functions": 200,
+     "produced": 199,
+     "compiled": 197,
+     "compile_failure_share": 0.015,
+     "exact": 99,
+     "exact_symbols": 99,
+     "mean_percent": 84.665,
+     "mean_percent_compiled": 85.954,
+     "percent_ge_90": 119,
+     "percent_100": 99
+    }
+   },
+   "standalone": {
+    "base": {
+     "functions": 200,
+     "produced": 199,
+     "compiled": 182,
+     "compile_failure_share": 0.09,
+     "exact": 100,
+     "exact_symbols": 100,
+     "mean_percent": 79.649,
+     "mean_percent_compiled": 87.526,
+     "percent_ge_90": 119,
+     "percent_100": 100
+    },
+    "master": {
+     "functions": 200,
+     "produced": 199,
+     "compiled": 182,
+     "compile_failure_share": 0.09,
+     "exact": 94,
+     "exact_symbols": 94,
+     "mean_percent": 78.195,
+     "mean_percent_compiled": 85.928,
+     "percent_ge_90": 113,
+     "percent_100": 94
+    }
+   },
+   "best": {
+    "base": {
+     "functions": 200,
+     "produced": 199,
+     "compiled": 197,
+     "compile_failure_share": 0.015,
+     "exact": 110,
+     "exact_symbols": 110,
+     "mean_percent": 86.753,
+     "mean_percent_compiled": 88.074,
+     "percent_ge_90": 130,
+     "percent_100": 110
+    },
+    "master": {
+     "functions": 200,
+     "produced": 199,
+     "compiled": 197,
+     "compile_failure_share": 0.015,
+     "exact": 103,
+     "exact_symbols": 103,
+     "mean_percent": 85.012,
+     "mean_percent_compiled": 86.307,
+     "percent_ge_90": 123,
+     "percent_100": 103
+    }
+   },
+   "paired_context": {
+    "master_better": 4,
+    "master_worse": 10,
+    "same": 186
+   }
+  }
+ },
+ "function_diff": {
+  "generated": "2026-10-12T02:03:02+00:00",
+  "totals": {
+   "functions": 2043,
+   "base_ok": 2042,
+   "master_ok": 1909,
+   "identical": 1643,
+   "changed": 400,
+   "better": 64,
+   "worse": 167,
+   "neutral": 169,
+   "base_timeouts": 0,
+   "master_timeouts": 0
+  },
+  "games": {
+   "gba-kh-chain-of-memories": {
+    "functions": 200,
+    "base_ok": 200,
+    "master_ok": 200,
+    "identical": 190,
+    "changed": 10,
+    "better": 1,
+    "worse": 3,
+    "neutral": 6,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:casts": 1,
+     "worse:casts": 3
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 5.205,
+     "master": 5.181
+    },
+    "total_seconds": {
+     "base": 992.9,
+     "master": 994.4
+    },
+    "median_pair_ratio": 0.994
+   },
+   "gc-pikmin-2": {
+    "functions": 200,
+    "base_ok": 200,
+    "master_ok": 200,
+    "identical": 189,
+    "changed": 11,
+    "better": 0,
+    "worse": 0,
+    "neutral": 11,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {},
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 4.098,
+     "master": 4.13
+    },
+    "total_seconds": {
+     "base": 817.7,
+     "master": 819.1
+    },
+    "median_pair_ratio": 0.99
+   },
+   "n64-super-mario-64": {
+    "functions": 200,
+    "base_ok": 200,
+    "master_ok": 67,
+    "identical": 61,
+    "changed": 139,
+    "better": 0,
+    "worse": 134,
+    "neutral": 5,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "worse:casts": 1,
+     "worse:irregular": 1,
+     "worse:master": 133
+    },
+    "failure_classes": {
+     "master: error: native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error:": 133
+    },
+    "median_seconds": {
+     "base": 1.281,
+     "master": 1.283
+    },
+    "total_seconds": {
+     "base": 86.6,
+     "master": 85.5
+    },
+    "median_pair_ratio": 1.01
+   },
+   "nds-kh-358-2-days": {
+    "functions": 38,
+    "base_ok": 38,
+    "master_ok": 38,
+    "identical": 30,
+    "changed": 8,
+    "better": 2,
+    "worse": 0,
+    "neutral": 6,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:casts": 2
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 4.846,
+     "master": 5.021
+    },
+    "total_seconds": {
+     "base": 189.9,
+     "master": 195.5
+    },
+    "median_pair_ratio": 1.008
+   },
+   "ps2-dark-chronicle": {
+    "functions": 179,
+    "base_ok": 179,
+    "master_ok": 179,
+    "identical": 159,
+    "changed": 20,
+    "better": 9,
+    "worse": 2,
+    "neutral": 9,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:casts": 9,
+     "worse:casts": 2
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 1.493,
+     "master": 1.484
+    },
+    "total_seconds": {
+     "base": 265.1,
+     "master": 265.9
+    },
+    "median_pair_ratio": 1.02
+   },
+   "ps2-dark-cloud": {
+    "functions": 175,
+    "base_ok": 175,
+    "master_ok": 175,
+    "identical": 133,
+    "changed": 42,
+    "better": 19,
+    "worse": 6,
+    "neutral": 17,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:casts": 18,
+     "better:gotos_labels": 1,
+     "worse:address_literals": 1,
+     "worse:casts": 5
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 0.773,
+     "master": 0.778
+    },
+    "total_seconds": {
+     "base": 156.9,
+     "master": 160.5
+    },
+    "median_pair_ratio": 0.992
+   },
+   "ps2-digital-devil-saga": {
+    "functions": 169,
+    "base_ok": 169,
+    "master_ok": 169,
+    "identical": 152,
+    "changed": 17,
+    "better": 2,
+    "worse": 1,
+    "neutral": 14,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:casts": 2,
+     "worse:casts": 1
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 1.529,
+     "master": 1.489
+    },
+    "total_seconds": {
+     "base": 274.7,
+     "master": 275.8
+    },
+    "median_pair_ratio": 0.99
+   },
+   "ps2-fatal-frame": {
+    "functions": 175,
+    "base_ok": 175,
+    "master_ok": 175,
+    "identical": 132,
+    "changed": 43,
+    "better": 10,
+    "worse": 13,
+    "neutral": 20,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:address_literals": 1,
+     "better:casts": 7,
+     "better:gotos_labels": 3,
+     "worse:address_literals": 1,
+     "worse:casts": 12,
+     "worse:gotos_labels": 1,
+     "worse:irregular": 1
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 1.057,
+     "master": 1.039
+    },
+    "total_seconds": {
+     "base": 196.0,
+     "master": 191.1
+    },
+    "median_pair_ratio": 0.99
+   },
+   "ps2-god-hand": {
+    "functions": 172,
+    "base_ok": 172,
+    "master_ok": 172,
+    "identical": 158,
+    "changed": 14,
+    "better": 1,
+    "worse": 2,
+    "neutral": 11,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:casts": 1,
+     "worse:casts": 1,
+     "worse:gotos_labels": 1
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 2.205,
+     "master": 2.21
+    },
+    "total_seconds": {
+     "base": 373.7,
+     "master": 377.3
+    },
+    "median_pair_ratio": 1.012
+   },
+   "ps2-persona-4": {
+    "functions": 177,
+    "base_ok": 177,
+    "master_ok": 177,
+    "identical": 156,
+    "changed": 21,
+    "better": 1,
+    "worse": 1,
+    "neutral": 19,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:casts": 1,
+     "worse:address_literals": 1
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 2.256,
+     "master": 2.246
+    },
+    "total_seconds": {
+     "base": 407.7,
+     "master": 405.0
+    },
+    "median_pair_ratio": 0.989
+   },
+   "ps2-ratchet-clank": {
+    "functions": 179,
+    "base_ok": 179,
+    "master_ok": 179,
+    "identical": 146,
+    "changed": 33,
+    "better": 9,
+    "worse": 2,
+    "neutral": 22,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:address_literals": 1,
+     "better:casts": 8,
+     "better:irregular": 1,
+     "neutral:address_literals": 2,
+     "neutral:casts": 2,
+     "worse:casts": 2
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 0.626,
+     "master": 0.633
+    },
+    "total_seconds": {
+     "base": 144.1,
+     "master": 139.0
+    },
+    "median_pair_ratio": 0.983
+   },
+   "ps2-ratchet-clank-pal": {
+    "functions": 179,
+    "base_ok": 178,
+    "master_ok": 178,
+    "identical": 137,
+    "changed": 42,
+    "better": 10,
+    "worse": 3,
+    "neutral": 29,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:address_literals": 1,
+     "better:casts": 9,
+     "worse:address_literals": 1,
+     "worse:casts": 2
+    },
+    "failure_classes": {
+     "base: error: native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error:": 1,
+     "master: error: native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error:": 1
+    },
+    "median_seconds": {
+     "base": 0.631,
+     "master": 0.657
+    },
+    "total_seconds": {
+     "base": 134.5,
+     "master": 123.8
+    },
+    "median_pair_ratio": 1.032
+   }
+  },
+  "timing": {
+   "pairs": 1909,
+   "median_pair_ratio": 0.997,
+   "master_slower_pairs": 950,
+   "load1_median": 32.47,
+   "load1_max": 56.06,
+   "note": "one process per function and arm; the arm order alternates; seconds include process start, project open and the decompile"
+  },
+  "changed_examples": [
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "08007f3c",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 11,
+     "address_literals": 1,
+     "symbol_names": 1,
+     "lines": 48
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 11,
+     "address_literals": 1,
+     "symbol_names": 1,
+     "lines": 46
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "08014294",
+    "verdict": "worse",
+    "reasons": [
+     "casts 27->28"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 27,
+     "address_literals": 0,
+     "symbol_names": 5,
+     "lines": 51
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 28,
+     "address_literals": 0,
+     "symbol_names": 5,
+     "lines": 51
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "08040c8c",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 14,
+     "address_literals": 1,
+     "symbol_names": 3,
+     "lines": 44
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 14,
+     "address_literals": 1,
+     "symbol_names": 3,
+     "lines": 44
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "08048594",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 28,
+     "address_literals": 0,
+     "symbol_names": 10,
+     "lines": 69
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 28,
+     "address_literals": 0,
+     "symbol_names": 10,
+     "lines": 67
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "080a86f4",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 74,
+     "address_literals": 2,
+     "symbol_names": 65,
+     "lines": 203
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 74,
+     "address_literals": 2,
+     "symbol_names": 65,
+     "lines": 203
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "080a99a0",
+    "verdict": "worse",
+    "reasons": [
+     "casts 11->12"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 11,
+     "address_literals": 0,
+     "symbol_names": 4,
+     "lines": 30
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 12,
+     "address_literals": 0,
+     "symbol_names": 4,
+     "lines": 30
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "080f8f9c",
+    "verdict": "worse",
+    "reasons": [
+     "casts 181->184"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 181,
+     "address_literals": 0,
+     "symbol_names": 34,
+     "lines": 357
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 184,
+     "address_literals": 0,
+     "symbol_names": 34,
+     "lines": 358
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "08103de8",
+    "verdict": "better",
+    "reasons": [
+     "casts 18->17"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 18,
+     "address_literals": 2,
+     "symbol_names": 10,
+     "lines": 61
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 17,
+     "address_literals": 2,
+     "symbol_names": 10,
+     "lines": 60
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "08113e94",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 6,
+     "address_literals": 0,
+     "symbol_names": 32,
+     "lines": 84
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 6,
+     "address_literals": 0,
+     "symbol_names": 32,
+     "lines": 84
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gba-kh-chain-of-memories",
+    "address": "0811411c",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 6,
+     "address_literals": 0,
+     "symbol_names": 11,
+     "lines": 58
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 6,
+     "address_literals": 0,
+     "symbol_names": 11,
+     "lines": 58
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "800219c4",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 8,
+     "address_literals": 1,
+     "symbol_names": 5,
+     "lines": 32
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 8,
+     "address_literals": 1,
+     "symbol_names": 5,
+     "lines": 31
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "80041da4",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 26,
+     "address_literals": 4,
+     "symbol_names": 11,
+     "lines": 73
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 26,
+     "address_literals": 4,
+     "symbol_names": 11,
+     "lines": 73
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "800541fc",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 11,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 21
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 11,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 21
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "800c0394",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 4,
+     "symbol_names": 3,
+     "lines": 11
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 4,
+     "symbol_names": 3,
+     "lines": 11
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "801abc18",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 42,
+     "address_literals": 8,
+     "symbol_names": 28,
+     "lines": 120
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 42,
+     "address_literals": 8,
+     "symbol_names": 28,
+     "lines": 118
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "8024446c",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 3,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 6
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 3,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 6
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "802d5ab8",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 66,
+     "address_literals": 10,
+     "symbol_names": 6,
+     "lines": 219
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 66,
+     "address_literals": 10,
+     "symbol_names": 6,
+     "lines": 219
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "802f1dc0",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 7,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 8
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 7,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 8
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "8034e038",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 9,
+     "address_literals": 0,
+     "symbol_names": 5,
+     "lines": 33
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 9,
+     "address_literals": 0,
+     "symbol_names": 5,
+     "lines": 33
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "803b82d4",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 71,
+     "address_literals": 12,
+     "symbol_names": 5,
+     "lines": 137
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 71,
+     "address_literals": 12,
+     "symbol_names": 5,
+     "lines": 138
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "gc-pikmin-2",
+    "address": "803ba6d4",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 30,
+     "address_literals": 1,
+     "symbol_names": 4,
+     "lines": 88
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 30,
+     "address_literals": 1,
+     "symbol_names": 4,
+     "lines": 92
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "802481e0",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 5,
+     "address_literals": 0,
+     "symbol_names": 14,
+     "lines": 23
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80248498",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 13,
+     "address_literals": 0,
+     "symbol_names": 11,
+     "lines": 28
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80248ce8",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 1,
+     "address_literals": 0,
+     "symbol_names": 4,
+     "lines": 13
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80249178",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 7,
+     "lines": 16
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80249310",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 2,
+     "lines": 6
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80249398",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 6,
+     "lines": 9
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8024bd5c",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 1,
+     "address_literals": 0,
+     "symbol_names": 10,
+     "lines": 19
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8024be14",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 4,
+     "address_literals": 1,
+     "symbol_names": 16,
+     "lines": 34
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8024dbf0",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 5,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 5
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 5,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 6
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8024ed84",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 4,
+     "address_literals": 0,
+     "symbol_names": 2,
+     "lines": 22
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8024f134",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 1,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 6
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8024f1e0",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 4,
+     "address_literals": 4,
+     "symbol_names": 10,
+     "lines": 39
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8025118c",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 6,
+     "address_literals": 3,
+     "symbol_names": 2,
+     "lines": 13
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8025177c",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 3,
+     "labels": 2,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 14,
+     "address_literals": 3,
+     "symbol_names": 4,
+     "lines": 62
+    },
+    "master": {
+     "gotos": 3,
+     "labels": 2,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 14,
+     "address_literals": 3,
+     "symbol_names": 4,
+     "lines": 62
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80257640",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 6,
+     "address_literals": 2,
+     "symbol_names": 9,
+     "lines": 23
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8025cef0",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 8,
+     "address_literals": 1,
+     "symbol_names": 6,
+     "lines": 26
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8025d4f0",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 20,
+     "address_literals": 7,
+     "symbol_names": 6,
+     "lines": 29
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8025e21c",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 50,
+     "address_literals": 7,
+     "symbol_names": 13,
+     "lines": 70
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8026aa48",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 49,
+     "address_literals": 9,
+     "symbol_names": 2,
+     "lines": 53
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 49,
+     "address_literals": 9,
+     "symbol_names": 2,
+     "lines": 53
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80273618",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 37,
+     "address_literals": 3,
+     "symbol_names": 4,
+     "lines": 29
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80277b14",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 12,
+     "address_literals": 7,
+     "symbol_names": 11,
+     "lines": 40
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80279f80",
+    "verdict": "neutral",
+    "reasons": [],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 1,
+     "lines": 18
+    },
+    "master": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 1,
+     "lines": 18
+    },
+    "base_ok": true,
+    "master_ok": true
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8027a7d0",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 7,
+     "address_literals": 0,
+     "symbol_names": 3,
+     "lines": 9
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8027a83c",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 9,
+     "address_literals": 0,
+     "symbol_names": 4,
+     "lines": 10
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8027ad74",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 4,
+     "address_literals": 3,
+     "symbol_names": 5,
+     "lines": 18
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8027b0c0",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 9,
+     "address_literals": 0,
+     "symbol_names": 5,
+     "lines": 16
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8027b164",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 3,
+     "lines": 6
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8027b35c",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 2,
+     "lines": 6
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8027d518",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 25,
+     "address_literals": 2,
+     "symbol_names": 2,
+     "lines": 39
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8027da84",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 34,
+     "address_literals": 15,
+     "symbol_names": 12,
+     "lines": 60
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80280368",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 11,
+     "address_literals": 3,
+     "symbol_names": 6,
+     "lines": 21
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "802804f4",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 3,
+     "address_literals": 7,
+     "symbol_names": 14,
+     "lines": 34
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "802817fc",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 4,
+     "address_literals": 1,
+     "symbol_names": 8,
+     "lines": 26
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80283a68",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 2,
+     "address_literals": 2,
+     "symbol_names": 4,
+     "lines": 6
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8028b00c",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 3,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 8
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8028b218",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 9,
+     "address_literals": 3,
+     "symbol_names": 4,
+     "lines": 20
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8028dbf4",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 0,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 0,
+     "lines": 4
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "8028e298",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 0,
+     "address_literals": 0,
+     "symbol_names": 1,
+     "lines": 9
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   },
+   {
+    "game": "n64-super-mario-64",
+    "address": "80291b68",
+    "verdict": "worse",
+    "reasons": [
+     "master failed, base printed"
+    ],
+    "base": {
+     "gotos": 0,
+     "labels": 0,
+     "irregular": 1,
+     "halt_baddata": 0,
+     "casts": 2,
+     "address_literals": 4,
+     "symbol_names": 5,
+     "lines": 8
+    },
+    "master": null,
+    "base_ok": true,
+    "master_ok": false
+   }
+  ]
+ },
+ "function_diff_n64_without_gp7310": {
+  "generated": "2026-10-12T02:05:09+00:00",
+  "totals": {
+   "functions": 200,
+   "base_ok": 200,
+   "master_ok": 200,
+   "identical": 182,
+   "changed": 18,
+   "better": 1,
+   "worse": 1,
+   "neutral": 16,
+   "base_timeouts": 0,
+   "master_timeouts": 0
+  },
+  "games": {
+   "n64-super-mario-64": {
+    "functions": 200,
+    "base_ok": 200,
+    "master_ok": 200,
+    "identical": 182,
+    "changed": 18,
+    "better": 1,
+    "worse": 1,
+    "neutral": 16,
+    "base_timeouts": 0,
+    "master_timeouts": 0,
+    "reasons": {
+     "better:address_literals": 1,
+     "better:casts": 1,
+     "worse:casts": 1,
+     "worse:irregular": 1
+    },
+    "failure_classes": {},
+    "median_seconds": {
+     "base": 1.546,
+     "master": 1.574
+    },
+    "total_seconds": {
+     "base": 313.8,
+     "master": 315.0
+    },
+    "median_pair_ratio": 1.008
+   }
+  },
+  "timing": {
+   "pairs": 200,
+   "median_pair_ratio": 1.008,
+   "master_slower_pairs": 101,
+   "load1_median": 25.27,
+   "load1_max": 26.63,
+   "note": "one process per function and arm; the arm order alternates; seconds include process start, project open and the decompile"
+  }
+ },
+ "printer_diff": {
+  "gba-pokeemerald": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 200,
+    "identical": 196,
+    "categories": {
+     "markup-only": 4
+    },
+    "decompile_errors": 0
+   }
+  },
+  "gc-animal-crossing": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 200,
+    "identical": 185,
+    "categories": {
+     "markup-only": 15
+    },
+    "decompile_errors": 0
+   }
+  },
+  "nds-pokeheartgold-arm9": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 200,
+    "identical": 163,
+    "categories": {
+     "markup-only": 37
+    },
+    "decompile_errors": 0
+   }
+  },
+  "ps2-capcom-fighting-evolution": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 200,
+    "identical": 185,
+    "categories": {
+     "markup-only": 15
+    },
+    "decompile_errors": 0
+   }
+  },
+  "ps2-dungeon-game": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 200,
+    "identical": 195,
+    "categories": {
+     "markup-only": 5
+    },
+    "decompile_errors": 0
+   }
+  },
+  "psv-need-for-speed-most-wanted": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 200,
+    "identical": 192,
+    "categories": {
+     "markup-only": 8
+    },
+    "decompile_errors": 0
+   }
+  },
+  "psx-darkstalkers-3": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 200,
+    "identical": 199,
+    "categories": {
+     "markup-only": 1
+    },
+    "decompile_errors": 0
+   }
+  },
+  "x360-black-ops-2": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 120,
+    "identical": 102,
+    "categories": {
+     "markup-only": 18
+    },
+    "decompile_errors": 80
+   }
+  },
+  "x86-libc": {
+   "base": {
+    "decompiled": 200,
+    "identical": 200,
+    "categories": {},
+    "decompile_errors": 0
+   },
+   "master": {
+    "decompiled": 200,
+    "identical": 109,
+    "categories": {
+     "markup-only": 91
+    },
+    "decompile_errors": 0
+   }
+  }
+ },
+ "attribution_groups": {
+  "jtnz": {
+   "commits": "GP-7003 64606271a (non-zero mask off)",
+   "what": "master with `JumpBasic::getInitialRange` ignoring the non-zero mask; the rest of GP-7003 stays"
+  },
+  "cp7003": {
+   "commits": "GP-7003 only, on 12.1.3 + patch",
+   "what": "the cherry-pick: `gp7003-12.1.3.patch` applied to the pinned decompiler (restores = prints the 12.1.3 text, i.e. GP-7003 does not touch that function)"
+  },
+  "no7310": {
+   "commits": "GP-7310 bc858e1ec reverted",
+   "what": "assignment-to-constant check back in `VarnodeBank::setDef` only"
+  },
+  "rules": {
+   "commits": "GP-7353, 7346, 7309, 7280, 7272, 7227, 7210, 7126, 7058 reverted (not 7310, not 7166)",
+   "what": "rule, subflow and transform fixes"
+  },
+  "thunk": {
+   "commits": "GP-6946 ff4f0ed1f reverted",
+   "what": "thunk test back to `any single target > 0xffff away`"
+  },
+  "nosym7038": {
+   "commits": "GP-7038 7f538e0af off (toggle)",
+   "what": "a constant checked once is never re-tested when it turns out to be a pointer"
+  },
+  "nonear7080": {
+   "commits": "GP-7080 792e529e7 off (toggle)",
+   "what": "no nearby-symbol search before/after an address (`type.cc` arrayed-component search)"
+  },
+  "nobaddata6945": {
+   "commits": "GP-6945 d424b6ff9 off (default)",
+   "what": "`max_baddata` unlimited as in 12.1.3"
+  },
+  "noexitpref": {
+   "commits": "GP-7115 fefe791da, `BlockIfNoExit::preferComplement` (toggle)",
+   "what": "arm preference of an if-without-exit as for if/else"
+  },
+  "noexitrule": {
+   "commits": "GP-7115 fefe791da, `ruleBlockIfNoExit` branch for two exit-less arms (toggle)",
+   "what": "that branch disabled"
+  },
+  "nocopyimm": {
+   "commits": "GP-6788 4661fc0be, `BlockBasic::hasNoImmediateCopy` (toggle)",
+   "what": "a block with an immediate COPY out of it may be removed again"
+  }
+ },
+ "attribution": {
+  "variants": {
+   "jtnz": {
+    "restores": 0,
+    "moves": 4,
+    "none": 257,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 0,
+      "moves": 0,
+      "none": 10,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 0,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 0,
+      "moves": 0,
+      "none": 8,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 0,
+      "moves": 0,
+      "none": 20,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 0,
+      "moves": 1,
+      "none": 41,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 0,
+      "moves": 0,
+      "none": 17,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 0,
+      "moves": 3,
+      "none": 40,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 0,
+      "moves": 0,
+      "none": 14,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 0,
+      "moves": 0,
+      "none": 21,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 0,
+      "moves": 0,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     }
+    }
+   },
+   "cp7003": {
+    "restores": 257,
+    "moves": 4,
+    "none": 0,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 10,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 11,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 8,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 20,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 41,
+      "moves": 1,
+      "none": 0,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 17,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 40,
+      "moves": 3,
+      "none": 0,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 14,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 21,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 33,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 42,
+      "moves": 0,
+      "none": 0,
+      "failed": 0
+     }
+    }
+   },
+   "no7310": {
+    "restores": 0,
+    "moves": 0,
+    "none": 261,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 0,
+      "moves": 0,
+      "none": 10,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 0,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 0,
+      "moves": 0,
+      "none": 8,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 0,
+      "moves": 0,
+      "none": 20,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 0,
+      "moves": 0,
+      "none": 17,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 0,
+      "moves": 0,
+      "none": 43,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 0,
+      "moves": 0,
+      "none": 14,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 0,
+      "moves": 0,
+      "none": 21,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 0,
+      "moves": 0,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     }
+    }
+   },
+   "rules": {
+    "restores": 1,
+    "moves": 1,
+    "none": 259,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 0,
+      "moves": 0,
+      "none": 10,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 0,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 0,
+      "moves": 0,
+      "none": 8,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 0,
+      "moves": 0,
+      "none": 20,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 0,
+      "moves": 0,
+      "none": 17,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 0,
+      "moves": 1,
+      "none": 42,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 1,
+      "moves": 0,
+      "none": 13,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 0,
+      "moves": 0,
+      "none": 21,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 0,
+      "moves": 0,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     }
+    }
+   },
+   "thunk": {
+    "restores": 0,
+    "moves": 0,
+    "none": 261,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 0,
+      "moves": 0,
+      "none": 10,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 0,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 0,
+      "moves": 0,
+      "none": 8,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 0,
+      "moves": 0,
+      "none": 20,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 0,
+      "moves": 0,
+      "none": 17,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 0,
+      "moves": 0,
+      "none": 43,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 0,
+      "moves": 0,
+      "none": 14,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 0,
+      "moves": 0,
+      "none": 21,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 0,
+      "moves": 0,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     }
+    }
+   },
+   "nosym7038": {
+    "restores": 0,
+    "moves": 0,
+    "none": 261,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 0,
+      "moves": 0,
+      "none": 10,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 0,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 0,
+      "moves": 0,
+      "none": 8,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 0,
+      "moves": 0,
+      "none": 20,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 0,
+      "moves": 0,
+      "none": 17,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 0,
+      "moves": 0,
+      "none": 43,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 0,
+      "moves": 0,
+      "none": 14,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 0,
+      "moves": 0,
+      "none": 21,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 0,
+      "moves": 0,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     }
+    }
+   },
+   "nonear7080": {
+    "restores": 2,
+    "moves": 3,
+    "none": 256,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 0,
+      "moves": 0,
+      "none": 10,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 0,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 0,
+      "moves": 0,
+      "none": 8,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 2,
+      "moves": 0,
+      "none": 18,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 0,
+      "moves": 3,
+      "none": 39,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 0,
+      "moves": 0,
+      "none": 17,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 0,
+      "moves": 0,
+      "none": 43,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 0,
+      "moves": 0,
+      "none": 14,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 0,
+      "moves": 0,
+      "none": 21,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 0,
+      "moves": 0,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     }
+    }
+   },
+   "nobaddata6945": {
+    "restores": 0,
+    "moves": 0,
+    "none": 261,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 0,
+      "moves": 0,
+      "none": 10,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 0,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 0,
+      "moves": 0,
+      "none": 8,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 0,
+      "moves": 0,
+      "none": 20,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 0,
+      "moves": 0,
+      "none": 17,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 0,
+      "moves": 0,
+      "none": 43,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 0,
+      "moves": 0,
+      "none": 14,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 0,
+      "moves": 0,
+      "none": 21,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 0,
+      "moves": 0,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     }
+    }
+   },
+   "noexitpref": {
+    "restores": 3,
+    "moves": 7,
+    "none": 251,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 0,
+      "moves": 1,
+      "none": 9,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 0,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 0,
+      "moves": 1,
+      "none": 7,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 0,
+      "moves": 0,
+      "none": 20,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 0,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 1,
+      "moves": 0,
+      "none": 16,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 1,
+      "moves": 0,
+      "none": 42,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 0,
+      "moves": 2,
+      "none": 12,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 0,
+      "moves": 1,
+      "none": 20,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 0,
+      "moves": 0,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 1,
+      "moves": 2,
+      "none": 39,
+      "failed": 0
+     }
+    }
+   },
+   "noexitrule": {
+    "restores": 44,
+    "moves": 13,
+    "none": 204,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 3,
+      "moves": 0,
+      "none": 7,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 5,
+      "moves": 0,
+      "none": 6,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 5,
+      "moves": 1,
+      "none": 2,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 2,
+      "moves": 0,
+      "none": 18,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 2,
+      "moves": 1,
+      "none": 39,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 5,
+      "moves": 1,
+      "none": 11,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 4,
+      "moves": 2,
+      "none": 37,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 5,
+      "moves": 1,
+      "none": 8,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 4,
+      "moves": 1,
+      "none": 16,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 4,
+      "moves": 2,
+      "none": 27,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 5,
+      "moves": 4,
+      "none": 33,
+      "failed": 0
+     }
+    }
+   },
+   "nocopyimm": {
+    "restores": 44,
+    "moves": 24,
+    "none": 193,
+    "failed": 0,
+    "by_game": {
+     "gba-kh-chain-of-memories": {
+      "restores": 1,
+      "moves": 1,
+      "none": 8,
+      "failed": 0
+     },
+     "gc-pikmin-2": {
+      "restores": 4,
+      "moves": 1,
+      "none": 6,
+      "failed": 0
+     },
+     "nds-kh-358-2-days": {
+      "restores": 1,
+      "moves": 0,
+      "none": 7,
+      "failed": 0
+     },
+     "ps2-dark-chronicle": {
+      "restores": 5,
+      "moves": 1,
+      "none": 14,
+      "failed": 0
+     },
+     "ps2-dark-cloud": {
+      "restores": 3,
+      "moves": 6,
+      "none": 33,
+      "failed": 0
+     },
+     "ps2-digital-devil-saga": {
+      "restores": 1,
+      "moves": 1,
+      "none": 15,
+      "failed": 0
+     },
+     "ps2-fatal-frame": {
+      "restores": 7,
+      "moves": 5,
+      "none": 31,
+      "failed": 0
+     },
+     "ps2-god-hand": {
+      "restores": 3,
+      "moves": 0,
+      "none": 11,
+      "failed": 0
+     },
+     "ps2-persona-4": {
+      "restores": 3,
+      "moves": 1,
+      "none": 17,
+      "failed": 0
+     },
+     "ps2-ratchet-clank": {
+      "restores": 6,
+      "moves": 3,
+      "none": 24,
+      "failed": 0
+     },
+     "ps2-ratchet-clank-pal": {
+      "restores": 10,
+      "moves": 5,
+      "none": 27,
+      "failed": 0
+     }
+    }
+   }
+  },
+  "functions": 261,
+  "unexplained_by_single_group": 4,
+  "examples": {
+   "jtnz": [],
+   "cp7003": [
+    "gba-kh-chain-of-memories:08007f3c",
+    "gba-kh-chain-of-memories:08014294",
+    "gba-kh-chain-of-memories:08040c8c",
+    "gba-kh-chain-of-memories:08048594",
+    "gba-kh-chain-of-memories:080a86f4",
+    "gba-kh-chain-of-memories:080a99a0",
+    "gba-kh-chain-of-memories:080f8f9c",
+    "gba-kh-chain-of-memories:08103de8",
+    "gba-kh-chain-of-memories:08113e94",
+    "gba-kh-chain-of-memories:0811411c",
+    "gc-pikmin-2:800219c4",
+    "gc-pikmin-2:80041da4"
+   ],
+   "no7310": [],
+   "rules": [
+    "ps2-god-hand:0033a730"
+   ],
+   "thunk": [],
+   "nosym7038": [],
+   "nonear7080": [
+    "ps2-dark-chronicle:002d7b40",
+    "ps2-dark-chronicle:002d8580"
+   ],
+   "nobaddata6945": [],
+   "noexitpref": [
+    "ps2-digital-devil-saga:002e70f0",
+    "ps2-fatal-frame:00205c48",
+    "ps2-ratchet-clank-pal:00209750"
+   ],
+   "noexitrule": [
+    "gba-kh-chain-of-memories:080a86f4",
+    "gba-kh-chain-of-memories:08113e94",
+    "gba-kh-chain-of-memories:0811411c",
+    "gc-pikmin-2:800541fc",
+    "gc-pikmin-2:800c0394",
+    "gc-pikmin-2:8024446c",
+    "gc-pikmin-2:802f1dc0",
+    "gc-pikmin-2:8034e038",
+    "nds-kh-358-2-days:02003380",
+    "nds-kh-358-2-days:0200ef9c",
+    "nds-kh-358-2-days:0200fe88",
+    "nds-kh-358-2-days:02011a20"
+   ],
+   "nocopyimm": [
+    "gba-kh-chain-of-memories:08048594",
+    "gc-pikmin-2:800219c4",
+    "gc-pikmin-2:80041da4",
+    "gc-pikmin-2:801abc18",
+    "gc-pikmin-2:802d5ab8",
+    "nds-kh-358-2-days:02039ba0",
+    "ps2-dark-chronicle:0016ca40",
+    "ps2-dark-chronicle:001775b0",
+    "ps2-dark-chronicle:00240750",
+    "ps2-dark-chronicle:002d91e0",
+    "ps2-dark-chronicle:002f1370",
+    "ps2-dark-cloud:0012e4e0"
+   ]
+  }
+ },
+ "recommendation": "**Do not re-pin now. Cherry-pick GP-7003 with its two corrections; take the rest as the Rust port's reference; re-run this trial on the 12.2 release.**\n\n1. *Re-pin to master now: no.* Measured against the pin it is worse on two console images (N64 decompile success 1.000 -> 0.328, x360 40% of a sample failing: GP-7310), worse on one compiled-output lane (ee-gcc \u22127 exact: GP-7115), neutral-to-slightly-better elsewhere (MWCC +1 exact per seed, gotos \u22124.5% on the unaffected wave samples), and it needs a rebased patch with two wire compat hunks. Master is also a moving target: no 12.2 tag exists, the branch reports 12.3, and the GP-7310 defect is in the tip.\n2. *Cherry-pick into the patch: GP-7003 with the two corrections, `gp7003-12.1.3.cpfix.patch`.* The original `gp7003-12.1.3.patch` (6 files, fuzz 2) reproduces master's recovery of Fatal Frame `FActExecOccur`'s two missed tables (72 -> 507 printed lines) and leaves the m22 functions as they were, but loses jump tables 12.1.3 recovers (God Hand 0x274828 6 -> 5 targets, 20 whole tables in seven games); the corrected patch loses none, gains 4 and is measured in `gp7003_cherrypick.md`. It needs no Rust change and no wire change. Not worth taking: GP-6946 (the thunk test) and GP-6945 (the bad-data limit) change none of the 261 changed functions when reverted; GP-7010 and GP-6957 were not isolated.\n3. *Wait for a release: yes, for everything else.* When 12.2 is tagged re-run `benchmarks/ghidra_master_trial.py` (sample, export, classify, report) with the new tag as the master arm; adopt it only if GP-7310 is fixed upstream (or the check is moved back in the patch, one line), the arm-order change in GP-7115 has a switch or is accepted for ee-gcc code, and the two wire changes are taken into `wire.rs`/`provider.rs` rather than reverted in C++.\n4. *The Rust port should take master, not 12.1.3, as its reference for the stages in the list below.* It is cheaper to port GP-7115/GP-6788 (structuring) and GP-7136/GP-7272 (heritage and call arguments) once, from the newer source, than to port 12.1.3 and port the delta later; the trial's evidence that the delta matters is the ee-gcc lane, Fatal Frame and the two N64/x360 failures."
+}

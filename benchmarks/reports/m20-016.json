@@ -1,0 +1,30 @@
+{
+  "id": "m20-016",
+  "passed": true,
+  "results": {
+    "gcm": {
+      "regions": 4,
+      "modules": 2,
+      "functions": 4,
+      "module_xrefs": 2
+    },
+    "ciso-32k": {
+      "regions": 4,
+      "modules": 2,
+      "functions": 4,
+      "module_xrefs": 2
+    },
+    "ciso-2m": {
+      "regions": 4,
+      "modules": 2,
+      "functions": 4,
+      "module_xrefs": 2
+    },
+    "cut_ciso": {
+      "outcome": "refused"
+    },
+    "bad_yaz0": {
+      "outcome": "dol_only_with_diagnostic"
+    }
+  }
+}

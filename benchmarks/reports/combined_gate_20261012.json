@@ -1,0 +1,910 @@
+{
+ "generated": "2026-10-12T08:10:10+00:00",
+ "tag": "20261012",
+ "notes": {
+  "summary_md": "**Verdict: nothing dropped against the per-agent reports; GP-7003 (with its two corrections) is in `native/ghidra-opt-sleigh.patch` and moves no number in any gate.**\n\nOne build of the shared tree on `nih-vps-u` (2026-10-12): `ghidra_opt` sha256 `4561fbea361d602cec0576f2c28a18da19dc5155cb9973d1a5b4e762c87ca598` (`native/build_ghidra_opt.sh --jobs 4` under the build lock, from the patch with md5 `ad0975eb`; the build before it, `15396033...`, is RustStructure's and reproduces byte for byte), and the release `romwright-cli`, `-worker`, `-api` of a fresh sync of the shared tree (cli `620b67d5...`, worker `008bff14...`, api `41cd75a7...`). Every table below is from that build; the comparisons are the per-agent reports named in each section.",
+  "explanations_md": "## Explanations\n\n- **m22-002 seed 20261010: 55 / 193 / 76.976 against Ps2CMatch's 55 / 192 / 76.624.** Not GP-7003 and not a drop: the same tree with the previous `ghidra_opt` scores identically (0 of 200 functions differ), and RustStructure measured the same 55 / 76.976 on its tree. Two functions moved since Ps2CMatch's report: `func_0038d9f0` compiles now (0 -> 72.30 %), `func_001e7080` 96.60 -> 94.62 % (the one worse function; a change of the tree between the two reports, not attributed further). The other two lanes (seed 20261011, ee-gcc) are identical to the frozen reports function by function.\n- **m21-001.** PASS, and identical image by image to the same tree without GP-7003. Against the master-trial base arm (the tree before the PS2 discovery work) capcom is 0.9652 / 0.9954 -> 0.9741 / 0.9945 (Ps2Precision's own numbers, reproduced), dungeon-game recall 0.9885 -> 0.9872, darkstalkers 0.9866 -> 0.9878; those are the tree's changes between the two runs, not this patch.\n- **PS2 decompile success.** `ps2_decompile_success.py` on the 4b53 projects: 10,338 / 10,342 (RustStructure 10,337, Ps2CMatch 10,338). The four failures: Dark Cloud 0x01db08a0 and Persona 4 0x002be530 (the 60 s execution deadline), Ratchet & Clank 0x00239780 and PAL 0x0023aa38 (`Backward normalization not implemented`); RustStructure's run failed one more Ratchet & Clank function (859 / 861); that one did not reproduce here. R&C 0x00239780 fails the same way with the previous `ghidra_opt` and with both projects. The wave's own fresh imports decompile 10,340 / 10,342 (only the two deadlines; its R&C samples do not include the two `Backward normalization` addresses).\n- **PS2 wave (n = 500, seeds 1,2, stock cached).** Recall and precision are identical to four places to Ps2Precision's `console_research_wave_20261011_ps2_precision` in all 11 images; against stock Ghidra the same wins and losses (Ps2Precision's loss, R&C PAL against stock's precision, stays: 0.9947 against 1.0000). Its success column was 0.0 (the IR version mismatch of that day); this run's is 1.0000 except Dark Cloud 0.9989 and Persona 4 0.9990, the two deadlines.\n- **gc / n64 / gba / nds.** Success 1.0000 in all four (n64 923 / 923: the N64 breakage of the master trial is master's GP-7310, not this tree). gc-pikmin-2 gotos 39 -> 59, labels 18 -> 31, lines +9,561 against the 2026-10-10 wave: in that run 0x800f9d0c (9,251 lines, 20 gotos, 13 labels) hit the 60 s deadline (985 / 986); it decompiles now in 29 s. The build without GP-7003 gives 59 / 31 as well.\n- **PSP.** Recall and precision at `-n 200` equal Ps2Precision's five rows to four places. Against the 2026-10-10 wave (n = 500): recall up on Camera (+0.0140) and Tetris (+0.0491), precision up on Hot Pixel (+0.0096), Melodie (+0.0495), Pac-Man Rally (+0.0245), down on Camera (-0.0015) and Tetris (-0.0039), all Ps2Precision's discovery work (their STATUS lists the same figures). Hot Pixel at `-n 200` has one failed function, 0x001032e0 (386 / 387): the 60 s deadline, identical with the previous `ghidra_opt` (two runs each); the n = 500 sample decompiles 940 / 940.\n- **What GP-7003 does here.** On the four images re-run without it (gc-pikmin-2, Fatal Frame, God Hand, Hot Pixel; 3,848 functions) gotos, labels, success, recall and precision are identical; lines differ by 0 / 0 / 0 / -3, Fatal Frame has one native warning fewer. With this tree's import the stored switch tables are the same with and without it (Fatal Frame 278 / 278, God Hand 992 / 992 tables), and both builds store Fatal Frame 0x1caab4, 0x1cab80 and God Hand 0x22cca8, which the 4b53 imports (before Ps2Precision's VSA work) lacked; the cause is inferred from that, not traced, and `FActExecOccur` prints 516 lines / 3 switches with either build; God Hand 0x274828 keeps its six targets (distinct 6 in the import). The patch's effect is therefore on the decompiler-only path (tables the import did not store): the follow-up's 2,869 against 2,865 tables over 12 games and the `switchmask.xml` datatest, not on these gates.\n- **Not run again.** `tools/vendor_ghidra.py` does not exist in the tree (neither in the working tree nor in any commit); the check was `sha256sum -c third_party/ghidra/MANIFEST.sha256`: every `decompiler/` file matches; two language files do not (`languages/gamecube/ppc_gekko_broadway.slaspec`, `languages/ps2/vuupper.sinc`, edited by earlier commits, manifest not refreshed). `third_party` and the pin are unchanged."
+ },
+ "m21": {
+  "status": "pass",
+  "failures": [],
+  "rows": {
+   "gba-pokeemerald": {
+    "recall": 0.9761,
+    "precision": 0.9972,
+    "size_exact": 5748,
+    "without_gp7003": {
+     "recall": 0.9761,
+     "precision": 0.9972
+    },
+    "earlier_tree": {
+     "recall": 0.9761,
+     "precision": 0.9972
+    },
+    "ps2precision": null
+   },
+   "nds-pokeheartgold-arm9": {
+    "recall": 0.9735,
+    "precision": 0.9984,
+    "size_exact": 5156,
+    "without_gp7003": {
+     "recall": 0.9735,
+     "precision": 0.9984
+    },
+    "earlier_tree": {
+     "recall": 0.9735,
+     "precision": 0.9984
+    },
+    "ps2precision": null
+   },
+   "ps2-capcom-fighting-evolution": {
+    "recall": 0.9741,
+    "precision": 0.9945,
+    "size_exact": 8548,
+    "without_gp7003": {
+     "recall": 0.9741,
+     "precision": 0.9945
+    },
+    "earlier_tree": {
+     "recall": 0.9652,
+     "precision": 0.9954
+    },
+    "ps2precision": [
+     0.9741,
+     0.9945
+    ]
+   },
+   "ps2-dungeon-game": {
+    "recall": 0.9872,
+    "precision": 0.9835,
+    "size_exact": 751,
+    "without_gp7003": {
+     "recall": 0.9872,
+     "precision": 0.9835
+    },
+    "earlier_tree": {
+     "recall": 0.9885,
+     "precision": 0.9835
+    },
+    "ps2precision": null
+   },
+   "psx-darkstalkers-3": {
+    "recall": 0.9878,
+    "precision": 0.3663,
+    "size_exact": 0,
+    "without_gp7003": {
+     "recall": 0.9878,
+     "precision": 0.3663
+    },
+    "earlier_tree": {
+     "recall": 0.9866,
+     "precision": 0.366
+    },
+    "ps2precision": null
+   },
+   "psv-need-for-speed-most-wanted": {
+    "recall": 0.9734,
+    "precision": 0.9719,
+    "size_exact": 16304,
+    "without_gp7003": {
+     "recall": 0.9734,
+     "precision": 0.9719
+    },
+    "earlier_tree": {
+     "recall": 0.9734,
+     "precision": 0.9719
+    },
+    "ps2precision": null
+   },
+   "x360-black-ops-2": {
+    "recall": 0.9833,
+    "precision": 0.9964,
+    "size_exact": 0,
+    "without_gp7003": {
+     "recall": 0.9833,
+     "precision": 0.9964
+    },
+    "earlier_tree": {
+     "recall": 0.9833,
+     "precision": 0.9964
+    },
+    "ps2precision": null
+   }
+  }
+ },
+ "m22": {
+  "MWCC seed 20261010": {
+   "frozen": {
+    "exact": 55,
+    "compiled": 192,
+    "mean_percent": 76.624,
+    "compile_failure_share": 0.04
+   },
+   "new": {
+    "exact": 55,
+    "compiled": 193,
+    "mean_percent": 76.976,
+    "compile_failure_share": 0.035
+   },
+   "better": [
+    [
+     "0038d9f0",
+     "func_0038d9f0",
+     0.0,
+     72.296875
+    ]
+   ],
+   "worse": [
+    [
+     "001e7080",
+     "func_001e7080",
+     96.603775,
+     94.62264
+    ]
+   ],
+   "same": 198,
+   "exact_gained": [],
+   "exact_lost": []
+  },
+  "MWCC seed 20261011": {
+   "frozen": {
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.321,
+    "compile_failure_share": 0.03
+   },
+   "new": {
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.321,
+    "compile_failure_share": 0.03
+   },
+   "better": [],
+   "worse": [],
+   "same": 200,
+   "exact_gained": [],
+   "exact_lost": []
+  },
+  "ee-gcc seed 20261010": {
+   "frozen": {
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.406,
+    "compile_failure_share": 0.015
+   },
+   "new": {
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.406,
+    "compile_failure_share": 0.015
+   },
+   "better": [],
+   "worse": [],
+   "same": 200,
+   "exact_gained": [],
+   "exact_lost": []
+  },
+  "same_tree_without_gp7003_seed20261010": {
+   "exact": 55,
+   "compiled": 193,
+   "mean_percent": 76.976,
+   "functions_that_differ_from_this_build": []
+  }
+ },
+ "ps2_success": {
+  "games": {
+   "ps2-dark-chronicle": {
+    "decompiled": 969,
+    "sampled": 969,
+    "failures": [],
+    "RustStructure (handoff default)": 969,
+    "Ps2CMatch (after)": 969
+   },
+   "ps2-dark-chronicle-symtab": {
+    "decompiled": 962,
+    "sampled": 962,
+    "failures": [],
+    "RustStructure (handoff default)": 962,
+    "Ps2CMatch (after)": 962
+   },
+   "ps2-dark-cloud": {
+    "decompiled": 936,
+    "sampled": 937,
+    "failures": [
+     {
+      "address": "01db08a0",
+      "success": false,
+      "seconds": 60.1,
+      "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+      "class": "native runtime: native runtime: execution deadline exceeded"
+     }
+    ],
+    "RustStructure (handoff default)": 936,
+    "Ps2CMatch (after)": 936
+   },
+   "ps2-dark-cloud-symtab": {
+    "decompiled": 940,
+    "sampled": 940,
+    "failures": [],
+    "RustStructure (handoff default)": 940,
+    "Ps2CMatch (after)": 940
+   },
+   "ps2-digital-devil-saga": {
+    "decompiled": 977,
+    "sampled": 977,
+    "failures": [],
+    "RustStructure (handoff default)": 977,
+    "Ps2CMatch (after)": 977
+   },
+   "ps2-fatal-frame": {
+    "decompiled": 942,
+    "sampled": 942,
+    "failures": [],
+    "RustStructure (handoff default)": 942,
+    "Ps2CMatch (after)": 942
+   },
+   "ps2-fatal-frame-symtab": {
+    "decompiled": 940,
+    "sampled": 940,
+    "failures": [],
+    "RustStructure (handoff default)": 940,
+    "Ps2CMatch (after)": 940
+   },
+   "ps2-god-hand": {
+    "decompiled": 980,
+    "sampled": 980,
+    "failures": [],
+    "RustStructure (handoff default)": 980,
+    "Ps2CMatch (after)": 980
+   },
+   "ps2-persona-4": {
+    "decompiled": 974,
+    "sampled": 975,
+    "failures": [
+     {
+      "address": "002be530",
+      "success": false,
+      "seconds": 60.11,
+      "error": "error: native runtime: native runtime: execution deadline exceeded\n",
+      "class": "native runtime: native runtime: execution deadline exceeded"
+     }
+    ],
+    "RustStructure (handoff default)": 974,
+    "Ps2CMatch (after)": 974
+   },
+   "ps2-ratchet-clank": {
+    "decompiled": 860,
+    "sampled": 861,
+    "failures": [
+     {
+      "address": "00239780",
+      "success": false,
+      "seconds": 0.27,
+      "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+      "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+     }
+    ],
+    "RustStructure (handoff default)": 859,
+    "Ps2CMatch (after)": 860
+   },
+   "ps2-ratchet-clank-pal": {
+    "decompiled": 858,
+    "sampled": 859,
+    "failures": [
+     {
+      "address": "0023aa38",
+      "success": false,
+      "seconds": 0.27,
+      "error": "error: native runtime: worker failed (exit status: 1): error: decompiler exception: Low-level Error: Backward normalization not implemented\n",
+      "class": "native runtime: worker failed (exit status: N): error: decompiler exception: Low-level Error: Backward normalization not"
+     }
+    ],
+    "RustStructure (handoff default)": 858,
+    "Ps2CMatch (after)": 858
+   }
+  },
+  "bin": "/home/raikaru/runs/GhidraMaster/bin",
+  "wave": "benchmarks/reports/console_research_wave_20261011_ps2.json",
+  "total": [
+   10338,
+   10342
+  ]
+ },
+ "ps2_wave": {
+  "tools": "b2368ce6b5673309",
+  "frozen_tools": "8089735f6fb1f18e",
+  "images": {
+   "ps2-dark-chronicle": {
+    "summary": {
+     "sampled": 969,
+     "decompiled": 969,
+     "success_rate": 1.0,
+     "recall": 0.9987,
+     "precision": 0.9963,
+     "gotos": 49,
+     "labels": 27,
+     "native_warnings": 2497,
+     "wall_seconds": 120.5
+    },
+    "frozen": {
+     "sampled": 969,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9987,
+     "precision": 0.9963,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-dark-chronicle-symtab": {
+    "summary": {
+     "sampled": 962,
+     "decompiled": 962,
+     "success_rate": 1.0,
+     "recall": 1.0,
+     "precision": 0.9973,
+     "gotos": 84,
+     "labels": 41,
+     "native_warnings": 2281,
+     "wall_seconds": 183.7
+    },
+    "frozen": {
+     "sampled": 962,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 1.0,
+     "precision": 0.9973,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-dark-cloud": {
+    "summary": {
+     "sampled": 937,
+     "decompiled": 936,
+     "success_rate": 0.9989,
+     "recall": 0.9988,
+     "precision": 0.9907,
+     "gotos": 48,
+     "labels": 21,
+     "native_warnings": 2569,
+     "wall_seconds": 118.6
+    },
+    "frozen": {
+     "sampled": 937,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9988,
+     "precision": 0.9907,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-dark-cloud-symtab": {
+    "summary": {
+     "sampled": 940,
+     "decompiled": 940,
+     "success_rate": 1.0,
+     "recall": 0.9995,
+     "precision": 0.9448,
+     "gotos": 80,
+     "labels": 39,
+     "native_warnings": 2398,
+     "wall_seconds": 106.1
+    },
+    "frozen": {
+     "sampled": 940,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9995,
+     "precision": 0.9448,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-digital-devil-saga": {
+    "summary": {
+     "sampled": 977,
+     "decompiled": 977,
+     "success_rate": 1.0,
+     "recall": 0.9974,
+     "precision": 0.9987,
+     "gotos": 73,
+     "labels": 43,
+     "native_warnings": 2337,
+     "wall_seconds": 162.6
+    },
+    "frozen": {
+     "sampled": 977,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9974,
+     "precision": 0.9987,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-fatal-frame": {
+    "summary": {
+     "sampled": 942,
+     "decompiled": 942,
+     "success_rate": 1.0,
+     "recall": 0.9958,
+     "precision": 0.9993,
+     "gotos": 247,
+     "labels": 93,
+     "native_warnings": 2968,
+     "wall_seconds": 88.7
+    },
+    "frozen": {
+     "sampled": 942,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9958,
+     "precision": 0.9993,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-fatal-frame-symtab": {
+    "summary": {
+     "sampled": 940,
+     "decompiled": 940,
+     "success_rate": 1.0,
+     "recall": 1.0,
+     "precision": 0.9998,
+     "gotos": 263,
+     "labels": 105,
+     "native_warnings": 2412,
+     "wall_seconds": 114.8
+    },
+    "frozen": {
+     "sampled": 940,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 1.0,
+     "precision": 0.9998,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-god-hand": {
+    "summary": {
+     "sampled": 980,
+     "decompiled": 980,
+     "success_rate": 1.0,
+     "recall": 0.9976,
+     "precision": 0.9943,
+     "gotos": 186,
+     "labels": 95,
+     "native_warnings": 2063,
+     "wall_seconds": 192.1
+    },
+    "frozen": {
+     "sampled": 980,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9976,
+     "precision": 0.9943,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-persona-4": {
+    "summary": {
+     "sampled": 975,
+     "decompiled": 974,
+     "success_rate": 0.999,
+     "recall": 0.9992,
+     "precision": 0.9967,
+     "gotos": 101,
+     "labels": 80,
+     "native_warnings": 1841,
+     "wall_seconds": 214.5
+    },
+    "frozen": {
+     "sampled": 975,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9992,
+     "precision": 0.9967,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-ratchet-clank": {
+    "summary": {
+     "sampled": 861,
+     "decompiled": 861,
+     "success_rate": 1.0,
+     "recall": 0.9281,
+     "precision": 0.9965,
+     "gotos": 226,
+     "labels": 117,
+     "native_warnings": 3495,
+     "wall_seconds": 61.2
+    },
+    "frozen": {
+     "sampled": 861,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9281,
+     "precision": 0.9965,
+     "gotos": 0,
+     "labels": 0
+    }
+   },
+   "ps2-ratchet-clank-pal": {
+    "summary": {
+     "sampled": 859,
+     "decompiled": 859,
+     "success_rate": 1.0,
+     "recall": 0.9276,
+     "precision": 0.9947,
+     "gotos": 230,
+     "labels": 97,
+     "native_warnings": 3492,
+     "wall_seconds": 60.3
+    },
+    "frozen": {
+     "sampled": 859,
+     "decompiled": 0,
+     "success_rate": 0.0,
+     "recall": 0.9276,
+     "precision": 0.9947,
+     "gotos": 0,
+     "labels": 0
+    }
+   }
+  }
+ },
+ "other_platforms": {
+  "tools": "b2368ce6b5673309",
+  "frozen_tools": "5d47c57fe192c622",
+  "images": {
+   "gba-kh-chain-of-memories": {
+    "summary": {
+     "sampled": 961,
+     "decompiled": 961,
+     "success_rate": 1.0,
+     "recall": 0.9582,
+     "precision": 0.964,
+     "gotos": 68,
+     "labels": 36,
+     "native_warnings": 3124,
+     "wall_seconds": 300.9
+    },
+    "frozen": {
+     "sampled": 961,
+     "decompiled": 961,
+     "success_rate": 1.0,
+     "recall": 0.9582,
+     "precision": 0.964,
+     "gotos": 68,
+     "labels": 36
+    }
+   },
+   "gc-pikmin-2": {
+    "summary": {
+     "sampled": 986,
+     "decompiled": 986,
+     "success_rate": 1.0,
+     "recall": 0.9998,
+     "precision": 0.9984,
+     "gotos": 59,
+     "labels": 31,
+     "native_warnings": 2628,
+     "wall_seconds": 286.3
+    },
+    "frozen": {
+     "sampled": 986,
+     "decompiled": 985,
+     "success_rate": 0.999,
+     "recall": 0.9998,
+     "precision": 0.9984,
+     "gotos": 39,
+     "labels": 18
+    }
+   },
+   "n64-super-mario-64": {
+    "summary": {
+     "sampled": 923,
+     "decompiled": 923,
+     "success_rate": 1.0,
+     "recall": 0.9974,
+     "precision": 0.9053,
+     "gotos": 15,
+     "labels": 4,
+     "native_warnings": 1754,
+     "wall_seconds": 138.0
+    },
+    "frozen": {
+     "sampled": 923,
+     "decompiled": 923,
+     "success_rate": 1.0,
+     "recall": 0.9974,
+     "precision": 0.9053,
+     "gotos": 15,
+     "labels": 4
+    }
+   },
+   "nds-kh-358-2-days": {
+    "summary": {
+     "sampled": 987,
+     "decompiled": 987,
+     "success_rate": 1.0,
+     "recall": 0.8863,
+     "precision": 0.9922,
+     "gotos": 24,
+     "labels": 10,
+     "native_warnings": 2673,
+     "wall_seconds": 399.1
+    },
+    "frozen": {
+     "sampled": 987,
+     "decompiled": 987,
+     "success_rate": 1.0,
+     "recall": 0.8863,
+     "precision": 0.9922,
+     "gotos": 24,
+     "labels": 10
+    }
+   },
+   "psp-hot-pixel": {
+    "summary": {
+     "sampled": 940,
+     "decompiled": 940,
+     "success_rate": 1.0,
+     "recall": 0.8884,
+     "precision": 0.9057,
+     "gotos": 614,
+     "labels": 312,
+     "native_warnings": 2580,
+     "wall_seconds": 180.5
+    },
+    "frozen": {
+     "sampled": 940,
+     "decompiled": 940,
+     "success_rate": 1.0,
+     "recall": 0.8883,
+     "precision": 0.8961,
+     "gotos": 585,
+     "labels": 294
+    }
+   },
+   "psp-melodie": {
+    "summary": {
+     "sampled": 851,
+     "decompiled": 851,
+     "success_rate": 1.0,
+     "recall": 0.9605,
+     "precision": 0.9477,
+     "gotos": 114,
+     "labels": 54,
+     "native_warnings": 2030,
+     "wall_seconds": 54.7
+    },
+    "frozen": {
+     "sampled": 851,
+     "decompiled": 851,
+     "success_rate": 1.0,
+     "recall": 0.9605,
+     "precision": 0.8982,
+     "gotos": 183,
+     "labels": 81
+    }
+   },
+   "psp-pac-man-rally": {
+    "summary": {
+     "sampled": 862,
+     "decompiled": 862,
+     "success_rate": 1.0,
+     "recall": 0.9074,
+     "precision": 0.928,
+     "gotos": 61,
+     "labels": 28,
+     "native_warnings": 1839,
+     "wall_seconds": 266.4
+    },
+    "frozen": {
+     "sampled": 862,
+     "decompiled": 862,
+     "success_rate": 1.0,
+     "recall": 0.9072,
+     "precision": 0.9035,
+     "gotos": 73,
+     "labels": 36
+    }
+   },
+   "psp-psp-camera-01": {
+    "summary": {
+     "sampled": 938,
+     "decompiled": 938,
+     "success_rate": 1.0,
+     "recall": 0.9597,
+     "precision": 0.9585,
+     "gotos": 48,
+     "labels": 22,
+     "native_warnings": 2049,
+     "wall_seconds": 86.4
+    },
+    "frozen": {
+     "sampled": 938,
+     "decompiled": 938,
+     "success_rate": 1.0,
+     "recall": 0.9457,
+     "precision": 0.96,
+     "gotos": 61,
+     "labels": 21
+    }
+   },
+   "psp-tetris": {
+    "summary": {
+     "sampled": 939,
+     "decompiled": 939,
+     "success_rate": 1.0,
+     "recall": 0.9876,
+     "precision": 0.9671,
+     "gotos": 105,
+     "labels": 65,
+     "native_warnings": 1467,
+     "wall_seconds": 107.2
+    },
+    "frozen": {
+     "sampled": 935,
+     "decompiled": 935,
+     "success_rate": 1.0,
+     "recall": 0.9385,
+     "precision": 0.971,
+     "gotos": 114,
+     "labels": 66
+    }
+   }
+  }
+ },
+ "psp_n200": {
+  "psp-hot-pixel": {
+   "recall": 0.8884,
+   "precision": 0.9057,
+   "ps2precision": [
+    0.8884,
+    0.9057
+   ],
+   "success_rate": 0.9974
+  },
+  "psp-melodie": {
+   "recall": 0.9605,
+   "precision": 0.9477,
+   "ps2precision": [
+    0.9605,
+    0.9477
+   ],
+   "success_rate": 1.0
+  },
+  "psp-pac-man-rally": {
+   "recall": 0.9074,
+   "precision": 0.928,
+   "ps2precision": [
+    0.9074,
+    0.928
+   ],
+   "success_rate": 1.0
+  },
+  "psp-psp-camera-01": {
+   "recall": 0.9597,
+   "precision": 0.9585,
+   "ps2precision": [
+    0.9597,
+    0.9585
+   ],
+   "success_rate": 1.0
+  },
+  "psp-tetris": {
+   "recall": 0.9876,
+   "precision": 0.9671,
+   "ps2precision": [
+    0.9876,
+    0.9671
+   ],
+   "success_rate": 1.0
+  }
+ },
+ "gp7003_effect": {
+  "gc-pikmin-2": {
+   "without": {
+    "decompiled": 986,
+    "success_rate": 1.0,
+    "gotos": 59,
+    "labels": 31,
+    "lines": 46430,
+    "native_warnings": 2628,
+    "text_warnings": 479,
+    "recall": 0.9998,
+    "precision": 0.9984
+   },
+   "with": {
+    "decompiled": 986,
+    "success_rate": 1.0,
+    "gotos": 59,
+    "labels": 31,
+    "lines": 46430,
+    "native_warnings": 2628,
+    "text_warnings": 479,
+    "recall": 0.9998,
+    "precision": 0.9984
+   }
+  },
+  "ps2-fatal-frame": {
+   "without": {
+    "decompiled": 942,
+    "success_rate": 1.0,
+    "gotos": 247,
+    "labels": 93,
+    "lines": 61387,
+    "native_warnings": 2969,
+    "text_warnings": 494,
+    "recall": 0.9958,
+    "precision": 0.9993
+   },
+   "with": {
+    "decompiled": 942,
+    "success_rate": 1.0,
+    "gotos": 247,
+    "labels": 93,
+    "lines": 61387,
+    "native_warnings": 2968,
+    "text_warnings": 494,
+    "recall": 0.9958,
+    "precision": 0.9993
+   }
+  },
+  "ps2-god-hand": {
+   "without": {
+    "decompiled": 980,
+    "success_rate": 1.0,
+    "gotos": 186,
+    "labels": 95,
+    "lines": 45366,
+    "native_warnings": 2063,
+    "text_warnings": 104,
+    "recall": 0.9976,
+    "precision": 0.9943
+   },
+   "with": {
+    "decompiled": 980,
+    "success_rate": 1.0,
+    "gotos": 186,
+    "labels": 95,
+    "lines": 45366,
+    "native_warnings": 2063,
+    "text_warnings": 104,
+    "recall": 0.9976,
+    "precision": 0.9943
+   }
+  },
+  "psp-hot-pixel": {
+   "without": {
+    "decompiled": 940,
+    "success_rate": 1.0,
+    "gotos": 614,
+    "labels": 312,
+    "lines": 65426,
+    "native_warnings": 2580,
+    "text_warnings": 1007,
+    "recall": 0.8884,
+    "precision": 0.9057
+   },
+   "with": {
+    "decompiled": 940,
+    "success_rate": 1.0,
+    "gotos": 614,
+    "labels": 312,
+    "lines": 65423,
+    "native_warnings": 2580,
+    "text_warnings": 1007,
+    "recall": 0.8884,
+    "precision": 0.9057
+   }
+  }
+ }
+}

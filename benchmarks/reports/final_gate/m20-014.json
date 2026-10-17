@@ -1,0 +1,21 @@
+{
+  "results": {
+    "valid": {
+      "outcome": "exact"
+    },
+    "relocations": {
+      "outcome": "exact",
+      "words_compared": 6
+    },
+    "dtk_parity": {
+      "outcome": "exact",
+      "relocation_lines": 4
+    },
+    "bad_offset": {
+      "outcome": "refused"
+    },
+    "truncated": {
+      "outcome": "refused"
+    }
+  }
+}

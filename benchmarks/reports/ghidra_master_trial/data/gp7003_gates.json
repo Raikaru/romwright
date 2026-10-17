@@ -1,0 +1,612 @@
+{
+ "base": "base",
+ "stored": {
+  "cp7003": {
+   "tables": [
+    3874,
+    3874
+   ],
+   "edges": [
+    35145,
+    35178
+   ],
+   "lost": {
+    "ps2-god-hand": [
+     "00147238",
+     "0037a9f8",
+     "003a9e10"
+    ]
+   },
+   "gained": {
+    "ps2-fatal-frame": [
+     "001caab4",
+     "001cab80"
+    ],
+    "ps2-god-hand": [
+     "0022cca8"
+    ]
+   },
+   "different": {
+    "ps2-god-hand": [
+     "0020f78c",
+     "00274828"
+    ]
+   },
+   "games": 12
+  },
+  "remguard": {
+   "tables": [
+    3874,
+    3874
+   ],
+   "edges": [
+    35145,
+    35183
+   ],
+   "lost": {
+    "ps2-god-hand": [
+     "00147238",
+     "0037a9f8",
+     "003a9e10"
+    ]
+   },
+   "gained": {
+    "ps2-fatal-frame": [
+     "001caab4",
+     "001cab80"
+    ],
+    "ps2-god-hand": [
+     "0022cca8"
+    ]
+   },
+   "different": {},
+   "games": 12
+  },
+  "cpfix": {
+   "tables": [
+    3874,
+    3877
+   ],
+   "edges": [
+    35145,
+    35196
+   ],
+   "lost": {},
+   "gained": {
+    "ps2-fatal-frame": [
+     "001caab4",
+     "001cab80"
+    ],
+    "ps2-god-hand": [
+     "0022cca8"
+    ]
+   },
+   "different": {},
+   "games": 12
+  }
+ },
+ "m21": {
+  "gba-pokeemerald": {
+   "identical": true,
+   "values": {
+    "base": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "invented": 43,
+     "sizes_compared": 15475,
+     "size_exact": 5748,
+     "size_short": 9727,
+     "size_long": 0
+    },
+    "cp7003": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "invented": 43,
+     "sizes_compared": 15475,
+     "size_exact": 5748,
+     "size_short": 9727,
+     "size_long": 0
+    },
+    "remguard": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "invented": 43,
+     "sizes_compared": 15475,
+     "size_exact": 5748,
+     "size_short": 9727,
+     "size_long": 0
+    },
+    "cpfix": {
+     "truth": 15856,
+     "found": 15520,
+     "recall": 0.9761,
+     "precision": 0.9972,
+     "invented": 43,
+     "sizes_compared": 15475,
+     "size_exact": 5748,
+     "size_short": 9727,
+     "size_long": 0
+    }
+   }
+  },
+  "nds-pokeheartgold-arm9": {
+   "identical": true,
+   "values": {
+    "base": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "invented": 17,
+     "sizes_compared": 10741,
+     "size_exact": 5156,
+     "size_short": 5584,
+     "size_long": 1
+    },
+    "cp7003": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "invented": 17,
+     "sizes_compared": 10741,
+     "size_exact": 5156,
+     "size_short": 5584,
+     "size_long": 1
+    },
+    "remguard": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "invented": 17,
+     "sizes_compared": 10741,
+     "size_exact": 5156,
+     "size_short": 5584,
+     "size_long": 1
+    },
+    "cpfix": {
+     "truth": 11078,
+     "found": 10801,
+     "recall": 0.9735,
+     "precision": 0.9984,
+     "invented": 17,
+     "sizes_compared": 10741,
+     "size_exact": 5156,
+     "size_short": 5584,
+     "size_long": 1
+    }
+   }
+  },
+  "ps2-capcom-fighting-evolution": {
+   "identical": true,
+   "values": {
+    "base": {
+     "truth": 8794,
+     "found": 8651,
+     "recall": 0.9762,
+     "precision": 0.9924,
+     "invented": 66,
+     "sizes_compared": 8585,
+     "size_exact": 8567,
+     "size_short": 8,
+     "size_long": 10
+    },
+    "cp7003": {
+     "truth": 8794,
+     "found": 8651,
+     "recall": 0.9762,
+     "precision": 0.9924,
+     "invented": 66,
+     "sizes_compared": 8585,
+     "size_exact": 8567,
+     "size_short": 8,
+     "size_long": 10
+    },
+    "remguard": {
+     "truth": 8794,
+     "found": 8651,
+     "recall": 0.9762,
+     "precision": 0.9924,
+     "invented": 66,
+     "sizes_compared": 8585,
+     "size_exact": 8567,
+     "size_short": 8,
+     "size_long": 10
+    },
+    "cpfix": {
+     "truth": 8794,
+     "found": 8651,
+     "recall": 0.9762,
+     "precision": 0.9924,
+     "invented": 66,
+     "sizes_compared": 8585,
+     "size_exact": 8567,
+     "size_short": 8,
+     "size_long": 10
+    }
+   }
+  },
+  "ps2-dungeon-game": {
+   "identical": true,
+   "values": {
+    "base": {
+     "truth": 783,
+     "found": 788,
+     "recall": 0.9885,
+     "precision": 0.9822,
+     "invented": 14,
+     "sizes_compared": 772,
+     "size_exact": 751,
+     "size_short": 10,
+     "size_long": 11
+    },
+    "cp7003": {
+     "truth": 783,
+     "found": 788,
+     "recall": 0.9885,
+     "precision": 0.9822,
+     "invented": 14,
+     "sizes_compared": 772,
+     "size_exact": 751,
+     "size_short": 10,
+     "size_long": 11
+    },
+    "remguard": {
+     "truth": 783,
+     "found": 788,
+     "recall": 0.9885,
+     "precision": 0.9822,
+     "invented": 14,
+     "sizes_compared": 772,
+     "size_exact": 751,
+     "size_short": 10,
+     "size_long": 11
+    },
+    "cpfix": {
+     "truth": 783,
+     "found": 788,
+     "recall": 0.9885,
+     "precision": 0.9822,
+     "invented": 14,
+     "sizes_compared": 772,
+     "size_exact": 751,
+     "size_short": 10,
+     "size_long": 11
+    }
+   }
+  },
+  "psx-darkstalkers-3": {
+   "identical": true,
+   "values": {
+    "base": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "invented": 1398,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    },
+    "cp7003": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "invented": 1398,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    },
+    "remguard": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "invented": 1398,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    },
+    "cpfix": {
+     "truth": 818,
+     "found": 2206,
+     "recall": 0.9878,
+     "precision": 0.3663,
+     "invented": 1398,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    }
+   }
+  },
+  "psv-need-for-speed-most-wanted": {
+   "identical": true,
+   "values": {
+    "base": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "invented": 746,
+     "sizes_compared": 25789,
+     "size_exact": 16304,
+     "size_short": 9479,
+     "size_long": 6
+    },
+    "cp7003": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "invented": 746,
+     "sizes_compared": 25789,
+     "size_exact": 16304,
+     "size_short": 9479,
+     "size_long": 6
+    },
+    "remguard": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "invented": 746,
+     "sizes_compared": 25789,
+     "size_exact": 16304,
+     "size_short": 9479,
+     "size_long": 6
+    },
+    "cpfix": {
+     "truth": 26495,
+     "found": 26535,
+     "recall": 0.9734,
+     "precision": 0.9719,
+     "invented": 746,
+     "sizes_compared": 25789,
+     "size_exact": 16304,
+     "size_short": 9479,
+     "size_long": 6
+    }
+   }
+  },
+  "x360-black-ops-2": {
+   "identical": true,
+   "values": {
+    "base": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "invented": 98,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    },
+    "cp7003": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "invented": 98,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    },
+    "remguard": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "invented": 98,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    },
+    "cpfix": {
+     "truth": 27730,
+     "found": 27364,
+     "recall": 0.9833,
+     "precision": 0.9964,
+     "invented": 98,
+     "sizes_compared": 0,
+     "size_exact": 0,
+     "size_short": 0,
+     "size_long": 0
+    }
+   }
+  }
+ },
+ "m22": {
+  "MWCC seed 20261010": {
+   "base": {
+    "exact": 45,
+    "compiled": 190,
+    "mean_percent": 74.725,
+    "best_exact": 46,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "mwcc"
+   },
+   "cp7003": {
+    "exact": 45,
+    "compiled": 190,
+    "mean_percent": 74.725,
+    "best_exact": 46,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "mwcc"
+   },
+   "remguard": {
+    "exact": 45,
+    "compiled": 190,
+    "mean_percent": 74.725,
+    "best_exact": 46,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "mwcc"
+   },
+   "cpfix": {
+    "exact": 45,
+    "compiled": 190,
+    "mean_percent": 74.725,
+    "best_exact": 46,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "mwcc"
+   }
+  },
+  "MWCC seed 20261011": {
+   "base": {
+    "exact": 45,
+    "compiled": 190,
+    "mean_percent": 76.361,
+    "best_exact": 45,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "mwcc"
+   },
+   "cp7003": {
+    "exact": 45,
+    "compiled": 190,
+    "mean_percent": 76.361,
+    "best_exact": 45,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "mwcc"
+   },
+   "remguard": {
+    "exact": 45,
+    "compiled": 190,
+    "mean_percent": 76.361,
+    "best_exact": 45,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "mwcc"
+   },
+   "cpfix": {
+    "exact": 45,
+    "compiled": 190,
+    "mean_percent": 76.361,
+    "best_exact": 45,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "mwcc"
+   }
+  },
+  "ee-gcc seed 20261010": {
+   "base": {
+    "exact": 94,
+    "compiled": 196,
+    "mean_percent": 84.558,
+    "best_exact": 98,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "eegcc"
+   },
+   "cp7003": {
+    "exact": 94,
+    "compiled": 196,
+    "mean_percent": 84.558,
+    "best_exact": 98,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "eegcc"
+   },
+   "remguard": {
+    "exact": 94,
+    "compiled": 196,
+    "mean_percent": 84.558,
+    "best_exact": 98,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "eegcc"
+   },
+   "cpfix": {
+    "exact": 94,
+    "compiled": 196,
+    "mean_percent": 84.558,
+    "best_exact": 98,
+    "better": 0,
+    "worse": 0,
+    "same": 200,
+    "exact_gained": [],
+    "exact_lost": [],
+    "compiler": "eegcc"
+   }
+  }
+ },
+ "datatests": {
+  "files": 84,
+  "builds": [
+   "pre",
+   "cp7003",
+   "remguard",
+   "cpfix",
+   "norem"
+  ],
+  "identical_in_every_build": 83,
+  "differing": {
+   "switchmask.xml": [
+    [
+     "pre"
+    ],
+    [
+     "cp7003",
+     "cpfix",
+     "remguard"
+    ],
+    [
+     "norem"
+    ]
+   ]
+  }
+ },
+ "md": "## Stored switch tables, whole games (each build imported the game itself)\n\nReference: `base`. Tables and edges are counted in the stored computed-jump xrefs.\n\n| build | tables (ref -> build) | edges (ref -> build) | tables only in ref | tables only in build | different targets |\n|---|---|---|---|---|---|\n| cp7003 | 3874 -> 3874 | 35145 -> 35178 | ps2-god-hand: 00147238 0037a9f8 003a9e10 | ps2-fatal-frame: 001caab4 001cab80; ps2-god-hand: 0022cca8 | ps2-god-hand: 0020f78c 00274828 |\n| remguard | 3874 -> 3874 | 35145 -> 35183 | ps2-god-hand: 00147238 0037a9f8 003a9e10 | ps2-fatal-frame: 001caab4 001cab80; ps2-god-hand: 0022cca8 | none |\n| cpfix | 3874 -> 3877 | 35145 -> 35196 | none | ps2-fatal-frame: 001caab4 001cab80; ps2-god-hand: 0022cca8 | none |\n\n## m21 function discovery (7 images)\n\nBuilds: base, cp7003, remguard, cpfix. Status: base pass, cp7003 pass, remguard pass, cpfix pass.\n\n| image | recall | precision | size exact | across builds |\n|---|---|---|---|---|\n| gba-pokeemerald | 0.9761 | 0.9972 | 5748 | identical in every build |\n| nds-pokeheartgold-arm9 | 0.9735 | 0.9984 | 5156 | identical in every build |\n| ps2-capcom-fighting-evolution | 0.9762 | 0.9924 | 8567 | identical in every build |\n| ps2-dungeon-game | 0.9885 | 0.9822 | 751 | identical in every build |\n| psx-darkstalkers-3 | 0.9878 | 0.3663 | 0 | identical in every build |\n| psv-need-for-speed-most-wanted | 0.9734 | 0.9719 | 16304 | identical in every build |\n| x360-black-ops-2 | 0.9833 | 0.9964 | 0 | identical in every build |\n\n## m22-002 (PS2 C match, 200 functions per run, context variant)\n\n| run | build | exact | compiled | mean percent | best exact | paired vs ref: better / worse / same | exact gained / lost |\n|---|---|---|---|---|---|---|---|\n| MWCC seed 20261010 | base | 45/200 | 190 | 74.725 | 46 | - | - |\n| MWCC seed 20261010 | cp7003 | 45/200 | 190 | 74.725 | 46 | 0 / 0 / 200 | 0 / 0 |\n| MWCC seed 20261010 | remguard | 45/200 | 190 | 74.725 | 46 | 0 / 0 / 200 | 0 / 0 |\n| MWCC seed 20261010 | cpfix | 45/200 | 190 | 74.725 | 46 | 0 / 0 / 200 | 0 / 0 |\n| MWCC seed 20261011 | base | 45/200 | 190 | 76.361 | 45 | - | - |\n| MWCC seed 20261011 | cp7003 | 45/200 | 190 | 76.361 | 45 | 0 / 0 / 200 | 0 / 0 |\n| MWCC seed 20261011 | remguard | 45/200 | 190 | 76.361 | 45 | 0 / 0 / 200 | 0 / 0 |\n| MWCC seed 20261011 | cpfix | 45/200 | 190 | 76.361 | 45 | 0 / 0 / 200 | 0 / 0 |\n| ee-gcc seed 20261010 | base | 94/200 | 196 | 84.558 | 98 | - | - |\n| ee-gcc seed 20261010 | cp7003 | 94/200 | 196 | 84.558 | 98 | 0 / 0 / 200 | 0 / 0 |\n| ee-gcc seed 20261010 | remguard | 94/200 | 196 | 84.558 | 98 | 0 / 0 / 200 | 0 / 0 |\n| ee-gcc seed 20261010 | cpfix | 94/200 | 196 | 84.558 | 98 | 0 / 0 / 200 | 0 / 0 |\n\n## Upstream decompiler datatests (decomp_opt `load test file` + `execute test command`)\n\n84 XML tests (12.1.3's `datatests` directory plus master's `switchmask.xml`), each decompiled by pre, cp7003, remguard, cpfix, norem; the printed C was compared. 83 tests print identical text in every build.\n\n- `switchmask.xml`: pre | cp7003+cpfix+remguard | norem\n"
+}

@@ -1,0 +1,91 @@
+{
+  "benchmark": "wave_text_diff",
+  "date": "2026-10-14",
+  "bin": "/home/raikaru/runs/Stage3/bin-f1",
+  "a_env": {},
+  "b_env": {
+    "ROMWRIGHT_NATIVE_MERGE": "1"
+  },
+  "totals": {
+    "compared": 7409,
+    "identical": 7409,
+    "different": 0,
+    "missing": 91,
+    "missing_a": 91,
+    "missing_b": 91
+  },
+  "images": {
+    "ps2-fatal-frame": {
+      "compared": 942,
+      "identical": 942,
+      "different": 0,
+      "missing": 0,
+      "missing_a": 0,
+      "missing_b": 0,
+      "differences": []
+    },
+    "ps2-ratchet-clank-pal": {
+      "compared": 858,
+      "identical": 858,
+      "different": 0,
+      "missing": 1,
+      "missing_a": 1,
+      "missing_b": 1,
+      "differences": []
+    },
+    "ps2-god-hand": {
+      "compared": 980,
+      "identical": 980,
+      "different": 0,
+      "missing": 0,
+      "missing_a": 0,
+      "missing_b": 0,
+      "differences": []
+    },
+    "ps2-digital-devil-saga": {
+      "compared": 977,
+      "identical": 977,
+      "different": 0,
+      "missing": 0,
+      "missing_a": 0,
+      "missing_b": 0,
+      "differences": []
+    },
+    "ps2-dark-chronicle": {
+      "compared": 969,
+      "identical": 969,
+      "different": 0,
+      "missing": 0,
+      "missing_a": 0,
+      "missing_b": 0,
+      "differences": []
+    },
+    "ps2-ratchet-clank": {
+      "compared": 860,
+      "identical": 860,
+      "different": 0,
+      "missing": 1,
+      "missing_a": 1,
+      "missing_b": 1,
+      "differences": []
+    },
+    "ps2-persona-4": {
+      "compared": 935,
+      "identical": 935,
+      "different": 0,
+      "missing": 40,
+      "missing_a": 40,
+      "missing_b": 40,
+      "differences": []
+    },
+    "ps2-dark-cloud": {
+      "compared": 888,
+      "identical": 888,
+      "different": 0,
+      "missing": 49,
+      "missing_a": 49,
+      "missing_b": 49,
+      "differences": []
+    }
+  }
+}

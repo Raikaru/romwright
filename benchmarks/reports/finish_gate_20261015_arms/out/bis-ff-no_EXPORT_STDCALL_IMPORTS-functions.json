@@ -1,0 +1,44 @@
+{
+ "schema": "m22-003-functions/1",
+ "lane": "ff",
+ "game": "ps2-fatal-frame",
+ "tag": "bis-no_EXPORT_STDCALL_IMPORTS",
+ "env": {},
+ "layers": [
+  "romwright"
+ ],
+ "seed": 20261012,
+ "n": 1,
+ "matched_count": 3436,
+ "functions": {
+  "0019c2f0": {
+   "name": "SettleGhostBattleSet",
+   "address": "0x19c2f0",
+   "size": 208,
+   "file": "src/ingame/entry/ap_sgost.c",
+   "compiler": "ee-gcc2.9-991111-01",
+   "layers": {
+    "romwright": {
+     "context": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.25
+     },
+     "standalone": {
+      "produced": true,
+      "compiled": false,
+      "exact": false,
+      "percent": 0.0
+     },
+     "best": {
+      "produced": true,
+      "compiled": true,
+      "exact": false,
+      "percent": 58.25
+     }
+    }
+   }
+  }
+ }
+}

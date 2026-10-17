@@ -1,0 +1,10879 @@
+{
+ "tag": "w4_default",
+ "fixture": "pc-quake2-game-msvc8",
+ "overall": {
+  "functions": 200,
+  "produced": 198,
+  "compiled": 195,
+  "exact": 35,
+  "mean_percent": 63.132,
+  "mean_percent_compiled": 64.751,
+  "percent_ge_90": 43
+ },
+ "classes": {
+  "bytes: length (candidate shorter), mostly x87": 58,
+  "bytes: length (candidate longer), mostly moves and arithmetic": 26,
+  "bytes: different instructions (same length)": 21,
+  "bytes: length (candidate longer), mostly x87": 19,
+  "bytes: length (candidate shorter), mostly moves and arithmetic": 15,
+  "bytes: length (candidate shorter), mostly stack and arithmetic": 10,
+  "bytes: few instructions differ in count": 4,
+  "bytes: length (candidate longer), mostly control flow and calls": 4,
+  "bytes: length (candidate longer), mostly stack and arithmetic": 2,
+  "not produced": 2,
+  "compile: conflicting / incompatible types": 2,
+  "compile: other": 1,
+  "bytes: length (candidate shorter), mostly control flow and calls": 1
+ },
+ "tags": {
+  "x87": 141,
+  "argument cleanup (`add esp`) differs": 43,
+  "call count differs": 29,
+  "security cookie": 17,
+  "rep string op": 10,
+  "mul/shift strength reduction": 7,
+  "float-to-int helper (`__ftol`) argument lost": 6
+ },
+ "functions": {
+  "10001080": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [
+      "push eax",
+      "mov eax, dword ptr [esp + 8]",
+      "mov ecx, dword ptr [eax + 0x14]",
+      "push ecx"
+     ],
+     "retail": [
+      "fld dword ptr [esp + 8]",
+      "sub esp, 8",
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [eax + 0x14]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10005c70": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "x87"
+   ],
+   "edits": 87,
+   "hunks": [
+    {
+     "cand": [
+      "push ebp",
+      "mov ebp, esp",
+      "and esp, 0xfffffff8"
+     ],
+     "retail": [
+      "fld dword ptr [esp + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [ebp + 8]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "call T",
+      "lea edi, [eax + 4]",
+      "mov dword ptr [esp + 0x10], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp]",
+      "lea ebx, [edi + 4]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push ebp",
+      "jmp T",
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x20]",
+      "push ecx",
+      "fld dword ptr [esi + 0xcc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fadd dword ptr [esi + 0xc0]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0x3f000000"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 0xd0]",
+      "fadd dword ptr [esi + 0xc4]",
+      "fstp dword ptr [esp + 0x2c]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x2c]",
+      "fld dword ptr [edi + 8]",
+      "fsub dword ptr [esp + 0x30]",
+      "fstp dword ptr [esp + 0x30]",
+      "fld dword ptr [edi + 0xc]",
+      "fsub dword ptr [esp + 0x34]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [ebp + 8]",
+      "fcomp qword ptr [0]"
+     ],
+     "retail": [
+      "fldz ",
+      "fcomp dword ptr [esp + 0x34]"
+     ]
+    },
+    {
+     "cand": [
+      "jne T",
+      "mov ecx, dword ptr [esp + 0x10]"
+     ],
+     "retail": [
+      "jp T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fsub dword ptr [edi + 8]",
+      "fstp dword ptr [esp + 0x28]",
+      "fld dword ptr [esi + 0xc]",
+      "fsub dword ptr [edi + 0xc]",
+      "fstp dword ptr [esp + 0x2c]",
+      "fld dword ptr [esp + 0x34]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10005f60": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 5,
+   "hunks": [
+    {
+     "cand": [
+      "xor ecx, ecx"
+     ],
+     "retail": [
+      "fldz ",
+      "fst dword ptr [eax + 0x18c]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0x188], ecx",
+      "mov dword ptr [eax + 0x184], ecx"
+     ],
+     "retail": [
+      "fst dword ptr [eax + 0x188]",
+      "fstp dword ptr [eax + 0x184]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100061e0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "float-to-int helper (`__ftol`) argument lost",
+    "x87"
+   ],
+   "edits": 55,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "push ecx",
+      "push esi",
+      "mov esi, dword ptr [esp + 0xc]"
+     ]
+    },
+    {
+     "cand": [
+      "sub esp, 0xc",
+      "push esi",
+      "call T",
+      "mov esi, eax",
+      "mov eax, dword ptr [esi + 0x40]",
+      "mov dword ptr [esi + 0x64], eax"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0x64]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esi + 0x6c]",
+      "mov dword ptr [esi + 0x60], ecx"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 0x6c]",
+      "fstp dword ptr [esi + 0x60]"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 0xc"
+     ],
+     "retail": [
+      "pop ecx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [esi + 0x40]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fxch st(1)"
+     ]
+    },
+    {
+     "cand": [
+      "fsubr dword ptr [esi + 0x6c]"
+     ],
+     "retail": [
+      "fxch st(1)",
+      "fstp dword ptr [esp + 4]",
+      "fsub dword ptr [esp + 4]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 0x14]",
+      "fld dword ptr [esi + 0x3c]",
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [esi + 0x44]",
+      "fstp dword ptr [esp + 0xc]",
+      "fld dword ptr [esi + 0x3c]",
+      "fstp dword ptr [esp + 8]",
+      "call T",
+      "fld qword ptr [0]",
+      "fsub st(1), st(0)",
+      "fld dword ptr [esp + 4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0xc]",
+      "fld dword ptr [esi + 0x6c]",
+      "fmul qword ptr [0]",
+      "fld dword ptr [esp + 0xc]",
+      "fld qword ptr [0]",
+      "fmul st(1), st(0)",
+      "fxch st(2)"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fsubp st(1)",
+      "call T",
+      "fld qword ptr [0]",
+      "fsub st(1), st(0)",
+      "fmul dword ptr [esp + 0xc]"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 0xc"
+     ],
+     "retail": [
+      "pop ecx"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100064f0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [
+      "push 0",
+      "push 0x40400000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fldz ",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10007760": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [
+      "push 0",
+      "push 0x40400000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fldz ",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100085e0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 110,
+   "hunks": [
+    {
+     "cand": [
+      "xor ecx, ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0x18]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0x14]",
+      "fst dword ptr [esi + 0x10]",
+      "lea ebp, [esi + 0x10]",
+      "fst dword ptr [esi + 0x15c]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0x158]"
+     ]
+    },
+    {
+     "cand": [
+      "lea edi, [esi + 0x154]",
+      "mov dword ptr [esi + 0x18], ecx",
+      "mov dword ptr [esi + 0x14], ecx",
+      "mov dword ptr [ebp], ecx",
+      "mov dword ptr [esi + 0x15c], ecx",
+      "mov dword ptr [esi + 0x158], ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld1 "
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x15c], 0x3f800000"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0x15c]"
+     ]
+    },
+    {
+     "cand": [
+      "jge T",
+      "fld1 "
+     ],
+     "retail": [
+      "jns T"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x158], 0x3f800000"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0x158]"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [0], ecx"
+     ],
+     "retail": [
+      "cmp dword ptr [0], 0"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [ebp]",
+      "mov ecx, dword ptr [esi + 0x18]",
+      "mov eax, dword ptr [esi + 0x14]"
+     ],
+     "retail": [
+      "fld dword ptr [ebp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esi + 0x160]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1000a4d0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 22,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 "
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 0"
+     ],
+     "retail": [
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]",
+      "push 0"
+     ]
+    },
+    {
+     "cand": [
+      "lea ecx, [eax - 0x10062040]"
+     ],
+     "retail": [
+      "mov ecx, eax",
+      "sub ecx, 0"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 0"
+     ],
+     "retail": [
+      "fldz ",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0x3f800000",
+      "push 0x3f800000",
+      "push eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1000c730": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 30,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [ecx + 0xc4]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x1c]",
+      "fld dword ptr [esp + 0x1c]"
+     ]
+    },
+    {
+     "cand": [
+      "jmp T",
+      "xor ecx, ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "xor ecx, ecx",
+      "jmp T"
+     ]
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [ecx + 8]",
+      "fsub dword ptr [esi + 8]",
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [ecx + 0xc]",
+      "fsub dword ptr [esi + 0xc]",
+      "fstp dword ptr [esp + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1000cbf0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 12,
+   "hunks": [
+    {
+     "cand": [
+      "mov ecx, dword ptr [eax + 4]",
+      "mov edx, dword ptr [eax + 8]",
+      "push esi",
+      "mov esi, dword ptr [eax + 0xc]",
+      "mov dword ptr [eax + 0xdc], esi",
+      "mov dword ptr [eax + 0xe8], esi",
+      "mov dword ptr [eax + 0xd4], ecx",
+      "mov dword ptr [eax + 0xd8], edx",
+      "mov dword ptr [eax + 0xe0], ecx",
+      "mov dword ptr [eax + 0xe4], edx",
+      "pop esi"
+     ],
+     "retail": [
+      "fld dword ptr [eax + 4]",
+      "fstp dword ptr [eax + 0xd4]",
+      "fld dword ptr [eax + 8]",
+      "fstp dword ptr [eax + 0xd8]",
+      "fld dword ptr [eax + 0xc]",
+      "fstp dword ptr [eax + 0xdc]",
+      "fld dword ptr [eax + 4]",
+      "fstp dword ptr [eax + 0xe0]",
+      "fld dword ptr [eax + 8]",
+      "fstp dword ptr [eax + 0xe4]",
+      "fld dword ptr [eax + 0xc]",
+      "fstp dword ptr [eax + 0xe8]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1000d460": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 28,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fild dword ptr [eax + 0x190]",
+      "push ecx",
+      "fidiv dword ptr [esi + 0x190]",
+      "fstp dword ptr [esp + 0x1c]"
+     ]
+    },
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "fsub dword ptr [eax + 4]",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [esi + 8]",
+      "fsub dword ptr [eax + 8]",
+      "fstp dword ptr [esp + 0xc]",
+      "fld dword ptr [esi + 0xc]"
+     ]
+    },
+    {
+     "cand": [
+      "fild dword ptr [ecx + 0x190]",
+      "fidiv dword ptr [esi + 0x190]"
+     ],
+     "retail": [
+      "fld dword ptr [esp + 0x1c]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 0x18]",
+      "fld dword ptr [esp + 0x18]",
+      "add esp, 4"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1000eb20": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 19,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 0xc2800000",
+      "mov dword ptr [esi + 0xbc], eax",
+      "mov dword ptr [esi + 0xc0], eax",
+      "xor eax, eax",
+      "mov dword ptr [esi + 0x104], eax",
+      "mov dword ptr [esi + 0xc4], eax",
+      "mov eax, 0x42800000"
+     ],
+     "retail": [
+      "fst dword ptr [esi + 0xbc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esi + 0xc0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc8], eax",
+      "mov dword ptr [esi + 0xcc], eax"
+     ],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esi + 0xc4]",
+      "fld dword ptr [0]",
+      "fst dword ptr [esi + 0xc8]",
+      "fstp dword ptr [esi + 0xcc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esi + 0xd0]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1000f530": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 41,
+   "hunks": [
+    {
+     "cand": [
+      "mov ecx, 0xc2000000"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fst dword ptr [esi + 0xbc]",
+      "push esi",
+      "fstp dword ptr [esi + 0xc0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 0x42000000",
+      "push esi",
+      "mov dword ptr [esi + 0xbc], ecx",
+      "mov dword ptr [esi + 0xc0], ecx"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc4], 0xc1c00000",
+      "mov dword ptr [esi + 0xc8], eax",
+      "mov dword ptr [esi + 0xcc], eax",
+      "mov dword ptr [esi + 0xd0], 0xc1800000"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0xc4]",
+      "fld dword ptr [0]",
+      "fst dword ptr [esi + 0xc8]",
+      "fstp dword ptr [esi + 0xcc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esi + 0xd0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esi + 4]"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 4]",
+      "fstp dword ptr [eax + 4]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [esi + 8]",
+      "mov dword ptr [eax + 8], edx",
+      "mov ecx, dword ptr [esi + 0xc]",
+      "mov dword ptr [eax + 0xc], ecx",
+      "mov ecx, 0xc1000000",
+      "mov dword ptr [eax + 0xbc], ecx",
+      "mov dword ptr [eax + 0xc0], ecx",
+      "mov ecx, 0x41000000",
+      "mov dword ptr [eax + 0xc4], ecx",
+      "mov dword ptr [eax + 0xc8], ecx",
+      "mov dword ptr [eax + 0xcc], ecx",
+      "mov dword ptr [eax + 0xd0], 0x41c00000"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 8]",
+      "fstp dword ptr [eax + 8]",
+      "fld dword ptr [esi + 0xc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [eax + 0xc]",
+      "fld dword ptr [0]",
+      "fst dword ptr [eax + 0xbc]",
+      "fstp dword ptr [eax + 0xc0]",
+      "fld dword ptr [0]",
+      "fst dword ptr [eax + 0xc4]",
+      "fst dword ptr [eax + 0xc8]",
+      "fstp dword ptr [eax + 0xcc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 0xd0]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100148f0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100167a0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 61,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x34], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [esi + 0x268]"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 0x268]",
+      "add esp, 0x10"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esi + 0x26c]"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 0x26c]",
+      "add esp, 0x10"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, ecx",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [esi + 0x270]"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 0x270]",
+      "add esp, 0x10"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, ecx",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [0]",
+      "fmul dword ptr [ecx + 0x14]"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0x43160000"
+     ],
+     "retail": [
+      "push ecx",
+      "mov ecx, dword ptr [0]",
+      "fstp dword ptr [esp]",
+      "fmul dword ptr [ecx + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fldz ",
+      "add esp, 0x10",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10017170": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 55,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 0x10]",
+      "fstp dword ptr [esi + 0x10]",
+      "fld dword ptr [eax + 0x14]",
+      "fstp dword ptr [esi + 0x14]",
+      "fld dword ptr [eax + 0x18]",
+      "fstp dword ptr [esi + 0x18]",
+      "fld dword ptr [eax + 4]",
+      "fsub dword ptr [esi + 4]",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [eax + 8]",
+      "lea eax, [esp + 8]",
+      "fsub dword ptr [esi + 8]",
+      "push eax",
+      "fstp dword ptr [esp + 0x10]",
+      "fldz ",
+      "fstp dword ptr [esp + 0x14]",
+      "call T",
+      "fstp dword ptr [esi + 0x268]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x10], ecx",
+      "mov edx, dword ptr [eax + 0x14]",
+      "mov dword ptr [esi + 0x14], edx",
+      "mov ecx, dword ptr [eax + 0x18]",
+      "mov dword ptr [esi + 0x18], ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 0x14]",
+      "call T",
+      "mov dword ptr [esp + 0xc], eax",
+      "fild dword ptr [esp + 0xc]",
+      "mov eax, dword ptr [esi + 0x144]"
+     ],
+     "retail": [
+      "mov edx, ecx",
+      "push edx"
+     ]
+    },
+    {
+     "cand": [
+      "lea eax, [esp + 0x14]",
+      "push eax",
+      "mov ecx, eax",
+      "push ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea ebx, [ebx]"
+     ]
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001a550": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 14,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, 0xc1800000"
+     ],
+     "retail": [
+      "fst dword ptr [eax + 0xbc]",
+      "fstp dword ptr [eax + 0xc0]",
+      "mov dword ptr [eax + 0x104], 7",
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0xc0], ecx",
+      "mov ecx, 0x41800000",
+      "mov dword ptr [eax + 0x104], 7",
+      "mov dword ptr [eax + 0xc4], 0xc1c00000",
+      "mov dword ptr [eax + 0xc8], ecx",
+      "mov dword ptr [eax + 0xcc], ecx",
+      "mov dword ptr [eax + 0xd0], 0xc1000000",
+      "mov dword ptr [eax + 0x1ac], 0"
+     ],
+     "retail": [
+      "fstp dword ptr [eax + 0xc4]",
+      "fld dword ptr [0]",
+      "fst dword ptr [eax + 0xc8]",
+      "fstp dword ptr [eax + 0xcc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 0xd0]",
+      "fldz ",
+      "fstp dword ptr [eax + 0x1ac]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001ad00": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001b030": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 19,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "jmp T",
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "jle T"
+     ],
+     "retail": [
+      "jl T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001b310": {
+   "tags": [
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 119,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x20], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x2c]",
+      "fld dword ptr [eax + 8]",
+      "fstp dword ptr [esp + 0x30]",
+      "fild dword ptr [eax + 0x1fc]",
+      "fadd dword ptr [eax + 0xc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push eax",
+      "fstp dword ptr [esp + 0x38]",
+      "fld dword ptr [esp + 0x30]"
+     ]
+    },
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x3c]",
+      "fld dword ptr [esp + 0x34]",
+      "fsub dword ptr [esp + 0x4c]",
+      "fstp dword ptr [esp + 0x40]",
+      "fld dword ptr [esp + 0x38]",
+      "fsub dword ptr [esp + 0x50]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp st(0)"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x1c]",
+      "fld dword ptr [eax + 8]",
+      "fstp dword ptr [esp + 0x20]",
+      "fild dword ptr [eax + 0x1fc]",
+      "fadd dword ptr [eax + 0xc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push eax",
+      "fstp dword ptr [esp + 0x28]",
+      "fld dword ptr [esp + 0x20]"
+     ]
+    },
+    {
+     "cand": [
+      "push edx"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x2c]",
+      "fld dword ptr [esp + 0x24]",
+      "fsub dword ptr [esp + 0x3c]",
+      "fstp dword ptr [esp + 0x30]",
+      "fld dword ptr [esp + 0x28]",
+      "fsub dword ptr [esp + 0x40]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp st(0)"
+     ]
+    },
+    {
+     "cand": [
+      "fsub dword ptr [esp + 8]"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [eax + 8]",
+      "fstp dword ptr [esp + 0xc]",
+      "fild dword ptr [eax + 0x1fc]",
+      "fadd dword ptr [eax + 0xc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [esp + 0xc]",
+      "fsub dword ptr [esp + 0x24]",
+      "fstp dword ptr [esp + 0x18]",
+      "fld dword ptr [esp + 0x10]",
+      "fsub dword ptr [esp + 0x28]",
+      "fstp dword ptr [esp + 0x1c]",
+      "fld dword ptr [esp + 0x14]",
+      "fsub dword ptr [esp + 0x2c]",
+      "fstp dword ptr [esp + 0x20]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp st(0)"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001b980": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 9,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fst dword ptr [esp + 8]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "xor eax, eax"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x200], 0",
+      "mov dword ptr [esi + 0x214], 0"
+     ],
+     "retail": [
+      "mov dword ptr [esi + 0x200], eax",
+      "mov dword ptr [esi + 0x214], eax"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001c2c0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 38,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x18], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 0x24"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push ecx"
+     ]
+    },
+    {
+     "cand": [
+      "push 0xbe4ccccd"
+     ],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, dword ptr [esi + 0x21c]",
+      "fild dword ptr [eax + 0x1fc]",
+      "lea ecx, [esp + 0x14]",
+      "push ecx",
+      "fadd dword ptr [esp + 0x2c]",
+      "fstp dword ptr [esp + 0x2c]"
+     ]
+    },
+    {
+     "cand": [
+      "lea eax, [esp + 0x38]",
+      "push eax"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x18]",
+      "fld dword ptr [esp + 0x28]",
+      "fsub dword ptr [esp + 0x34]",
+      "fstp dword ptr [esp + 0x1c]",
+      "fld dword ptr [esp + 0x2c]",
+      "fsub dword ptr [esp + 0x38]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp st(0)"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esp + 0x74]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "xor ecx, esp",
+      "call T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001cb00": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fst dword ptr [esp + 8]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001cb30": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fst dword ptr [esp + 8]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001cc60": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 50,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x20], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x28]",
+      "push ecx",
+      "fld dword ptr [eax + 8]",
+      "fstp dword ptr [esp + 0x30]",
+      "fild dword ptr [eax + 0x1fc]",
+      "fadd dword ptr [eax + 0xc]",
+      "fstp dword ptr [esp + 0x34]",
+      "fld dword ptr [esp + 0x2c]"
+     ]
+    },
+    {
+     "cand": [
+      "push edx"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x38]",
+      "fld dword ptr [esp + 0x30]",
+      "fsub dword ptr [esp + 0x48]",
+      "fstp dword ptr [esp + 0x3c]",
+      "fld dword ptr [esp + 0x34]",
+      "fsub dword ptr [esp + 0x4c]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fstp st(0)",
+      "fldz ",
+      "add esp, 0x1c",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0x43960000"
+     ],
+     "retail": [
+      "push ecx",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esp + 0x44]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "xor ecx, esp",
+      "call T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001da00": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 14,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, 0xc2000000",
+      "mov dword ptr [esi + 0xbc], eax",
+      "mov dword ptr [esi + 0xc0], eax",
+      "mov eax, 0x42000000"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fst dword ptr [esi + 0xbc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esi + 0xc0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc4], 0",
+      "mov dword ptr [esi + 0xc8], eax",
+      "mov dword ptr [esi + 0xcc], eax",
+      "mov dword ptr [esi + 0xd0], 0x42b40000"
+     ],
+     "retail": [
+      "fldz ",
+      "push esi",
+      "fstp dword ptr [esi + 0xc4]",
+      "fld dword ptr [0]",
+      "fst dword ptr [esi + 0xc8]",
+      "fstp dword ptr [esi + 0xcc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esi + 0xd0]"
+     ]
+    },
+    {
+     "cand": [
+      "push esi"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001db40": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x40000000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001de10": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 9,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "mov dword ptr [eax + 0x374], 0",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0x374], 0"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001ead0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001ec20": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001ef20": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 22,
+   "hunks": [
+    {
+     "cand": [
+      "sete cl",
+      "test eax, eax",
+      "jge T",
+      "add eax, -1"
+     ],
+     "retail": [
+      "jns T",
+      "dec eax"
+     ]
+    },
+    {
+     "cand": [
+      "cmp eax, -1",
+      "sete cl",
+      "test cl, cl",
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "inc eax",
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001f7e0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001fa70": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001fb10": {
+   "tags": [
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 43,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x20], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fsub dword ptr [esp + 0x34]",
+      "push edi",
+      "push 0x3e8",
+      "push 1",
+      "lea ecx, [esp + 0x44]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 8]",
+      "push 0x3e8",
+      "fstp dword ptr [esp + 0x40]",
+      "push 1",
+      "fild dword ptr [eax + 0x1fc]",
+      "lea ecx, [esp + 0x4c]",
+      "fadd dword ptr [eax + 0xc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x50]",
+      "push esi",
+      "fld dword ptr [esp + 0x4c]",
+      "fsub dword ptr [esp + 0x58]",
+      "fstp dword ptr [esp + 0x64]",
+      "fld dword ptr [esp + 0x50]",
+      "fsub dword ptr [esp + 0x5c]",
+      "fstp dword ptr [esp + 0x68]",
+      "fld dword ptr [esp + 0x54]",
+      "fsub dword ptr [esp + 0x60]",
+      "fstp dword ptr [esp + 0x6c]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esp + 0x6c]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "xor ecx, esp",
+      "call T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001fc00": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 17,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [esi + 0xbc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0xc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x18]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x14], 0x42a00000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0xc]",
+      "fld1 ",
+      "add esp, 4",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1001feb0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100200c0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x40000000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100203b0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 21,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]",
+      "fcom st(1)"
+     ],
+     "retail": [
+      "fcomp st(1)"
+     ]
+    },
+    {
+     "cand": [
+      "fstp st(1)"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jp T"
+     ],
+     "retail": [
+      "jne T"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "push eax",
+      "jmp T",
+      "mov ecx, dword ptr [0]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10020850": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10021b10": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 12,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 0xc1800000",
+      "mov dword ptr [esi + 0xbc], eax",
+      "mov dword ptr [esi + 0xc0], eax",
+      "mov eax, 0x41800000"
+     ],
+     "retail": [
+      "fst dword ptr [esi + 0xbc]",
+      "fstp dword ptr [esi + 0xc0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc4], 0xc1c00000",
+      "mov dword ptr [esi + 0xc8], eax",
+      "mov dword ptr [esi + 0xcc], eax",
+      "mov dword ptr [esi + 0xd0], 0xc1000000"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0xc4]",
+      "fld dword ptr [0]",
+      "fst dword ptr [esi + 0xc8]",
+      "fstp dword ptr [esi + 0xcc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esi + 0xd0]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10022360": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 25,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]",
+      "fcom st(1)"
+     ],
+     "retail": [
+      "fcomp st(1)"
+     ]
+    },
+    {
+     "cand": [
+      "fstp st(1)"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "je T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "and eax, 1",
+      "add eax, 1"
+     ]
+    },
+    {
+     "cand": [
+      "setg dl"
+     ],
+     "retail": [
+      "setge dl"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x40000000",
+      "and eax, 1",
+      "push 0x3f800000",
+      "add eax, 1"
+     ],
+     "retail": [
+      "fldz ",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 0x10"
+     ]
+    },
+    {
+     "cand": [
+      "add eax, -0x62"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "ja T"
+     ],
+     "retail": [
+      "jl T",
+      "cmp eax, 0x9f",
+      "jg T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10022e60": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 18,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "jmp T",
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "jmp T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100230f0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10024540": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 20,
+   "hunks": [
+    {
+     "cand": [
+      "push ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push edi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "je T",
+      "fld dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, dword ptr [esp + 0x14]",
+      "je T",
+      "push edi"
+     ],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [esi + 0x1a8]",
+      "push edi",
+      "push eax"
+     ],
+     "retail": [
+      "fld dword ptr [esp + 0x10]",
+      "sub esp, 8",
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [esi + 0x1a8]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "pop ebx"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100247b0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 13,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x40000000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "mov dword ptr [eax + 0x304], 0",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [ecx + 0x304], 0"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100252f0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x40000000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10025320": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x40000000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10025350": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x40000000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100258d0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 17,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "jmp T",
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10025bf0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 12,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz ",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0x40000000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld1 "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100267b0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 14,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, 0xc1800000"
+     ],
+     "retail": [
+      "fst dword ptr [eax + 0xbc]",
+      "fstp dword ptr [eax + 0xc0]",
+      "mov dword ptr [eax + 0x104], 7",
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0xc0], ecx",
+      "mov ecx, 0x41800000",
+      "mov dword ptr [eax + 0x104], 7",
+      "mov dword ptr [eax + 0xc4], 0xc1c00000",
+      "mov dword ptr [eax + 0xc8], ecx",
+      "mov dword ptr [eax + 0xcc], ecx",
+      "mov dword ptr [eax + 0xd0], 0xc1000000",
+      "mov dword ptr [eax + 0x1ac], 0"
+     ],
+     "retail": [
+      "fstp dword ptr [eax + 0xc4]",
+      "fld dword ptr [0]",
+      "fst dword ptr [eax + 0xc8]",
+      "fstp dword ptr [eax + 0xcc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 0xd0]",
+      "fldz ",
+      "fstp dword ptr [eax + 0x1ac]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "100273c0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 9,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "xor eax, eax"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x200], 0",
+      "mov dword ptr [esi + 0x214], 0"
+     ],
+     "retail": [
+      "mov dword ptr [esi + 0x200], eax",
+      "mov dword ptr [esi + 0x214], eax"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10027e40": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 16,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1002c140": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 53,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "sub esp, 8"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0xc], 0xffffffff"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x10]",
+      "fldz ",
+      "fld dword ptr [esp + 0x10]",
+      "fcom st(1)",
+      "mov dword ptr [esp + 0x10], 0",
+      "fnstsw ax",
+      "fstp st(1)",
+      "test ah, 5",
+      "jnp T",
+      "mov dword ptr [esp + 0x10], 1",
+      "fild dword ptr [esp + 0x10]",
+      "mov eax, dword ptr [0]",
+      "mov ecx, dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fabs ",
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [eax + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [esp]",
+      "fcom qword ptr [0]",
+      "fnstsw ax",
+      "test ah, 1",
+      "jne T",
+      "mov dword ptr [esp + 0xc], 1",
+      "fldz ",
+      "fcomp st(1)",
+      "fnstsw ax",
+      "test ah, 0x41",
+      "jne T",
+      "fchs ",
+      "fstp dword ptr [esp]",
+      "fld dword ptr [esp]",
+      "mov ecx, dword ptr [0]"
+     ],
+     "retail": [
+      "fld dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [0]"
+     ],
+     "retail": [
+      "fmul dword ptr [esp]",
+      "fdiv dword ptr [ecx + 0x14]",
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [esp + 4]"
+     ]
+    },
+    {
+     "cand": [
+      "fdiv dword ptr [ecx + 0x14]",
+      "fimul dword ptr [esp + 0xc]",
+      "pop ecx"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [esp + 0x10]",
+      "add esp, 8"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [esp]",
+      "fstp dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [
+      "fimul dword ptr [esp + 0xc]",
+      "pop ecx"
+     ],
+     "retail": [
+      "fmul dword ptr [esp + 0x10]",
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [esp + 0x10]",
+      "add esp, 8"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1002c6b0": {
+   "tags": [
+    "call count differs",
+    "x87"
+   ],
+   "edits": 152,
+   "hunks": [
+    {
+     "cand": [
+      "fld dword ptr [esp + 4]"
+     ],
+     "retail": [
+      "mov ecx, dword ptr [esp + 4]",
+      "fld qword ptr [0]",
+      "mov edx, dword ptr [ecx + 0x54]"
+     ]
+    },
+    {
+     "cand": [
+      "push esi",
+      "call T",
+      "fld qword ptr [0]",
+      "fld qword ptr [0]",
+      "mov ecx, eax",
+      "mov edx, dword ptr [ecx + 0x54]",
+      "xor esi, esi",
+      "cmp dword ptr [ecx + 0x1ec], esi"
+     ],
+     "retail": [
+      "add edx, 0x34",
+      "cmp dword ptr [ecx + 0x1ec], 0"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [edx + 0x3c], esi",
+      "mov dword ptr [edx + 0x38], esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [edx + 4]",
+      "fst dword ptr [edx]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0x24], 0x42200000"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 0x24]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [edx + 0x1c], 0xc1700000"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fstp dword ptr [edx + 0x1c]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 0xdec]",
+      "fstp dword ptr [eax + 0x20]",
+      "jmp T"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0x20], edx",
+      "jmp T",
+      "mov eax, edx"
+     ],
+     "retail": [
+      "fld dword ptr [eax + 0xdf4]",
+      "fstp dword ptr [edx]",
+      "mov eax, dword ptr [ecx + 0x54]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [eax + 0xdf8]",
+      "mov dword ptr [edx + 0x38], eax",
+      "mov eax, dword ptr [ecx + 0x54]",
+      "mov eax, dword ptr [eax + 0xdfc]",
+      "mov dword ptr [edx + 0x3c], eax"
+     ],
+     "retail": [
+      "fld dword ptr [eax + 0xdfc]",
+      "fstp dword ptr [edx + 8]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [esp + 4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0xe10], esi"
+     ],
+     "retail": [
+      "fst dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [eax + 0xe0c]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "1002e1f0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 29,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 0xc",
+      "fld dword ptr [eax]",
+      "fstp dword ptr [esp]",
+      "fld dword ptr [eax + 4]",
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [eax + 8]",
+      "mov eax, dword ptr [esp + 0x10]",
+      "mov eax, dword ptr [eax + 0x2cc]",
+      "fstp dword ptr [esp + 8]",
+      "cmp eax, 1",
+      "jne T",
+      "fld dword ptr [esp + 4]",
+      "fmul qword ptr [0]",
+      "jmp T",
+      "cmp eax, 2",
+      "jne T",
+      "fldz ",
+      "fstp dword ptr [esp + 4]",
+      "mov eax, dword ptr [esp + 0x18]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [esp]",
+      "mov ecx, dword ptr [eax]"
+     ],
+     "retail": [
+      "push edx"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 4], ecx",
+      "mov ecx, dword ptr [esp + 0x10]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10030650": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "float-to-int helper (`__ftol`) argument lost",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 149,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x30], eax",
+      "push ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add eax, 0xe00",
+      "push eax"
+     ]
+    },
+    {
+     "cand": [
+      "push 0xc0000000"
+     ],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "lea eax, [esp + 0x2c]"
+     ],
+     "retail": [
+      "fstp dword ptr [edx + 0xdf4]",
+      "mov eax, dword ptr [esi + 0x1fc]",
+      "sub eax, 8",
+      "mov dword ptr [esp + 0x64], eax",
+      "fild dword ptr [esp + 0x64]",
+      "mov eax, dword ptr [esi + 0x54]",
+      "mov eax, dword ptr [eax + 0x2cc]",
+      "add esp, 0xc",
+      "cmp eax, 1",
+      "fstp dword ptr [esp + 0x44]",
+      "fldz ",
+      "fst dword ptr [esp + 0x24]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 0x28]",
+      "fld dword ptr [esp + 0x44]",
+      "fstp dword ptr [esp + 0x2c]",
+      "jne T",
+      "fstp st(0)",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 0x28]",
+      "jmp T",
+      "cmp eax, 2",
+      "jne T",
+      "fstp dword ptr [esp + 0x28]",
+      "jmp T",
+      "fstp st(0)"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [edx + 0xdf4], 0xc0000000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x54], 0"
+     ],
+     "retail": [
+      "lea ebp, [esi + 4]",
+      "push ebp"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [ecx + 0xe34]"
+     ],
+     "retail": [
+      "fld dword ptr [eax + 0xe34]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x38]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 0xe38]",
+      "lea edx, [esp + 0x24]",
+      "fsub qword ptr [0]",
+      "push edx",
+      "fstp dword ptr [esp + 0x44]",
+      "fld dword ptr [eax + 0xe3c]"
+     ]
+    },
+    {
+     "cand": [
+      "lea ecx, [esp + 0x24]",
+      "push ecx",
+      "mov dword ptr [esp + 0x28], edx"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x4c]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10032070": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 16,
+   "hunks": [
+    {
+     "cand": [
+      "fld qword ptr [0]",
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fcomp qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "jne T",
+      "fstp st(0)"
+     ],
+     "retail": [
+      "jp T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fxch st(1)",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [esp + 8]",
+      "fxch st(1)"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [esp + 8]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp st(0)"
+     ],
+     "retail": [
+      "fld st(0)",
+      "fsubp st(2)"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [esp + 8]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly x87"
+  },
+  "10001810": {
+   "tags": [
+    "call count differs",
+    "rep string op",
+    "x87"
+   ],
+   "edits": 118,
+   "hunks": [
+    {
+     "cand": [
+      "mov ecx, dword ptr [esi + 4]"
+     ],
+     "retail": [
+      "fld dword ptr [ebp + 4]",
+      "push esi",
+      "fstp dword ptr [esp + 0x1c]",
+      "push edi",
+      "fld dword ptr [ebp + 8]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x10], ecx",
+      "mov edx, dword ptr [eax + 4]"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x28]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fild dword ptr [ebp + 0x1fc]",
+      "lea ecx, [esp + 0x28]",
+      "lea edx, [esp + 0x34]",
+      "fadd dword ptr [ebp + 0xc]",
+      "fstp dword ptr [esp + 0x30]",
+      "fld dword ptr [eax + 4]",
+      "fstp dword ptr [esp + 0x1c]",
+      "fld dword ptr [eax + 8]",
+      "fstp dword ptr [esp + 0x20]",
+      "fld dword ptr [eax + 0xc]",
+      "fstp dword ptr [esp + 0x24]",
+      "fild dword ptr [eax + 0x1fc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fadd dword ptr [esp + 0x2c]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push ecx",
+      "push edx",
+      "fstp dword ptr [esp + 0x38]",
+      "call dword ptr [0]",
+      "mov esi, eax",
+      "add esp, 0x1c",
+      "mov ecx, 0xe"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x24], edx",
+      "push ecx",
+      "lea edx, [esp + 0x2c]",
+      "push edx",
+      "call dword ptr [0]"
+     ],
+     "retail": [
+      "rep movsd dword ptr es:[edi], dword ptr [esi]"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 0x1c"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop edi",
+      "pop esi"
+     ]
+    },
+    {
+     "cand": [
+      "xor edx, edx",
+      "cmp dword ptr [esi + 0x330], edx"
+     ],
+     "retail": [
+      "mov edx, dword ptr [ebp + 0x330]",
+      "neg edx",
+      "sbb edx, edx",
+      "add edx, 4",
+      "mov dword ptr [ebp + 0x364], edx"
+     ]
+    },
+    {
+     "cand": [
+      "setne dl",
+      "sub eax, edx",
+      "mov dword ptr [esi + 0x364], eax",
+      "call T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "10005210": {
+   "tags": [
+    "rep string op",
+    "x87"
+   ],
+   "edits": 64,
+   "hunks": [
+    {
+     "cand": [
+      "push ebp"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push ebp"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov edx, 2"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [edi + 0x1ec], 2"
+     ],
+     "retail": [
+      "cmp dword ptr [ebx + 0x1ec], edx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "cmp dword ptr [ebp + 0x54], 0",
+      "je T"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax",
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push esi"
+     ]
+    },
+    {
+     "cand": [
+      "sub esi, eax",
+      "lea ecx, [ecx]",
+      "test edx, edx",
+      "je T",
+      "mov cl, byte ptr [eax]",
+      "sub edx, 1",
+      "cmp cl, byte ptr [esi + eax]",
+      "sete cl",
+      "add eax, 1",
+      "test cl, cl"
+     ],
+     "retail": [
+      "xor eax, eax",
+      "repe cmpsb byte ptr [esi], byte ptr es:[edi]",
+      "pop edi",
+      "pop esi"
+     ]
+    },
+    {
+     "cand": [
+      "jmp T",
+      "test cl, cl",
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "cmp eax, 2"
+     ],
+     "retail": [
+      "cmp eax, edx"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [edi + 0x1ec], 2"
+     ],
+     "retail": [
+      "cmp dword ptr [ebx + 0x1ec], edx"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "10005360": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "mul/shift strength reduction",
+    "x87"
+   ],
+   "edits": 136,
+   "hunks": [
+    {
+     "cand": [
+      "push ebx",
+      "mov ebx, dword ptr [esp + 0x24]",
+      "test ebx, ebx"
+     ],
+     "retail": [
+      "cmp dword ptr [esp + 0x30], 0"
+     ]
+    },
+    {
+     "cand": [
+      "pop ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push esi",
+      "mov esi, dword ptr [ebp + 0x54]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop esi",
+      "pop ebp"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push edi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push ebx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov dword ptr [esp + 0xc], eax"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov ebp, dword ptr [esp + 0x3c]",
+      "mov dword ptr [esp + 0xc], ecx"
+     ]
+    },
+    {
+     "cand": [
+      "test esi, esi"
+     ],
+     "retail": [
+      "cmp dword ptr [esp + 0xc], 0"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp st(0)",
+      "add esp, 0x14"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 0x14"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "10006170": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 25,
+   "hunks": [
+    {
+     "cand": [
+      "xor ecx, ecx"
+     ],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [eax + 0x18c]",
+      "mov ecx, dword ptr [esp + 8]",
+      "fst dword ptr [eax + 0x188]",
+      "fstp dword ptr [eax + 0x184]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0x188], ecx",
+      "mov dword ptr [eax + 0x184], ecx",
+      "mov ecx, dword ptr [esp + 8]",
+      "mov dword ptr [eax + 0x300], ecx",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "mov ecx, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "jmp T",
+      "mov ecx, eax"
+     ]
+    },
+    {
+     "cand": [
+      "je T",
+      "fld dword ptr [esp + 4]"
+     ],
+     "retail": [
+      "jne T",
+      "push eax",
+      "call T",
+      "add esp, 4",
+      "ret ",
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "push eax",
+      "call T",
+      "pop ecx",
+      "ret "
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000b2c0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "float-to-int helper (`__ftol`) argument lost",
+    "rep string op",
+    "x87"
+   ],
+   "edits": 123,
+   "hunks": [
+    {
+     "cand": [
+      "sub esp, 8"
+     ],
+     "retail": [
+      "push ebx"
+     ]
+    },
+    {
+     "cand": [
+      "mov cl, 1",
+      "sub edx, eax",
+      "test edi, edi"
+     ],
+     "retail": [
+      "xor eax, eax",
+      "repe cmpsb byte ptr [esi], byte ptr es:[edi]"
+     ]
+    },
+    {
+     "cand": [
+      "mov cl, byte ptr [eax]",
+      "sub edi, 1",
+      "cmp cl, byte ptr [edx + eax]",
+      "sete cl",
+      "add eax, 1",
+      "test cl, cl",
+      "jne T",
+      "jmp T",
+      "test cl, cl",
+      "jne T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x11c], 0"
+     ],
+     "retail": [
+      "mov dword ptr [ebx + 0x11c], eax"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov edx, dword ptr [ebx + 0x118]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [esi + 0x118]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fnstcw word ptr [esp + 0x18]",
+      "movzx eax, word ptr [esp + 0x18]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "or eax, 0xc00",
+      "mov dword ptr [esp + 0xc], eax",
+      "fldcw word ptr [esp + 0xc]",
+      "fistp qword ptr [esp + 0xc]",
+      "mov ecx, dword ptr [esp + 0xc]"
+     ],
+     "retail": [
+      "call T"
+     ]
+    },
+    {
+     "cand": [
+      "fldcw word ptr [esp + 0x18]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "je T"
+     ],
+     "retail": [
+      "jne T",
+      "push ebx",
+      "fstp st(0)",
+      "call T",
+      "add esp, 4",
+      "pop edi",
+      "pop esi",
+      "pop ebp",
+      "pop ebx",
+      "ret "
+     ]
+    },
+    {
+     "cand": [
+      "jne T",
+      "push esi",
+      "fstp st(0)",
+      "call T",
+      "add esp, 4",
+      "pop edi",
+      "pop esi",
+      "pop ebp",
+      "add esp, 8",
+      "ret "
+     ],
+     "retail": [
+      "je T"
+     ]
+    },
+    {
+     "cand": [
+      "mov cl, 1",
+      "sub edi, eax",
+      "test edx, edx"
+     ],
+     "retail": [
+      "xor edx, edx",
+      "repe cmpsb byte ptr [esi], byte ptr es:[edi]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000b710": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [
+      "mov ecx, dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jmp T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jmp T",
+      "lea ecx, [ecx]"
+     ],
+     "retail": [
+      "mov ecx, dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [0]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000bed0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 3,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000bf40": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 24,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x18], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "je T"
+     ]
+    },
+    {
+     "cand": [
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fldz ",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esp + 0x20]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "xor ecx, esp",
+      "call T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000c240": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 51,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz ",
+      "mov eax, dword ptr [esp + 8]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x10], eax",
+      "mov eax, dword ptr [esp + 0x1c]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0xc4]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0xc0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0xbc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0xd0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0xcc]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc0], edi",
+      "mov dword ptr [esi + 0xbc], edi",
+      "mov dword ptr [esi + 0xd0], edi",
+      "mov dword ptr [esi + 0xcc], edi",
+      "mov dword ptr [esi + 0x3c], edi",
+      "mov dword ptr [esi + 0xc8], edi"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0xc8]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, 0x3f000000"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, 0x3f800000"
+     ],
+     "retail": [
+      "fld1 "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x18]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [esp + 0x20]",
+      "add esp, 8"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000ee00": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 10,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": [
+      "push esi"
+     ]
+    },
+    {
+     "cand": [
+      "push esi"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000ef30": {
+   "tags": [],
+   "edits": 39,
+   "hunks": [
+    {
+     "cand": [
+      "push ebp",
+      "push esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push edi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub eax, edx",
+      "mov edi, eax"
+     ]
+    },
+    {
+     "cand": [
+      "mov ebx, esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "sub ebx, ebp"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "mov dword ptr [ecx + 0x38], 0xc"
+     ],
+     "retail": [
+      "jle T",
+      "mov dword ptr [eax + 0x38], edx"
+     ]
+    },
+    {
+     "cand": [
+      "cmp bl, dl",
+      "jae T"
+     ],
+     "retail": [
+      "cmp bl, 9",
+      "ja T"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [ecx + 0x38], edx"
+     ],
+     "retail": [
+      "mov dword ptr [eax + 0x38], 0xa"
+     ]
+    },
+    {
+     "cand": [
+      "pop ebp"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000f130": {
+   "tags": [
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 20,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 8], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, esi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, esi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fild dword ptr [esi + 0x1e0]"
+     ]
+    },
+    {
+     "cand": [
+      "fild dword ptr [esi + 0x1e0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "je T"
+     ],
+     "retail": [
+      "jnp T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, esi"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esp + 0xc]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "xor ecx, esp",
+      "call T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1000f3e0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 120,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "push esi",
+      "mov esi, dword ptr [esp + 0xc]",
+      "cmp dword ptr [esi + 0x54], 0",
+      "je T"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [esi + 0x54], 0",
+      "lea ebp, [esi + 0x54]",
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [eax + 0x128]",
+      "push edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "call dword ptr [0]",
+      "fld dword ptr [ebx + 4]",
+      "fstp dword ptr [esi + 4]",
+      "mov edx, dword ptr [esi + 0x54]",
+      "fld dword ptr [ebx + 8]",
+      "mov ecx, 0x14",
+      "fstp dword ptr [esi + 8]",
+      "add esp, 4",
+      "fld dword ptr [ebx + 0xc]",
+      "mov dword ptr [esp + 0x14], ecx",
+      "fstp dword ptr [esi + 0xc]"
+     ]
+    },
+    {
+     "cand": [
+      "call dword ptr [0]"
+     ],
+     "retail": [
+      "fld dword ptr [ebx + 4]",
+      "fstp dword ptr [esi + 0x1c]",
+      "fld dword ptr [ebx + 8]",
+      "fstp dword ptr [esi + 0x20]",
+      "fld dword ptr [ebx + 0xc]",
+      "fstp dword ptr [esi + 0x24]",
+      "fld dword ptr [esi + 0xc]",
+      "fadd qword ptr [0]",
+      "fstp dword ptr [esi + 0xc]",
+      "fldz ",
+      "fst dword ptr [esi + 0x180]",
+      "fst dword ptr [esi + 0x17c]",
+      "fst dword ptr [esi + 0x178]",
+      "fld qword ptr [0]",
+      "mov byte ptr [edx + 0x11], cl"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [ebp]",
+      "mov dword ptr [esi + 4], edx",
+      "mov ecx, dword ptr [edi + 8]",
+      "mov dword ptr [esi + 8], ecx",
+      "mov ecx, dword ptr [edi + 0xc]",
+      "mov dword ptr [esi + 0xc], ecx",
+      "fld dword ptr [esi + 0xc]",
+      "mov ecx, dword ptr [edi + 4]",
+      "fadd qword ptr [0]",
+      "mov dword ptr [esi + 0x1c], ecx",
+      "mov ecx, dword ptr [edi + 8]",
+      "mov dword ptr [esi + 0x20], ecx",
+      "mov ecx, dword ptr [edi + 0xc]",
+      "fstp dword ptr [esi + 0xc]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x24], ecx",
+      "fld qword ptr [0]",
+      "xor ecx, ecx",
+      "mov edx, 0x14",
+      "mov dword ptr [esi + 0x180], ecx",
+      "mov dword ptr [esi + 0x17c], ecx",
+      "mov dword ptr [esi + 0x178], ecx",
+      "mov byte ptr [eax + 0x11], dl",
+      "mov eax, dword ptr [ebp]",
+      "add eax, 0x10",
+      "mov dword ptr [esp + 0x1c], edx",
+      "mov edx, dword ptr [esp + 0x18]",
+      "add esp, 4",
+      "or byte ptr [eax], 0x20"
+     ],
+     "retail": [
+      "or byte ptr [eax + 0x10], 0x20"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [ebp]"
+     ],
+     "retail": [
+      "mov ebp, dword ptr [esi + 0x54]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [ebp]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [ebp]"
+     ],
+     "retail": [
+      "mov eax, dword ptr [esi + 0x54]"
+     ]
+    },
+    {
+     "cand": [
+      "xor eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x18], eax",
+      "mov dword ptr [esi + 0x14], eax",
+      "mov dword ptr [esi + 0x10], eax",
+      "mov dword ptr [edx + 0x24], eax",
+      "mov ecx, dword ptr [ebp]",
+      "mov dword ptr [ecx + 0x20], eax",
+      "mov edx, dword ptr [ebp]",
+      "mov dword ptr [edx + 0x1c], eax",
+      "mov ecx, dword ptr [ebp]",
+      "mov dword ptr [ecx + 0xe3c], eax",
+      "mov edx, dword ptr [ebp]",
+      "mov dword ptr [edx + 0xe38], eax",
+      "mov ecx, dword ptr [ebp]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "10010500": {
+   "tags": [
+    "rep string op",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 157,
+   "hunks": [
+    {
+     "cand": [
+      "cmp dword ptr [esi + 0x1e0], 0",
+      "mov byte ptr [esp + 7], 0"
+     ],
+     "retail": [
+      "push ebp",
+      "xor ebp, ebp",
+      "cmp dword ptr [ebx + 0x1e0], ebp"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax",
+      "push ebx"
+     ],
+     "retail": [
+      "cmp eax, ebp"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "xor bl, bl"
+     ],
+     "retail": [
+      "push ebp",
+      "mov dword ptr [esp + 0x2c], ebp"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": [
+      "cmp eax, ebp"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "jmp T",
+      "lea esp, [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "xor edx, edx",
+      "repe cmpsb byte ptr [esi], byte ptr es:[edi]",
+      "jne T",
+      "mov ecx, dword ptr [ebx + 0x128]",
+      "mov dword ptr [ebx + 0x140], ecx"
+     ]
+    },
+    {
+     "cand": [
+      "sub edi, ecx",
+      "test ebp, ebp",
+      "je T",
+      "mov dl, byte ptr [ecx]",
+      "sub ebp, 1",
+      "cmp dl, byte ptr [edi + ecx]",
+      "sete dl",
+      "add ecx, 1",
+      "test dl, dl",
+      "jne T",
+      "mov bl, 1"
+     ],
+     "retail": [
+      "jmp T",
+      "mov dword ptr [esp + 0x20], 1"
+     ]
+    },
+    {
+     "cand": [
+      "test bl, bl"
+     ],
+     "retail": [
+      "cmp dword ptr [esp + 0x20], eax"
+     ]
+    },
+    {
+     "cand": [
+      "cmp byte ptr [esp + 0x13], 0"
+     ],
+     "retail": [
+      "test ebp, ebp"
+     ]
+    },
+    {
+     "cand": [
+      "mov cl, 1",
+      "mov eax, ebx",
+      "sub edx, ebx",
+      "test ebp, ebp"
+     ],
+     "retail": [
+      "xor edx, edx",
+      "repe cmpsb byte ptr [esi], byte ptr es:[edi]"
+     ]
+    },
+    {
+     "cand": [
+      "mov cl, byte ptr [eax]",
+      "sub ebp, 1",
+      "cmp cl, byte ptr [edx + eax]",
+      "sete cl",
+      "add eax, 1",
+      "test cl, cl",
+      "jne T",
+      "jmp T",
+      "test dl, dl",
+      "je T",
+      "mov ecx, dword ptr [esi + 0x128]",
+      "mov dword ptr [esi + 0x140], ecx",
+      "mov byte ptr [esp + 0x13], 1",
+      "jmp T",
+      "test cl, cl",
+      "jne T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push eax"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "10013070": {
+   "tags": [
+    "rep string op",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 80,
+   "hunks": [
+    {
+     "cand": [
+      "push ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "xor ebx, ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "cmp ebp, ebx"
+     ],
+     "retail": [
+      "test ebx, ebx"
+     ]
+    },
+    {
+     "cand": [
+      "push ebx"
+     ],
+     "retail": [
+      "push 0"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [0], eax",
+      "jg T"
+     ],
+     "retail": [
+      "cmp eax, dword ptr [0]",
+      "jl T"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [0], ebx"
+     ],
+     "retail": [
+      "cmp dword ptr [0], 0"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [esi], ebx"
+     ],
+     "retail": [
+      "cmp dword ptr [esi], 0"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "xor eax, eax",
+      "mov dword ptr [edi + 0x60], eax"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [edi + 0x60], ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "jmp T",
+      "lea esp, [esp]",
+      "jmp T",
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, ecx"
+     ],
+     "retail": [
+      "lea eax, [ecx + 1]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [ecx + edx + 0x3d0], eax"
+     ],
+     "retail": [
+      "add ecx, edx"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "100176a0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 10,
+   "hunks": [
+    {
+     "cand": [
+      "mov edx, dword ptr [esp + 4]"
+     ],
+     "retail": [
+      "fld dword ptr [esp + 4]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea eax, [eax*4]",
+      "fstp dword ptr [eax]"
+     ]
+    },
+    {
+     "cand": [
+      "add eax, eax",
+      "add eax, eax"
+     ],
+     "retail": [
+      "fld dword ptr [esp + 8]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax], edx",
+      "mov edx, dword ptr [esp + 0xc]"
+     ],
+     "retail": [
+      "fstp dword ptr [eax + 4]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esp + 8]",
+      "mov dword ptr [eax + 0x100747ac], ecx",
+      "mov dword ptr [eax + 0x100747b0], edx"
+     ],
+     "retail": [
+      "fld dword ptr [esp + 0xc]",
+      "fstp dword ptr [eax + 8]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "100192d0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 108,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x34], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fild dword ptr [esp + 0x58]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [eax]",
+      "mov dword ptr [esi + 4], edx",
+      "mov ecx, dword ptr [eax + 4]"
+     ],
+     "retail": [
+      "fld dword ptr [eax]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esi + 4]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 4]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 8], ecx"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 8]",
+      "fld dword ptr [eax + 8]",
+      "fstp dword ptr [esi + 0xc]",
+      "fild dword ptr [esp + 0x58]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [eax + 8]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc], edx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": [
+      "push ecx"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 0x10"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1001a1f0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "mul/shift strength reduction",
+    "x87"
+   ],
+   "edits": 132,
+   "hunks": [
+    {
+     "cand": [
+      "push ebx"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 0xc]",
+      "fld dword ptr [esp + 0xc]",
+      "fld dword ptr [0]",
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fcompp "
+     ]
+    },
+    {
+     "cand": [
+      "mov ebx, 1",
+      "jmp T",
+      "xor ebx, ebx",
+      "sub esp, 8",
+      "fstp qword ptr [esp]",
+      "call T",
+      "add esp, 8",
+      "test eax, eax",
+      "jne T",
+      "fld dword ptr [0]",
+      "sub esp, 8",
+      "fstp qword ptr [esp]",
+      "call T",
+      "add esp, 8",
+      "test eax, eax",
+      "jne T",
+      "xor ecx, ecx",
+      "jmp T",
+      "mov ecx, 1",
+      "fld dword ptr [esp + 0xc]",
+      "fld st(0)",
+      "fld dword ptr [0]",
+      "fld st(0)",
+      "fucomp st(2)",
+      "fnstsw ax",
+      "fstp st(1)",
+      "test ah, 0x44",
+      "jp T",
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "shl eax, 4",
+      "fcom st(1)",
+      "or al, cl",
+      "add al, al",
+      "add al, al",
+      "or al, bl",
+      "xor ecx, ecx",
+      "mov ch, al",
+      "fnstsw ax",
+      "test ah, 0x41",
+      "movzx ecx, cx",
+      "jp T",
+      "fucompp ",
+      "fnstsw ax",
+      "test ah, 0x44",
+      "jnp T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov eax, ecx",
+      "pop ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp st(0)",
+      "fstp st(0)"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld1 "
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]",
+      "fcom qword ptr [0]"
+     ],
+     "retail": [
+      "fcomp dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ebx, 1",
+      "jmp T",
+      "xor ebx, ebx",
+      "fld1 ",
+      "fucomp st(1)",
+      "fnstsw ax",
+      "test ah, 0x44",
+      "jp T",
+      "mov esi, 1",
+      "jmp T",
+      "xor esi, esi",
+      "sub esp, 8",
+      "fstp qword ptr [esp]"
+     ],
+     "retail": [
+      "push edi",
+      "mov edi, dword ptr [esi + 0x304]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]",
+      "mov edx, esi",
+      "fcom qword ptr [0]",
+      "shl edx, 4",
+      "or al, dl",
+      "add al, al",
+      "add al, al",
+      "or al, bl",
+      "xor ecx, ecx",
+      "mov ch, al",
+      "fnstsw ax"
+     ],
+     "retail": [
+      "mov ecx, dword ptr [edi + 4]",
+      "sub ecx, dword ptr [edi]",
+      "cdq "
+     ]
+    },
+    {
+     "cand": [
+      "test ah, 0x41",
+      "movzx ecx, cx",
+      "jp T",
+      "fld1 ",
+      "fucompp ",
+      "fnstsw ax",
+      "test ah, 0x44",
+      "jnp T",
+      "mov esi, dword ptr [ebp + 0x304]",
+      "push edi",
+      "call T",
+      "mov edi, dword ptr [esi]",
+      "mov ecx, dword ptr [esi + 4]",
+      "sub ecx, edi",
+      "add ecx, 1",
+      "cdq "
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1001aeb0": {
+   "tags": [],
+   "edits": 10,
+   "hunks": [
+    {
+     "cand": [
+      "sete cl",
+      "test eax, eax",
+      "jge T",
+      "add eax, -1"
+     ],
+     "retail": [
+      "jns T",
+      "dec eax"
+     ]
+    },
+    {
+     "cand": [
+      "cmp eax, -1",
+      "sete cl",
+      "test cl, cl",
+      "je T"
+     ],
+     "retail": [
+      "inc eax",
+      "jne T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "100222e0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 18,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fld qword ptr [0]",
+      "fcom st(1)",
+      "fnstsw ax",
+      "test ah, 0x41",
+      "jne T",
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fucompp "
+     ],
+     "retail": [
+      "fcomp qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "je T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "100224f0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 3,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1002be50": {
+   "tags": [
+    "rep string op",
+    "x87"
+   ],
+   "edits": 34,
+   "hunks": [
+    {
+     "cand": [
+      "push ebx"
+     ],
+     "retail": [
+      "mov dword ptr [esp], 1"
+     ]
+    },
+    {
+     "cand": [
+      "mov ebx, 1"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "test bl, ah"
+     ],
+     "retail": [
+      "test ah, 1"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov ebp, dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, dword ptr [esp + 0x18]"
+     ],
+     "retail": [
+      "push edi"
+     ]
+    },
+    {
+     "cand": [
+      "add eax, 0x78"
+     ],
+     "retail": [
+      "lea edi, [eax + 0x78]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ebp, dword ptr [eax]",
+      "mov dword ptr [ecx], ebp",
+      "add eax, 4",
+      "add ecx, 4",
+      "sub edx, 1",
+      "jne T"
+     ],
+     "retail": [
+      "rep movsd dword ptr es:[edi], dword ptr [esi]"
+     ]
+    },
+    {
+     "cand": [
+      "add ecx, esi"
+     ],
+     "retail": [
+      "lea edx, [ebx + ecx]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add dword ptr [esp + 0x10], 1",
+      "fild dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x10], ebx",
+      "fild dword ptr [esp + 0x10]",
+      "add esi, 0x37c",
+      "fld dword ptr [eax + 0x14]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1002dbf0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "rep string op",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 81,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "mov edx, 1"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0x710], 1"
+     ],
+     "retail": [
+      "mov dword ptr [eax + 0x710], edx"
+     ]
+    },
+    {
+     "cand": [
+      "jge T"
+     ],
+     "retail": [
+      "jg T"
+     ]
+    },
+    {
+     "cand": [
+      "add dword ptr [eax + 0x710], 1",
+      "push 0",
+      "push 0x40400000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fldz ",
+      "add dword ptr [eax + 0x710], edx",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, 0",
+      "mov esi, 0xf"
+     ],
+     "retail": [
+      "push edi"
+     ]
+    },
+    {
+     "cand": [
+      "sub edi, edx",
+      "test esi, esi",
+      "je T",
+      "mov cl, byte ptr [eax]",
+      "sub esi, 1",
+      "cmp cl, byte ptr [edi + eax]",
+      "sete cl"
+     ],
+     "retail": [
+      "mov ecx, 0xf",
+      "xor ebp, ebp",
+      "repe cmpsb byte ptr [esi], byte ptr es:[edi]",
+      "jne T",
+      "push 0",
+      "call dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "test cl, cl",
+      "jne T",
+      "mov esi, 0xb",
+      "mov al, 1",
+      "mov ecx, 0",
+      "test esi, esi",
+      "je T",
+      "mov al, byte ptr [edx]",
+      "sub esi, 1",
+      "cmp al, byte ptr [ecx]",
+      "sete al",
+      "add edx, 1",
+      "add ecx, 1",
+      "test al, al",
+      "jne T",
+      "mov eax, dword ptr [ebp + 0x54]",
+      "mov ecx, dword ptr [eax + 0xe98]"
+     ],
+     "retail": [
+      "pop edi"
+     ]
+    },
+    {
+     "cand": [
+      "test cl, cl",
+      "je T"
+     ],
+     "retail": [
+      "mov esi, eax",
+      "mov edi, 0",
+      "mov ecx, 0xb",
+      "xor eax, eax",
+      "repe cmpsb byte ptr [esi], byte ptr es:[edi]",
+      "jne T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop ebp"
+     ]
+    },
+    {
+     "cand": [
+      "test al, al",
+      "je T",
+      "push 0",
+      "call dword ptr [0]",
+      "add esp, 4"
+     ],
+     "retail": [
+      "mov edx, dword ptr [edx + 0xe98]",
+      "pop edi"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1002e410": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "float-to-int helper (`__ftol`) argument lost",
+    "x87"
+   ],
+   "edits": 82,
+   "hunks": [
+    {
+     "cand": [
+      "sub esp, 8"
+     ],
+     "retail": [
+      "push ebp"
+     ]
+    },
+    {
+     "cand": [
+      "fnstcw word ptr [esp + 0x10]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push edi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [eax + 0x14]",
+      "movzx eax, word ptr [esp + 0x10]",
+      "or eax, 0xc00",
+      "mov dword ptr [esp + 4], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fldcw word ptr [esp + 4]",
+      "push edi"
+     ],
+     "retail": [
+      "call T",
+      "test al, 4"
+     ]
+    },
+    {
+     "cand": [
+      "fistp qword ptr [esp + 8]",
+      "mov edx, dword ptr [esp + 8]",
+      "test dl, 4",
+      "fldcw word ptr [esp + 0x14]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop esi"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 8"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add dword ptr [eax + edi*4 + 0x2e4], 1",
+      "test dword ptr [esi + 0x11c], 0x10000",
+      "lea eax, [eax + edi*4 + 0x2e4]"
+     ]
+    },
+    {
+     "cand": [
+      "lea ebx, [ecx*4 + 0x2e4]",
+      "add dword ptr [eax + ebx], 1",
+      "add eax, ebx",
+      "test dword ptr [esi + 0x11c], 0x10000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fnstcw word ptr [esp + 0x1c]"
+     ],
+     "retail": [
+      "mov ebx, eax"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "1002f550": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov ecx, 0xf"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, 0xf"
+     ]
+    },
+    {
+     "cand": [
+      "add eax, 0x5c"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "10032b60": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "mul/shift strength reduction",
+    "x87"
+   ],
+   "edits": 40,
+   "hunks": [
+    {
+     "cand": [
+      "sub esp, 8"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "xor edx, edx",
+      "fnstcw word ptr [esp + 0xc]",
+      "movzx eax, word ptr [esp + 0xc]",
+      "fld st(0)",
+      "or eax, 0xc00",
+      "mov dword ptr [esp], eax",
+      "fldcw word ptr [esp]",
+      "fistp qword ptr [esp]",
+      "mov eax, dword ptr [esp]"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 4]",
+      "mov eax, dword ptr [esp + 4]"
+     ]
+    },
+    {
+     "cand": [
+      "fldcw word ptr [esp + 0xc]"
+     ],
+     "retail": [
+      "mov byte ptr [esp + 4], cl"
+     ]
+    },
+    {
+     "cand": [
+      "movzx ecx, dx",
+      "fnstcw word ptr [esp + 0xc]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "movzx edx, dl",
+      "shl edx, 0x10",
+      "or ecx, edx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "or ecx, eax",
+      "movzx eax, word ptr [esp + 0xc]",
+      "or eax, 0xc00",
+      "mov dword ptr [esp], eax",
+      "and ecx, 0xffffff",
+      "fldcw word ptr [esp]",
+      "fistp dword ptr [esp]",
+      "mov al, byte ptr [esp]",
+      "movzx edx, al",
+      "shl edx, 0x18",
+      "fldcw word ptr [esp + 0xc]",
+      "or ecx, edx",
+      "test ecx, ecx",
+      "mov dword ptr [esp + 0xc], ecx",
+      "fild dword ptr [esp + 0xc]",
+      "jge T",
+      "fadd dword ptr [0]",
+      "add esp, 8"
+     ],
+     "retail": [
+      "mov byte ptr [esp + 5], dl",
+      "mov byte ptr [esp + 6], cl",
+      "mov byte ptr [esp + 7], al",
+      "fld dword ptr [esp + 4]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly moves and arithmetic"
+  },
+  "10001aa0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 4,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x1a8], eax"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0x1a8]"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10002920": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 5,
+   "hunks": [
+    {
+     "cand": [
+      "fld dword ptr [edx + 0x14]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [edx + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jp T"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10002f20": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [
+      "jl T",
+      "lea eax, [esi + 1]",
+      "pop esi",
+      "ret "
+     ],
+     "retail": [
+      "jns T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea eax, [esi + 1]",
+      "pop esi",
+      "ret "
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "100038d0": {
+   "tags": [],
+   "edits": 3,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "add eax, 0"
+     ]
+    },
+    {
+     "cand": [
+      "lea eax, [eax]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10003b40": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 3,
+   "hunks": [
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jnp T"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10003bd0": {
+   "tags": [],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [
+      "movzx eax, word ptr [edx + ecx + 0x94]"
+     ],
+     "retail": [
+      "movsx eax, word ptr [edx + ecx + 0x94]"
+     ]
+    },
+    {
+     "cand": [
+      "movzx ecx, word ptr [edx + ecx + 0x94]"
+     ],
+     "retail": [
+      "movsx ecx, word ptr [edx + ecx + 0x94]"
+     ]
+    },
+    {
+     "cand": [
+      "setl dl"
+     ],
+     "retail": [
+      "setg dl"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "1000a260": {
+   "tags": [],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [
+      "jge T"
+     ],
+     "retail": [
+      "jg T"
+     ]
+    },
+    {
+     "cand": [
+      "jge T"
+     ],
+     "retail": [
+      "jg T"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [ecx + eax*4 + 0x2e4], 1",
+      "setl dl"
+     ],
+     "retail": [
+      "cmp dword ptr [ecx + eax*4 + 0x2e4], edx",
+      "setle dl"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "1000be20": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 42,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [ecx + 0x178]",
+      "mov edx, 0xc3960000",
+      "fld qword ptr [0]",
+      "fcom st(1)"
+     ],
+     "retail": [
+      "fcom dword ptr [ecx + 0x178]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp st(1)"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fld qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov dword ptr [ecx + 0x178], edx"
+     ],
+     "retail": [
+      "fxch st(1)",
+      "fst dword ptr [ecx + 0x178]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [ecx + 0x178]",
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fcom dword ptr [ecx + 0x178]",
+      "fnstsw ax",
+      "test ah, 5",
+      "jp T",
+      "fst dword ptr [ecx + 0x178]",
+      "fxch st(1)",
+      "fcom dword ptr [ecx + 0x17c]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [ecx + 0x178], 0x43960000",
+      "fld dword ptr [ecx + 0x17c]",
+      "fcomp st(2)"
+     ],
+     "retail": [
+      "fstp st(1)",
+      "fstp dword ptr [ecx + 0x17c]",
+      "jmp T",
+      "fstp st(0)",
+      "fcom dword ptr [ecx + 0x17c]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp st(1)"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [ecx + 0x17c]",
+      "jmp T"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [ecx + 0x17c], edx",
+      "jmp T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fcompp "
+     ],
+     "retail": [
+      "fcomp qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "jne T",
+      "mov dword ptr [ecx + 0x17c], 0x43960000"
+     ],
+     "retail": [
+      "jp T",
+      "fld dword ptr [0]",
+      "fstp dword ptr [ecx + 0x180]",
+      "ret "
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "1000c4e0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 72,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [eax]",
+      "mov dword ptr [esi + 4], ecx",
+      "mov edx, dword ptr [eax + 4]",
+      "mov ecx, dword ptr [esp + 0x10]",
+      "mov dword ptr [esi + 8], edx"
+     ],
+     "retail": [
+      "fld dword ptr [eax]",
+      "fstp dword ptr [esi + 4]",
+      "fld dword ptr [eax + 4]",
+      "fstp dword ptr [esi + 8]",
+      "fld dword ptr [eax + 8]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esi + 0xc]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 8"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 0x20]",
+      "fld dword ptr [esp + 0x20]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "and eax, 0x7fff",
+      "mov dword ptr [esp + 0x20], eax",
+      "fild dword ptr [esp + 0x20]",
+      "fdiv qword ptr [0]",
+      "fsub qword ptr [0]",
+      "fadd st(0), st(0)",
+      "fmul qword ptr [0]",
+      "fstp dword ptr [esp + 8]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "and eax, 0x7fff",
+      "mov dword ptr [esp + 0x20], eax",
+      "fild dword ptr [esp + 0x20]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [esp + 0x18]"
+     ],
+     "retail": [
+      "fdiv qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fsub qword ptr [0]",
+      "fadd st(0), st(0)",
+      "fld qword ptr [0]",
+      "fmul st(1), st(0)",
+      "faddp st(1)",
+      "fstp dword ptr [esp + 0x18]",
+      "fld dword ptr [esp + 0x28]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "1000c8b0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 16,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, 0xc1000000"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0xbc]",
+      "fst dword ptr [esi + 0xc0]",
+      "push esi",
+      "fstp dword ptr [esi + 0xc4]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc0], eax",
+      "mov dword ptr [esi + 0xc4], eax",
+      "mov eax, 0x41000000",
+      "push esi",
+      "mov dword ptr [esi + 0xf8], ecx"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc8], eax",
+      "mov dword ptr [esi + 0xcc], eax",
+      "mov dword ptr [esi + 0xd0], eax"
+     ],
+     "retail": [
+      "fst dword ptr [esi + 0xc8]",
+      "fst dword ptr [esi + 0xcc]",
+      "fstp dword ptr [esi + 0xd0]"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "1000deb0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 2,
+   "hunks": [
+    {
+     "cand": [
+      "jle T"
+     ],
+     "retail": [
+      "jl T"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "1000e070": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 17,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 0xc2000000",
+      "mov dword ptr [esi + 0xbc], eax",
+      "mov dword ptr [esi + 0xc0], eax",
+      "xor eax, eax",
+      "mov dword ptr [esi + 0x104], eax",
+      "mov dword ptr [esi + 0xc4], eax",
+      "mov eax, 0x42000000"
+     ],
+     "retail": [
+      "fst dword ptr [esi + 0xbc]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esi + 0xc0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0xc8], eax",
+      "mov dword ptr [esi + 0xcc], eax",
+      "mov dword ptr [esi + 0xd0], eax"
+     ],
+     "retail": [
+      "fldz ",
+      "mov dword ptr [esi + 0xf8], 2",
+      "fstp dword ptr [esi + 0xc4]",
+      "fld dword ptr [0]",
+      "fst dword ptr [esi + 0xc8]",
+      "fst dword ptr [esi + 0xcc]",
+      "fstp dword ptr [esi + 0xd0]"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10014d40": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 27,
+   "hunks": [
+    {
+     "cand": [
+      "mov ecx, dword ptr [edi + 4]",
+      "mov dword ptr [esi + 4], ecx",
+      "mov edx, dword ptr [edi + 8]",
+      "mov dword ptr [esi + 8], edx",
+      "mov eax, dword ptr [edi + 0xc]",
+      "mov dword ptr [esi + 0xc], eax",
+      "mov ecx, dword ptr [edi + 0x10]",
+      "mov dword ptr [esi + 0x10], ecx",
+      "mov edx, dword ptr [edi + 0x14]",
+      "mov dword ptr [esi + 0x14], edx",
+      "mov eax, dword ptr [edi + 0x18]"
+     ],
+     "retail": [
+      "fld dword ptr [edi + 4]",
+      "fstp dword ptr [esi + 4]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x18], eax"
+     ],
+     "retail": [
+      "fld dword ptr [edi + 8]",
+      "fstp dword ptr [esi + 8]",
+      "fld dword ptr [edi + 0xc]",
+      "fstp dword ptr [esi + 0xc]",
+      "fld dword ptr [edi + 0x10]",
+      "fstp dword ptr [esi + 0x10]",
+      "fld dword ptr [edi + 0x14]",
+      "fstp dword ptr [esi + 0x14]",
+      "fld dword ptr [edi + 0x18]",
+      "fstp dword ptr [esi + 0x18]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [edi + 0x154]",
+      "mov dword ptr [esi + 0x178], ecx",
+      "mov edx, dword ptr [edi + 0x158]",
+      "mov dword ptr [esi + 0x17c], edx",
+      "mov eax, dword ptr [edi + 0x15c]",
+      "mov dword ptr [esi + 0x180], eax"
+     ],
+     "retail": [
+      "fld dword ptr [edi + 0x154]",
+      "fstp dword ptr [esi + 0x178]",
+      "fld dword ptr [edi + 0x158]",
+      "fstp dword ptr [esi + 0x17c]",
+      "fld dword ptr [edi + 0x15c]",
+      "fstp dword ptr [esi + 0x180]"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10016500": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 4,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 0x198]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [esp + 8]",
+      "mov dword ptr [edx + 0x198], ecx"
+     ],
+     "retail": [
+      "fstp dword ptr [ecx + 0x198]"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "1001dfa0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 24,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fcom st(1)"
+     ],
+     "retail": [
+      "fcom qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp st(1)"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fldz ",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]",
+      "jp T"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10021df0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 9,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10026c80": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 14,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "100313a0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 10,
+   "hunks": [
+    {
+     "cand": [
+      "fild dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fild dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "je T"
+     ],
+     "retail": [
+      "jnp T"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [ecx + 0xe94], 0"
+     ],
+     "retail": [
+      "mov ecx, dword ptr [ecx + 0xe94]",
+      "neg ecx",
+      "sbb cl, cl"
+     ]
+    },
+    {
+     "cand": [
+      "setne cl",
+      "neg cl"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10031e10": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 38,
+   "hunks": [
+    {
+     "cand": [
+      "fld dword ptr [eax + 4]",
+      "fmul dword ptr [ecx + 0xc]"
+     ],
+     "retail": [
+      "fld dword ptr [eax]",
+      "fmul dword ptr [ecx]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [eax]",
+      "fmul dword ptr [ecx]"
+     ],
+     "retail": [
+      "fld dword ptr [eax + 8]",
+      "fmul dword ptr [ecx + 0x18]"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "100328a0": {
+   "tags": [],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [
+      "jne T",
+      "mov eax, dword ptr [esp + 8]",
+      "mov byte ptr [eax], 0",
+      "ret "
+     ],
+     "retail": [
+      "je T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, dword ptr [esp + 8]",
+      "mov byte ptr [eax], 0",
+      "ret "
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10032d40": {
+   "tags": [],
+   "edits": 2,
+   "hunks": [
+    {
+     "cand": [
+      "sub eax, 1"
+     ],
+     "retail": [
+      "add eax, -1"
+     ]
+    }
+   ],
+   "class": "bytes: different instructions (same length)"
+  },
+  "10001b20": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 30,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "push esi",
+      "mov dword ptr [esi + 0x1a8], eax"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0x1a8]"
+     ]
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "je T"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, dword ptr [esp + 0x14]"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0xc]",
+      "sub esp, 8",
+      "fld dword ptr [esp + 0x18]"
+     ]
+    },
+    {
+     "cand": [
+      "push edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 8",
+      "fstp dword ptr [esp + 4]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [esi + 0x1a8]",
+      "sub eax, dword ptr [esi + 0x368]"
+     ]
+    },
+    {
+     "cand": [
+      "sub ecx, dword ptr [esi + 0x368]",
+      "push edi",
+      "push ecx"
+     ],
+     "retail": [
+      "mov dword ptr [esi + 0x368], eax"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x368], ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly stack and arithmetic"
+  },
+  "1000b7c0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "x87"
+   ],
+   "edits": 51,
+   "hunks": [
+    {
+     "cand": [
+      "sub esp, 0xc"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fnstcw word ptr [esp + 2]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "movzx eax, word ptr [esp + 6]",
+      "or eax, 0xc00",
+      "mov dword ptr [esp + 8], eax",
+      "fldcw word ptr [esp + 8]",
+      "fistp qword ptr [esp + 8]",
+      "mov ecx, dword ptr [esp + 8]"
+     ],
+     "retail": [
+      "call T"
+     ]
+    },
+    {
+     "cand": [
+      "fldcw word ptr [esp + 6]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "add esp, 0xc"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov edx, dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "xor edi, edi"
+     ]
+    },
+    {
+     "cand": [
+      "xor edi, edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jne T",
+      "push 0",
+      "push 0x118"
+     ],
+     "retail": [
+      "je T"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 0xc",
+      "test eax, eax",
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "add esp, 0xc"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly stack and arithmetic"
+  },
+  "10003120": {
+   "tags": [],
+   "edits": 27,
+   "hunks": [
+    {
+     "cand": [
+      "jge T",
+      "add eax, -1"
+     ],
+     "retail": [
+      "jns T",
+      "dec ecx"
+     ]
+    },
+    {
+     "cand": [
+      "add eax, 1"
+     ],
+     "retail": [
+      "inc ecx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add eax, 0"
+     ]
+    },
+    {
+     "cand": [
+      "test dword ptr [ecx], ebx"
+     ],
+     "retail": [
+      "test dword ptr [eax + 0x38], ebx"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "100039d0": {
+   "tags": [],
+   "edits": 38,
+   "hunks": [
+    {
+     "cand": [
+      "lea ecx, [eax - 0x10062040]"
+     ],
+     "retail": [
+      "sub eax, 0",
+      "mov ecx, eax"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "shr eax, 0x1f"
+     ]
+    },
+    {
+     "cand": [
+      "shr ecx, 0x1f"
+     ],
+     "retail": [
+      "add eax, edx"
+     ]
+    },
+    {
+     "cand": [
+      "lea ebp, [edx + ecx + 0xff]"
+     ],
+     "retail": [
+      "lea edi, [eax + 0xff]"
+     ]
+    },
+    {
+     "cand": [
+      "jge T",
+      "add eax, -1"
+     ],
+     "retail": [
+      "jns T",
+      "dec eax"
+     ]
+    },
+    {
+     "cand": [
+      "add eax, 1"
+     ],
+     "retail": [
+      "inc eax"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add eax, 0",
+      "mov esi, eax"
+     ]
+    },
+    {
+     "cand": [
+      "test byte ptr [eax], 1"
+     ],
+     "retail": [
+      "test byte ptr [esi + 0x38], 1"
+     ]
+    },
+    {
+     "cand": [
+      "lea esi, [eax]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jl T"
+     ],
+     "retail": [
+      "jle T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10003a70": {
+   "tags": [],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [
+      "lea edx, [eax - 0x10062040]"
+     ],
+     "retail": [
+      "sub eax, 0",
+      "mov edx, eax"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add eax, 0"
+     ]
+    },
+    {
+     "cand": [
+      "test byte ptr [eax], 1"
+     ],
+     "retail": [
+      "test byte ptr [eax + 0x38], 1"
+     ]
+    },
+    {
+     "cand": [
+      "lea eax, [eax]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10003c10": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "mul/shift strength reduction",
+    "x87"
+   ],
+   "edits": 135,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, dword ptr [esp + 0x950]",
+      "push ebx",
+      "push ebp",
+      "push esi"
+     ]
+    },
+    {
+     "cand": [
+      "push ebp",
+      "fcom qword ptr [0]",
+      "push esi"
+     ],
+     "retail": [
+      "mov dword ptr [esp + 0xc], eax",
+      "fcomp qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 8], esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov dword ptr [esp + ebp*4 + 0x14], ecx"
+     ]
+    },
+    {
+     "cand": [
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 0x14]",
+      "fcompp "
+     ]
+    },
+    {
+     "cand": [
+      "jnp T",
+      "mov dword ptr [esp + 8], esi",
+      "fstp st(0)"
+     ],
+     "retail": [
+      "je T",
+      "push 0",
+      "push 4",
+      "lea ecx, [esp + 0x1c]",
+      "push ebp",
+      "push ecx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 0x10"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea esp, [esp]",
+      "mov edx, dword ptr [esp + ebx*4 + 0x18]",
+      "mov eax, dword ptr [0]",
+      "imul edx, edx, 0xedc",
+      "add eax, edx",
+      "movsx edx, word ptr [eax + 0x94]"
+     ]
+    },
+    {
+     "cand": [
+      "add edi, edi",
+      "mov dword ptr [esp + 0x10], edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "lea ebx, [ebx]"
+     ],
+     "retail": [
+      "push edx",
+      "push 0",
+      "lea eax, [esp + 0x424]",
+      "push 0x40",
+      "push eax"
+     ]
+    },
+    {
+     "cand": [
+      "lea esp, [esp]",
+      "mov eax, ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "cmp byte ptr [eax], 0",
+      "jne T",
+      "lea ecx, [esp + 0x419]",
+      "mov dl, byte ptr [ecx]",
+      "add ecx, 1",
+      "test dl, dl",
+      "jne T",
+      "sub eax, edi",
+      "lea ecx, [eax + ecx - 0x899]",
+      "cmp ecx, 0x49c",
+      "ja T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10008dd0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "x87"
+   ],
+   "edits": 12,
+   "hunks": [
+    {
+     "cand": [
+      "xor edx, edx"
+     ],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [eax + 0x180]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0x11c], ecx",
+      "mov dword ptr [eax + 0x17c], edx",
+      "mov dword ptr [eax + 0x178], edx",
+      "mov dword ptr [eax + 0x1ac], edx"
+     ],
+     "retail": [
+      "fst dword ptr [eax + 0x17c]",
+      "fst dword ptr [eax + 0x178]",
+      "fstp dword ptr [eax + 0x1ac]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push eax"
+     ]
+    },
+    {
+     "cand": [
+      "jmp T",
+      "push eax"
+     ],
+     "retail": [
+      "call T",
+      "add esp, 4",
+      "ret "
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "1000a2b0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 89,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [eax + 0x288]",
+      "push ebx"
+     ],
+     "retail": [
+      "mov ecx, dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push esi",
+      "push edi",
+      "mov edi, dword ptr [ebp + 0x54]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [0]",
+      "push edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov edx, 1",
+      "cmp dword ptr [esi + ebx*4 + 0x2e4], edx"
+     ],
+     "retail": [
+      "cmp dword ptr [edi + ecx*4 + 0x2e4], 0",
+      "jle T"
+     ]
+    },
+    {
+     "cand": [
+      "jge T",
+      "cmp dword ptr [esi + ecx*4 + 0x2e4], edx"
+     ],
+     "retail": [
+      "jmp T",
+      "cmp dword ptr [edi + edx*4 + 0x2e4], 0",
+      "jle T"
+     ]
+    },
+    {
+     "cand": [
+      "jge T"
+     ],
+     "retail": [
+      "jmp T"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [esi + ecx*4 + 0x2e4], 1",
+      "setl dl"
+     ],
+     "retail": [
+      "cmp dword ptr [edi + esi*4 + 0x2e4], edx",
+      "setle dl"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, edx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, edi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea esi, [eax + esi*4 + 0x2e4]"
+     ]
+    },
+    {
+     "cand": [
+      "lea ecx, [eax - 0x10062040]"
+     ],
+     "retail": [
+      "sub eax, 0",
+      "mov ecx, eax"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [ebp]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "100129d0": {
+   "tags": [
+    "security cookie"
+   ],
+   "edits": 37,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0xee8], eax"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov esi, dword ptr [ebp + 0xc]",
+      "push edi",
+      "mov dword ptr [esp + 0xc], esi"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, dword ptr [ebp + 8]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "lea ecx, [ecx]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "cmp dword ptr [esi], 2"
+     ],
+     "retail": [
+      "mov eax, dword ptr [esi]",
+      "mov ecx, dword ptr [esi + 4]",
+      "add eax, dword ptr [esp + 0xc]",
+      "sub ecx, 2"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [esi - 4]",
+      "mov eax, dword ptr [ebp + 0xc]",
+      "mov edx, dword ptr [eax + edx]"
+     ],
+     "retail": [
+      "mov edx, dword ptr [eax]"
+     ]
+    },
+    {
+     "cand": [
+      "lea ebx, [ebx]"
+     ],
+     "retail": [
+      "lea edi, [eax + 1]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub eax, edi"
+     ]
+    },
+    {
+     "cand": [
+      "sub eax, edx"
+     ],
+     "retail": [
+      "add eax, 1"
+     ]
+    },
+    {
+     "cand": [
+      "lea eax, [esi + 8]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "cmp dword ptr [eax], 0"
+     ],
+     "retail": [
+      "cmp dword ptr [esi - 4], 0"
+     ]
+    },
+    {
+     "cand": [
+      "call T"
+     ],
+     "retail": [
+      "mov ecx, dword ptr [esp + 0xef4]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10012e10": {
+   "tags": [
+    "security cookie"
+   ],
+   "edits": 31,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x138], eax"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push ebx",
+      "mov ebx, dword ptr [ebp + 8]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, dword ptr [ebp + 8]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "cmp dword ptr [esi], 2"
+     ],
+     "retail": [
+      "mov eax, dword ptr [esi]",
+      "mov ecx, dword ptr [esi + 4]",
+      "add eax, 0",
+      "sub ecx, 2"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [esi - 4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "lea ebx, [ebx]"
+     ],
+     "retail": [
+      "lea edi, [eax + 1]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub eax, edi"
+     ]
+    },
+    {
+     "cand": [
+      "sub eax, edx"
+     ],
+     "retail": [
+      "add eax, 1"
+     ]
+    },
+    {
+     "cand": [
+      "lea eax, [esi + 8]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "cmp dword ptr [eax], 0"
+     ],
+     "retail": [
+      "cmp dword ptr [esi - 4], 0"
+     ]
+    },
+    {
+     "cand": [
+      "call T"
+     ],
+     "retail": [
+      "mov ecx, dword ptr [esp + 0x144]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop ebx",
+      "xor ecx, esp",
+      "call T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "100179b0": {
+   "tags": [],
+   "edits": 18,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "push esi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea edx, [eax + 1]",
+      "jmp T",
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add eax, 1"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov esi, eax"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov ecx, edi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop esi"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10017d00": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "rep string op"
+   ],
+   "edits": 51,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "mov ebp, dword ptr [esp + 0x80]"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, dword ptr [esp + 0x54]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov ecx, 0xe",
+      "mov esi, eax",
+      "lea edi, [esp + 0x64]",
+      "rep movsd dword ptr es:[edi], dword ptr [esi]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea esp, [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea eax, [ebp + 0xc8]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov ecx, 0xe",
+      "mov esi, eax",
+      "lea edi, [esp + 0x64]",
+      "rep movsd dword ptr es:[edi], dword ptr [esi]",
+      "mov esi, dword ptr [esp + 0x98]"
+     ]
+    },
+    {
+     "cand": [
+      "jmp T"
+     ],
+     "retail": [
+      "test esi, esi",
+      "jne T",
+      "pop edi",
+      "pop esi",
+      "pop ebp",
+      "mov eax, 1",
+      "pop ebx",
+      "mov ecx, dword ptr [esp + 0x70]",
+      "xor ecx, esp"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 0x74",
+      "ret "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "xor eax, eax"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "100214a0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 15,
+   "hunks": [
+    {
+     "cand": [
+      "mov ecx, 0xc1800000"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fst dword ptr [eax + 0xbc]",
+      "mov dword ptr [eax + 0x104], 7",
+      "fstp dword ptr [eax + 0xc0]",
+      "mov dword ptr [eax + 0x1b4], 0",
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0xc0], ecx",
+      "mov ecx, 0x41800000",
+      "mov dword ptr [eax + 0x104], 7",
+      "mov dword ptr [eax + 0x1b4], 0",
+      "mov dword ptr [eax + 0xc4], 0xc1c00000",
+      "mov dword ptr [eax + 0xc8], ecx",
+      "mov dword ptr [eax + 0xcc], ecx",
+      "mov dword ptr [eax + 0xd0], 0xc1000000"
+     ],
+     "retail": [
+      "fstp dword ptr [eax + 0xc4]",
+      "fld dword ptr [0]",
+      "fst dword ptr [eax + 0xc8]",
+      "fstp dword ptr [eax + 0xcc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 0xd0]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10021880": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 37,
+   "hunks": [
+    {
+     "cand": [
+      "push edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "and eax, 0",
+      "jns T",
+      "dec eax",
+      "or eax, 0",
+      "inc eax",
+      "fldz ",
+      "jne T"
+     ]
+    },
+    {
+     "cand": [
+      "mov edi, dword ptr [0]",
+      "and eax, 0x80000001",
+      "sete cl",
+      "test eax, eax",
+      "jge T",
+      "add eax, -1",
+      "or eax, 0xfffffffe",
+      "cmp eax, -1",
+      "sete cl",
+      "test cl, cl",
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000",
+      "jne T"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "mov dword ptr [esi + 0x304], 0",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x304], 0"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov edx, dword ptr [0]",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "mov dword ptr [esi + 0x304], 0",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x304], 0"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop edi"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "1002ea10": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 79,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [0]",
+      "xor eax, esp",
+      "mov dword ptr [esp + 0x3c], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub eax, 8",
+      "mov dword ptr [esp + 0x48], eax",
+      "mov eax, dword ptr [esi + 0x54]",
+      "fild dword ptr [esp + 0x48]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0x30]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]",
+      "mov eax, dword ptr [esi + 0x54]",
+      "fst dword ptr [esp + 0x18]",
+      "mov eax, dword ptr [eax + 0x2cc]",
+      "fstp dword ptr [esp + 0x1c]",
+      "fld dword ptr [esp + 0x38]",
+      "add esp, 0x10",
+      "cmp eax, 1",
+      "fstp dword ptr [esp + 0x10]",
+      "jne T",
+      "fld dword ptr [0]",
+      "jmp T",
+      "cmp eax, 2",
+      "jne T",
+      "fldz ",
+      "fstp dword ptr [esp + 0xc]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x38], 0x41000000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push 0x43250000"
+     ],
+     "retail": [
+      "sub esp, 8"
+     ]
+    },
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]"
+     ]
+    },
+    {
+     "cand": [
+      "fnstcw word ptr [esp + 0x28]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "movzx eax, word ptr [esp + 0x28]",
+      "or eax, 0xc00",
+      "mov dword ptr [esp + 0x2c], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fldcw word ptr [esp + 0xc]",
+      "fistp qword ptr [esp + 0xc]",
+      "mov ecx, dword ptr [esp + 0xc]"
+     ],
+     "retail": [
+      "call T"
+     ]
+    },
+    {
+     "cand": [
+      "fldcw word ptr [esp + 8]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esp + 0x3c]",
+      "xor ecx, esp",
+      "call T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10032930": {
+   "tags": [],
+   "edits": 31,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, ecx"
+     ],
+     "retail": [
+      "push esi",
+      "lea esi, [eax + 1]",
+      "lea ebx, [ebx]",
+      "mov cl, byte ptr [eax]"
+     ]
+    },
+    {
+     "cand": [
+      "cmp byte ptr [eax], 0"
+     ],
+     "retail": [
+      "test cl, cl"
+     ]
+    },
+    {
+     "cand": [
+      "push esi",
+      "mov esi, eax",
+      "sub eax, 1"
+     ],
+     "retail": [
+      "sub eax, esi",
+      "lea eax, [eax + edx - 1]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "cmp byte ptr [eax], 0x2e",
+      "jne T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "cmp eax, edx",
+      "mov ecx, eax",
+      "je T",
+      "cmp byte ptr [ecx], 0x2f",
+      "je T",
+      "sub ecx, 1",
+      "cmp ecx, edx",
+      "jne T",
+      "mov edx, eax"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, 0xfffffffe",
+      "sub edx, ecx"
+     ],
+     "retail": [
+      "sub eax, 1"
+     ]
+    },
+    {
+     "cand": [
+      "add esi, edx"
+     ],
+     "retail": [
+      "mov esi, eax",
+      "sub esi, ecx"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10033110": {
+   "tags": [
+    "argument cleanup (`add esp`) differs"
+   ],
+   "edits": 111,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, 0"
+     ],
+     "retail": [
+      "push 0"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea edx, [eax + 1]"
+     ]
+    },
+    {
+     "cand": [
+      "sub eax, 1"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jae T"
+     ],
+     "retail": [
+      "ja T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea edx, [eax + 1]",
+      "mov cl, byte ptr [eax]",
+      "add eax, 1",
+      "test cl, cl",
+      "jne T",
+      "sub eax, edx",
+      "cmp eax, 0x3f",
+      "ja T",
+      "push edi",
+      "push ebx",
+      "call T",
+      "add esp, 8",
+      "test esi, esi",
+      "je T",
+      "mov eax, esi",
+      "lea edx, [eax + 1]"
+     ]
+    },
+    {
+     "cand": [
+      "sub eax, 1",
+      "cmp eax, 0x40",
+      "jae T",
+      "push edi",
+      "push ebx",
+      "call T",
+      "add esp, 8",
+      "test esi, esi",
+      "je T",
+      "mov eax, esi",
+      "jmp T",
+      "lea ecx, [ecx]",
+      "mov cl, byte ptr [eax]",
+      "add eax, 1",
+      "test cl, cl",
+      "jne T",
+      "lea ecx, [esi + 1]",
+      "cmp eax, ecx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea eax, [esp + 0x24]"
+     ]
+    },
+    {
+     "cand": [
+      "lea esp, [esp]"
+     ],
+     "retail": [
+      "sub eax, edx",
+      "lea esi, [ecx + 1]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add ecx, eax",
+      "cmp ecx, 0x200",
+      "jbe T",
+      "push 0",
+      "jmp T",
+      "mov eax, ebx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov cl, byte ptr [eax]",
+      "add eax, 1",
+      "test cl, cl",
+      "jne T"
+     ]
+    },
+    {
+     "cand": [
+      "lea eax, [eax + ecx - 1]"
+     ],
+     "retail": [
+      "add ebx, eax",
+      "cmp byte ptr [esp + 0x10], 0",
+      "lea ecx, [esp + 0x10]",
+      "je T",
+      "lea ebx, [ebx]",
+      "movsx eax, byte ptr [ecx]",
+      "and eax, 0x7f",
+      "lea edx, [eax - 0x20]",
+      "add ecx, 1"
+     ]
+    },
+    {
+     "cand": [
+      "jae T",
+      "lea esp, [esp]",
+      "mov esi, ebx"
+     ],
+     "retail": [
+      "ja T",
+      "mov byte ptr [ebx], al"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly moves and arithmetic"
+  },
+  "10003710": {
+   "tags": [],
+   "edits": 37,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "push ebx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop ebx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop ebx"
+     ]
+    },
+    {
+     "cand": [
+      "lea edx, [ecx - 0x10062040]"
+     ],
+     "retail": [
+      "mov ecx, esi",
+      "sub ecx, 0"
+     ]
+    },
+    {
+     "cand": [
+      "push ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ebx"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop ebx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop ebx"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "10008f50": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "x87"
+   ],
+   "edits": 7,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "push ecx",
+      "push 0",
+      "call dword ptr [0]",
+      "add esp, 8"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 8], ecx",
+      "mov dword ptr [esp + 4], 0",
+      "jmp dword ptr [0]"
+     ],
+     "retail": [
+      "ret "
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "10009bf0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 12,
+   "hunks": [
+    {
+     "cand": [
+      "add ecx, 0xeff9dfc0"
+     ],
+     "retail": [
+      "sub ecx, 0"
+     ]
+    },
+    {
+     "cand": [
+      "fild dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fild dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jp T",
+      "mov esi, ecx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop esi"
+     ]
+    },
+    {
+     "cand": [
+      "pop esi"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "10009c80": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 12,
+   "hunks": [
+    {
+     "cand": [
+      "add ecx, 0xeff9dfc0"
+     ],
+     "retail": [
+      "sub ecx, 0"
+     ]
+    },
+    {
+     "cand": [
+      "fild dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fild dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jp T",
+      "mov esi, ecx"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop esi"
+     ]
+    },
+    {
+     "cand": [
+      "pop esi"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "10019ba0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "security cookie",
+    "x87"
+   ],
+   "edits": 66,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "push esi"
+     ]
+    },
+    {
+     "cand": [
+      "push edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0x42c80000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push 0x43480000"
+     ],
+     "retail": [
+      "fstp dword ptr [esp]",
+      "push ebp",
+      "fld dword ptr [0]",
+      "push ecx",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "push ebp",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fldz ",
+      "add esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]",
+      "add esp, 0x18",
+      "mov dword ptr [esi + 0xf8], edi",
+      "mov dword ptr [esi + 0x1bc], edi"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push ecx",
+      "fstp dword ptr [esp]",
+      "push edi",
+      "call T",
+      "fldz ",
+      "fst dword ptr [esi + 0x180]"
+     ]
+    },
+    {
+     "cand": [
+      "push edi",
+      "mov dword ptr [esi + 0xf8], ebp",
+      "mov dword ptr [esi + 0x1bc], ebp",
+      "call T",
+      "add esp, 0x44",
+      "push 0",
+      "mov dword ptr [esi + 0x180], ebp",
+      "mov dword ptr [esi + 0x17c], ebp",
+      "mov dword ptr [ebx], ebp"
+     ],
+     "retail": [
+      "fst dword ptr [esi + 0x17c]",
+      "fstp dword ptr [ebx]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [esp + 0x1c]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "xor eax, eax"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "1001e980": {
+   "tags": [
+    "mul/shift strength reduction",
+    "x87"
+   ],
+   "edits": 31,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 0xbc]",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 0x14]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 0x18]",
+      "fldz ",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x1c], 0x42a00000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 0x18"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, eax"
+     ],
+     "retail": [
+      "cdq "
+     ]
+    },
+    {
+     "cand": [
+      "imul ecx",
+      "mov eax, edx",
+      "shr eax, 0x1f",
+      "add eax, edx",
+      "lea edx, [eax + eax*2]",
+      "add edx, edx",
+      "sub ecx, edx"
+     ],
+     "retail": [
+      "idiv ecx"
+     ]
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "10021350": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 46,
+   "hunks": [
+    {
+     "cand": [
+      "jle T",
+      "mov ecx, dword ptr [0]",
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000",
+      "push ecx",
+      "push 2",
+      "push esi",
+      "call dword ptr [0]",
+      "add esp, 0x18",
+      "mov dword ptr [esi + 0x304], 0",
+      "pop esi",
+      "ret "
+     ],
+     "retail": [
+      "jg T"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]",
+      "jp T"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz ",
+      "mov eax, dword ptr [0]",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]",
+      "push eax",
+      "push 2",
+      "push esi",
+      "call dword ptr [0]",
+      "add esp, 0x18",
+      "mov dword ptr [esi + 0x304], 0",
+      "pop esi",
+      "ret "
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "100221c0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 15,
+   "hunks": [
+    {
+     "cand": [
+      "push 0",
+      "push 0x40000000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fldz ",
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 0xc"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "add eax, -1"
+     ],
+     "retail": [
+      "jns T",
+      "dec eax"
+     ]
+    },
+    {
+     "cand": [
+      "add eax, 1"
+     ],
+     "retail": [
+      "inc eax"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "10024840": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "mul/shift strength reduction",
+    "x87"
+   ],
+   "edits": 34,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 0xc",
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "push esi"
+     ],
+     "retail": [
+      "mov esi, dword ptr [esp + 0x14]",
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [esi + 0xbc]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 8], 0x42a00000"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0xc]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, eax",
+      "mov esi, dword ptr [esp + 0x10]"
+     ],
+     "retail": [
+      "cdq "
+     ]
+    },
+    {
+     "cand": [
+      "imul ecx",
+      "sar edx, 1",
+      "mov eax, edx",
+      "shr eax, 0x1f",
+      "add edx, eax",
+      "mov eax, 2",
+      "sub eax, edx",
+      "lea ecx, [ecx + eax*4]",
+      "add ecx, eax"
+     ],
+     "retail": [
+      "idiv ecx",
+      "add edx, 0xa"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "1002aa50": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 19,
+   "hunks": [
+    {
+     "cand": [
+      "jp T"
+     ],
+     "retail": [
+      "jnp T",
+      "push ebx",
+      "call T",
+      "add esp, 4",
+      "push ebx",
+      "call T",
+      "add esp, 4",
+      "pop ebx",
+      "ret "
+     ]
+    },
+    {
+     "cand": [
+      "push ebx",
+      "call T",
+      "push ebx",
+      "call T",
+      "add esp, 8",
+      "pop ebx",
+      "ret "
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly stack and arithmetic"
+  },
+  "10006890": {
+   "tags": [
+    "call count differs",
+    "x87"
+   ],
+   "edits": 56,
+   "hunks": [
+    {
+     "cand": [
+      "fld dword ptr [esp + 8]",
+      "call T",
+      "mov ecx, eax"
+     ],
+     "retail": [
+      "mov ecx, dword ptr [esp + 8]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov edx, dword ptr [ecx + 0x230]",
+      "test edx, edx",
+      "fabs "
+     ]
+    },
+    {
+     "cand": [
+      "fldz "
+     ],
+     "retail": [
+      "je T",
+      "jmp T",
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [
+      "fcom st(1)",
+      "fnstsw ax",
+      "test ah, 5",
+      "jp T",
+      "fchs ",
+      "mov edx, dword ptr [ecx + 0x230]",
+      "fstp dword ptr [esp + 8]",
+      "test edx, edx",
+      "je T",
+      "fld dword ptr [edx + 0x2d4]",
+      "fstp dword ptr [esp]",
+      "fld dword ptr [esp]",
+      "fcom st(1)",
+      "fnstsw ax",
+      "test ah, 5",
+      "jp T",
+      "fchs "
+     ],
+     "retail": [
+      "fabs "
+     ]
+    },
+    {
+     "cand": [
+      "fcompp "
+     ],
+     "retail": [
+      "fcomp st(1)"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [edx + 0x2d4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fld dword ptr [esp + 8]",
+      "fcom st(1)",
+      "fnstsw ax",
+      "test ah, 5",
+      "jp T",
+      "fchs ",
+      "fstp dword ptr [esp + 8]"
+     ],
+     "retail": [
+      "jmp T",
+      "fstp st(0)"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp]",
+      "fld dword ptr [esp + 8]",
+      "fdiv dword ptr [esp]",
+      "fld dword ptr [ecx + 0x2d4]"
+     ],
+     "retail": [
+      "fdiv dword ptr [ecx + 0x2cc]"
+     ]
+    },
+    {
+     "cand": [
+      "fcom st(2)",
+      "fnstsw ax",
+      "test ah, 5",
+      "jp T",
+      "fchs ",
+      "fstp dword ptr [esp + 8]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fabs "
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [ecx + 0x2c8]",
+      "fmul st(1)"
+     ],
+     "retail": [
+      "fld st(0)",
+      "fmul dword ptr [ecx + 0x2c8]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp st(0)"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10007aa0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 115,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0x18]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fst dword ptr [esi + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "xor edi, edi"
+     ],
+     "retail": [
+      "fstp dword ptr [esi + 0x10]"
+     ]
+    },
+    {
+     "cand": [
+      "push esi",
+      "mov dword ptr [esi + 0x18], edi",
+      "mov dword ptr [esi + 0x14], edi",
+      "mov dword ptr [esi + 0x10], edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fld dword ptr [esp + 0xc]",
+      "fstp dword ptr [esi + 0x148]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 0x14c], 0x40a00000"
+     ],
+     "retail": [
+      "fst dword ptr [esi + 0x14c]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esi + 0x14c]",
+      "fld dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jnp T",
+      "fmul dword ptr [esi + 0x150]",
+      "fstp dword ptr [esp + 0xc]"
+     ],
+     "retail": [
+      "jp T",
+      "fstp st(0)"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [esi + 0x204], edi",
+      "fld dword ptr [esp + 0xc]"
+     ],
+     "retail": [
+      "fmul dword ptr [esi + 0x150]",
+      "cmp dword ptr [esi + 0x204], 0"
+     ]
+    },
+    {
+     "cand": [
+      "cmp dword ptr [0], edi"
+     ],
+     "retail": [
+      "cmp dword ptr [0], 0"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "100090e0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 6,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx",
+      "fld dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fld dword ptr [esp]"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "1000bd60": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 20,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": [
+      "mov esi, dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [
+      "mov esi, dword ptr [esp + 0x10]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [esp + 4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [esp + 4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": [
+      "cmp dword ptr [esp + 0xc], 0x32"
+     ]
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]",
+      "cmp dword ptr [esp + 0xc], 0x32"
+     ],
+     "retail": [
+      "push esi",
+      "push ecx"
+     ]
+    },
+    {
+     "cand": [
+      "push esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push 0x3f333333"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "push 0x3f99999a"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fstp dword ptr [esp]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10015830": {
+   "tags": [
+    "call count differs",
+    "x87"
+   ],
+   "edits": 36,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fst dword ptr [esp + 8]",
+      "fstp dword ptr [esp + 4]",
+      "lea ecx, [ebx + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "lea ecx, [ebx + 4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "lea ecx, [ecx]"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [esp + 0x10]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fiadd dword ptr [esi - 0xb0]",
+      "call T",
+      "mov dword ptr [esi - 0xb0], eax"
+     ],
+     "retail": [
+      "fadd dword ptr [esi - 0xb0]",
+      "fstp dword ptr [esi - 0xb0]"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [esp + 0x10]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fiadd dword ptr [esi - 0xac]",
+      "call T"
+     ],
+     "retail": [
+      "fadd dword ptr [esi - 0xac]",
+      "fstp dword ptr [esi - 0xac]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "100159a0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 5,
+   "hunks": [
+    {
+     "cand": [
+      "fstp dword ptr [esp + 4]",
+      "mov dword ptr [eax + 0x1dc], 0",
+      "fld dword ptr [esp + 4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz ",
+      "fstp dword ptr [eax + 0x1dc]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10017730": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 33,
+   "hunks": [
+    {
+     "cand": [
+      "push edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [0]"
+     ],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax], ecx",
+      "mov edx, dword ptr [0]",
+      "mov dword ptr [eax + 4], edx",
+      "mov ecx, dword ptr [0]",
+      "xor edi, edi",
+      "mov dword ptr [eax + 8], ecx",
+      "mov dword ptr [esi + 8], edi",
+      "mov dword ptr [esi + 4], edi",
+      "mov dword ptr [esi], edi",
+      "pop edi"
+     ],
+     "retail": [
+      "fstp dword ptr [eax]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 4]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 8]",
+      "fldz ",
+      "fst dword ptr [esi + 8]",
+      "fst dword ptr [esi + 4]",
+      "fstp dword ptr [esi]"
+     ]
+    },
+    {
+     "cand": [
+      "xor edi, edi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [0]",
+      "mov dword ptr [eax], edx",
+      "mov ecx, dword ptr [0]",
+      "mov dword ptr [eax + 4], ecx",
+      "mov edx, dword ptr [0]",
+      "mov dword ptr [eax + 8], edx",
+      "mov dword ptr [esi + 8], edi",
+      "mov dword ptr [esi + 4], edi",
+      "mov dword ptr [esi], edi",
+      "pop edi"
+     ],
+     "retail": [
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 4]",
+      "fld dword ptr [0]",
+      "fstp dword ptr [eax + 8]",
+      "fldz ",
+      "fst dword ptr [esi + 8]",
+      "fst dword ptr [esi + 4]",
+      "fstp dword ptr [esi]"
+     ]
+    },
+    {
+     "cand": [
+      "push edi",
+      "push edi"
+     ],
+     "retail": [
+      "push 0",
+      "push 0"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz ",
+      "fst dword ptr [esi + 8]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esi + 8], edi",
+      "mov dword ptr [esi + 4], edi",
+      "mov dword ptr [esi], edi",
+      "pop edi"
+     ],
+     "retail": [
+      "fst dword ptr [esi + 4]",
+      "fstp dword ptr [esi]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "1001aef0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 28,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fcomp st(1)",
+      "fnstsw ax",
+      "test ah, 0x41",
+      "je T",
+      "fadd qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]",
+      "fcom st(1)",
+      "fnstsw ax",
+      "fstp st(1)",
+      "test ah, 1",
+      "jne T",
+      "fadd qword ptr [0]",
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esi + 0x1d0]",
+      "fldz ",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esi + 0x1d0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jle T"
+     ],
+     "retail": [
+      "jl T"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jnp T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "1001c480": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 43,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 4]",
+      "fsub dword ptr [esi + 4]",
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [eax + 8]",
+      "fsub dword ptr [esi + 8]",
+      "fstp dword ptr [esp + 8]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp st(0)"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [
+      "fld qword ptr [0]",
+      "fcom st(1)"
+     ],
+     "retail": [
+      "fcomp qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "jne T",
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fucompp ",
+      "fnstsw ax",
+      "test ah, 0x44"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "1001ca40": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 48,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd dword ptr [0]"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp]",
+      "fld dword ptr [0]",
+      "fld dword ptr [esp]",
+      "fcom st(1)"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0xc]",
+      "fld dword ptr [esp + 0xc]",
+      "fcom qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fucom st(1)",
+      "fnstsw ax",
+      "fstp st(1)",
+      "test ah, 0x44",
+      "jp T",
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "fst dword ptr [esp + 8]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]",
+      "fcom st(1)"
+     ],
+     "retail": [
+      "fcomp qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "jne T",
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fucompp ",
+      "fnstsw ax",
+      "test ah, 0x44"
+     ],
+     "retail": [
+      "fst dword ptr [esp + 8]",
+      "fstp dword ptr [esp + 4]",
+      "fld1 ",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0",
+      "push 0x3f800000"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "1001e8c0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 22,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]",
+      "fcom st(1)",
+      "fnstsw ax",
+      "fstp st(1)",
+      "test ah, 0x41",
+      "jne T",
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fld dword ptr [edx + 0x33c]",
+      "fucompp "
+     ],
+     "retail": [
+      "fcompp "
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "je T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10020300": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 47,
+   "hunks": [
+    {
+     "cand": [
+      "push ecx"
+     ],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov eax, dword ptr [esi + 0x21c]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [esi + 0x21c]"
+     ],
+     "retail": [
+      "fsub dword ptr [eax + 4]",
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [esi + 8]",
+      "fsub dword ptr [eax + 8]",
+      "fstp dword ptr [esp + 8]",
+      "fld dword ptr [esi + 0xc]"
+     ]
+    },
+    {
+     "cand": [
+      "fld qword ptr [0]"
+     ],
+     "retail": [
+      "fcomp qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fcom st(1)"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jne T",
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fucompp ",
+      "fnstsw ax",
+      "test ah, 0x44",
+      "jp T",
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "jne T"
+     ],
+     "retail": [
+      "jnp T",
+      "fldz "
+     ]
+    },
+    {
+     "cand": [
+      "push 0",
+      "push 0x3f800000",
+      "push 0x3f800000"
+     ],
+     "retail": [
+      "sub esp, 0xc",
+      "fstp dword ptr [esp + 8]",
+      "fld1 ",
+      "fst dword ptr [esp + 4]",
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov ecx, dword ptr [eax + 4]",
+      "mov dword ptr [esi + 0x160], ecx",
+      "mov edx, dword ptr [eax + 8]",
+      "mov dword ptr [esi + 0x164], edx"
+     ],
+     "retail": [
+      "fld dword ptr [eax + 4]",
+      "add esp, 0x18",
+      "fstp dword ptr [esi + 0x160]"
+     ]
+    },
+    {
+     "cand": [
+      "add esp, 0x18"
+     ],
+     "retail": [
+      "fld dword ptr [eax + 0xc]",
+      "fstp dword ptr [esp + 0x14]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [eax + 0x1fc]",
+      "mov dword ptr [esp + 0xc], eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "pop ecx"
+     ],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10023120": {
+   "tags": [
+    "call count differs",
+    "rep string op",
+    "x87"
+   ],
+   "edits": 197,
+   "hunks": [
+    {
+     "cand": [
+      "push edi",
+      "xor edi, edi",
+      "cmp dword ptr [eax + 0x58], edi"
+     ],
+     "retail": [
+      "cmp dword ptr [eax + 0x58], 0"
+     ]
+    },
+    {
+     "cand": [
+      "push edi"
+     ],
+     "retail": [
+      "push 0"
+     ]
+    },
+    {
+     "cand": [
+      "mov edx, dword ptr [ecx*4]"
+     ],
+     "retail": [
+      "add eax, eax",
+      "fld dword ptr [eax + eax]",
+      "add eax, eax",
+      "fstp dword ptr [esp + 0x48]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax]",
+      "push ecx",
+      "fstp dword ptr [esp + 0x50]",
+      "lea edx, [esp + 0x64]",
+      "fld dword ptr [eax]"
+     ]
+    },
+    {
+     "cand": [
+      "push ecx",
+      "mov dword ptr [esp + 0x34], edx",
+      "lea edx, [esp + 0x7c]"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x58]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [esp + 0x34]",
+      "fsub dword ptr [eax + 8]",
+      "fstp dword ptr [esp + 0x40]",
+      "fld dword ptr [esp + 0x38]",
+      "fsub dword ptr [eax + 0xc]",
+      "fstp dword ptr [esp + 0x44]"
+     ]
+    },
+    {
+     "cand": [
+      "fcomp qword ptr [0]"
+     ],
+     "retail": [
+      "fcomp dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "jp T"
+     ],
+     "retail": [
+      "je T"
+     ]
+    },
+    {
+     "cand": [
+      "fldz ",
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fabs ",
+      "fcomp qword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "jne T",
+      "fchs ",
+      "fstp dword ptr [esp + 0x18]",
+      "fld dword ptr [0]",
+      "fcomp dword ptr [esp + 0x18]",
+      "fnstsw ax",
+      "test ah, 1",
+      "jne T"
+     ],
+     "retail": [
+      "je T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push esi",
+      "push edi"
+     ]
+    },
+    {
+     "cand": [
+      "push edi",
+      "push edi"
+     ],
+     "retail": [
+      "push 0",
+      "push 0"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10023ef0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "x87"
+   ],
+   "edits": 72,
+   "hunks": [
+    {
+     "cand": [
+      "mov eax, dword ptr [esi + 0x14]"
+     ],
+     "retail": [
+      "fld dword ptr [esi + 0x14]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x10], eax",
+      "fild dword ptr [esp + 0x10]"
+     ],
+     "retail": [
+      "fstp dword ptr [esp + 0x10]"
+     ]
+    },
+    {
+     "cand": [
+      "fstp dword ptr [esp + 4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fcomp st(1)",
+      "fnstsw ax",
+      "test ah, 0x41",
+      "jne T",
+      "fld dword ptr [0]",
+      "fld dword ptr [esp + 0xc]"
+     ]
+    },
+    {
+     "cand": [
+      "test ah, 5",
+      "jp T",
+      "fld dword ptr [esp + 0xc]",
+      "fcom qword ptr [0]",
+      "fnstsw ax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "test ah, 5",
+      "jp T",
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fucom st(1)",
+      "fnstsw ax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "je T"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fst dword ptr [esp + 0xc]",
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fcom st(1)"
+     ]
+    },
+    {
+     "cand": [
+      "jne T",
+      "faddp st(1)",
+      "sub esp, 8",
+      "fstp qword ptr [esp]",
+      "call T",
+      "mov dword ptr [esp + 0x14], eax",
+      "fild dword ptr [esp + 0x14]",
+      "add esp, 8"
+     ],
+     "retail": [
+      "jp T",
+      "fstp st(1)"
+     ]
+    },
+    {
+     "cand": [
+      "pop esi",
+      "pop ecx",
+      "ret "
+     ],
+     "retail": [
+      "fld dword ptr [esp + 0xc]",
+      "jmp T"
+     ]
+    },
+    {
+     "cand": [
+      "fst dword ptr [esp + 0xc]",
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fcom st(1)"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10024100": {
+   "tags": [
+    "call count differs",
+    "mul/shift strength reduction",
+    "x87"
+   ],
+   "edits": 285,
+   "hunks": [
+    {
+     "cand": [
+      "fldz "
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fcomp dword ptr [esp + 0x24]",
+      "fnstsw ax",
+      "test ah, 0x44",
+      "jnp T"
+     ],
+     "retail": [
+      "push edi",
+      "mov edi, dword ptr [esp + 0x28]",
+      "test edi, edi",
+      "je T"
+     ]
+    },
+    {
+     "cand": [
+      "sub esp, 8"
+     ],
+     "retail": [
+      "push ecx"
+     ]
+    },
+    {
+     "cand": [
+      "fstp qword ptr [esp]"
+     ],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [esp + 0x20], eax",
+      "fild dword ptr [esp + 0x20]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fstp qword ptr [esp]",
+      "call T",
+      "mov dword ptr [esp + 0x20], eax",
+      "fild dword ptr [esp + 0x20]",
+      "add esp, 8"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [esp + 0xc]",
+      "add esp, 4"
+     ]
+    },
+    {
+     "cand": [
+      "fld qword ptr [0]"
+     ],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fldz "
+     ],
+     "retail": [
+      "fxch st(1)",
+      "fst dword ptr [esp + 0x1c]",
+      "jmp T",
+      "fcom st(3)",
+      "fnstsw ax",
+      "fstp st(3)",
+      "test ah, 0x41",
+      "jne T",
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fxch st(2)",
+      "fcomp st(1)",
+      "fnstsw ax",
+      "test ah, 1",
+      "jne T",
+      "fxch st(1)"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10026670": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 22,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [0]",
+      "fcom st(1)",
+      "fnstsw ax",
+      "fstp st(1)",
+      "test ah, 0x41",
+      "jne T",
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fld dword ptr [edx + 0x33c]",
+      "fucompp "
+     ],
+     "retail": [
+      "fcompp "
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "je T"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "100270d0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "x87"
+   ],
+   "edits": 37,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "sub esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [eax + 4]",
+      "fsub dword ptr [esi + 4]",
+      "fstp dword ptr [esp + 4]",
+      "fld dword ptr [eax + 8]",
+      "fsub dword ptr [esi + 8]",
+      "fstp dword ptr [esp + 8]"
+     ]
+    },
+    {
+     "cand": [
+      "fld qword ptr [0]"
+     ],
+     "retail": [
+      "fcomp dword ptr [0]"
+     ]
+    },
+    {
+     "cand": [
+      "fcom st(1)"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jne T",
+      "mov ecx, 1",
+      "jmp T",
+      "xor ecx, ecx",
+      "fucompp ",
+      "fnstsw ax",
+      "test ah, 0x44",
+      "jp T",
+      "mov eax, 1",
+      "jmp T",
+      "xor eax, eax",
+      "cmp ecx, eax",
+      "jne T"
+     ],
+     "retail": [
+      "jnp T"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jp T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "add esp, 0xc"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "100289f0": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "float-to-int helper (`__ftol`) argument lost",
+    "rep string op",
+    "x87"
+   ],
+   "edits": 95,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "push ecx"
+     ]
+    },
+    {
+     "cand": [
+      "sub esp, 0xc"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "push ebp",
+      "push esi"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push ebp"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push esi"
+     ]
+    },
+    {
+     "cand": [
+      "mov cl, 1",
+      "sub edi, eax",
+      "test edx, edx",
+      "je T",
+      "mov cl, byte ptr [eax]",
+      "sub edx, 1",
+      "cmp cl, byte ptr [edi + eax]",
+      "sete cl",
+      "add eax, 1",
+      "test cl, cl",
+      "je T",
+      "jmp T",
+      "test cl, cl",
+      "je T"
+     ],
+     "retail": [
+      "xor edx, edx",
+      "repe cmpsb byte ptr [esi], byte ptr es:[edi]",
+      "jne T"
+     ]
+    },
+    {
+     "cand": [
+      "fnstcw word ptr [esp + 0x10]",
+      "movzx eax, word ptr [esp + 0x10]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "or eax, 0xc00",
+      "mov dword ptr [esp + 0x14], eax",
+      "fldcw word ptr [esp + 0x14]",
+      "fistp qword ptr [esp + 0x14]",
+      "mov eax, dword ptr [esp + 0x14]"
+     ],
+     "retail": [
+      "call T"
+     ]
+    },
+    {
+     "cand": [
+      "fldcw word ptr [esp + 0x10]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov ecx, dword ptr [ebx + 0x54]"
+     ]
+    },
+    {
+     "cand": [
+      "je T"
+     ],
+     "retail": [
+      "jp T"
+     ]
+    },
+    {
+     "cand": [
+      "fst dword ptr [esp + 0x10]"
+     ],
+     "retail": [
+      "je T",
+      "test edi, edi",
+      "je T",
+      "fstp st(0)",
+      "fld dword ptr [0]",
+      "test ebp, ebp",
+      "fstp dword ptr [esp + 0x10]",
+      "fld dword ptr [esp + 0x10]"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "1002da90": {
+   "tags": [
+    "argument cleanup (`add esp`) differs",
+    "call count differs",
+    "float-to-int helper (`__ftol`) argument lost",
+    "x87"
+   ],
+   "edits": 42,
+   "hunks": [
+    {
+     "cand": [
+      "sub esp, 8"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fld dword ptr [esi + 0x1f4]"
+     ]
+    },
+    {
+     "cand": [
+      "fld dword ptr [esi + 0x1f4]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jp T"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "push edi"
+     ]
+    },
+    {
+     "cand": [
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fcom st(1)"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp st(1)"
+     ]
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jp T"
+     ]
+    },
+    {
+     "cand": [
+      "fnstcw word ptr [esp + 0x10]",
+      "movzx eax, word ptr [esp + 0x10]",
+      "or eax, 0xc00",
+      "mov dword ptr [esp + 4], eax",
+      "fldcw word ptr [esp + 4]",
+      "fistp qword ptr [esp + 4]",
+      "mov eax, dword ptr [esp + 4]"
+     ],
+     "retail": [
+      "call T"
+     ]
+    },
+    {
+     "cand": [
+      "fldcw word ptr [esp + 0x10]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "fcomp st(1)"
+     ],
+     "retail": [
+      "fcom st(1)"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp st(1)"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly x87"
+  },
+  "10006fa0": {
+   "tags": [
+    "call count differs"
+   ],
+   "edits": 3,
+   "hunks": [
+    {
+     "cand": [
+      "mov dword ptr [esp + 4], eax",
+      "jmp T"
+     ],
+     "retail": [
+      "push eax",
+      "call T",
+      "pop ecx"
+     ]
+    }
+   ],
+   "class": "bytes: few instructions differ in count"
+  },
+  "1000a810": {
+   "tags": [],
+   "edits": 2,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "mov dword ptr [esp + 8], eax",
+      "mov dword ptr [esp + 4], ecx"
+     ]
+    }
+   ],
+   "class": "bytes: few instructions differ in count"
+  },
+  "10010860": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 4,
+   "hunks": [
+    {
+     "cand": [
+      "mov ecx, dword ptr [edx + 0x54]",
+      "test ecx, ecx"
+     ],
+     "retail": [
+      "cmp dword ptr [ecx + 0x54], 0"
+     ]
+    }
+   ],
+   "class": "bytes: few instructions differ in count"
+  },
+  "100152b0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 4,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "fldz "
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "fstp dword ptr [eax + 0x1ac]"
+     ]
+    },
+    {
+     "cand": [
+      "mov dword ptr [eax + 0x1ac], 0"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: few instructions differ in count"
+  },
+  "10012880": {
+   "class": "not produced"
+  },
+  "10032ad0": {
+   "class": "not produced"
+  },
+  "100128d0": {
+   "detail": "error C2296: '+' : illegal, left operand has type 'int (__cdecl *)()'",
+   "class": "compile: other"
+  },
+  "100156e0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 34,
+   "hunks": [
+    {
+     "cand": [],
+     "retail": [
+      "push edi",
+      "lea edi, [eax + 1]",
+      "lea esp, [esp]"
+     ]
+    },
+    {
+     "cand": [
+      "sub eax, 1"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "pop edi"
+     ]
+    },
+    {
+     "cand": [
+      "jle T"
+     ],
+     "retail": [
+      "jl T"
+     ]
+    },
+    {
+     "cand": [
+      "jge T"
+     ],
+     "retail": [
+      "jg T"
+     ]
+    },
+    {
+     "cand": [
+      "jle T"
+     ],
+     "retail": [
+      "jl T"
+     ]
+    },
+    {
+     "cand": [
+      "jge T",
+      "cmp dl, al"
+     ],
+     "retail": [
+      "jg T",
+      "mov al, byte ptr [ecx]",
+      "cmp al, byte ptr [ecx + 1]"
+     ]
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov edx, dword ptr [esi + 0x114]"
+     ]
+    },
+    {
+     "cand": [
+      "mov eax, dword ptr [esi + 0x114]"
+     ],
+     "retail": []
+    }
+   ],
+   "class": "bytes: length (candidate shorter), mostly control flow and calls"
+  },
+  "100177d0": {
+   "detail": "error C2440: 'type cast' : cannot convert from 'float' to 'float *'",
+   "class": "compile: conflicting / incompatible types"
+  },
+  "10017870": {
+   "detail": "error C2440: 'type cast' : cannot convert from 'float *' to 'float'",
+   "class": "compile: conflicting / incompatible types"
+  },
+  "10020bd0": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 4,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jp T"
+     ],
+     "retail": [
+      "je T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly control flow and calls"
+  },
+  "10023050": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 4,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jp T"
+     ],
+     "retail": [
+      "je T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly control flow and calls"
+  },
+  "10026370": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 5,
+   "hunks": [
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jne T"
+     ],
+     "retail": [
+      "jnp T"
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly control flow and calls"
+  },
+  "10026550": {
+   "tags": [
+    "x87"
+   ],
+   "edits": 11,
+   "hunks": [
+    {
+     "cand": [
+      "jle T",
+      "mov dword ptr [esi + 0x304], 0",
+      "pop esi",
+      "ret "
+     ],
+     "retail": [
+      "jge T"
+     ]
+    },
+    {
+     "cand": [
+      "test eax, eax"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [
+      "jge T",
+      "fadd qword ptr [0]"
+     ],
+     "retail": []
+    },
+    {
+     "cand": [],
+     "retail": [
+      "mov dword ptr [esi + 0x304], 0",
+      "pop esi",
+      "ret "
+     ]
+    }
+   ],
+   "class": "bytes: length (candidate longer), mostly control flow and calls"
+  }
+ }
+}

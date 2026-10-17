@@ -1,0 +1,80 @@
+{
+ "name": "wii-pikmin2",
+ "image": "/home/raikaru/ventris-corpus/extracted/wii-npc-pikmin-2/main.dol",
+ "started": "2026-10-15T14:21:10Z",
+ "steps": {
+  "new-project": {
+   "rc": 0,
+   "secs": 51.6,
+   "tail": [
+    "DOL /home/raikaru/ventris-corpus/extracted/wii-npc-pikmin-2/main.dol (6126432 bytes)",
+    "imported pikmin2wii (28170 functions, PowerPC:BE:32:Gekko_Broadway)",
+    "wrote /home/raikaru/runs/FinalGate2/smoke/proj-wii-pikmin2: mwcc-wii wii-2006-2008 (Medium confidence), 13 sections (from the .init tables), 28167 functions, 28167 symbols (3 functions dtk cannot represent skipped), 0 REL module(s), 0 prototypes (0 skipped), compiler `GC/3.0a5`",
+    "next: cd /home/raikaru/runs/FinalGate2/smoke/proj-wii-pikmin2 && python3 -m pip install -r requirements.txt && python3 configure.py && ninja"
+   ],
+   "cmd": "/home/raikaru/runs/FinalGate2/bin/romwright-cli new-project /home/raikaru/ventris-corpus/extracted/wii-npc-pikmin-2/main.dol /home/raikaru/runs/FinalGate2/smoke/proj-wii-pikmin2 --name pikmin2wii"
+  },
+  "configure": {
+   "rc": 0,
+   "secs": 34.9,
+   "tail": [
+    " INFO Initial analysis completed in 0.595s (found 28231 functions)",
+    " INFO Rebuilding relocations and splitting",
+    " INFO Splitting completed in 1.630s (wrote 683 objects)",
+    " INFO Total time: 2.227s",
+    "the DOL rebuilds byte for byte (arrangement: names)",
+    "configured: 683 units, 0 module(s), 0 with C; run `ninja`"
+   ],
+   "cmd": "python3 configure.py"
+  },
+  "build": {
+   "rc": 0,
+   "secs": 3.4,
+   "tail": [
+    "[1/3] link build/PIKMIN2WII/main.elf",
+    "[2/3] dol build/PIKMIN2WII/main.dol",
+    "[3/3] check config/PIKMIN2WII/build.sha1",
+    "build/PIKMIN2WII/main.dol: OK"
+   ],
+   "cmd": "ninja"
+  }
+ },
+ "build_ok_lines": [
+  "build/PIKMIN2WII/main.dol: OK"
+ ],
+ "sha1_built": null,
+ "build_rc": 0,
+ "match_functions": [
+  "0x800060b8",
+  "0x80067628",
+  "0x800e8c5c"
+ ],
+ "matches": [
+  {
+   "function": "0x800060b8",
+   "rc": 0,
+   "secs": 1.3,
+   "head": "FUN_800060b8 0x800060b8 (48 bytes)  compiler mwcc-gc-wii-20251118 -nodefaults -proc gekko -align powerpc -enum int -fp hardware -Cpp_exceptions off -O4,p -inline auto -nosyspath -RTTI off -str reuse -",
+   "best": "best: default  100.000% exact  (default 100.000%)  1 decompiles, 1 compiles, 1.2s; stopped at an exact variant",
+   "tail": []
+  },
+  {
+   "function": "0x80067628",
+   "rc": 0,
+   "secs": 1.2,
+   "head": "FUN_80067628 0x80067628 (16 bytes)  compiler mwcc-gc-wii-20251118 -nodefaults -proc gekko -align powerpc -enum int -fp hardware -Cpp_exceptions off -O4,p -inline auto -nosyspath -RTTI off -str reuse -",
+   "best": "best: default  100.000% exact  (default 100.000%)  1 decompiles, 1 compiles, 1.1s; stopped at an exact variant",
+   "tail": []
+  },
+  {
+   "function": "0x800e8c5c",
+   "rc": 0,
+   "secs": 1.3,
+   "head": "FUN_800e8c5c 0x800e8c5c (16 bytes)  compiler mwcc-gc-wii-20251118 -nodefaults -proc gekko -align powerpc -enum int -fp hardware -Cpp_exceptions off -O4,p -inline auto -nosyspath -RTTI off -str reuse -",
+   "best": "best: default  100.000% exact  (default 100.000%)  1 decompiles, 1 compiles, 1.2s; stopped at an exact variant",
+   "tail": []
+  }
+ ],
+ "result": "done",
+ "finished": "2026-10-15T14:22:44Z"
+}

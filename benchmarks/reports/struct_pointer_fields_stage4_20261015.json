@@ -1,0 +1,12 @@
+{
+ "addresses": 200,
+ "env": [],
+ "structs_printed": 9,
+ "pointer_fields": {
+  "fields": 71,
+  "void *": 1,
+  "non-pointer fields read through a pointer cast": 3
+ },
+ "functions_with_a_pointer_field": 1,
+ "scalar_pointee_types": {}
+}

@@ -1,0 +1,860 @@
+{
+ "benchmark": "stage2_gates",
+ "date": "20261013",
+ "tag": "g6",
+ "gates": [
+  {
+   "gate": "m22-002 MWCC seed 20261010",
+   "off": {
+    "functions": 200,
+    "exact": 55,
+    "compiled": 193,
+    "mean_percent": 76.976
+   },
+   "arms": {
+    "parity": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 1,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "001d94d0"
+     ]
+    },
+    "def_before_final_rebuild": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 1,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "001d94d0"
+     ]
+    },
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 55,
+      "compiled": 193,
+      "mean_percent": 76.968
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 1,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "001d94d0"
+     ]
+    }
+   }
+  },
+  {
+   "gate": "m22-002 MWCC seed 20261011",
+   "off": {
+    "functions": 200,
+    "exact": 57,
+    "compiled": 194,
+    "mean_percent": 78.321
+   },
+   "arms": {
+    "parity": {
+     "summary": {
+      "functions": 200,
+      "exact": 57,
+      "compiled": 194,
+      "mean_percent": 78.316
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 1,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00159a60"
+     ]
+    },
+    "def_before_final_rebuild": {
+     "summary": {
+      "functions": 200,
+      "exact": 57,
+      "compiled": 194,
+      "mean_percent": 78.316
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 1,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00159a60"
+     ]
+    },
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 57,
+      "compiled": 194,
+      "mean_percent": 78.316
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 1,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "00159a60"
+     ]
+    }
+   }
+  },
+  {
+   "gate": "m22-002 ee-gcc (fresh work dir per arm)",
+   "off": {
+    "functions": 200,
+    "exact": 106,
+    "compiled": 197,
+    "mean_percent": 86.403
+   },
+   "arms": {
+    "parity": {
+     "summary": {
+      "functions": 200,
+      "exact": 106,
+      "compiled": 197,
+      "mean_percent": 86.403
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    },
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 106,
+      "compiled": 197,
+      "mean_percent": 86.403
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dds",
+   "off": {
+    "functions": 200,
+    "exact": 61,
+    "compiled": 196,
+    "mean_percent": 76.818,
+    "failure_classes": {
+     "type mismatch (assignment, operand, return, cast)": 1,
+     "member access on a type the context lacks": 1,
+     "undeclared identifier": 2
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 61,
+      "compiled": 196,
+      "mean_percent": 76.818,
+      "failure_classes": {
+       "type mismatch (assignment, operand, return, cast)": 1,
+       "member access on a type the context lacks": 1,
+       "undeclared identifier": 2
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 rc",
+   "off": {
+    "functions": 200,
+    "exact": 26,
+    "compiled": 199,
+    "mean_percent": 68.13,
+    "failure_classes": {
+     "type mismatch (assignment, operand, return, cast)": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 26,
+      "compiled": 199,
+      "mean_percent": 68.113,
+      "failure_classes": {
+       "type mismatch (assignment, operand, return, cast)": 1
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 1,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": [
+      "0011e3d8"
+     ]
+    }
+   }
+  },
+  {
+   "gate": "m22-003 p4",
+   "off": {
+    "functions": 200,
+    "exact": 60,
+    "compiled": 193,
+    "mean_percent": 79.129,
+    "failure_classes": {
+     "call does not match prototype": 1,
+     "undeclared identifier": 1,
+     "type mismatch (assignment, operand, return, cast)": 5
+    }
+   },
+   "arms": {
+    "def_before_final_rebuild": {
+     "summary": {
+      "functions": 200,
+      "exact": 60,
+      "compiled": 193,
+      "mean_percent": 79.4,
+      "failure_classes": {
+       "call does not match prototype": 1,
+       "undeclared identifier": 1,
+       "type mismatch (assignment, operand, return, cast)": 5
+      }
+     },
+     "paired": 200,
+     "better": 2,
+     "worse": 0,
+     "same": 198,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "001d8cb0",
+      "001ec2b0"
+     ],
+     "worse_addresses": []
+    },
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 60,
+      "compiled": 193,
+      "mean_percent": 79.4,
+      "failure_classes": {
+       "call does not match prototype": 1,
+       "undeclared identifier": 1,
+       "type mismatch (assignment, operand, return, cast)": 5
+      }
+     },
+     "paired": 200,
+     "better": 2,
+     "worse": 0,
+     "same": 198,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "001d8cb0",
+      "001ec2b0"
+     ],
+     "worse_addresses": []
+    },
+    "parity": {
+     "summary": {
+      "functions": 200,
+      "exact": 60,
+      "compiled": 193,
+      "mean_percent": 79.4,
+      "failure_classes": {
+       "call does not match prototype": 1,
+       "undeclared identifier": 1,
+       "type mismatch (assignment, operand, return, cast)": 5
+      }
+     },
+     "paired": 200,
+     "better": 2,
+     "worse": 0,
+     "same": 198,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "001d8cb0",
+      "001ec2b0"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 gh (pristine repo copy: a smaller build than the harness clone, see stage2_followup)",
+   "off": {
+    "functions": 200,
+    "exact": 78,
+    "compiled": 196,
+    "mean_percent": 79.062,
+    "failure_classes": {
+     "undeclared identifier": 1,
+     "member access on a type the context lacks": 1,
+     "assembler rejected the compiler's output": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 78,
+      "compiled": 196,
+      "mean_percent": 79.062,
+      "failure_classes": {
+       "undeclared identifier": 1,
+       "member access on a type the context lacks": 1,
+       "assembler rejected the compiler's output": 1
+      }
+     },
+     "paired": 200,
+     "better": 0,
+     "worse": 0,
+     "same": 200,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 ff",
+   "off": {
+    "functions": 200,
+    "exact": 20,
+    "compiled": 145,
+    "mean_percent": 49.294,
+    "failure_classes": {
+     "member access on a type the context lacks": 25,
+     "call does not match prototype": 2,
+     "undeclared identifier": 3,
+     "type mismatch (assignment, operand, return, cast)": 22,
+     "conflicting types / redeclaration": 1,
+     "syntax error": 1,
+     "other": 1
+    }
+   },
+   "arms": {
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 20,
+      "compiled": 145,
+      "mean_percent": 49.35,
+      "failure_classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 22,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      }
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "0015ac28"
+     ],
+     "worse_addresses": []
+    },
+    "noagg": {
+     "summary": {
+      "functions": 200,
+      "exact": 20,
+      "compiled": 145,
+      "mean_percent": 49.35,
+      "failure_classes": {
+       "member access on a type the context lacks": 25,
+       "call does not match prototype": 2,
+       "undeclared identifier": 3,
+       "type mismatch (assignment, operand, return, cast)": 22,
+       "conflicting types / redeclaration": 1,
+       "syntax error": 1,
+       "other": 1
+      }
+     },
+     "paired": 200,
+     "better": 1,
+     "worse": 0,
+     "same": 199,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "0015ac28"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dc",
+   "off": {
+    "functions": 200,
+    "exact": 36,
+    "compiled": 166,
+    "mean_percent": 62.625,
+    "failure_classes": {
+     "call does not match prototype": 1,
+     "type mismatch (assignment, operand, return, cast)": 8,
+     "syntax error": 11,
+     "unit post-processing rejected the candidate object": 1,
+     "illegal or unknown type name": 11,
+     "member access on a type the context lacks": 2
+    }
+   },
+   "arms": {
+    "def_before_final_rebuild": {
+     "summary": {
+      "functions": 200,
+      "exact": 38,
+      "compiled": 176,
+      "mean_percent": 66.605,
+      "failure_classes": {
+       "call does not match prototype": 2,
+       "type mismatch (assignment, operand, return, cast)": 8,
+       "syntax error": 11,
+       "unit post-processing rejected the candidate object": 1,
+       "member access on a type the context lacks": 2
+      }
+     },
+     "paired": 200,
+     "better": 17,
+     "worse": 0,
+     "same": 183,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "0023c630",
+      "00258380"
+     ],
+     "gained_compiled": [
+      "001e55d0",
+      "001e8930",
+      "001e89b0",
+      "0023c630",
+      "002454e0",
+      "00254460",
+      "00258380",
+      "00279bd0",
+      "00279ec0",
+      "0027f520"
+     ],
+     "better_addresses": [
+      "00135230",
+      "0016bc60",
+      "001ba4b0",
+      "001e55d0",
+      "001e8930",
+      "001e89b0",
+      "0023c630",
+      "002454e0",
+      "00254460",
+      "00258380",
+      "00279bd0",
+      "00279ec0",
+      "0027f520",
+      "0028fd60",
+      "00290040",
+      "002904e0",
+      "002e8600"
+     ],
+     "worse_addresses": []
+    },
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 38,
+      "compiled": 176,
+      "mean_percent": 66.605,
+      "failure_classes": {
+       "call does not match prototype": 2,
+       "type mismatch (assignment, operand, return, cast)": 8,
+       "syntax error": 11,
+       "unit post-processing rejected the candidate object": 1,
+       "member access on a type the context lacks": 2
+      }
+     },
+     "paired": 200,
+     "better": 17,
+     "worse": 0,
+     "same": 183,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "0023c630",
+      "00258380"
+     ],
+     "gained_compiled": [
+      "001e55d0",
+      "001e8930",
+      "001e89b0",
+      "0023c630",
+      "002454e0",
+      "00254460",
+      "00258380",
+      "00279bd0",
+      "00279ec0",
+      "0027f520"
+     ],
+     "better_addresses": [
+      "00135230",
+      "0016bc60",
+      "001ba4b0",
+      "001e55d0",
+      "001e8930",
+      "001e89b0",
+      "0023c630",
+      "002454e0",
+      "00254460",
+      "00258380",
+      "00279bd0",
+      "00279ec0",
+      "0027f520",
+      "0028fd60",
+      "00290040",
+      "002904e0",
+      "002e8600"
+     ],
+     "worse_addresses": []
+    },
+    "parity": {
+     "summary": {
+      "functions": 200,
+      "exact": 36,
+      "compiled": 166,
+      "mean_percent": 63.314,
+      "failure_classes": {
+       "call does not match prototype": 1,
+       "type mismatch (assignment, operand, return, cast)": 8,
+       "syntax error": 11,
+       "unit post-processing rejected the candidate object": 1,
+       "illegal or unknown type name": 11,
+       "member access on a type the context lacks": 2
+      }
+     },
+     "paired": 200,
+     "better": 7,
+     "worse": 0,
+     "same": 193,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "00135230",
+      "0016bc60",
+      "001ba4b0",
+      "0028fd60",
+      "00290040",
+      "002904e0",
+      "002e8600"
+     ],
+     "worse_addresses": []
+    }
+   }
+  },
+  {
+   "gate": "m22-003 dk",
+   "off": {
+    "functions": 200,
+    "exact": 28,
+    "compiled": 169,
+    "mean_percent": 67.36,
+    "failure_classes": {
+     "syntax error": 8,
+     "member access on a type the context lacks": 6,
+     "illegal or unknown type name": 8,
+     "type mismatch (assignment, operand, return, cast)": 6,
+     "incomplete type": 1,
+     "undeclared identifier": 2
+    }
+   },
+   "arms": {
+    "def_before_final_rebuild": {
+     "summary": {
+      "functions": 200,
+      "exact": 29,
+      "compiled": 176,
+      "mean_percent": 70.804,
+      "failure_classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 6,
+       "type mismatch (assignment, operand, return, cast)": 6,
+       "incomplete type": 1,
+       "undeclared identifier": 2,
+       "illegal or unknown type name": 1
+      }
+     },
+     "paired": 200,
+     "better": 15,
+     "worse": 0,
+     "same": 185,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "00177550"
+     ],
+     "gained_compiled": [
+      "00174b60",
+      "00176e20",
+      "00176fb0",
+      "00177060",
+      "00177550",
+      "00177570",
+      "001ec170"
+     ],
+     "better_addresses": [
+      "00174b60",
+      "00176e20",
+      "00176fb0",
+      "00177060",
+      "00177550",
+      "00177570",
+      "00190ea0",
+      "00191a50",
+      "001af3b0",
+      "001c8ed0",
+      "001d7fc0",
+      "001d99a0",
+      "001e2120",
+      "001e5a90",
+      "001ec170"
+     ],
+     "worse_addresses": []
+    },
+    "def": {
+     "summary": {
+      "functions": 200,
+      "exact": 29,
+      "compiled": 176,
+      "mean_percent": 70.804,
+      "failure_classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 6,
+       "type mismatch (assignment, operand, return, cast)": 6,
+       "incomplete type": 1,
+       "undeclared identifier": 2,
+       "illegal or unknown type name": 1
+      }
+     },
+     "paired": 200,
+     "better": 15,
+     "worse": 0,
+     "same": 185,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "00177550"
+     ],
+     "gained_compiled": [
+      "00174b60",
+      "00176e20",
+      "00176fb0",
+      "00177060",
+      "00177550",
+      "00177570",
+      "001ec170"
+     ],
+     "better_addresses": [
+      "00174b60",
+      "00176e20",
+      "00176fb0",
+      "00177060",
+      "00177550",
+      "00177570",
+      "00190ea0",
+      "00191a50",
+      "001af3b0",
+      "001c8ed0",
+      "001d7fc0",
+      "001d99a0",
+      "001e2120",
+      "001e5a90",
+      "001ec170"
+     ],
+     "worse_addresses": []
+    },
+    "parity": {
+     "summary": {
+      "functions": 200,
+      "exact": 28,
+      "compiled": 169,
+      "mean_percent": 68.054,
+      "failure_classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 6,
+       "illegal or unknown type name": 8,
+       "type mismatch (assignment, operand, return, cast)": 6,
+       "incomplete type": 1,
+       "undeclared identifier": 2
+      }
+     },
+     "paired": 200,
+     "better": 8,
+     "worse": 0,
+     "same": 192,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [],
+     "gained_compiled": [],
+     "better_addresses": [
+      "00190ea0",
+      "00191a50",
+      "001af3b0",
+      "001c8ed0",
+      "001d7fc0",
+      "001d99a0",
+      "001e2120",
+      "001e5a90"
+     ],
+     "worse_addresses": []
+    },
+    "noagg": {
+     "summary": {
+      "functions": 200,
+      "exact": 29,
+      "compiled": 176,
+      "mean_percent": 70.804,
+      "failure_classes": {
+       "syntax error": 8,
+       "member access on a type the context lacks": 6,
+       "type mismatch (assignment, operand, return, cast)": 6,
+       "incomplete type": 1,
+       "undeclared identifier": 2,
+       "illegal or unknown type name": 1
+      }
+     },
+     "paired": 200,
+     "better": 15,
+     "worse": 0,
+     "same": 185,
+     "lost_exact": [],
+     "lost_compiled": [],
+     "gained_exact": [
+      "00177550"
+     ],
+     "gained_compiled": [
+      "00174b60",
+      "00176e20",
+      "00176fb0",
+      "00177060",
+      "00177550",
+      "00177570",
+      "001ec170"
+     ],
+     "better_addresses": [
+      "00174b60",
+      "00176e20",
+      "00176fb0",
+      "00177060",
+      "00177550",
+      "00177570",
+      "00190ea0",
+      "00191a50",
+      "001af3b0",
+      "001c8ed0",
+      "001d7fc0",
+      "001d99a0",
+      "001e2120",
+      "001e5a90",
+      "001ec170"
+     ],
+     "worse_addresses": []
+    }
+   }
+  }
+ ]
+}

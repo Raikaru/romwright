@@ -1,0 +1,908 @@
+{
+ "schema": "console-research/1",
+ "generated": "2026-10-07T05:49:42+00:00",
+ "tools": "15ef1c536271bd8a",
+ "cli": "/home/raikaru/ventris/target/eval2/release/romwright-cli",
+ "n": 200,
+ "seed": 20261006,
+ "thresholds": {
+  "rate": 0.005,
+  "count_relative": 0.01
+ },
+ "configs": {
+  "default": {
+   "name": "default",
+   "env": {},
+   "component": "all research (default vs baseline-off)",
+   "reference": "baseline-off",
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "baseline-off": {
+   "name": "baseline-off",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": "",
+    "ROMWRIGHT_NO_SWITCH_VSA": "1",
+    "ROMWRIGHT_NO_SWITCH_DECOMPILER": "1"
+   },
+   "component": "reference",
+   "reference": null,
+   "sign": 1,
+   "infer_prototypes": false
+  },
+  "ir-none": {
+   "name": "ir-none",
+   "env": {
+    "ROMWRIGHT_IR_PASSES": ""
+   },
+   "component": "IR passes (all three)",
+   "reference": "default",
+   "sign": -1,
+   "infer_prototypes": false
+  },
+  "infer-prototypes": {
+   "name": "infer-prototypes",
+   "env": {},
+   "component": "persisted prototypes (infer_prototypes job)",
+   "reference": "default",
+   "sign": 1,
+   "infer_prototypes": true
+  },
+  "infer-prototypes+register-params": {
+   "name": "infer-prototypes+register-params",
+   "env": {
+    "ROMWRIGHT_REGISTER_PARAMS": "1"
+   },
+   "component": "register params (persisted)",
+   "reference": "infer-prototypes",
+   "sign": 1,
+   "infer_prototypes": true
+  },
+  "inferred-types": {
+   "name": "inferred-types",
+   "env": {
+    "ROMWRIGHT_INFERRED_TYPES": "1"
+   },
+   "component": "inferred types -> prototypes",
+   "reference": "infer-prototypes",
+   "sign": 1,
+   "infer_prototypes": true
+  }
+ },
+ "images": {
+  "gba-pokeemerald": {
+   "configs": {
+    "infer-prototypes": {
+     "error": "romwright-api errors: [{\"code\": \"worker_error\", \"message\": \"worker: worker: decompiler exception: Low-level Error: Trying to construct memory range beyond end of address space: ram\"}]"
+    },
+    "infer-prototypes+register-params": {
+     "error": "romwright-api errors: [{\"code\": \"worker_error\", \"message\": \"worker: worker: decompiler exception: Low-level Error: Trying to construct memory range beyond end of address space: ram\"}]"
+    },
+    "inferred-types": {
+     "error": "romwright-api errors: [{\"code\": \"worker_error\", \"message\": \"worker: worker: decompiler exception: Low-level Error: Trying to construct memory range beyond end of address space: ram\"}]"
+    },
+    "default": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 88,
+      "labels": 34,
+      "irregular_functions": 189,
+      "native_warnings": 857,
+      "text_warnings": 251,
+      "lines": 6201,
+      "median_seconds": 0.804,
+      "max_seconds": 0.913,
+      "wall_seconds": 40.6,
+      "recall": 0.9736,
+      "precision": 0.9689,
+      "discovered": 15934,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.97,
+      "type_slots": 389,
+      "type_exact": 120,
+      "type_partial": 0,
+      "type_wrong": 269,
+      "type_exact_rate": 0.3085,
+      "m22_mean_similarity": 0.0,
+      "m22_exact": 0,
+      "m22_compiled": 0,
+      "m22_standalone_similarity": 0.64142,
+      "m22_standalone_exact": 6
+     },
+     "import": {
+      "seconds": 148.4,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 699,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/.cache/romwright/research-eval2/results/15ef1c536271bd8a/gba-pokeemerald/default-200-20261006.json",
+     "vs_baseline_off": {
+      "recall": {
+       "from": 0.9504,
+       "to": 0.9736,
+       "delta": 0.0232,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9681,
+       "to": 0.9689,
+       "delta": 0.0008,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.955,
+       "to": 1.0,
+       "delta": 0.045,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 76,
+       "to": 88,
+       "delta": 12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 34,
+       "to": 34,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 182,
+       "to": 182,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 835,
+       "to": 835,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 242,
+       "to": 242,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 6039,
+       "to": 6038,
+       "delta": -1,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.93,
+       "to": 0.97,
+       "delta": 0.04,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.2974,
+       "to": 0.3085,
+       "delta": 0.0111,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 191
+     },
+     "vs_reference": {
+      "recall": {
+       "from": 0.9504,
+       "to": 0.9736,
+       "delta": 0.0232,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9681,
+       "to": 0.9689,
+       "delta": 0.0008,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 0.955,
+       "to": 1.0,
+       "delta": 0.045,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 76,
+       "to": 88,
+       "delta": 12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 34,
+       "to": 34,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 182,
+       "to": 182,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 835,
+       "to": 835,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 242,
+       "to": 242,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 6039,
+       "to": 6038,
+       "delta": -1,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.93,
+       "to": 0.97,
+       "delta": 0.04,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.2974,
+       "to": 0.3085,
+       "delta": 0.0111,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 191
+     },
+     "verdict": "mixed"
+    },
+    "baseline-off": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 191,
+      "success_rate": 0.955,
+      "gotos": 76,
+      "labels": 34,
+      "irregular_functions": 182,
+      "native_warnings": 835,
+      "text_warnings": 242,
+      "lines": 6039,
+      "median_seconds": 1.912,
+      "max_seconds": 4.454,
+      "wall_seconds": 99.2,
+      "recall": 0.9504,
+      "precision": 0.9681,
+      "discovered": 15565,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.93,
+      "type_slots": 390,
+      "type_exact": 116,
+      "type_partial": 0,
+      "type_wrong": 274,
+      "type_exact_rate": 0.2974
+     },
+     "import": {
+      "seconds": 198.5,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 1377,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/.cache/romwright/research-eval2/results/15ef1c536271bd8a/gba-pokeemerald/baseline-off-200-20261006.json",
+     "vs_default": {
+      "recall": {
+       "from": 0.9736,
+       "to": 0.9504,
+       "delta": -0.0232,
+       "material": true,
+       "direction": 1
+      },
+      "precision": {
+       "from": 0.9689,
+       "to": 0.9681,
+       "delta": -0.0008,
+       "material": false,
+       "direction": 1
+      },
+      "success_rate": {
+       "from": 1.0,
+       "to": 0.955,
+       "delta": -0.045,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 88,
+       "to": 76,
+       "delta": -12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 34,
+       "to": 34,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 182,
+       "to": 182,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 835,
+       "to": 835,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 242,
+       "to": 242,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 6038,
+       "to": 6039,
+       "delta": 1,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.97,
+       "to": 0.93,
+       "delta": -0.04,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3085,
+       "to": 0.2974,
+       "delta": -0.0111,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 191
+     }
+    },
+    "ir-none": {
+     "summary": {
+      "sampled": 200,
+      "decompiled": 200,
+      "success_rate": 1.0,
+      "gotos": 76,
+      "labels": 34,
+      "irregular_functions": 189,
+      "native_warnings": 857,
+      "text_warnings": 251,
+      "lines": 6202,
+      "median_seconds": 1.516,
+      "max_seconds": 4.05,
+      "wall_seconds": 84.8,
+      "dwarf_functions": 200,
+      "arity_accuracy": 0.97,
+      "type_slots": 389,
+      "type_exact": 120,
+      "type_partial": 0,
+      "type_wrong": 269,
+      "type_exact_rate": 0.3085,
+      "m22_mean_similarity": 0.0,
+      "m22_exact": 0,
+      "m22_compiled": 0,
+      "m22_standalone_similarity": 0.64404,
+      "m22_standalone_exact": 6
+     },
+     "import": {
+      "seconds": 148.4,
+      "switch_stats": {
+       "vsa_resolved": 0,
+       "vsa_refused": 699,
+       "decompiler_skipped": 0
+      }
+     },
+     "prototypes": null,
+     "results_file": "/home/raikaru/.cache/romwright/research-eval2/results/15ef1c536271bd8a/gba-pokeemerald/ir-none-200-20261006.json",
+     "vs_default": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 88,
+       "to": 76,
+       "delta": -12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 34,
+       "to": 34,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 189,
+       "to": 189,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 857,
+       "to": 857,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 251,
+       "to": 251,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 6201,
+       "to": 6202,
+       "delta": 1,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.97,
+       "to": 0.97,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3085,
+       "to": 0.3085,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "m22_mean_similarity": {
+       "from": 0.0,
+       "to": 0.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "m22_exact": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": 1
+      },
+      "m22_standalone_similarity": {
+       "from": 0.64142,
+       "to": 0.64404,
+       "delta": 0.00262,
+       "material": false,
+       "direction": 1
+      },
+      "m22_standalone_exact": {
+       "from": 6,
+       "to": 6,
+       "delta": 0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "vs_baseline_off": {
+      "success_rate": {
+       "from": 0.955,
+       "to": 1.0,
+       "delta": 0.045,
+       "material": true,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 76,
+       "to": 76,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "labels": {
+       "from": 34,
+       "to": 34,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 182,
+       "to": 182,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 835,
+       "to": 835,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 242,
+       "to": 242,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 6039,
+       "to": 6039,
+       "delta": 0,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.93,
+       "to": 0.97,
+       "delta": 0.04,
+       "material": true,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.2974,
+       "to": 0.3085,
+       "delta": 0.0111,
+       "material": true,
+       "direction": 1
+      },
+      "common_functions": 191
+     },
+     "vs_reference": {
+      "success_rate": {
+       "from": 1.0,
+       "to": 1.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "gotos": {
+       "from": 88,
+       "to": 76,
+       "delta": -12,
+       "material": true,
+       "direction": -1
+      },
+      "labels": {
+       "from": 34,
+       "to": 34,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "irregular_functions": {
+       "from": 189,
+       "to": 189,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "native_warnings": {
+       "from": 857,
+       "to": 857,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "text_warnings": {
+       "from": 251,
+       "to": 251,
+       "delta": 0,
+       "material": false,
+       "direction": -1
+      },
+      "lines": {
+       "from": 6201,
+       "to": 6202,
+       "delta": 1,
+       "material": false,
+       "direction": 0
+      },
+      "arity_accuracy": {
+       "from": 0.97,
+       "to": 0.97,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "type_exact_rate": {
+       "from": 0.3085,
+       "to": 0.3085,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "m22_mean_similarity": {
+       "from": 0.0,
+       "to": 0.0,
+       "delta": 0.0,
+       "material": false,
+       "direction": 1
+      },
+      "m22_exact": {
+       "from": 0,
+       "to": 0,
+       "delta": 0,
+       "material": false,
+       "direction": 1
+      },
+      "m22_standalone_similarity": {
+       "from": 0.64142,
+       "to": 0.64404,
+       "delta": 0.00262,
+       "material": false,
+       "direction": 1
+      },
+      "m22_standalone_exact": {
+       "from": 6,
+       "to": 6,
+       "delta": 0,
+       "material": false,
+       "direction": 1
+      },
+      "common_functions": 200
+     },
+     "verdict": "hurts"
+    }
+   },
+   "dwarf": {
+    "reader": "pyelftools-tolerant",
+    "functions": 15678,
+    "conflicts_dropped": 0
+   },
+   "status": "ran",
+   "program": "gba",
+   "sample": [
+    "08000f00",
+    "08006348",
+    "08006648",
+    "08007df8",
+    "080082b8",
+    "08008744",
+    "0800d434",
+    "0800f1e0",
+    "080124e8",
+    "0801a43c",
+    "0801d1f0",
+    "0801f0d0",
+    "0801f5b8",
+    "0801fd30",
+    "08020af4",
+    "08021944",
+    "08022cb0",
+    "080261cc",
+    "08027554",
+    "08028a88",
+    "08028b80",
+    "0802d598",
+    "0802e120",
+    "08031580",
+    "08031c88",
+    "08033efc",
+    "0804b658",
+    "0804de14",
+    "08051064",
+    "08055dfc",
+    "08062ac4",
+    "08063364",
+    "080662f8",
+    "080672dc",
+    "0806782c",
+    "08070728",
+    "080712c0",
+    "08077288",
+    "0807811c",
+    "0807ab04",
+    "08081be0",
+    "080824fc",
+    "08084b1c",
+    "08086ce0",
+    "08089588",
+    "080897a0",
+    "0808aaf8",
+    "0808b95c",
+    "0808b9ec",
+    "0808df80",
+    "0808e594",
+    "08090148",
+    "08090df8",
+    "08091d84",
+    "080935c4",
+    "08093c44",
+    "080948d8",
+    "08094d20",
+    "08095070",
+    "080951a4",
+    "080954dc",
+    "080971c0",
+    "08097d9c",
+    "0809b3b0",
+    "0809b458",
+    "080a14c0",
+    "080a2390",
+    "080a64ec",
+    "080a67bc",
+    "080a7a74",
+    "080ab3a8",
+    "080addbc",
+    "080af314",
+    "080af87c",
+    "080afbf4",
+    "080b08ec",
+    "080b6fa8",
+    "080b72f4",
+    "080b86ec",
+    "080bab08",
+    "080c5a48",
+    "080c63fc",
+    "080ca9c0",
+    "080d5c20",
+    "080d622c",
+    "080d656c",
+    "080da198",
+    "080dbaa0",
+    "080de424",
+    "080e5384",
+    "080e5664",
+    "080e5a10",
+    "080e9214",
+    "080e9238",
+    "080f0ecc",
+    "080f6404",
+    "080f8ee8",
+    "080f9438",
+    "081005d4",
+    "08101440",
+    "08102584",
+    "08102de4",
+    "081052a4",
+    "0810916c",
+    "0810d308",
+    "0810da10",
+    "081157fc",
+    "081194c8",
+    "08120160",
+    "0812220c",
+    "08123190",
+    "08125b5c",
+    "08126dcc",
+    "0812a750",
+    "0812e230",
+    "08131cec",
+    "08131d5c",
+    "08134ce8",
+    "081371d4",
+    "08138d10",
+    "0813a46c",
+    "0813d824",
+    "08142a88",
+    "08144d94",
+    "08149864",
+    "0814d288",
+    "08153430",
+    "08153850",
+    "08153970",
+    "08157644",
+    "08159c08",
+    "0815c3a8",
+    "0815e34c",
+    "08161d00",
+    "081621c0",
+    "08164ed8",
+    "08167ba0",
+    "08168610",
+    "08168af8",
+    "0816a788",
+    "0816bfe0",
+    "0816d12c",
+    "0816f6d0",
+    "08175ae4",
+    "0817603c",
+    "0817c7dc",
+    "0817f3f0",
+    "08180f2c",
+    "08183574",
+    "0818bfac",
+    "0818bfb8",
+    "0818fa20",
+    "0819a25c",
+    "081a09d0",
+    "081a16b4",
+    "081a2560",
+    "081a6a08",
+    "081a7140",
+    "081a7974",
+    "081a9134",
+    "081aa760",
+    "081ac23c",
+    "081ac2e8",
+    "081ad044",
+    "081ad9ec",
+    "081adc0c",
+    "081b0ef4",
+    "081b31b0",
+    "081b5d4c",
+    "081b9030",
+    "081b951c",
+    "081b9d98",
+    "081bc484",
+    "081bd778",
+    "081bd784",
+    "081bdff8",
+    "081c1da4",
+    "081c4484",
+    "081c4c60",
+    "081c5518",
+    "081c742c",
+    "081c7ba4",
+    "081ca3b4",
+    "081cbe88",
+    "081cc6f4",
+    "081cf0c0",
+    "081d2c3c",
+    "081d5520",
+    "081d74c8",
+    "081d93d8",
+    "081d961c",
+    "081da9bc",
+    "082e0130",
+    "082e15a0",
+    "082e2c78",
+    "082e2e70",
+    "082e46ac",
+    "082e530c",
+    "082e5c34",
+    "082e5cc8"
+   ],
+   "sample_in_dwarf": 200
+  }
+ }
+}

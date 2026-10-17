@@ -1,0 +1,78 @@
+{
+ "benchmark": "structuring_compile",
+ "compiler": "gcc",
+ "configs": {
+  "all": {
+   "functions": 1800,
+   "rewritten": 188,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "break_continue": {
+   "functions": 1800,
+   "rewritten": 5,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "collapsed_edges": {
+   "functions": 1800,
+   "rewritten": 4,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "else_join": {
+   "functions": 1800,
+   "rewritten": 31,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "five": {
+   "functions": 1800,
+   "rewritten": 177,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "five_b6": {
+   "functions": 1800,
+   "rewritten": 181,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "five_else": {
+   "functions": 1800,
+   "rewritten": 180,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "irreducible_entry": {
+   "functions": 1800,
+   "rewritten": 52,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "loop_exits": {
+   "functions": 1800,
+   "rewritten": 35,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "no_else": {
+   "functions": 1800,
+   "rewritten": 186,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "sink_join": {
+   "functions": 1800,
+   "rewritten": 0,
+   "error_free": 1519,
+   "regressions": []
+  },
+  "switch_tails": {
+   "functions": 1800,
+   "rewritten": 149,
+   "error_free": 1519,
+   "regressions": []
+  }
+ }
+}
