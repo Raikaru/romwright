@@ -902,7 +902,7 @@
     "cpp": "*/bin/arm-none-eabi-cpp"
    },
    "license": "GPL-3.0-or-later (GNU Binutils 2.42 and GCC 13.3 as built and distributed by Arm; the archive also holds newlib under its own licenses)",
-   "provenance": "https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads release 13.3.rel1 (binrel); sha256 as published in the `.sha256asc` file next to each archive. The archive has one version-named top directory, so members are globs (`*/bin/arm-none-eabi-as`). The whole archive (about 150 MB) is extracted; the project runs as, ld, objcopy and cpp.",
+   "provenance": "https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads release 13.3.rel1 (binrel); sha256 as published in the `.sha256asc` file next to each archive. The archive has one version-named top directory, so members are globs (`*/bin/arm-none-eabi-as`). The whole archive (about 150 MB) is extracted; the project runs as, ld, objcopy and cpp. The Windows asset (mingw-w64 build, 298 MB zip) installs only the standalone as, ld, nm, objcopy, objdump and readelf executables (`include`), which is what a 3DS project's tools/relink.py runs (`*/bin/arm-none-eabi-<tool>.exe`).",
    "assets": {
     "linux-x86_64": {
      "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz",
@@ -927,6 +927,20 @@
      "sha256": "1ab00742d1ed0926e6f227df39d767f8efab46f5250505c29cb81f548222d794",
      "size": 138514276,
      "archive": "tar.xz"
+    },
+    "windows-x86_64": {
+     "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi.zip",
+     "sha256": "e46fda043c0ce83582bc8db4b3ef85f77f4beb7333344c2f4193c17e1167a095",
+     "size": 297871203,
+     "archive": "zip",
+     "include": [
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-as.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-ld.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-nm.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-objcopy.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-objdump.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-readelf.exe"
+     ]
     }
    }
   },
