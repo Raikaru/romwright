@@ -153,7 +153,10 @@ def smoke(archive: Path, name: str) -> None:
                 bundle.extractall(scratch_dir / "unpacked")
         else:
             with tarfile.open(archive) as bundle:
-                bundle.extractall(scratch_dir / "unpacked")
+                if hasattr(tarfile, "data_filter"):
+                    bundle.extractall(scratch_dir / "unpacked", filter="data")
+                else:
+                    bundle.extractall(scratch_dir / "unpacked")
         cli = scratch_dir / "unpacked" / name / "bin" / f"romwright-cli{EXE}"
         project = scratch_dir / "project"
         project.mkdir()

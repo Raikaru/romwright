@@ -45,7 +45,12 @@ impl Layout {
             exe_dir: std::env::current_exe()
                 .ok()
                 .and_then(|exe| exe.parent().map(Path::to_path_buf)),
-            repo_root: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+            // CARGO_MANIFEST_DIR is `<repo>/crates/romwright-core`.
+            repo_root: Path::new(env!("CARGO_MANIFEST_DIR"))
+                .ancestors()
+                .nth(2)
+                .map(Path::to_path_buf)
+                .unwrap_or_default(),
             home: std::env::home_dir(),
         }
     }
@@ -54,7 +59,8 @@ impl Layout {
     fn share(&self) -> Option<PathBuf> {
         self.exe_dir
             .as_ref()
-            .map(|dir| dir.join("..").join("share").join("romwright"))
+            .and_then(|dir| dir.parent())
+            .map(|root| root.join("share").join("romwright"))
     }
 
     fn first_existing(candidates: Vec<PathBuf>, exists: impl Fn(&Path) -> bool) -> Option<PathBuf> {
@@ -181,12 +187,12 @@ mod tests {
         }
         let layout = layout(root);
         assert_eq!(layout.decompiler(), root.join("pkg/bin").join(&name));
-        assert_eq!(layout.specs(), root.join("pkg/bin/../share/romwright/specs"));
+        assert_eq!(layout.specs(), root.join("pkg/share/romwright/specs"));
         assert_eq!(
             layout.library_prototypes(),
-            root.join("pkg/bin/../share/romwright/library-prototypes-v1/generic_clib_64.json")
+            root.join("pkg/share/romwright/library-prototypes-v1/generic_clib_64.json")
         );
-        assert_eq!(layout.ghidra(), root.join("pkg/bin/../share/romwright/ghidra"));
+        assert_eq!(layout.ghidra(), root.join("pkg/share/romwright/ghidra"));
     }
 
     #[test]
