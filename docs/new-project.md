@@ -513,7 +513,7 @@ ELF's machine and OS ABI, a PE with machine `0x1F2`) or given with `--platform 3
 romwright-cli new-project <image> <outdir> [--platform ID] [--name NAME] [--keys FILE...] [--map FILE]
               [--raw BASE --language ID] [--decompile all|first:N|ADDR,ADDR|none] [--budget-ms N] [--jobs N]
               [--toolchain PROFILE.json] [--manifest FILE] [--fact-pack PACK] [--json]
-              [--compiler armcc-<version>-b<build> [--cflags FLAGS]]          (3DS)
+              [--compiler armcc-<version>-b<build> [--cflags FLAGS]] [--tus FILE]
 ```
 
 `--keys` hands the container loaders the user's keys (`prod.keys`, a RAP/klic, a 3DS `aes_keys.txt`); they
@@ -524,6 +524,13 @@ on `--jobs N` threads at once (default: the host's cores, at most 16); `--budget
 batch gets the sum. A batch the decompiler refuses is redone function by function, and a function it refuses is
 skipped and counted, never fatal. The smokes below use `first:40` (the first N functions of each module by
 address).
+
+`--tus FILE` (`{"units": [{"module": "_code", "address": "0x1b0cb0", "tu": "sdds4/program/battle/btlMain"}]}`)
+places functions in the original source files evidence assigns them to (assert paths, file-local data): each
+listed function's unit becomes `src/<module>/<file>/<function>.c` (and the same path below `build/obj/` and
+`orig/target/`), `config/project.json` records its `file`, and objdiff gets one progress category per file. Every
+other function stays in its address shard. A path must be relative, `/`-separated plain names; anything else is
+refused. Functions stay one per unit, so the build, objdiff and a relink are unchanged.
 
 **3DS with armcc.** Nintendo's 3DS SDK builds with ARM's armcc (RVCT 4.0/4.1, ARM Compiler 5). The
 decomp.me compilers project hosts fourteen builds (`armcc.zip`, compiler and headers only); the manifest pins

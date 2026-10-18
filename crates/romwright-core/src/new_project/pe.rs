@@ -218,7 +218,7 @@ pub fn layout(inputs: &PeInputs) -> Vec<Unit> {
             let address = function.entry.offset;
             let cname = names.claim(scaffold::c_ident(&function.name, address), address);
             let stem = file_stem(&cname, address);
-            Unit { module: 0, address, name: function.name.clone(), size: function.size, tu: format!("main/{:04x}/{stem}", address >> 16), cname }
+            Unit { module: 0, address, name: function.name.clone(), size: function.size, tu: format!("main/{:04x}/{stem}", address >> 16), file: None, cname }
         })
         .collect()
 }

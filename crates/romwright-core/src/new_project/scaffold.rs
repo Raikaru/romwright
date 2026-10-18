@@ -374,6 +374,10 @@ pub struct ScaffoldInputs<'a> {
     pub compiler: ScaffoldCompiler,
     /// A toolchain profile (JSON text) written as `config/toolchain.local.json`.
     pub profile: Option<&'a str>,
+    /// `(module id, function address)` -> the original source file the
+    /// function was compiled from (a relative path without extension, e.g.
+    /// `sdds4/program/battle/btlMain`), where evidence places it (`--tus`).
+    pub files: &'a HashMap<(String, u64), String>,
     pub romwright_version: &'a str,
 }
 
@@ -385,8 +389,11 @@ pub struct Unit {
     pub name: String,
     pub cname: String,
     pub size: u64,
-    /// `<module>/<shard>/<stem>`: below `src/`, `build/obj/`, `orig/target/`.
+    /// `<module>/<shard>/<stem>`, or `<module>/<file>/<stem>` for a function
+    /// placed in its original source file: below `src/`, `build/obj/`, `orig/target/`.
     pub tu: String,
+    /// The original source file (see `ScaffoldInputs::files`).
+    pub file: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -462,6 +469,18 @@ pub(super) fn file_stem(cname: &str, address: u64) -> String {
     }
 }
 
+/// Whether `path` can be a directory below `src/`: relative, `/`-separated,
+/// every component a plain name (letters, digits, `_`, `-`, `.`, not `.`/`..`).
+pub fn valid_file_path(path: &str) -> bool {
+    !path.is_empty()
+        && path.split('/').all(|part| {
+            !part.is_empty()
+                && part != "."
+                && part != ".."
+                && part.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+        })
+}
+
 fn buildable(target: &Target, language: &str) -> bool {
     target.languages.iter().any(|prefix| language.starts_with(prefix))
 }
@@ -483,12 +502,15 @@ pub fn layout(inputs: &ScaffoldInputs) -> Vec<Unit> {
             let address = function.entry.offset;
             let cname = names.claim(c_ident(&function.name, address), address);
             let stem = file_stem(&cname, address);
+            let file = inputs.files.get(&(module.id.clone(), address)).filter(|path| valid_file_path(path)).cloned();
+            let directory = file.clone().unwrap_or_else(|| format!("{:04x}", address >> 16));
             units.push(Unit {
                 module: index,
                 address,
                 name: function.name.clone(),
                 size: function.size,
-                tu: format!("{}/{:04x}/{stem}", module.id, address >> 16),
+                tu: format!("{}/{directory}/{stem}", module.id),
+                file,
                 cname,
             });
         }
@@ -872,6 +894,9 @@ pub fn plan(
             "source": format!("src/{}.c", unit.tu),
             "object": format!("build/obj/{}.o", unit.tu),
         });
+        if let Some(file) = &unit.file {
+            row["file"] = json!(file);
+        }
 
         let prepared = prepared.entry(unit.module).or_insert_with(|| {
             let names = units.iter().filter(|u| u.module == unit.module).map(|u| (u.address, u.cname.as_str())).collect();
@@ -959,15 +984,20 @@ pub fn plan(
                 row["target"] = json!(format!("orig/target/{}.o", unit.tu));
                 if target.objdiff {
                     categories.entry(module.id.clone()).or_insert_with(|| module.id.clone());
+                    let mut progress = vec![module.id.clone()];
+                    if let Some(file) = &unit.file {
+                        categories.entry(file.clone()).or_insert_with(|| file.clone());
+                        progress.push(file.clone());
+                    }
                     objdiff_rows.push(json!({
-                        "name": format!("{}/{:04x}/{}", module.id, unit.address >> 16, unit.cname),
+                        "name": unit.tu,
                         "target_path": format!("orig/target/{}.o", unit.tu),
                         "base_path": format!("build/obj/{}.o", unit.tu),
                         "metadata": {
                             "complete": false,
                             "auto_generated": false,
                             "source_path": format!("src/{}.c", unit.tu),
-                            "progress_categories": [module.id],
+                            "progress_categories": progress,
                             "functions": [{"name": unit.cname, "vram": format!("{:#x}", unit.address), "size": unit.size}],
                         },
                     }));
@@ -1111,6 +1141,18 @@ pub fn plan(
             ("BUILD_COMMENT", build_comment),
             ("OBJDIFF_QUICKSTART", objdiff_quickstart),
             ("UNITS", sources_written.to_string()),
+            ("FILES_NOTE", {
+                let placed: Vec<&Unit> = units.iter().filter(|u| u.file.is_some() && sources.contains_key(&u.tu)).collect();
+                let count = placed.iter().filter_map(|u| u.file.as_deref()).collect::<HashSet<_>>().len();
+                if placed.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        "\n  {} function(s) the evidence places in {count} original source file(s) are in\n  `src/<module>/<file>/<function>.c` instead, one objdiff progress category per file\n  (`file` in `config/project.json`); the placement is evidence, not proof: move a function by\n  correcting its entry in the `--tus` file and regenerating.",
+                        placed.len()
+                    )
+                }
+            }),
             ("SYMBOLS", symbol_count.to_string()),
             ("MODULES", inputs.modules.len().to_string()),
             ("CHECK", check),
@@ -1238,6 +1280,7 @@ mod tests {
             manifest: &manifest,
             compiler: compiler_for(target("switch").unwrap(), None, None, &manifest).unwrap(),
             profile: None,
+            files: &HashMap::new(),
             romwright_version: "0.0.0",
         };
         let units = layout(&inputs);
@@ -1293,6 +1336,7 @@ mod tests {
             manifest: &manifest,
             compiler: compiler_for(target("ps3").unwrap(), None, None, &manifest).unwrap(),
             profile: None,
+            files: &HashMap::new(),
             romwright_version: "0.0.0",
         };
         let units = layout(&inputs);
@@ -1320,6 +1364,7 @@ mod tests {
             manifest: &manifest,
             compiler: compiler_for(target("ps3").unwrap(), None, None, &manifest).unwrap(),
             profile: None,
+            files: &HashMap::new(),
             romwright_version: "0",
         };
         assert!(layout(&inputs).is_empty());
@@ -1365,6 +1410,15 @@ mod tests {
             manifest.subset(&ids).unwrap();
         }
         assert_eq!(manifest.tool(CLANG_ID).unwrap().assets["linux-x86_64"].sha256.len(), 64);
+    }
+
+    #[test]
+    fn a_source_file_path_stays_below_src() {
+        assert!(valid_file_path("sdds4/program/battle/btlMain"));
+        assert!(valid_file_path("AsdSDK/Source/Gfx/Effect/effMisc.inl"));
+        for bad in ["", "/abs/path", "a//b", "a/../b", "./a", "a\\b", "c:/SMT4/x", "a/b c"] {
+            assert!(!valid_file_path(bad), "{bad:?}");
+        }
     }
 
     #[test]
@@ -1432,6 +1486,7 @@ mod tests {
             manifest: &manifest,
             compiler: compiler_for(n3ds, Some("armcc-4.1-b713"), Some(vec!["-O3".into(), "-Otime".into()]), &manifest).unwrap(),
             profile: None,
+            files: &[(("_code".to_string(), 0x10_0000u64), "sdds4/program/battle/btlMain".to_string())].into(),
             romwright_version: "0.0.0",
         };
         let units = layout(&inputs);
@@ -1443,7 +1498,15 @@ mod tests {
         assert_eq!(project["compiler"]["modes"]["arm"], "--arm");
         let toolchain = String::from_utf8(get("config/toolchain.json")).unwrap();
         assert!(toolchain.contains("\"armcc-4.1-b713\"") && toolchain.contains("\"wibo\"") && !toolchain.contains(CLANG_ID));
-        let object = get("orig/target/_code/0010/f.o");
+        // f is placed in its original source file's folder; g, unplaced, stays in its address shard.
+        assert_eq!(project["units"][0]["file"], "sdds4/program/battle/btlMain");
+        assert_eq!(project["units"][0]["source"], "src/_code/sdds4/program/battle/btlMain/f.c");
+        assert_eq!(project["units"][1]["source"], "src/_code/0010/g.c");
+        let objdiff: serde_json::Value = serde_json::from_slice(&get("objdiff.json")).unwrap();
+        assert_eq!(objdiff["units"][0]["metadata"]["progress_categories"], json!(["_code", "sdds4/program/battle/btlMain"]));
+        assert_eq!(objdiff["units"][1]["metadata"]["progress_categories"], json!(["_code"]));
+        assert!(objdiff["progress_categories"].as_array().unwrap().iter().any(|c| c["id"] == "sdds4/program/battle/btlMain"));
+        let object = get("orig/target/_code/sdds4/program/battle/btlMain/f.o");
         let file = object::File::parse(&*object).unwrap();
         let names: HashMap<usize, String> = file.symbols().map(|s| (s.index().0, s.name().unwrap().to_string())).collect();
         let relocs: Vec<(u64, u32, String)> = file
