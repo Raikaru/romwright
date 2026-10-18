@@ -1083,7 +1083,11 @@ pub fn plan(
         "Direct calls and branches to other known functions are rewritten into the relocations a compiler would emit (only when the instruction decodes to exactly the target romwright recorded); data operands are not, so literal-pool and RIP-relative operands show as differences."
     };
     let verdict = if compiler.retail() {
-        "The base side is the retail compiler's output, so 100% is reachable: a unit at 100% matches its retail function, and its `NON_MATCHING` marker can go."
+        if target.id == "3ds" {
+            "The base side is the retail compiler's output, so 100% is reachable. 100% in objdiff is necessary but not proof: a function is proven when `tools/relink.py --matched` links it from `build/obj/` into a byte-identical `.code`. Relink lists every 100% function it keeps as retail bytes, with the reason, and a function's `NON_MATCHING` marker goes once it is proven."
+        } else {
+            "The base side is the retail compiler's output, so 100% is reachable. 100% in objdiff is necessary but not proof, since objdiff ignores some operand differences: confirm a function another way before its `NON_MATCHING` marker goes."
+        }
     } else {
         "A decompilation this far from the original compiler's output will rarely reach 100%: objdiff is a way to compare, not a pass/fail gate."
     };
@@ -1112,8 +1116,12 @@ pub fn plan(
     let (headline, intro, build_line, fetch_line, build_comment, check, tools_note) = if compiler.retail() {
         (
             "**per-function matching**",
-            format!("Every unit is built with the retail compiler (`{tool}`, `{flags}`) and compared with its retail function, so a function is decompiled when its bytes match. There is no whole-image build ({}). What this repository gives you:", target.why_not_matching),
-            format!("* `build.py`: compiles every unit with `{tool}`; a unit matches when objdiff says its bytes do."),
+            if target.id == "3ds" {
+                format!("Every unit is built with the retail compiler (`{tool}`, `{flags}`) and scored by objdiff against its retail function. `tools/relink.py` rebuilds the whole `.code` with GNU ld from the per-function objects and proves every function that links from its compiled object. What this repository gives you:")
+            } else {
+                format!("Every unit is built with the retail compiler (`{tool}`, `{flags}`) and scored by objdiff against its retail function (100% is necessary, not proof of a match). There is no whole-image build ({}). What this repository gives you:", target.why_not_matching)
+            },
+            format!("* `build.py`: compiles every unit with `{tool}`; objdiff scores each unit against its retail function."),
             format!("python3 build.py fetch      # download the pinned {tool} (decomp.me's armcc bundle, 73 MB), objdiff-cli, and wibo where Windows executables need it"),
             format!("python3 build.py            # compile src/ with {tool} ({flags}); writes build/compile_report.json"),
             "Units compile as C99 (`--c99`): decompiled C has no headers for its callees, so armcc's implicit-declaration warnings are not errors; every error is reported. A unit that fails (a missing struct definition, say) is listed with its first error in `build/compile_report.json`, and the build exits 0 unless you pass `--strict`. Each unit compiles in the mode its function was decoded in (`--arm`/`--thumb`).".to_string(),
@@ -1149,7 +1157,7 @@ pub fn plan(
         steps.push_str(image);
         steps.push_str("`, `config/symbols.txt` (a function renamed there is the name its callers' relocations use), `config/modules.json` and `config/project.json`, after checking the dump's decompressed `.code` against `mapped_sha256` in `config/modules.json` (another version of the game is refused). `tools/n3ds.py` reads NCCH, NCSD and decrypted CIA dumps (`.cxi`/`.3ds`/`.cci`/`.cia`; encrypted content is refused with a message). ");
         if compiler.retail() {
-            steps.push_str("`tools/relink.py` links the whole `.code` with GNU ld from `orig/target` objects (retail bytes) and, with `--matched`, from the objects `build.py` compiled for the functions objdiff reports at 100%; `--full` links every function from its target object, which proves those objects relocate back to retail. A function objdiff scores 100% that does not reproduce its bytes in the image is listed with an `--exclude` line to rerun with.\n\n");
+            steps.push_str("`tools/relink.py` links the whole `.code` with GNU ld from `orig/target` objects (retail bytes) and, with `--matched`, from the objects `build.py` compiled for the functions objdiff reports at 100%; `--full` links every function from its target object, which proves those objects relocate back to retail. Relink lists every 100% function it keeps as retail bytes with its reason, reports how many were proven (linked from `build/obj`) of how many objdiff claimed, and exits non-zero when a compiled object is missing (`--exclude FUN_a,FUN_b` names functions to keep as retail bytes on purpose). It prints MATCH when the image is byte-identical to retail and every function objdiff scores 100% has its compiled object; a function whose object does not reproduce its bytes is listed with the `--exclude` line to rerun with.\n\n");
         }
         steps.push_str("`romwright new-project` writes `src/` too: do not regenerate into a directory whose `src/` you have edited. Personal ignore rules (your dump's directory, say) go in `.git/info/exclude`, because regenerating rewrites `.gitignore`.\n");
         steps
@@ -1587,6 +1595,10 @@ mod tests {
             assert!(readme.contains(step), "{step}");
         }
         assert!(!readme.contains("no build relinks the retail"), "relink.py does relink it");
+        // 100% in objdiff is not proof: only relink --matched proves a function, and it lists the ones it does not link.
+        assert!(readme.contains("necessary but not proof") && readme.contains("links it from `build/obj/`"), "{readme}");
+        assert!(!readme.contains("matches its retail function") && !readme.contains("marker can go"), "100% must not be sold as a match");
+        assert!(readme.contains("prints MATCH when the image is byte-identical") && readme.contains("exits non-zero"), "a missing object fails relink");
 
         // The non-matching clang scaffold keeps the split tools but pins no binutils; another platform has none of them.
         let clang = ScaffoldInputs {
@@ -1606,5 +1618,7 @@ mod tests {
         assert!(clang_files.iter().any(|f| f.path == "tools/split.py"));
         let clang_toolchain = clang_files.iter().find(|f| f.path == "config/toolchain.json").unwrap();
         assert!(!String::from_utf8_lossy(&clang_toolchain.bytes).contains("binutils-arm-none-eabi"));
+        let clang_readme = String::from_utf8(clang_files.iter().find(|f| f.path == "README.md").unwrap().bytes.clone()).unwrap();
+        assert!(!clang_readme.contains("necessary but not proof") && !clang_readme.contains("relink.py --matched"), "{clang_readme}");
     }
 }
