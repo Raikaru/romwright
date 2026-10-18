@@ -394,9 +394,7 @@ impl Drop for Bridge {
 
 /// Where the launcher looks for the pinned Ghidra installation.
 pub fn default_ghidra_dir() -> PathBuf {
-    std::env::var_os("ROMWRIGHT_GHIDRA")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("ghidra_12.1.3_PUBLIC"))
+    crate::native_runtime::ghidra_dir()
 }
 
 /// Timeout helper used by tests to bound a decompile call.
