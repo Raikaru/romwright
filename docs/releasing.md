@@ -73,6 +73,68 @@ and the OFL licences of the fonts compiled into the executable. Without
 system and processor, so the staging step finds it rather than naming it.
 `docs/desktop.md` covers how that archive is gated.
 
+## Portable archives
+
+The downloadable release is a *portable archive* per platform, built by
+`.github/workflows/release.yml` (pushing a `v*` tag runs it and attaches the
+archives to the tag's GitHub release; **Run workflow** on the Actions page runs
+it without a tag and keeps the archives as workflow artifacts). It runs on
+`windows-latest`, `ubuntu-latest` and `macos-latest`, and each job does, in
+order:
+
+1. builds `ghidra_opt` with `native/build_ghidra_opt.sh` (Windows: inside
+   `msys2/setup-msys2` with `MINGW64` and the packages
+   `mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-x86_64-zlib`, so the
+   binary is static and needs no MinGW DLLs; Linux: `build-essential
+   zlib1g-dev`; macOS: the Xcode command line tools the runner carries);
+2. `cargo build --profile dist -p romwright-cli -p romwright-worker`;
+3. `python packaging/ghidra_data.py --dest build/ghidra`: downloads the pinned
+   Ghidra 12.1.3 zip, verifies its SHA-256 (the digest is a constant in the
+   script; a mismatch fails the job) and extracts only
+   `Ghidra/Processors/*/data/**` and Ghidra's `LICENSE`, the part romwright
+   reads (`docs/environment.md`, "Default resolution order");
+4. `python packaging/stage_portable.py --tag $GITHUB_REF_NAME --smoke`: assembles
+   `romwright-<version>-<os>-<arch>` and packs it as `.zip` on Windows and
+   `.tar.gz` elsewhere, with a `.sha256` beside it. `--tag` must equal
+   `v` plus the workspace version in `Cargo.toml`, so a tag that disagrees with
+   the binaries' own version fails before anything is published. `--smoke`
+   then unpacks the archive into a temporary directory and, from a working
+   directory outside any checkout, with no `ROMWRIGHT_*` variable and an empty
+   home directory, runs `romwright-cli paths` (every file must resolve inside
+   the unpacked archive), imports `tests/fixtures-src/tiny_bin` and decompiles
+   `00400466` (it must print `return param_2 + param_1;`);
+5. uploads `dist-portable/*`; a final job creates the release if the tag has
+   none and runs `gh release upload --clobber`.
+
+The archive layout is what `crates/romwright-core/src/runtime_paths.rs` looks
+for first, which is why it runs from wherever it is unpacked:
+
+<!-- not gated: layout sketch of the archive the release workflow builds -->
+```sh
+romwright-<version>-<os>-<arch>/
+    bin/romwright-cli  bin/romwright-worker  bin/ghidra_opt      # .exe on Windows
+    share/romwright/specs/                    # native/specs
+    share/romwright/library-prototypes-v1/    # oracle/library-prototypes-v1
+    share/romwright/ghidra/                   # Ghidra/Processors/*/data of Ghidra 12.1.3, LICENSE
+    share/doc/romwright/                      # LICENSE, NOTICE, THIRD_PARTY_NOTICES.md,
+                                              # GHIDRA-LICENSE (Apache-2.0 text of Ghidra)
+    README.txt
+```
+
+Ghidra is Apache-2.0: its `LICENSE` ships with the language data it came
+with, and again as `share/doc/romwright/GHIDRA-LICENSE`. The 12.1.3 release zip
+carries no `NOTICE` file; `stage_portable.py` ships one if a later release adds
+it. `THIRD_PARTY_NOTICES.md` records the provenance of the other vendored
+material.
+
+To build the same archive by hand from a checkout `python setup.py` has set up
+(it builds the `release` profile; the workflow uses `dist`):
+
+<!-- not gated: builds the whole workspace; the archive step is what tests/m6-004 does not cover and the release workflow runs with --smoke -->
+```sh
+python packaging/stage_portable.py --binaries target/release --output dist-portable --smoke
+```
+
 ## Describe
 
 ```console

@@ -1,0 +1,105 @@
+name: Release
+
+# Builds the portable archives (docs/releasing.md, "Portable archives") on
+# Windows, Linux and macOS and attaches them to the release of the pushed
+# `v*` tag. workflow_dispatch builds and uploads them as workflow artifacts
+# only. Every script step below is a script in this repository that was run
+# locally: packaging/ghidra_data.py, packaging/stage_portable.py and
+# native/build_ghidra_opt.sh.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    name: Package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ghidra_opt on Windows is built with MinGW-w64 under MSYS2 (static, so
+      # the archive needs no MinGW DLLs); native/build_ghidra_opt.sh detects it.
+      - name: Install MSYS2 MinGW64 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            git
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-zlib
+
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential zlib1g-dev git
+
+      - name: Build ghidra_opt (Windows, MSYS2 MINGW64)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: bash native/build_ghidra_opt.sh --jobs 4
+
+      - name: Build ghidra_opt
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash native/build_ghidra_opt.sh --jobs 4
+
+      - name: Build romwright-cli and romwright-worker (dist profile)
+        shell: bash
+        run: cargo build --profile dist -p romwright-cli -p romwright-worker
+
+      - name: Fetch the pinned Ghidra 12.1.3 language data (SHA-256 verified)
+        shell: bash
+        run: python packaging/ghidra_data.py --dest build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
+
+      - name: Stage, pack and smoke-test the archive
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then TAG_ARGS="--tag $GITHUB_REF_NAME"; else TAG_ARGS=""; fi
+          python packaging/stage_portable.py $TAG_ARGS --output dist-portable --smoke
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: romwright-${{ runner.os }}
+          path: dist-portable/*
+          if-no-files-found: error
+
+  publish:
+    name: Attach to the release
+    needs: package
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-portable
+          merge-multiple: true
+
+      - name: Create the release if the tag has none, then upload
+        run: |
+          ls -l dist-portable
+          gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          gh release upload "$TAG" dist-portable/* --clobber

@@ -48,6 +48,7 @@ const USAGE: &str = "usage:
   romwright-cli decompile-doc <binary> <address> [--name NAME] [--project DIR] [--base HEX]
   romwright-cli disasm <binary> <address> [-n N]
   romwright-cli architectures [--project DIR]   (uses ROMWRIGHT_GHIDRA)
+  romwright-cli paths   (where the decompiler, worker, specs, library prototypes and Ghidra data are looked for, and whether each exists; docs/environment.md)
   romwright-cli open <program> [--project DIR]
   romwright-cli functions <program> [--offset N] [--limit N] [--filter TEXT] [--project DIR]
   romwright-cli analyse-function <binary> <program> <address> [--project DIR] [--json]
@@ -381,6 +382,20 @@ fn run_inner(args: &[String]) -> Result<(), String> {
     }
     if args[1] == "compiler-rules" {
         return compiler_rules::run(args);
+    }
+    if args[1] == "paths" {
+        let config = romwright_core::session::RuntimeConfig::from_env();
+        for (name, path) in [
+            ("worker", &config.worker_path),
+            ("decompiler", &config.decompiler_path),
+            ("specs", &config.spec_root),
+            ("library-prototypes", &config.library_prototypes),
+            ("ghidra", &config.ghidra_install),
+        ] {
+            let state = if path.exists() { "found" } else { "missing" };
+            println!("{name}\t{state}\t{}", path.display());
+        }
+        return Ok(());
     }
     if matches!(args[1].as_str(), "new-project" | "detect-compiler") {
         return new_project::run(args);

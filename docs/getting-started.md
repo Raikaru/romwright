@@ -14,7 +14,7 @@ for example `/tmp/romwright-demo`.
 | Step | Needs |
 |---|---|
 | `import`, `functions`, `symbols`, `strings`, `xrefs`, `search`, `rename`, `bookmark`, `patch` | nothing beyond the built binary |
-| `disasm`, `decompile`, `decompile-doc` | the pinned Ghidra install for **SLEIGH language data** (`ROMWRIGHT_GHIDRA`, default `~/ghidra_12.1.3_PUBLIC`); `decompile` and `decompile-doc` also the native decompiler (`native/build_ghidra_opt.sh`) |
+| `disasm`, `decompile`, `decompile-doc` | the pinned Ghidra **SLEIGH language data** (`build/ghidra`, extracted by `python setup.py`; `ROMWRIGHT_GHIDRA` or `~/ghidra_12.1.3_PUBLIC` also work); `decompile` and `decompile-doc` also the native decompiler (`native/build/ghidra_opt`, built by `setup.py` or `native/build_ghidra_opt.sh`) |
 | `detect-compiler` | nothing beyond the built binary (it reads the image's bytes) |
 | `new-project` | the SLEIGH data like `import` (it imports the image); `python3` for the repository's own scripts. romwright downloads no tool: the repository's `configure.py` fetches the pinned ones |
 | `match` | the native decompiler, and the repository's compiler (installed by its `configure.py`, or a profile naming one you have) |
@@ -30,6 +30,21 @@ is a function start. Both imports
 are honest; the smaller one simply had less evidence.
 
 ## Build
+
+From a fresh checkout, one command checks the prerequisites, downloads and
+verifies the Ghidra 12.1.3 language data (into `build/ghidra`), builds
+`native/build/ghidra_opt`, runs the `cargo build` below and decompiles the
+fixture as a smoke test (`docs/environment.md`, "One command"). A release
+archive needs none of this: unpack it and use `bin/romwright-cli`, which
+finds everything relative to itself. `romwright-cli paths` prints where it
+looks and whether each file exists.
+
+<!-- not gated: builds native components and downloads Ghidra; the walkthrough below is what is gated -->
+```sh
+python setup.py        # python3 on Linux and macOS
+```
+
+The Rust part on its own:
 
 ```console
 $ cargo build --release -p romwright-cli
