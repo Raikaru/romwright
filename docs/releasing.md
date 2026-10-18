@@ -93,7 +93,12 @@ order:
    script; a mismatch fails the job) and extracts only
    `Ghidra/Processors/*/data/**` and Ghidra's `LICENSE`, the part romwright
    reads (`docs/environment.md`, "Default resolution order");
-4. `python packaging/stage_portable.py --tag $GITHUB_REF_NAME --smoke`: assembles
+4. `python packaging/languages.py --ghidra build/ghidra`: compiles romwright's own
+   languages (PSX, r5900, VU, RSP, Xenon, Gekko; `docs/environment.md`, "romwright's
+   own languages") with the sleigh compiler of the Ghidra release (Windows, Linux)
+   or one built from `third_party/ghidra/decompiler` by `native/build_sleigh.sh`
+   (macOS), and installs them into the same data directory;
+5. `python packaging/stage_portable.py --tag $GITHUB_REF_NAME --smoke`: assembles
    `romwright-<version>-<os>-<arch>` and packs it as `.zip` on Windows and
    `.tar.gz` elsewhere, with a `.sha256` beside it. `--tag` must equal
    `v` plus the workspace version in `Cargo.toml`, so a tag that disagrees with
@@ -103,7 +108,7 @@ order:
    home directory, runs `romwright-cli paths` (every file must resolve inside
    the unpacked archive), imports `tests/fixtures-src/tiny_bin` and decompiles
    `00400466` (it must print `return param_2 + param_1;`);
-5. uploads `dist-portable/*`; a final job creates the release if the tag has
+6. uploads `dist-portable/*`; a final job creates the release if the tag has
    none and runs `gh release upload --clobber`.
 
 The archive layout is what `crates/romwright-core/src/runtime_paths.rs` looks
@@ -115,7 +120,8 @@ romwright-<version>-<os>-<arch>/
     bin/romwright-cli  bin/romwright-worker  bin/ghidra_opt      # .exe on Windows
     share/romwright/specs/                    # native/specs
     share/romwright/library-prototypes-v1/    # oracle/library-prototypes-v1
-    share/romwright/ghidra/                   # Ghidra/Processors/*/data of Ghidra 12.1.3, LICENSE
+    share/romwright/ghidra/                   # Ghidra/Processors/*/data of Ghidra 12.1.3, LICENSE,
+                                              # Ghidra/Extensions/* (romwright's own languages)
     share/doc/romwright/                      # LICENSE, NOTICE, THIRD_PARTY_NOTICES.md,
                                               # GHIDRA-LICENSE (Apache-2.0 text of Ghidra)
     README.txt

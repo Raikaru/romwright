@@ -14,7 +14,8 @@ for its files relative to the running executable first
         bin/romwright-cli[.exe]  bin/romwright-worker[.exe]  bin/ghidra_opt[.exe]
         share/romwright/specs/                      native/specs
         share/romwright/library-prototypes-v1/      oracle/library-prototypes-v1
-        share/romwright/ghidra/                     Ghidra 12.1.3 language data subset
+        share/romwright/ghidra/                     Ghidra 12.1.3 language data subset, plus romwright's own
+                                                    languages under Ghidra/Extensions (packaging/languages.py)
         share/doc/romwright/                        LICENSE, NOTICE, THIRD_PARTY_NOTICES.md,
                                                     GHIDRA-LICENSE (Apache-2.0)
 
@@ -41,6 +42,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "packaging"))
 import ghidra_data  # noqa: E402
+import languages  # noqa: E402
+import smoke_fixtures  # noqa: E402
 
 EXE = ".exe" if os.name == "nt" else ""
 DOCUMENTS = ("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md")
@@ -105,6 +108,10 @@ def stage(arguments, staging: Path, name: str) -> Path:
     if not ghidra_data.is_installed(data):
         raise SystemExit(f"error: {data} is not a complete extraction of the pinned Ghidra "
                          f"{ghidra_data.VERSION} data; run packaging/ghidra_data.py --dest {data}")
+    if not languages.is_current(data):
+        raise SystemExit(f"error: {data} lacks romwright's own languages (PSX, r5900, RSP, VU, Xenon, "
+                         f"Gekko) or they are older than their sources; run "
+                         f"packaging/languages.py --ghidra {data}")
     shutil.copytree(data, share / "ghidra")
     for document in DOCUMENTS:
         shutil.copy2(need(ROOT / document, document), doc / document)
@@ -194,6 +201,24 @@ def smoke(archive: Path, name: str) -> None:
             raise SystemExit(f"error: the unpacked archive did not decompile {SMOKE_ADDRESS} "
                              f"to `{SMOKE_EXPECTED}`")
         print(f"  ok: the unpacked archive decompiled {SMOKE_ADDRESS}")
+        # A language romwright compiles itself (r5900 is not in the Ghidra release).
+        elf = smoke_fixtures.write_ps2_elf(scratch_dir / "ee.elf")
+        for command in ([cli, "import", elf, "--project", project / "ps2"],
+                        [cli, "decompile", elf, f"{smoke_fixtures.ENTRY:08x}", "--project",
+                         project / "ps2"]):
+            print("  $ " + " ".join(str(part) for part in command), flush=True)
+            result = subprocess.run([str(part) for part in command], cwd=project, env=env,
+                                    capture_output=True, text=True, errors="replace")
+            if result.returncode != 0:
+                print(result.stdout, result.stderr, sep="\n", file=sys.stderr)
+                raise SystemExit(f"error: PS2 `{command[1]}` from the unpacked archive failed "
+                                 f"(exit code {result.returncode})")
+            print("  " + "\n  ".join(result.stdout.rstrip().splitlines()))
+            if command[1] == "import" and smoke_fixtures.LANGUAGE not in result.stdout:
+                raise SystemExit(f"error: the PS2 ELF was not imported as {smoke_fixtures.LANGUAGE}")
+        if "return param_1 + param_2;" not in result.stdout:
+            raise SystemExit("error: the unpacked archive's PS2 decompile lacks `return param_1 + param_2;`")
+        print(f"  ok: the unpacked archive imported and decompiled a PS2 ELF as {smoke_fixtures.LANGUAGE}")
 
 
 def main() -> int:

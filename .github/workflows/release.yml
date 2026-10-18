@@ -4,8 +4,8 @@ name: Release
 # Windows, Linux and macOS and attaches them to the release of the pushed
 # `v*` tag. workflow_dispatch builds and uploads them as workflow artifacts
 # only. Every script step below is a script in this repository that was run
-# locally: packaging/ghidra_data.py, packaging/stage_portable.py and
-# native/build_ghidra_opt.sh.
+# locally: packaging/ghidra_data.py, packaging/languages.py, packaging/stage_portable.py and
+# native/build_ghidra_opt.sh (and native/build_sleigh.sh on macOS).
 
 on:
   push:
@@ -70,6 +70,13 @@ jobs:
       - name: Fetch the pinned Ghidra 12.1.3 language data (SHA-256 verified)
         shell: bash
         run: python packaging/ghidra_data.py --dest build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
+
+      # PSX, r5900 (PS2), VU, RSP (N64), Xenon (Xbox 360) and Gekko (GameCube/Wii) come from
+      # this repository's sources, compiled with the sleigh compiler of the Ghidra release
+      # (Windows, Linux) or one built from third_party/ghidra/decompiler (macOS).
+      - name: Compile romwright's own SLEIGH languages
+        shell: bash
+        run: python packaging/languages.py --ghidra build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
 
       - name: Stage, pack and smoke-test the archive
         shell: bash

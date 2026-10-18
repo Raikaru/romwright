@@ -167,15 +167,19 @@ mod tests {
 
     #[test]
     fn resolves_installed_xenon_language() {
-        let install = std::path::Path::new(&std::env::var("HOME").unwrap())
-            .join("ghidra_12.1.3_PUBLIC");
-        if !install.is_dir() {
-            eprintln!("skipping: no Ghidra install at {}", install.display());
+        let install = crate::native_runtime::ghidra_dir();
+        if !install.join("Ghidra").is_dir() {
+            eprintln!("SKIP: no Ghidra install at {}", install.display());
             return;
         }
-        let dir = directory_for_id(&install, "PowerPC:BE:64:Xenon-32addr")
-            .unwrap()
-            .expect("Xenon-32addr not installed; run native/languages/xenon/install.sh");
+        let Some(dir) = directory_for_id(&install, "PowerPC:BE:64:Xenon-32addr").unwrap() else {
+            eprintln!(
+                "SKIP: Xenon-32addr is not installed in {}; run `python setup.py` \
+                 (packaging/languages.py)",
+                install.display()
+            );
+            return;
+        };
         let sla = slafile_for_id(&dir, "PowerPC:BE:64:Xenon-32addr")
             .unwrap()
             .expect("no slafile in xenon.ldefs");
