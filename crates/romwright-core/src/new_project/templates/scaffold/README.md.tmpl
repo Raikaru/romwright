@@ -1,10 +1,9 @@
 # {{NAME}}
 
-A **non-matching** decompilation scaffold for the {{PLATFORM_NAME}} image `{{IMAGE}}`
+A {{HEADLINE}} decompilation scaffold for the {{PLATFORM_NAME}} image `{{IMAGE}}`
 (sha256 `{{SHA256}}`), bootstrapped by `romwright new-project` (romwright {{ROMWRIGHT}}).
 
-There is no byte-matching build for this platform ({{WHY_NOT_MATCHING}}). What this
-repository gives you instead:
+{{INTRO}}
 
 * `config/symbols*.txt`: every function, label and import romwright found, with address and size
   (`name = section:0xADDR; // type:function size:0xN`, one file per module).
@@ -14,7 +13,7 @@ repository gives you instead:
   decompiler's primitive names) and `romwright_protos.h` (recovered prototypes).
 * `src/<module>/<shard>/<function>.c`: romwright's decompiled C, one function per file, each
   marked `NON_MATCHING`. It is a reading aid and a starting point, not retail-equivalent.
-* `build.py`: compiles every unit with clang to prove it compiles, nothing more.
+{{BUILD_LINE}}
 {{OBJDIFF_LINE}}
 
 The retail image is not part of this repository and neither is anything derived from its
@@ -23,16 +22,12 @@ bytes (`orig/`, `build/`): put your own dump at `orig/{{IMAGE}}`.
 ## Quick start
 
 ```sh
-python3 build.py fetch      # download the pinned clang (about 2 GB), and objdiff-cli where the platform has an objdiff backend; optional if clang is on PATH
-python3 build.py            # compile src/ for {{TRIPLE}}; writes build/compile_report.json
+{{FETCH_LINE}}
+{{BUILD_COMMENT}}
 {{OBJDIFF_QUICKSTART}}```
 
 This image: {{UNITS}} function(s) decompiled into `src/`, {{SYMBOLS}} symbol(s), {{MODULES}} module(s).
-The compile check is a syntax and type check against `include/romwright_types.h`, in lenient C:
-implicit function declarations and integer/pointer conversions are accepted because decompiled C has
-no headers for its callees; every other error is reported. A unit that fails (a missing struct
-definition, say) is listed with its first error in `build/compile_report.json`, and the build exits 0
-unless you pass `--strict`.
+{{CHECK}}
 
 ## {{PLATFORM_NAME}} notes
 
@@ -44,9 +39,7 @@ unless you pass `--strict`.
 
 `config/toolchain.json` pins what this project downloads: URL, sha256, version, license and
 provenance. `build.py fetch` uses `tools/download_tool.py` (standard library only), which checks the
-sha256 before anything is extracted or run. romwright itself downloads nothing. LLVM is
-Apache-2.0 with LLVM exceptions; objdiff is Apache-2.0. A toolchain profile
-(`--toolchain`, `config/toolchain.local.json` with `{"clang": "/path/to/clang"}`) overrides the download.
+sha256 before anything is extracted or run. romwright itself downloads nothing. {{TOOLS_NOTE}}
 
 ## Keys and containers
 

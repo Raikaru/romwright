@@ -502,24 +502,52 @@ ARM7 and ARM7 overlays are not rebuilt from objects. `match` serves ARM9 and aut
 
 ## 3DS, Switch, PS3, PS4, Vita and Xbox 360: the non-matching scaffold
 
-No public toolchain reproduces these platforms' retail compiler output, so there is no byte-identical
-build and no checksum gate. `new-project` writes what romwright knows and a way to look at it. The plugin
+No public toolchain reproduces most of these platforms' retail compiler output, so there is no byte-identical
+build and no checksum gate. `new-project` writes what romwright knows and a way to look at it. The 3DS is
+the exception per function: its retail compiler (armcc) is pinned, see "3DS with armcc" below. The plugin
 is `new_project/scaffold.rs` (+ `scaffold_obj.rs`), the CLI side `crates/romwright-cli/src/new_project_scaffold.rs`.
 The platform is read from the container's magic (`NCCH`/`NCSD`/CIA, `NSO0`, NCA/XCI, `XEX2`, a SELF, an
 ELF's machine and OS ABI, a PE with machine `0x1F2`) or given with `--platform 3ds|switch|ps3|ps4|vita|x360`.
 
 ```
 romwright-cli new-project <image> <outdir> [--platform ID] [--name NAME] [--keys FILE...] [--map FILE]
-              [--raw BASE --language ID] [--decompile all|first:N|ADDR,ADDR|none] [--budget-ms N]
+              [--raw BASE --language ID] [--decompile all|first:N|ADDR,ADDR|none] [--budget-ms N] [--jobs N]
               [--toolchain PROFILE.json] [--manifest FILE] [--fact-pack PACK] [--json]
+              [--compiler armcc-<version>-b<build> [--cflags FLAGS]]          (3DS)
 ```
 
 `--keys` hands the container loaders the user's keys (`prod.keys`, a RAP/klic, a 3DS `aes_keys.txt`); they
 live in memory for the import and are never written. `--map` is a linker map or BINMAP naming symbols,
 `--raw 0x100000 --language ARM:LE:32:v6` imports a flat dump (a 3DS ExeFS `.code`).
-`--decompile` defaults to `all`; a whole-image decompile of a 30,000-function image is hours, so the smokes
-below use `first:40` (the first N functions of each module by address). A function the decompiler refuses is
-skipped and counted, never fatal; `all` falls back to function-by-function when its batch fails.
+`--decompile` defaults to `all`. The selected functions are decompiled in batches of 48, one worker per batch,
+on `--jobs N` threads at once (default: the host's cores, at most 16); `--budget-ms` bounds each function and a
+batch gets the sum. A batch the decompiler refuses is redone function by function, and a function it refuses is
+skipped and counted, never fatal. The smokes below use `first:40` (the first N functions of each module by
+address).
+
+**3DS with armcc.** Nintendo's 3DS SDK builds with ARM's armcc (RVCT 4.0/4.1, ARM Compiler 5). The
+decomp.me compilers project hosts fourteen builds (`armcc.zip`, compiler and headers only); the manifest pins
+each as `armcc-4.0-b771` ... `armcc-4.1-b713` ... `armcc-5.04-b82`, all from that one archive (sha256 of the
+bytes seen on 2026-10-17). `--compiler armcc-4.1-b713 --cflags "-O3 -Otime"` makes `build.py` compile every unit
+with that build (`--cpu=MPCore --fpmode=fast --apcs=/interwork --c99` plus `--cflags`, default `-O2 -Ospace`;
+`--arm`/`--thumb` per unit), natively on Windows and through wibo elsewhere, so objdiff compares armcc's
+object with the retail bytes and 100% means the function matches. There is still no whole-image build: the
+bundle has no `armlink` and no C runtime libraries. Without `--compiler` the 3DS keeps the clang compile check.
+
+The 3DS target objects carry what an armcc object of the same function carries, so a match is reachable:
+direct `BL`/`BLX` calls are `R_ARM_CALL`, `B` tail calls and conditional calls `R_ARM_JUMP24` (found from the
+bytes, whether or not the analysis recorded the branch), literal pools are `$d` ranges (a pool after the
+function's last instruction, which the analysis leaves out of its size, is taken in when it ends before the next
+function), and a pool word holding a function address or an address in a non-executable segment is an
+`R_ARM_ABS32` to that function or to `DAT_<address>` (eight lowercase hex digits). Each object carries the
+`.ARM.attributes` armcc writes (MPCore, ARMv6K, VFPv2), so objdiff decodes both sides as ARMv6K. An NCCH's
+exheader code-set info maps `.code` as `.text` (r-x), `.rodata` (r--), `.data` (rw-) and the zero-filled
+`.bss`, so the decompiler treats pools as constants and names the global they hold.
+
+Finding the build and flags: compile a few hundred decompiled functions with every build and a few flag sets and
+rank them by objdiff score. On Shin Megami Tensei IV (USA, 9,350 functions, 240 sampled) every RVCT 4.1 build
+from b713 on at `-O3 -Otime` scored 55.2% fuzzy with 9 exact matches, 4.0 and 4.1 b561 49.8% with 3, 5.04 b82
+54.5% with 7; `-O3` and `-O2` scored lower on every build. The sample does not separate builds 713 to 1454.
 
 ```
 <outdir>/

@@ -9,9 +9,12 @@
 //! branch to another known function is turned into the relocation a compiler
 //! would have emitted (field zeroed the way an assembler writes it, symbol =
 //! callee name). A displacement is only rewritten when the instruction decodes
-//! to exactly the target the analysis recorded; anything else is left as
-//! retail bytes. References to data (literal pools, RIP-relative loads) are not
-//! rewritten, and objdiff reports their operands as differences.
+//! to exactly the target the analysis recorded (on ARM, also any `B`/`BL` that
+//! decodes to a known function: tail calls); anything else is left as retail
+//! bytes. ARM literal pools are marked with `$d` mapping symbols, and a pool
+//! word that holds an address becomes the `R_ARM_ABS32` armcc emits for it.
+//! Other data references (RIP-relative loads, PowerPC TOC) are not rewritten,
+//! and objdiff reports their operands as differences.
 //!
 //! The ELF layout (section headers, `.symtab`, `REL`/`RELA` records, ARM
 //! mapping symbols) follows the System V gABI and the processor supplements
@@ -131,17 +134,23 @@ pub fn relocate_transfers(arch: Arch, entry: u64, bytes: &mut [u8], thumb: bool,
         let reloc = match arch {
             Arch::Arm32 if !thumb => {
                 let Some(word) = read_u32(bytes, at, big) else { continue };
-                let (branch_link, blx) = (word >> 24 & 0x0F == 0x0B && word >> 28 != 0xF, word >> 25 == 0x7D);
-                if !(branch_link || blx) {
+                let unconditional = word >> 28 == 0xE;
+                // B/BL<cond> (opcode 101x) and BLX imm (cond 1111, 101H).
+                let (branch, blx) = (word >> 25 & 7 == 5 && word >> 28 != 0xF, word >> 25 == 0x7D);
+                if !(branch || blx) {
                     continue;
                 }
+                let link = word >> 24 & 1 == 1;
                 let imm = sign_extend(word & 0x00FF_FFFF, 24) * 4 + if blx { ((word >> 24) & 1) as i64 * 2 } else { 0 };
                 if (t.from as i64 + 8 + imm) as u64 & 0xFFFF_FFFF != t.to & 0xFFFF_FFFE {
                     continue;
                 }
                 let top = if blx { 0xFA00_0000 } else { word & 0xFF00_0000 };
                 write_u32(bytes, at, top | 0x00FF_FFFE, big);
-                Reloc { offset, symbol: t.name.to_string(), kind: 28, addend: 0 }
+                // AAELF: R_ARM_CALL for an unconditional BL/BLX, R_ARM_JUMP24 for
+                // B (a tail call) and a conditional BL, as armcc and gas emit them.
+                let kind = if blx || (link && unconditional) { 28 } else { 29 };
+                Reloc { offset, symbol: t.name.to_string(), kind, addend: 0 }
             }
             Arch::Arm32 => {
                 // Thumb BL/BLX: two halfwords.
@@ -207,6 +216,160 @@ pub fn relocate_transfers(arch: Arch, entry: u64, bytes: &mut [u8], thumb: bool,
     }
     relocs.sort_by_key(|r| r.offset);
     relocs.dedup_by_key(|r| r.offset);
+    relocs
+}
+
+/// The literal pools of one ARM function, as byte offsets into its bytes.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LiteralPools {
+    /// Merged `[start, end)` ranges holding data, for `$d` mapping symbols.
+    pub ranges: Vec<(u64, u64)>,
+    /// Words a `LDR Rt, [PC, #imm]` reads: the candidates for an address.
+    pub words: Vec<u64>,
+    /// Where the function's bytes end once every pool it reads is counted:
+    /// past the bytes given when a load reads a pool after them (an analysis
+    /// that sized the function to its last instruction), else their length.
+    pub end: u64,
+}
+
+/// Finds the literal pools of an ARM function from the PC-relative loads that
+/// read them: A32 `LDR`/`LDRD`/`VLDR` and Thumb `LDR` with PC as the base.
+/// One pass in address order: compilers place a pool after the code that
+/// reads it, so a pool word is already known to be data when the scan reaches
+/// it and is not decoded as an instruction (a pool constant that happens to
+/// look like a PC-relative load reads nothing).
+pub fn arm_literal_pools(bytes: &[u8], thumb: bool) -> LiteralPools {
+    let len = bytes.len() as u64;
+    let mut data: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+    let mut ranges: Vec<(u64, u64)> = Vec::new();
+    let mut words: Vec<u64> = Vec::new();
+    let mut reach = len;
+    let mut read = |data: &mut std::collections::BTreeSet<u64>, at: u64, size: u64, word: bool| {
+        if at % 4 != 0 {
+            return;
+        }
+        if at + size <= len {
+            ranges.push((at, at + size));
+            data.extend((at..at + size).step_by(4));
+            if word {
+                words.push(at);
+            }
+        } else if at + size <= len + 4096 {
+            // A pool behind the given bytes (PC-relative loads reach 4 KiB).
+            reach = reach.max(at + size);
+        }
+    };
+    if thumb {
+        let mut at = 0u64;
+        while at + 2 <= len {
+            let Some(half) = read_u16(bytes, at as usize) else { break };
+            if data.contains(&(at & !3)) {
+                at += 2;
+                continue;
+            }
+            if half & 0xF800 == 0x4800 {
+                read(&mut data, ((at + 4) & !3) + (half as u64 & 0xFF) * 4, 4, true);
+            } else if half & 0xF800 == 0xF000 {
+                // The first half of a BL/BLX pair: skip its second half.
+                at += 2;
+            }
+            at += 2;
+        }
+    } else {
+        for at in (0..len.saturating_sub(3)).step_by(4) {
+            if data.contains(&at) {
+                continue;
+            }
+            let Some(word) = read_u32(bytes, at as usize, false) else { break };
+            if word >> 28 == 0xF {
+                continue;
+            }
+            let up = word >> 23 & 1 == 1;
+            let target = |offset: u64| if up { (at + 8).checked_add(offset) } else { (at + 8).checked_sub(offset) };
+            if word & 0x0F7F_0000 == 0x051F_0000 {
+                // LDR Rt, [PC, #+/-imm12]
+                if let Some(to) = target(word as u64 & 0xFFF) {
+                    read(&mut data, to, 4, true);
+                }
+            } else if word & 0x0F7F_00F0 == 0x014F_00D0 {
+                // LDRD Rt, Rt2, [PC, #+/-imm8]
+                if let Some(to) = target((word as u64 >> 4 & 0xF0) | (word as u64 & 0xF)) {
+                    read(&mut data, to, 8, false);
+                }
+            } else if word & 0x0F3F_0E00 == 0x0D1F_0A00 {
+                // VLDR Sd/Dd, [PC, #+/-imm8*4]
+                if let Some(to) = target((word as u64 & 0xFF) * 4) {
+                    read(&mut data, to, if word >> 8 & 1 == 1 { 8 } else { 4 }, false);
+                }
+            }
+        }
+    }
+    ranges.sort_unstable();
+    let mut merged: Vec<(u64, u64)> = Vec::new();
+    for (start, end) in ranges {
+        match merged.last_mut() {
+            Some(last) if start <= last.1 => last.1 = last.1.max(end),
+            _ => merged.push((start, end)),
+        }
+    }
+    words.sort_unstable();
+    words.dedup();
+    LiteralPools { ranges: merged, words, end: reach }
+}
+
+/// Direct branches and calls of an ARM function outside its literal pools,
+/// as `(instruction address, target address)`: A32 `B`/`BL`/`BLX imm` and
+/// Thumb `BL`/`BLX` pairs. Unlike an analysis transfer list this sees a tail
+/// call (`B` to another function) wherever the decoder put it.
+pub fn arm_direct_branches(entry: u64, bytes: &[u8], thumb: bool, pools: &LiteralPools) -> Vec<(u64, u64)> {
+    let in_pool = |at: u64| pools.ranges.iter().any(|&(start, end)| at >= start && at < end);
+    let mut found = Vec::new();
+    let len = bytes.len() as u64;
+    if thumb {
+        let mut at = 0u64;
+        while at + 4 <= len {
+            let (Some(first), Some(second)) = (read_u16(bytes, at as usize), read_u16(bytes, at as usize + 2)) else { break };
+            if in_pool(at) || first & 0xF800 != 0xF000 || (second & 0xD000 != 0xD000 && second & 0xD001 != 0xC000) {
+                at += 2;
+                continue;
+            }
+            let blx = second & 0x1000 == 0;
+            let s = (first >> 10 & 1) as u32;
+            let (j1, j2) = ((second >> 13 & 1) as u32, (second >> 11 & 1) as u32);
+            let (i1, i2) = (!(j1 ^ s) & 1, !(j2 ^ s) & 1);
+            let imm = (s << 24) | (i1 << 23) | (i2 << 22) | ((first as u32 & 0x3FF) << 12) | ((second as u32 & 0x7FF) << 1);
+            let from = entry + at;
+            let base = if blx { (from + 4) & !3 } else { from + 4 };
+            found.push((from, (base as i64 + sign_extend(imm, 25)) as u64 & 0xFFFF_FFFF));
+            at += 4;
+        }
+    } else {
+        for at in (0..len.saturating_sub(3)).step_by(4) {
+            let Some(word) = read_u32(bytes, at as usize, false) else { break };
+            let (branch, blx) = (word >> 25 & 7 == 5 && word >> 28 != 0xF, word >> 25 == 0x7D);
+            if in_pool(at) || !(branch || blx) {
+                continue;
+            }
+            let imm = sign_extend(word & 0x00FF_FFFF, 24) * 4 + if blx { ((word >> 24) & 1) as i64 * 2 } else { 0 };
+            let from = entry + at;
+            found.push((from, (from as i64 + 8 + imm) as u64 & 0xFFFF_FFFF));
+        }
+    }
+    found
+}
+
+/// Turns the literal-pool words that hold an address into `R_ARM_ABS32`
+/// relocations: `resolve` names the symbol at a word's value (a function, a
+/// Thumb function's address with its low bit, or data), and the word is
+/// zeroed the way armcc leaves a `REL` field with no addend.
+pub fn relocate_pool_words(bytes: &mut [u8], pools: &LiteralPools, resolve: impl Fn(u32) -> Option<String>) -> Vec<Reloc> {
+    let mut relocs = Vec::new();
+    for &at in &pools.words {
+        let Some(value) = read_u32(bytes, at as usize, false) else { continue };
+        let Some(symbol) = resolve(value) else { continue };
+        write_u32(bytes, at as usize, 0, false);
+        relocs.push(Reloc { offset: at, symbol, kind: 2, addend: 0 });
+    }
     relocs
 }
 
@@ -278,11 +441,44 @@ struct Section {
     entsize: u64,
 }
 
+/// An `.ARM.attributes` section body (ARM ABI "Addenda", build attributes):
+/// one `aeabi` subsection with the file-scope `Tag_CPU_name`, `Tag_CPU_arch`,
+/// `Tag_ARM_ISA_use`, `Tag_THUMB_ISA_use` and `Tag_FP_arch` the compiler of
+/// the platform writes (3DS: `MPCore`, v6K = 9, VFPv2 = 2).
+pub fn arm_attributes(cpu_name: &str, cpu_arch: u8, fp_arch: u8) -> Vec<u8> {
+    let mut tags = vec![5];
+    tags.extend_from_slice(cpu_name.as_bytes());
+    tags.push(0);
+    tags.extend_from_slice(&[6, cpu_arch, 8, 1, 9, 1, 10, fp_arch]);
+    let file_len = (1 + 4 + tags.len()) as u32;
+    let mut vendor = b"aeabi\0".to_vec();
+    vendor.push(1);
+    vendor.extend_from_slice(&file_len.to_le_bytes());
+    vendor.extend_from_slice(&tags);
+    let mut out = vec![b'A'];
+    out.extend_from_slice(&((4 + vendor.len()) as u32).to_le_bytes());
+    out.extend_from_slice(&vendor);
+    out
+}
+
 /// A relocatable object holding `bytes` as the function `name`.
 ///
-/// `relocs` come from [`relocate_transfers`]; `thumb` marks ARM Thumb code
-/// (the symbol gets its low bit and a `$t` mapping symbol, otherwise `$a`).
-pub fn build_object(arch: Arch, name: &str, bytes: &[u8], thumb: bool, relocs: &[Reloc]) -> Vec<u8> {
+/// `relocs` come from [`relocate_transfers`] and [`relocate_pool_words`];
+/// `thumb` marks ARM Thumb code (the symbol gets its low bit and a `$t`
+/// mapping symbol, otherwise `$a`), and each of `data` (ARM literal pools,
+/// byte ranges) gets a `$d` with the code mapping symbol again after it.
+/// `attributes` (from [`arm_attributes`]) becomes `.ARM.attributes`, which
+/// tells a disassembler the architecture (ARMv6K decodes `nop`, `yield`,
+/// `ldrex` that an unnamed ARM does not); empty writes none.
+pub fn build_object(
+    arch: Arch,
+    name: &str,
+    bytes: &[u8],
+    thumb: bool,
+    relocs: &[Reloc],
+    data: &[(u64, u64)],
+    attributes: &[u8],
+) -> Vec<u8> {
     let class64 = arch.class64();
     let mut strtab = StringTable::new();
     let mut shstr = StringTable::new();
@@ -299,18 +495,30 @@ pub fn build_object(arch: Arch, name: &str, bytes: &[u8], thumb: bool, relocs: &
     // STB_LOCAL << 4 | STT_SECTION
     symbols.push(Sym { name: 0, info: 3, shndx: 1, value: 0, size: 0 });
     if arch == Arch::Arm32 {
-        let mapping = strtab.add(if thumb { "$t" } else { "$a" });
-        symbols.push(Sym { name: mapping, info: 0, shndx: 1, value: 0, size: 0 });
+        let code = strtab.add(if thumb { "$t" } else { "$a" });
+        let pool = strtab.add("$d");
+        if data.first().is_none_or(|&(start, _)| start > 0) {
+            symbols.push(Sym { name: code, info: 0, shndx: 1, value: 0, size: 0 });
+        }
+        for &(start, end) in data {
+            symbols.push(Sym { name: pool, info: 0, shndx: 1, value: start, size: 0 });
+            if end < bytes.len() as u64 {
+                symbols.push(Sym { name: code, info: 0, shndx: 1, value: end, size: 0 });
+            }
+        }
     }
     let first_global = symbols.len() as u32;
     let function = strtab.add(name);
-    // STB_GLOBAL << 4 | STT_FUNC
+    // STB_GLOBAL << 4 | STT_FUNC. A pool that ends the section follows the
+    // function's last instruction outside its symbol, as armcc sizes it.
+    let len = bytes.len() as u64;
+    let size = data.last().filter(|&&(_, end)| end == len).map_or(len, |&(start, _)| start);
     symbols.push(Sym {
         name: function,
         info: 0x12,
         shndx: 1,
         value: if arch == Arch::Arm32 && thumb { 1 } else { 0 },
-        size: bytes.len() as u64,
+        size,
     });
     let mut index_of: HashMap<&str, u32> = HashMap::new();
     for reloc in relocs {
@@ -342,7 +550,7 @@ pub fn build_object(arch: Arch, name: &str, bytes: &[u8], thumb: bool, relocs: &
         align: arch.text_align(thumb),
         entsize: 0,
     });
-    let symtab_index = if relocs.is_empty() { 2 } else { 3 };
+    let symtab_index = 2 + u32::from(!relocs.is_empty()) + u32::from(!attributes.is_empty());
     // .rel(a).text
     if !relocs.is_empty() {
         w.align(8);
@@ -376,6 +584,22 @@ pub fn build_object(arch: Arch, name: &str, bytes: &[u8], thumb: bool, relocs: &
             info: 1,
             align: if class64 { 8 } else { 4 },
             entsize,
+        });
+    }
+    // .ARM.attributes
+    if !attributes.is_empty() {
+        let offset = w.out.len() as u64;
+        w.out.extend_from_slice(attributes);
+        sections.push(Section {
+            name: shstr.add(".ARM.attributes"),
+            kind: 0x7000_0003,
+            flags: 0,
+            offset,
+            size: attributes.len() as u64,
+            link: 0,
+            info: 0,
+            align: 1,
+            entsize: 0,
         });
     }
     // .symtab
@@ -495,7 +719,7 @@ mod tests {
         let relocs = relocate_transfers(Arch::X86_64, 0x1000, &mut bytes, false, &transfers);
         assert_eq!(relocs, [Reloc { offset: 1, symbol: "callee".into(), kind: 4, addend: -4 }]);
         assert_eq!(bytes, [0xE8, 0, 0, 0, 0, 0xC3]);
-        let elf = build_object(Arch::X86_64, "f", &bytes, false, &relocs);
+        let elf = build_object(Arch::X86_64, "f", &bytes, false, &relocs, &[], &[]);
         let file = parse(&elf);
         assert_eq!(file.architecture(), object::Architecture::X86_64);
         let text = file.section_by_name(".text").unwrap();
@@ -525,7 +749,7 @@ mod tests {
         assert_eq!(relocs.len(), 1);
         assert_eq!(relocs[0].kind, 28);
         assert_eq!(&bytes[..4], &[0xFE, 0xFF, 0xFF, 0xEB]);
-        let elf = build_object(Arch::Arm32, "f", &bytes, true, &relocs);
+        let elf = build_object(Arch::Arm32, "f", &bytes, true, &relocs, &[], &[]);
         let file = parse(&elf);
         assert_eq!(file.architecture(), object::Architecture::Arm);
         let f = file.symbols().find(|s| s.name() == Ok("f")).unwrap();
@@ -563,7 +787,7 @@ mod tests {
         let relocs = relocate_transfers(Arch::Aarch64, 0x400000, &mut bytes, false, &transfers);
         assert_eq!(relocs.iter().map(|r| r.kind).collect::<Vec<_>>(), [283, 282]);
         assert_eq!(bytes, [0, 0, 0, 0x94, 0, 0, 0, 0x14]);
-        let elf = build_object(Arch::Aarch64, "f", &bytes, false, &relocs);
+        let elf = build_object(Arch::Aarch64, "f", &bytes, false, &relocs, &[], &[]);
         let file = parse(&elf);
         assert_eq!(file.architecture(), object::Architecture::Aarch64);
         assert_eq!(file.section_by_name(".text").unwrap().relocations().count(), 2);
@@ -577,19 +801,58 @@ mod tests {
         let relocs = relocate_transfers(Arch::Ppc32, 0x10000, &mut bytes, false, &transfers);
         assert_eq!(relocs.len(), 1);
         assert_eq!(bytes, 0x4800_0001u32.to_be_bytes());
-        let elf = build_object(Arch::Ppc32, "f", &bytes, false, &relocs);
+        let elf = build_object(Arch::Ppc32, "f", &bytes, false, &relocs, &[], &[]);
         let file = parse(&elf);
         assert_eq!(file.architecture(), object::Architecture::PowerPc);
         assert!(!file.is_little_endian());
-        let elf = build_object(Arch::Ppc64, "f", &bytes, false, &relocs);
+        let elf = build_object(Arch::Ppc64, "f", &bytes, false, &relocs, &[], &[]);
         assert_eq!(parse(&elf).architecture(), object::Architecture::PowerPc64);
     }
 
     #[test]
     fn an_object_without_relocations_is_still_a_valid_elf() {
-        let elf = build_object(Arch::Aarch64, "g", &[0xC0, 0x03, 0x5F, 0xD6], false, &[]);
+        let elf = build_object(Arch::Aarch64, "g", &[0xC0, 0x03, 0x5F, 0xD6], false, &[], &[], &[]);
         let file = parse(&elf);
         assert_eq!(file.section_by_name(".text").unwrap().size(), 4);
         assert_eq!(file.kind(), object::ObjectKind::Relocatable);
+    }
+
+    #[test]
+    fn arm_tail_calls_and_conditional_calls_are_jump24() {
+        // b 0x1100 from 0x1000 (imm24 0x3E); blne 0x1100 from 0x1004 (imm24 0x3D).
+        let mut bytes: Vec<u8> = [0xEA00_003Eu32, 0x1B00_003D].iter().flat_map(|w| w.to_le_bytes()).collect();
+        let transfers = [Transfer { from: 0x1000, to: 0x1100, name: "g" }, Transfer { from: 0x1004, to: 0x1100, name: "g" }];
+        let relocs = relocate_transfers(Arch::Arm32, 0x1000, &mut bytes, false, &transfers);
+        assert_eq!(relocs.iter().map(|r| r.kind).collect::<Vec<_>>(), [29, 29]);
+        assert_eq!(bytes, [0xFE, 0xFF, 0xFF, 0xEA, 0xFE, 0xFF, 0xFF, 0x1B]);
+    }
+
+    #[test]
+    fn arm_literal_pools_are_data_and_their_addresses_become_abs32() {
+        // ldr r0, [pc, #4] ; ldr r1, [pc, #4] ; bx lr ; .word 0x00200010 ; .word 0xE51F0014
+        // The second pool word decodes as `ldr r0, [pc, #-20]` (reading the instruction at 4):
+        // it is data, so it must not turn that instruction into a pool.
+        let mut bytes: Vec<u8> = [0xE59F_0004u32, 0xE59F_1004, 0xE12F_FF1E, 0x0020_0010, 0xE51F_0014]
+            .iter()
+            .flat_map(|w| w.to_le_bytes())
+            .collect();
+        let pools = arm_literal_pools(&bytes, false);
+        assert_eq!(pools.ranges, [(12, 20)]);
+        assert_eq!(pools.words, [12, 16]);
+        assert!(arm_direct_branches(0x1000, &bytes, false, &pools).is_empty());
+        let relocs = relocate_pool_words(&mut bytes, &pools, |v| (v == 0x0020_0010).then(|| "DAT_00200010".to_string()));
+        assert_eq!(relocs, [Reloc { offset: 12, symbol: "DAT_00200010".into(), kind: 2, addend: 0 }]);
+        assert_eq!(&bytes[12..16], &[0, 0, 0, 0]);
+        assert_eq!(&bytes[16..20], &0xE51F_0014u32.to_le_bytes(), "a constant stays a constant");
+        let file_bytes = build_object(Arch::Arm32, "f", &bytes, false, &relocs, &pools.ranges, &arm_attributes("MPCore", 9, 2));
+        let file = parse(&file_bytes);
+        let data = file.symbols().find(|s| s.name() == Ok("$d")).expect("$d mapping symbol");
+        assert_eq!(data.address(), 12);
+        let attributes = file.section_by_name(".ARM.attributes").expect("build attributes").data().unwrap().to_vec();
+        assert_eq!(attributes[0], b'A');
+        assert_eq!(u32::from_le_bytes(attributes[1..5].try_into().unwrap()) as usize, attributes.len() - 1);
+        assert!(attributes.windows(9).any(|w| w == b"aeabi\0\x01\x15\0"), "Tag_File covers its 21 bytes");
+        let (offset, reloc) = file.section_by_name(".text").unwrap().relocations().next().unwrap();
+        assert_eq!((offset, reloc.flags()), (12, object::RelocationFlags::Elf { r_type: 2 }));
     }
 }

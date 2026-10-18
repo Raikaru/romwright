@@ -373,7 +373,9 @@ impl ProgramImage {
         program: Option<&str>,
         raw_base: Option<u64>,
     ) -> crate::Result<Self> {
-        let map: SharedBytes = std::fs::read(binary)?.into();
+        // Straight into the shared buffer: `fs::read(..).into()` holds a
+        // multi-gigabyte card twice while the `Vec` is copied into the `Arc`.
+        let map: SharedBytes = crate::artifact::read_shared(binary)?.into();
         let images = match crate::native::parse_container(&map) {
             Ok(images) => images,
             Err(_)

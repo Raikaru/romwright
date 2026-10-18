@@ -169,6 +169,48 @@ impl Drop for Mapped {
     }
 }
 
+#[cfg(windows)]
+impl Mapped {
+    fn map(file: &std::fs::File, length: usize) -> std::io::Result<Self> {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::Memory::{CreateFileMappingW, FILE_MAP_READ, MapViewOfFile, PAGE_READONLY};
+        // SAFETY: a read-only mapping object over an open file handle, unnamed,
+        // sized by the file itself (both size words zero).
+        let mapping = unsafe {
+            CreateFileMappingW(file.as_raw_handle(), std::ptr::null(), PAGE_READONLY, 0, 0, std::ptr::null())
+        };
+        if mapping.is_null() {
+            return Err(std::io::Error::last_os_error());
+        }
+        // SAFETY: a read view of the whole mapping object created above.
+        let view = unsafe { MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, length) };
+        let error = std::io::Error::last_os_error();
+        // SAFETY: the view keeps the section alive; the mapping handle is no longer needed.
+        unsafe {
+            CloseHandle(mapping);
+        }
+        if view.Value.is_null() {
+            return Err(error);
+        }
+        Ok(Self {
+            pointer: view.Value.cast_const().cast(),
+            length,
+        })
+    }
+}
+
+#[cfg(windows)]
+impl Drop for Mapped {
+    fn drop(&mut self) {
+        use windows_sys::Win32::System::Memory::{MEMORY_MAPPED_VIEW_ADDRESS, UnmapViewOfFile};
+        // SAFETY: unmaps exactly the view `map` returned.
+        unsafe {
+            UnmapViewOfFile(MEMORY_MAPPED_VIEW_ADDRESS { Value: self.pointer.cast_mut().cast() });
+        }
+    }
+}
+
 /// Buffers of artifacts this process still holds, by content digest. An
 /// artifact is immutable and named by the digest of its bytes, so a second
 /// `open` of one that is still alive shares the buffer instead of reading the
@@ -222,7 +264,7 @@ fn changed_while_read() -> std::io::Error {
 fn bytes_of(file: std::fs::File, path: &Path, map_min: usize) -> std::io::Result<SharedBytes> {
     let length = usize::try_from(file.metadata()?.len())
         .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "file too large"))?;
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     if length >= map_min.max(1) {
         return Ok(SharedBytes(Backing::Mapped(Arc::new(Mapped::map(&file, length)?))));
     }
