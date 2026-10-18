@@ -39,7 +39,8 @@ def find_clang(explicit):
     if local.exists():
         candidates.append(json.loads(local.read_text()).get("clang"))
     tool_id = PROJECT["compiler"]["tool"]
-    candidates += sorted(glob.glob(str(BUILD / "tools" / tool_id / "*" / "bin" / "clang")))
+    for name in ("clang", "clang.exe"):
+        candidates += sorted(glob.glob(str(BUILD / "tools" / tool_id / "*" / "bin" / name)))
     candidates.append(shutil.which("clang"))
     for candidate in candidates:
         if candidate and (Path(candidate).exists() or shutil.which(candidate)):
@@ -100,7 +101,8 @@ def build(args):
     wanted = [a for a in args.paths]
     if wanted:
         by_object = {unit["object"]: unit for unit in units}
-        units = [by_object[w] for w in (os.path.relpath(Path(w).resolve(), ROOT) for w in wanted) if w in by_object]
+        relative = (Path(os.path.relpath(Path(w).resolve(), ROOT)).as_posix() for w in wanted)
+        units = [by_object[w] for w in relative if w in by_object]
     if args.only:
         units = [unit for unit in units if args.only in unit["source"]]
     if not units:

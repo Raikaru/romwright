@@ -16,8 +16,8 @@ pub(crate) fn scratch_root() -> std::io::Result<std::path::PathBuf> {
     let root = std::env::var_os("ROMWRIGHT_SCRATCH")
         .filter(|value| !value.is_empty())
         .map(std::path::PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|home| std::path::PathBuf::from(home).join(".cache/romwright/scratch")))
-        .ok_or_else(|| std::io::Error::other("set ROMWRIGHT_SCRATCH or HOME for native scratch storage"))?;
+        .or_else(|| std::env::home_dir().map(|home| home.join(".cache/romwright/scratch")))
+        .ok_or_else(|| std::io::Error::other("set ROMWRIGHT_SCRATCH or a home directory for native scratch storage"))?;
     std::fs::create_dir_all(&root)?;
     Ok(root)
 }
@@ -2063,8 +2063,7 @@ mod scratch_tests {
     }
 
     fn fresh(name: &str) -> std::path::PathBuf {
-        let root = std::env::var_os("HOME")
-            .map(std::path::PathBuf::from)
+        let root = std::env::home_dir()
             .unwrap_or_else(std::env::temp_dir)
             .join(".cache/romwright/test-scratch")
             .join(format!("{name}-{}", std::process::id()));

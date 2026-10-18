@@ -40,8 +40,8 @@ pub fn cache_root() -> Option<PathBuf> {
         let path = PathBuf::from(configured);
         return (!path.as_os_str().is_empty()).then_some(path);
     }
-    let home = std::env::var_os("HOME")?;
-    Some(PathBuf::from(home).join(".cache/romwright/imports"))
+    let home = std::env::home_dir()?;
+    Some(home.join(".cache/romwright/imports"))
 }
 
 /// SHA-256 of a file's bytes, or `None` when it cannot be read.

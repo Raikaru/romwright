@@ -22,8 +22,8 @@ test run on a `--release` build, the cheap profile is
 
 | Variable | Default | What it names |
 |---|---|---|
-| `ROMWRIGHT_GHIDRA` | `~/ghidra_12.1.3_PUBLIC` | The pinned Ghidra install whose processor specs and `.sla` files the in-process SLEIGH decoder and the worker load. Without it, discovery reports a degraded import. |
-| `ROMWRIGHT_GHIDRA_OPT` | `native/build/ghidra_opt` | The decompiler binary the worker drives. |
+| `ROMWRIGHT_GHIDRA` | `~/ghidra_12.1.3_PUBLIC` (`%USERPROFILE%\ghidra_12.1.3_PUBLIC` on Windows) | The pinned Ghidra install whose processor specs and `.sla` files the in-process SLEIGH decoder and the worker load. Without it, discovery reports a degraded import. |
+| `ROMWRIGHT_GHIDRA_OPT` | `native/build/ghidra_opt` (`ghidra_opt.exe` on Windows) | The decompiler binary the worker drives. |
 | `ROMWRIGHT_SPECS` | `native/specs` | Compiled language specs for the worker. |
 | `ROMWRIGHT_WORKER` | `romwright-worker` beside the running executable (so a `target/dist` build finds its own), then `target/release`, `target/debug` | The decompiler worker process. |
 | `ROMWRIGHT_CLI` | `romwright-cli` beside the desktop app, then `target/release`, `target/debug` | The CLI the desktop's Program setup runs for **Create project** (`new-project`). |
@@ -90,6 +90,24 @@ their vendored C sources). No system library and no environment variable is
 involved: the disc reader is configured by the file it is given. It holds no
 key; the Wii common keys it embeds are `nod`'s, used only to unwrap the
 title key stored in the disc's own ticket.
+
+### Windows
+
+The CLI, worker and desktop build natively with the MSVC Rust toolchain
+(`x86_64-pc-windows-msvc`; Visual Studio Build Tools supply `cc`). The
+decompiler builds with MSYS2's MinGW-w64 toolchain (packages
+`mingw-w64-x86_64-gcc`, `mingw-w64-x86_64-make`, `mingw-w64-x86_64-zlib`) and
+Git for Windows on `PATH`, from an MSYS2 MINGW64 shell:
+
+```sh
+export PATH="$PATH:/c/Program Files/Git/cmd"
+native/build_ghidra_opt.sh --jobs 8
+```
+
+The script defines `_WINDOWS` (Ghidra's binary-mode stdio and Win32 paths) and
+links statically, so `native/build/ghidra_opt.exe` needs no MinGW DLLs and runs
+from any shell. Tools romwright runs under a deadline (`exec::run_command`) are
+supervised by a kill-on-close job object instead of a Unix process group.
 
 ## Tracing
 

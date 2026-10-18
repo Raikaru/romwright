@@ -36,3 +36,8 @@ miniz_oxide = "0.9.1"
 # MIT OR Apache-2.0; see docs/third-party.md and THIRD_PARTY_NOTICES.md.
 nod = "=2.0.0-alpha.9"
 
+# Windows tool supervision (`exec::run_command`): a kill-on-close job object
+# bounds a tool and every process it starts. MIT OR Apache-2.0.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+

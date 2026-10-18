@@ -121,6 +121,8 @@ def install(tool, dest_root, cache):
     kind = asset["archive"]
     if kind == "raw":
         name = (tool.get("provides") or {}).get(tool["id"]) or tool["id"]
+        if asset["url"].lower().endswith(".exe") and not name.lower().endswith(".exe"):
+            name += ".exe"  # Windows runs a file by its extension
         target = install_dir / name
         shutil.copyfile(blob, target)
         target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)

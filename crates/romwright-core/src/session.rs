@@ -152,9 +152,10 @@ fn worker_candidate() -> PathBuf {
     if let Ok(pinned) = std::env::var("ROMWRIGHT_WORKER") {
         return PathBuf::from(pinned);
     }
+    let worker = format!("romwright-worker{}", std::env::consts::EXE_SUFFIX);
     let sibling = std::env::current_exe()
         .ok()
-        .and_then(|exe| exe.parent().map(|dir| dir.join("romwright-worker")));
+        .and_then(|exe| exe.parent().map(|dir| dir.join(&worker)));
     // The target/ fallbacks resolve against the repository root, not the
     // process cwd — a GUI launched from desktop/.../build must still find
     // target/release/romwright-worker.
@@ -163,16 +164,16 @@ fn worker_candidate() -> PathBuf {
         .canonicalize()
         .unwrap_or_else(|_| PathBuf::from("."));
     let fallbacks = [
-        repo_root.join("target/release/romwright-worker"),
-        repo_root.join("target/debug/romwright-worker"),
-        PathBuf::from("target/release/romwright-worker"),
-        PathBuf::from("target/debug/romwright-worker"),
+        repo_root.join("target/release").join(&worker),
+        repo_root.join("target/debug").join(&worker),
+        PathBuf::from("target/release").join(&worker),
+        PathBuf::from("target/debug").join(&worker),
     ];
     sibling
         .into_iter()
         .chain(fallbacks)
         .find(|candidate| candidate.is_file())
-        .unwrap_or_else(|| repo_root.join("target/debug/romwright-worker"))
+        .unwrap_or_else(|| repo_root.join("target/debug").join(&worker))
 }
 
 /// The worker memory cap in bytes: `ROMWRIGHT_WORKER_MEMORY_CAP` when it names
@@ -194,14 +195,7 @@ impl RuntimeConfig {
     /// Builds a config from the environment (the CLI's documented surface),
     /// with repo/install-relative defaults.
     pub fn from_env() -> Self {
-        let install = std::env::var("ROMWRIGHT_GHIDRA")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                PathBuf::from(format!(
-                    "{}/ghidra_12.1.3_PUBLIC",
-                    std::env::var("HOME").unwrap_or_default()
-                ))
-            });
+        let install = crate::native_runtime::ghidra_dir();
         let language_id =
             std::env::var("ROMWRIGHT_LANGUAGE").unwrap_or_else(|_| "x86:LE:64:default".into());
         let pinned_dir = std::env::var("ROMWRIGHT_LANGUAGE_DIR")
@@ -226,7 +220,11 @@ impl RuntimeConfig {
             .unwrap_or_else(|_| PathBuf::from("."));
         let decompiler_path = std::env::var("ROMWRIGHT_GHIDRA_OPT")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| repo_root.join("native/build/ghidra_opt"));
+            .unwrap_or_else(|_| {
+                repo_root
+                    .join("native/build")
+                    .join(format!("ghidra_opt{}", std::env::consts::EXE_SUFFIX))
+            });
         let library_prototypes = std::env::var("ROMWRIGHT_LIBRARY_PROTOTYPES")
             .map(PathBuf::from)
             .unwrap_or_else(|_| {
