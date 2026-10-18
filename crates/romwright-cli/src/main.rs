@@ -2205,8 +2205,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             // cspec schema drift). Exit non-zero when any error fires.
             let install = flag(args, "--ghidra")
                 .map(PathBuf::from)
-                .or_else(|| std::env::var_os("ROMWRIGHT_GHIDRA").map(PathBuf::from))
-                .unwrap_or_else(|| PathBuf::from("ghidra"));
+                .unwrap_or_else(romwright_core::native_runtime::ghidra_dir);
             let findings = romwright_core::speclint::lint_install(&install);
             let mut errors = 0usize;
             for f in &findings {

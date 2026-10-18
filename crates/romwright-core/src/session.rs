@@ -210,29 +210,20 @@ impl RuntimeConfig {
             })
             .unwrap_or_else(|| install.join("Ghidra/Processors/x86/data/languages"));
         let worker_path = worker_candidate();
-        // Relative defaults resolve against the repository root, not the
-        // process cwd — a GUI launched from desktop/.../build must still
-        // find native/build/ghidra_opt and native/specs. CARGO_MANIFEST_DIR
-        // is crates/romwright-core, so ../.. is the repo root.
-        let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../..")
-            .canonicalize()
-            .unwrap_or_else(|_| PathBuf::from("."));
+        // Defaults resolve beside the running executable first (a release
+        // archive), then inside the source checkout, never against the
+        // process cwd -- a GUI launched from desktop/.../build must still
+        // find native/build/ghidra_opt and native/specs (`runtime_paths`).
+        let layout = crate::runtime_paths::Layout::current();
         let decompiler_path = std::env::var("ROMWRIGHT_GHIDRA_OPT")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                repo_root
-                    .join("native/build")
-                    .join(format!("ghidra_opt{}", std::env::consts::EXE_SUFFIX))
-            });
+            .unwrap_or_else(|_| layout.decompiler());
         let library_prototypes = std::env::var("ROMWRIGHT_LIBRARY_PROTOTYPES")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                repo_root.join("oracle/library-prototypes-v1/generic_clib_64.json")
-            });
+            .unwrap_or_else(|_| layout.library_prototypes());
         let spec_root = std::env::var("ROMWRIGHT_SPECS")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| repo_root.join("native/specs"));
+            .unwrap_or_else(|_| layout.specs());
         let sla_path = std::env::var("ROMWRIGHT_SLA")
             .ok()
             .filter(|p| {

@@ -32,6 +32,7 @@ pub mod opinion;
 pub mod native_runtime;
 pub mod rsp;
 pub mod session;
+pub mod runtime_paths;
 pub mod structuring;
 pub mod speclint;
 pub mod vu;
