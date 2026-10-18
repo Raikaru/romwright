@@ -5,15 +5,22 @@
 //! Extra flags over the PS2 path: `--keys FILE...` (user keys for the
 //! container loaders; used in memory, never written), `--map FILE` (a linker
 //! map or BINMAP naming the image's symbols), `--raw BASE --language ID` (a
-//! flat dump, e.g. a 3DS ExeFS `.code`). `--decompile` takes `all` (the default),
-//! `first:N` (the first N functions of each module by address), `ADDR,ADDR` or `none`.
+//! flat dump, e.g. a 3DS ExeFS `.code`), `--compiler ID [--cflags FLAGS]` (a
+//! retail compiler from the manifest, 3DS armcc, instead of the clang compile
+//! check). `--decompile` takes `all` (the default), `first:N` (the first N
+//! functions of each module by address), `ADDR,ADDR` or `none`; `--jobs N`
+//! decompiles on N workers at once (default: the host's cores, at most 16).
+//! `--tus FILE` places functions in folders named after their original source
+//! files (`src/<module>/<file>/<function>.c`), one objdiff progress category each.
+//! `--names FILE` (`ADDR NAME` lines) renames functions the analysis found and
+//! seeds nothing, unlike `--map`.
 
 use super::{flag, has_flag};
 use romwright_core::native::linkmap::SplitExtent;
 use romwright_core::new_project::{self, manifest::Manifest, scaffold};
 use romwright_core::session::ProgramImage;
 use romwright_core::Core;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 /// Reads `size` bytes at a virtual address of one image.
@@ -53,6 +60,118 @@ fn extent(unit: &scaffold::Unit) -> SplitExtent {
     SplitExtent { tu: unit.tu.clone(), start: unit.address, end: unit.address + 1, name: String::new(), kind: "code".into() }
 }
 
+/// `--tus FILE`: `{"units": [{"module", "address", "tu"}, ...]}`, each function
+/// placed in its original source file (a relative path without extension).
+fn source_files(path: &str) -> Result<HashMap<(String, u64), String>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let document: serde_json::Value = serde_json::from_str(&text).map_err(|e| format!("{path}: not JSON: {e}"))?;
+    let units = document["units"].as_array().ok_or_else(|| format!("{path}: no `units` array"))?;
+    let mut files = HashMap::new();
+    for (index, unit) in units.iter().enumerate() {
+        let field = |name: &str| unit[name].as_str().ok_or_else(|| format!("{path}: units[{index}] has no `{name}`"));
+        let (module, address, file) = (field("module")?, field("address")?, field("tu")?);
+        let address = u64::from_str_radix(address.trim_start_matches("0x"), 16)
+            .map_err(|e| format!("{path}: units[{index}] address {address}: {e}"))?;
+        if !scaffold::valid_file_path(file) {
+            return Err(format!("{path}: units[{index}] file {file:?} is not a relative path of plain names"));
+        }
+        files.insert((module.to_string(), address), file.to_string());
+    }
+    Ok(files)
+}
+
+/// `--names FILE`: `ADDR NAME` per line (`#` comments). Unlike `--map`, which
+/// seeds the analysis with every row (and so changes which functions it finds),
+/// these only rename functions an unnamed import finds.
+fn names_file(path: &str) -> Result<Vec<(u64, String)>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let mut names = Vec::new();
+    for (number, line) in text.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut words = line.split_whitespace();
+        let (Some(address), Some(name), None) = (words.next(), words.next(), words.next()) else {
+            return Err(format!("{path}:{}: expected `ADDR NAME`", number + 1));
+        };
+        let address = u64::from_str_radix(address.trim_start_matches("0x"), 16)
+            .map_err(|e| format!("{path}:{}: address {address}: {e}", number + 1))?;
+        names.push((address, name.to_string()));
+    }
+    Ok(names)
+}
+
+/// Functions per decompile batch: one worker start serves this many, and a
+/// batch the decompiler refuses is redone function by function.
+const BATCH: usize = 48;
+
+/// Decompiles `units` of `program` into `scratch` on `jobs` threads, each with
+/// its own store connection and worker, `BATCH` functions per call. Returns
+/// how many functions the decompiler refused.
+///
+/// The threads use forks of `core`: their own connection, but one parsed image
+/// (the emitter reads machine code from it) instead of one per thread.
+fn decompile_parallel(
+    core: &Core,
+    orig: &Path,
+    program: &str,
+    scratch: &Path,
+    units: &[&scaffold::Unit],
+    options: &romwright_core::emit_m2c::M2cOptions,
+    per_function: std::time::Duration,
+    jobs: usize,
+) -> Result<usize, String> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let batches: Vec<&[&scaffold::Unit]> = units.chunks(BATCH).collect();
+    let next = AtomicUsize::new(0);
+    let (done, refused) = (AtomicUsize::new(0), AtomicUsize::new(0));
+    let total = units.len();
+    let forks: Vec<Core> = (0..jobs.clamp(1, batches.len().max(1)))
+        .map(|_| core.fork().map_err(|e| e.to_string()))
+        .collect::<Result<_, _>>()?;
+    std::thread::scope(|scope| -> Result<(), String> {
+        let workers: Vec<_> = forks
+            .into_iter()
+            .map(|core| {
+                let (next, done, refused, batches) = (&next, &done, &refused, &batches);
+                scope.spawn(move || -> Result<(), String> {
+                    loop {
+                        let index = next.fetch_add(1, Ordering::Relaxed);
+                        let Some(batch) = batches.get(index) else { return Ok(()) };
+                        let splits: Vec<SplitExtent> = batch.iter().map(|u| extent(u)).collect();
+                        let entries: Vec<u64> = batch.iter().map(|u| u.address).collect();
+                        let budgeted = romwright_core::emit_m2c::M2cOptions {
+                            budget: Some(per_function * entries.len() as u32),
+                            ..options.clone()
+                        };
+                        if core.export_m2c_entries(orig, program, scratch, Some(&splits), Some(&entries), &budgeted).is_err() {
+                            // The batch publishes nothing when any function fails: redo it
+                            // function by function, skipping (and counting) the refusals.
+                            let single = romwright_core::emit_m2c::M2cOptions { budget: Some(per_function), ..options.clone() };
+                            for unit in batch.iter() {
+                                if let Err(error) = core.export_m2c(orig, program, scratch, Some(&[extent(unit)]), Some(unit.address), &single) {
+                                    eprintln!("warning: {program}: no C for {:#x}: {error}", unit.address);
+                                    refused.fetch_add(1, Ordering::Relaxed);
+                                }
+                            }
+                        }
+                        let finished = done.fetch_add(batch.len(), Ordering::Relaxed) + batch.len();
+                        if total > BATCH {
+                            eprintln!("decompile: {finished}/{total}");
+                        }
+                    }
+                })
+            })
+            .collect();
+        for worker in workers {
+            worker.join().map_err(|_| "a decompile thread panicked".to_string())??;
+        }
+        Ok(())
+    })?;
+    Ok(refused.into_inner())
+}
+
 pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str, outdir: &Path, bytes: &[u8]) -> Result<(), String> {
     let target = scaffold::target(platform).ok_or_else(|| format!("`{platform}` has no scaffold target"))?;
     let project_name = flag(args, "--name").unwrap_or_else(|| {
@@ -73,12 +192,22 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
         }
         None => None,
     };
+    let compiler = scaffold::compiler_for(
+        target,
+        flag(args, "--compiler").as_deref(),
+        flag(args, "--cflags").map(|f| f.split_whitespace().map(str::to_string).collect()),
+        &manifest,
+    )?;
+    let files = match flag(args, "--tus") {
+        Some(path) => source_files(&path)?,
+        None => HashMap::new(),
+    };
 
     // The retail image goes into orig/ (user-owned bytes, ignored by git).
     let orig = outdir.join("orig").join(image_name);
     std::fs::create_dir_all(orig.parent().unwrap()).map_err(|e| e.to_string())?;
     if std::fs::canonicalize(image_path).ok() != std::fs::canonicalize(&orig).ok() {
-        std::fs::write(&orig, bytes).map_err(|e| format!("{}: {e}", orig.display()))?;
+        std::fs::copy(image_path, &orig).map_err(|e| format!("{}: {e}", orig.display()))?;
     }
 
     // Keys are the user's: loaded for this process only.
@@ -121,6 +250,27 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
         eprintln!("fact pack: {}: {} matched, {} renamed, {} prototypes", report.program, report.matched, report.renamed, report.prototypes);
     }
     eprintln!("import: {:.1}s", started.elapsed().as_secs_f64());
+    if let Some(path) = flag(args, "--names") {
+        let wanted = names_file(&path)?;
+        for summary in &stored {
+            let entries: HashSet<u64> = core
+                .export_facts(&summary.program)
+                .map_err(|e| e.to_string())?
+                .functions
+                .iter()
+                .map(|f| f.entry.offset)
+                .collect();
+            let mut renamed = 0;
+            for (address, name) in &wanted {
+                if entries.contains(address) {
+                    core.rename_command(&summary.program, &romwright_model::Address::ram(*address), name)
+                        .map_err(|e| format!("{path}: {address:#x} {name}: {e}"))?;
+                    renamed += 1;
+                }
+            }
+            eprintln!("names: {}: {renamed} of {} renamed, {} name no function entry", summary.program, wanted.len(), wanted.len() - renamed);
+        }
+    }
 
     // Facts and the retail bytes of every program.
     let mut facts = Vec::new();
@@ -176,11 +326,14 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
         target,
         image_name,
         project_name: &project_name,
-        image_sha256: scaffold::sha256_hex(bytes),
-        image_size: bytes.len() as u64,
+        // The retail file itself, streamed: `bytes` may be only its program view.
+        image_sha256: romwright_core::import_cache::digest(image_path).ok_or_else(|| format!("{}: unreadable", image_path.display()))?,
+        image_size: std::fs::metadata(image_path).map_err(|e| e.to_string())?.len(),
         modules,
         manifest: &manifest,
         profile: profile.as_deref(),
+        files: &files,
+        compiler,
         romwright_version: env!("CARGO_PKG_VERSION"),
     };
     let units = scaffold::layout(&inputs);
@@ -188,12 +341,15 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
     // Decompile into a scratch directory; plan() wraps each file into src/.
     let scratch = store.join("m2c");
     let _ = std::fs::remove_dir_all(&scratch);
-    let options = romwright_core::emit_m2c::M2cOptions {
-        budget: flag(args, "--budget-ms")
-            .map(|v| v.parse::<u64>().map_err(|e| e.to_string()))
-            .transpose()?
-            .map(std::time::Duration::from_millis),
-        ..Default::default()
+    let options = romwright_core::emit_m2c::M2cOptions::default();
+    // `--budget-ms` bounds each function; a batch gets the sum of its functions'.
+    let per_function = flag(args, "--budget-ms")
+        .map(|v| v.parse::<u64>().map_err(|e| e.to_string()))
+        .transpose()?
+        .map_or(romwright_core::exec::DEFAULT_BUDGET, std::time::Duration::from_millis);
+    let jobs = match flag(args, "--jobs") {
+        Some(value) => value.parse::<usize>().map_err(|e| format!("--jobs {value}: {e}"))?.max(1),
+        None => std::thread::available_parallelism().map_or(1, |n| n.get()).min(16),
     };
     let chosen = selection(args)?;
     let started = std::time::Instant::now();
@@ -201,40 +357,15 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
     let mut refused: usize = 0;
     for (index, summary) in stored.iter().enumerate() {
         let module_units: Vec<&scaffold::Unit> = units.iter().filter(|u| u.module == index).collect();
-        if module_units.is_empty() {
+        let selected: Vec<&scaffold::Unit> = match &chosen {
+            Selection::All => module_units,
+            Selection::First(count) => module_units.into_iter().take(*count).collect(),
+            Selection::Addresses(list) => module_units.into_iter().filter(|u| list.contains(&u.address)).collect(),
+        };
+        if selected.is_empty() {
             continue;
         }
-        let addresses: Vec<u64> = match &chosen {
-            Selection::All => Vec::new(),
-            Selection::First(count) => module_units.iter().take(*count).map(|u| u.address).collect(),
-            Selection::Addresses(list) => list.clone(),
-        };
-        // One function at a time: a function the decompiler refuses (code it
-        // cannot read, a flow it cannot follow) is skipped and counted, never
-        // fatal.
-        let mut one_by_one = |addresses: &[u64]| {
-            for address in addresses {
-                let Some(unit) = module_units.iter().find(|u| u.address == *address) else { continue };
-                if let Err(error) = core.export_m2c(&orig, &summary.program, &scratch, Some(&[extent(unit)]), Some(*address), &options) {
-                    eprintln!("warning: {}: no C for {address:#x}: {error}", summary.program);
-                    refused += 1;
-                }
-            }
-        };
-        match &chosen {
-            Selection::Addresses(list) if list.is_empty() => {}
-            Selection::All => {
-                let splits: Vec<SplitExtent> = module_units.iter().map(|u| extent(u)).collect();
-                if let Err(error) = core.export_m2c(&orig, &summary.program, &scratch, Some(&splits), None, &options) {
-                    // The batch publishes nothing when any function fails: redo it
-                    // function by function.
-                    eprintln!("warning: batch decompile of {} failed ({error}); retrying function by function", summary.program);
-                    let all: Vec<u64> = module_units.iter().map(|u| u.address).collect();
-                    one_by_one(&all);
-                }
-            }
-            _ => one_by_one(&addresses),
-        }
+        refused += decompile_parallel(&core, &orig, &summary.program, &scratch, &selected, &options, per_function, jobs)?;
     }
     let mut sources: HashMap<String, String> = HashMap::new();
     for unit in &units {
@@ -255,8 +386,9 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
         println!("{}", serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?);
     } else {
         println!(
-            "wrote {}: non-matching scaffold for {} ({} module(s)), {} function(s), {} source(s), {} target object(s) ({} calls relocated), {} objdiff unit(s), {} symbols, {} prototypes ({} skipped), clang target {}",
+            "wrote {}: {} for {} ({} module(s)), {} function(s), {} source(s), {} target object(s) ({} relocations), {} objdiff unit(s), {} symbols, {} prototypes ({} skipped), compiler {}",
             outdir.display(),
+            if inputs.compiler.retail() { "per-function matching project" } else { "non-matching scaffold" },
             target.name,
             report.modules,
             report.functions,
@@ -267,7 +399,7 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
             report.symbols,
             report.prototypes_emitted,
             report.prototypes_skipped,
-            report.triple
+            if inputs.compiler.retail() { format!("{} ({})", inputs.compiler.tool, inputs.compiler.flags.join(" ")) } else { format!("{} --target={}", inputs.compiler.tool, report.triple) }
         );
         println!("next: cd {} && python3 build.py", outdir.display());
     }

@@ -130,6 +130,115 @@ pub(crate) fn is_ncsd(data: &[u8]) -> bool {
     data.len() >= 0x104 && data[0x100..0x104] == *b"NCSD"
 }
 
+/// Files smaller than this are read whole: there is nothing worth leaving out.
+const PROGRAM_VIEW_MIN: u64 = 64 << 20;
+
+/// The program part of a large NCCH (`.cxi`) or NCSD (`.3ds`/`.cci`) file: what
+/// the ARM11 program is loaded from, which is a few megabytes of a card whose
+/// RomFS is gigabytes. An NCCH keeps its header, exheader and ExeFS at their
+/// offsets and ends after the ExeFS, its header's content size cut to match and
+/// its RomFS fields cleared. An NCSD keeps its header and, back to back, the
+/// program view of every partition that has an ExeFS, with the partition table
+/// rewritten to their new offsets (an NCCH's own offsets are relative to its
+/// start, so its ExeFS counters are unchanged). The result is a container the
+/// loaders read like the original. `None`: not one of these, a CIA, or small.
+pub fn program_view(path: &std::path::Path) -> std::io::Result<Option<Vec<u8>>> {
+    program_view_from(path, PROGRAM_VIEW_MIN)
+}
+
+fn program_view_from(path: &std::path::Path, min_length: u64) -> std::io::Result<Option<Vec<u8>>> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path)?;
+    let length = file.metadata()?.len();
+    if length < min_length {
+        return Ok(None);
+    }
+    let mut header = [0u8; 0x200];
+    if file.read_exact(&mut header).is_err() {
+        return Ok(None);
+    }
+    // Every range is checked against the file before anything is allocated: a
+    // header's offsets and sizes are untrusted.
+    let mut read_at = |offset: u64, size: u64| -> std::io::Result<Vec<u8>> {
+        if !offset.checked_add(size).is_some_and(|end| end <= length) {
+            return Err(invalid_range("a range lies beyond the end of the file"));
+        }
+        let mut out = vec![0u8; usize::try_from(size).map_err(|_| invalid_range("a range is too large"))?];
+        file.seek(SeekFrom::Start(offset))?;
+        file.read_exact(&mut out)?;
+        Ok(out)
+    };
+    let word = |data: &[u8], at: usize| u32::from_le_bytes(data[at..at + 4].try_into().unwrap()) as u64;
+    if is_ncch(&header) {
+        return Ok(Some(ncch_view(&mut read_at, 0, length)?.unwrap_or_default()).filter(|view| !view.is_empty()));
+    }
+    if !is_ncsd(&header) {
+        return Ok(None);
+    }
+    let unit = 0x200u64 << header[0x188 + 6].min(8);
+    let first = (0..8).map(|i| word(&header, 0x120 + i * 8)).filter(|&o| o > 0).min().unwrap_or(0) * unit;
+    if first == 0 || first > length {
+        return Ok(None);
+    }
+    let mut out = read_at(0, first)?;
+    for index in 0..8 {
+        let (offset, size) = (word(&out, 0x120 + index * 8) * unit, word(&out, 0x124 + index * 8) * unit);
+        // An NCCH may not reach past its own partition.
+        let view = if size == 0 { None } else { ncch_view(&mut read_at, offset, offset.saturating_add(size))? };
+        let (new_offset, new_size) = match view {
+            Some(view) => {
+                let at = out.len() as u64;
+                out.extend_from_slice(&view);
+                out.resize(out.len().next_multiple_of(unit as usize), 0);
+                (at / unit, view.len() as u64 / unit)
+            }
+            None => (0, 0),
+        };
+        out[0x120 + index * 8..0x124 + index * 8].copy_from_slice(&(new_offset as u32).to_le_bytes());
+        out[0x124 + index * 8..0x128 + index * 8].copy_from_slice(&(new_size as u32).to_le_bytes());
+    }
+    let total = out.len() as u64 / unit;
+    out[0x104..0x108].copy_from_slice(&(total as u32).to_le_bytes());
+    Ok(Some(out))
+}
+
+fn invalid_range(message: &str) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::InvalidData, format!("malformed 3DS image: {message}"))
+}
+
+/// The program view of the NCCH at `offset` (see [`program_view`]), `None`
+/// when it is not an NCCH or has no ExeFS (a CFA: manual, update data).
+/// `limit` is the end of the container it must fit in: its partition in an
+/// NCSD, the file for a bare NCCH. A header that points outside it is an error.
+fn ncch_view(
+    read_at: &mut dyn FnMut(u64, u64) -> std::io::Result<Vec<u8>>,
+    offset: u64,
+    limit: u64,
+) -> std::io::Result<Option<Vec<u8>>> {
+    if limit.saturating_sub(offset) < 0x200 {
+        return Err(invalid_range("an NCCH is smaller than its header"));
+    }
+    let header = read_at(offset, 0x200)?;
+    if !is_ncch(&header) {
+        return Ok(None);
+    }
+    let parsed = parse_ncch_header(&header).map_err(|e| invalid_range(&e.to_string()))?;
+    let unit = ncch_media_unit(&parsed).map_err(|e| invalid_range(&e.to_string()))?;
+    let (exefs_offset, exefs_size) = (parsed.exefs_off_units as u64 * unit, parsed.exefs_size_units as u64 * unit);
+    if exefs_size == 0 {
+        return Ok(None);
+    }
+    let end = (exefs_offset + exefs_size).max(0x200 + parsed.exheader_size as u64).next_multiple_of(unit);
+    if end > limit - offset {
+        return Err(invalid_range("an NCCH's ExeFS lies beyond its partition"));
+    }
+    let mut view = read_at(offset, end)?;
+    view[0x104..0x108].copy_from_slice(&((end / unit) as u32).to_le_bytes());
+    // RomFS offset, size and hash-region size.
+    view[0x1B0..0x1BC].fill(0);
+    Ok(Some(view))
+}
+
 /// True when `data` is a CIA installer: archive header size 0x2020 with
 /// type 0 / version 1 (the same two-field check `xbox_3ds::is_cia` uses).
 pub(crate) fn is_cia(data: &[u8]) -> bool {
@@ -536,15 +645,9 @@ fn import_ncch_slice(ncch: &[u8], base: u64, keys: &super::keys::KeyStore) -> Re
         .ok_or_else(|| super::ImportError::Bad("ExeFS .code file offset overflow".into()))?;
     let entry = text_addr as u64;
     let mut imp = NativeImport::default();
-    imp.mappings = vec![Mapping {
-        vaddr: entry,
-        size: code_bytes.len() as u64,
-        file_off,
-        // The blob holds text plus ro/data: readable, writable, executable.
-        flags: 0x7,
-        bytes: code_bytes,
-    }];
-    imp.mapping_names = vec![".code".into()];
+    let (mappings, names) = code_set_mappings(&exheader_blob, entry, file_off, code_bytes);
+    imp.mappings = mappings;
+    imp.mapping_names = names;
     imp.functions = vec![NativeFunction {
         entry,
         name: "entry".into(),
@@ -553,6 +656,55 @@ fn import_ncch_slice(ncch: &[u8], base: u64, keys: &super::keys::KeyStore) -> Re
     imp.format = "ncch".into();
     imp.language = LANGUAGE.into();
     Ok(Some(imp))
+}
+
+/// The ARM11 code set as the kernel maps it (gbatek/3dbrew exheader SCI
+/// code-set info: text, ro and data at +0x10/+0x20/+0x30 as address, page
+/// count, byte size, then the .bss size at +0x3C). The decompressed `.code`
+/// holds the three segments back to back, each padded to its page count;
+/// .bss follows .data in memory and has no bytes. Separate permissions are
+/// what let analysis treat literal pools in .text and .rodata as constants.
+/// A code set whose segments do not tile the blob that way is mapped as one
+/// read/write/execute region, as before.
+fn code_set_mappings(exheader: &[u8], entry: u64, file_off: u64, code: Vec<u8>) -> (Vec<Mapping>, Vec<String>) {
+    let word = |at: usize| u32::from_le_bytes([exheader[at], exheader[at + 1], exheader[at + 2], exheader[at + 3]]) as u64;
+    let segments = [(".text", 0x10, 6u64), (".rodata", 0x20, 2), (".data", 0x30, 3)];
+    let mut layout = Vec::new();
+    let mut offset = 0u64;
+    let mut fits = true;
+    for (name, at, flags) in segments {
+        let (addr, pages, size) = (word(at), word(at + 4), word(at + 8));
+        if size == 0 && pages == 0 {
+            continue;
+        }
+        let span = pages * 0x1000;
+        fits &= size <= span;
+        layout.push((name, addr, offset, span, flags));
+        offset += span;
+    }
+    let tiles = fits
+        && layout.first().is_some_and(|first| first.1 == entry)
+        && offset as usize == code.len()
+        && layout.windows(2).all(|pair| pair[0].1 + pair[0].3 <= pair[1].1);
+    if !tiles {
+        let size = code.len() as u64;
+        return (vec![Mapping { vaddr: entry, size, file_off, flags: 0x7, bytes: code }], vec![".code".into()]);
+    }
+    let mut mappings = Vec::new();
+    let mut names = Vec::new();
+    for (name, addr, start, span, flags) in &layout {
+        let bytes = code[*start as usize..(*start + *span) as usize].to_vec();
+        mappings.push(Mapping { vaddr: *addr, size: *span, file_off: file_off + start, flags: *flags, bytes });
+        names.push(name.to_string());
+    }
+    let (data_addr, data_size, bss_size) = (word(0x30), word(0x38), word(0x3C));
+    let mapped_end = layout.last().map_or(entry, |last| last.1 + last.3);
+    let bss_end = data_addr + data_size + bss_size;
+    if bss_size > 0 && bss_end > mapped_end {
+        mappings.push(Mapping { vaddr: mapped_end, size: bss_end - mapped_end, file_off: 0, flags: 3, bytes: Vec::new() });
+        names.push(".bss".into());
+    }
+    (mappings, names)
 }
 
 /// Imports a lone NCCH image.
@@ -985,6 +1137,116 @@ mod tests {
         ncsd
     }
 
+    /// `ncch` with `romfs` bytes of RomFS after its ExeFS, declared in the header.
+    fn with_romfs(mut ncch: Vec<u8>, romfs: usize) -> Vec<u8> {
+        let at = ncch.len();
+        ncch.resize(at + romfs, 0xAB);
+        let units = (ncch.len() / 0x200) as u32;
+        put32(&mut ncch, 0x104, units);
+        put32(&mut ncch, 0x1B0, (at / 0x200) as u32);
+        put32(&mut ncch, 0x1B4, (romfs / 0x200) as u32);
+        ncch
+    }
+
+    #[test]
+    fn a_program_view_imports_like_the_whole_card_without_its_romfs() {
+        let dir = std::env::temp_dir().join(format!("romwright-view-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let ncch = build_ncch(&test_code(), false, NO_CRYPTO, TEST_PID);
+        let exefs_end = ncch.len();
+        let card = with_romfs(ncch, 0x10_0000);
+        let mut cfa = build_ncch(&[], false, NO_CRYPTO, TEST_PID);
+        cfa[0x600..0x605].copy_from_slice(b"icon\0");
+        let manual = with_romfs(cfa, 0x8000);
+        for (name, whole) in [("cxi", card.clone()), ("cci", build_ncsd(&[card.clone(), manual]))] {
+            let path = dir.join(format!("game.{name}"));
+            std::fs::write(&path, &whole).unwrap();
+            let view = program_view_from(&path, 0).unwrap().expect("a program view");
+            assert!(view.len() < whole.len() / 4, "{name}: the RomFS is left out");
+            assert!(!view.windows(16).any(|w| w == [0xAB; 16]), "{name}: no RomFS byte is read");
+            let mapped = |data: &[u8]| -> Vec<(u64, Vec<u8>)> {
+                import(data).unwrap().unwrap().into_iter().flat_map(|(_, imp)| imp.mappings).map(|m| (m.vaddr, m.bytes)).collect()
+            };
+            assert_eq!(mapped(&view), mapped(&whole), "{name}: the same program");
+            if name == "cxi" {
+                assert_eq!(view.len(), exefs_end);
+            }
+        }
+        // Small files are read whole.
+        assert!(program_view(&dir.join("game.cxi")).unwrap().is_none());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    /// A 64 MiB file (the size `program_view` starts to trim at) with an NCCH header
+    /// at 0: the given version and ncchflag[6], ExeFS offset and size, exheader size 0.
+    fn big_ncch(name: &str, version: u16, shift: u8, exefs: (u32, u32)) -> std::path::PathBuf {
+        use std::io::{Seek, SeekFrom, Write};
+        let path = std::env::temp_dir().join(format!("romwright-{name}-{}.cxi", std::process::id()));
+        let mut header = vec![0u8; 0x200];
+        header[0x100..0x104].copy_from_slice(b"NCCH");
+        put16(&mut header, 0x112, version);
+        header[0x188 + 6] = shift;
+        put32(&mut header, 0x1A0, exefs.0);
+        put32(&mut header, 0x1A4, exefs.1);
+        let mut file = std::fs::File::create(&path).unwrap();
+        file.set_len(PROGRAM_VIEW_MIN).unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+        file.write_all(&header).unwrap();
+        path
+    }
+
+    #[test]
+    fn an_ncch_header_pointing_past_the_file_is_an_error_not_an_allocation() {
+        // ExeFS offset and size 0xFFFFFFFF units of 0x200 << 8: about 2^49 bytes.
+        let path = big_ncch("huge", 0, 8, (u32::MAX, u32::MAX));
+        let error = program_view(&path).expect_err("a range that cannot fit the file");
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert!(error.to_string().contains("beyond"), "{error}");
+    }
+
+    #[test]
+    fn an_ncch_whose_exefs_ends_past_the_file_is_an_error() {
+        // Units of 0x200: the ExeFS ends 0x1E000 bytes past the 64 MiB file.
+        let path = big_ncch("past-end", 0, 0, (0x1FFF0, 0x100));
+        let error = program_view(&path).expect_err("an ExeFS past the end of the file");
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn a_version_1_ncch_counts_its_offsets_in_bytes() {
+        // ExeFS at byte 0x20000, 0x400 long: the view reads through 0x20400.
+        let path = big_ncch("v1", 1, 0, (0x20000, 0x400));
+        let view = program_view(&path).unwrap().expect("a program view");
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(view.len(), 0x20400);
+        assert_eq!(&view[0x104..0x108], &0x20400u32.to_le_bytes());
+    }
+
+    #[test]
+    fn an_ncch_may_not_reach_past_its_ncsd_partition() {
+        let dir = std::env::temp_dir().join(format!("romwright-part-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // One partition of 4 units at unit 0x20 (byte 0x4000), its NCCH a version-1
+        // image whose ExeFS (0x1000 bytes at 0x1000) ends after the partition but
+        // inside the file.
+        let mut ncsd = vec![0u8; 0x4000 + 0x10000];
+        ncsd[0x100..0x104].copy_from_slice(b"NCSD");
+        put32(&mut ncsd, 0x120, 0x20);
+        put32(&mut ncsd, 0x124, 4);
+        ncsd[0x4100..0x4104].copy_from_slice(b"NCCH");
+        put16(&mut ncsd, 0x4112, 1);
+        put32(&mut ncsd, 0x41A0, 0x1000);
+        put32(&mut ncsd, 0x41A4, 0x1000);
+        let path = dir.join("part.cci");
+        std::fs::write(&path, &ncsd).unwrap();
+        let error = program_view_from(&path, 0).expect_err("an ExeFS outside its partition");
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert!(error.to_string().contains("partition"), "{error}");
+    }
+
     fn build_tmd(content_size: u64, ctype: u16) -> Vec<u8> {
         // RSA-2048/SHA-256 signature envelope, then the 0xC4 header.
         let mut tmd = vec![0u8; 0x140 + 0xC4 + 64 * 0x24 + 0x30];
@@ -1200,5 +1462,30 @@ mod tests {
         cfa[0x600..0x605].copy_from_slice(b"icon\0");
         let result = import(&cfa).expect("NCCH recognised");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn code_set_info_splits_code_into_segments_with_permissions_and_bss() {
+        let mut exheader = vec![0u8; 0x400];
+        let mut set = |at: usize, values: [u32; 3]| {
+            for (i, v) in values.iter().enumerate() {
+                exheader[at + i * 4..at + i * 4 + 4].copy_from_slice(&v.to_le_bytes());
+            }
+        };
+        // text 2 pages, ro 1 page, data 1 page (0x800 bytes used), then 0x1900 bytes of .bss.
+        set(0x10, [0x10_0000, 2, 0x1F00]);
+        set(0x20, [0x10_2000, 1, 0x100]);
+        set(0x30, [0x10_3000, 1, 0x800]);
+        exheader[0x3C..0x40].copy_from_slice(&0x1900u32.to_le_bytes());
+        let code: Vec<u8> = (0..0x4000u32).map(|i| (i / 0x1000) as u8).collect();
+        let (mappings, names) = code_set_mappings(&exheader, 0x10_0000, 0x1000, code.clone());
+        assert_eq!(names, [".text", ".rodata", ".data", ".bss"]);
+        let layout: Vec<(u64, u64, u64)> = mappings.iter().map(|m| (m.vaddr, m.size, m.flags)).collect();
+        assert_eq!(layout, [(0x10_0000, 0x2000, 6), (0x10_2000, 0x1000, 2), (0x10_3000, 0x1000, 3), (0x10_4000, 0x1100, 3)]);
+        assert_eq!(mappings[1].bytes, [2u8; 0x1000]);
+        assert!(mappings[3].bytes.is_empty(), ".bss has no file bytes");
+        // A blob the page counts do not tile stays one read/write/execute region.
+        let (whole, names) = code_set_mappings(&exheader, 0x10_0000, 0x1000, code[..0x3000].to_vec());
+        assert_eq!((whole.len(), whole[0].flags, names), (1, 7, vec![".code".to_string()]));
     }
 }

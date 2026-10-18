@@ -29,10 +29,19 @@ use super::GeneratedFile;
 use crate::export::ExportFacts;
 use crate::{Core, Result};
 
-/// The pinned compiler every scaffold compiles with (`toolchains.json`).
+/// The pinned compiler every scaffold compiles with unless a retail compiler
+/// is chosen (`toolchains.json`).
 pub const CLANG_ID: &str = "clang-22.1.8";
 const OBJDIFF_ID: &str = "objdiff-cli";
+const WIBO_ID: &str = "wibo";
+/// GNU as/ld/objcopy for `tools/relink.py` (3DS retail projects).
+const BINUTILS_ID: &str = "binutils-arm-none-eabi";
 const MAX_FUNCTION_BYTES: u64 = 1 << 20;
+/// Every armcc unit's flags: decomp.me's n3ds command line (ARM11 MPCore,
+/// fast VFP, ARM/Thumb interworking) and C99 for the decompiler's C.
+const ARMCC_BASE_FLAGS: &[&str] = &["--cpu=MPCore", "--fpmode=fast", "--apcs=/interwork", "--c99"];
+/// armcc's own optimisation defaults, written out so `config/project.json` says them.
+const ARMCC_DEFAULT_OPT: &[&str] = &["-O2", "-Ospace"];
 
 /// One platform's build target.
 pub struct Target {
@@ -53,6 +62,10 @@ pub struct Target {
     pub why_not_matching: &'static str,
     pub notes: &'static str,
     pub keys: &'static str,
+    /// ARM build attributes the target objects carry (`Tag_CPU_name`,
+    /// `Tag_CPU_arch`, `Tag_FP_arch`), so a disassembler decodes the retail
+    /// bytes for the same architecture as the compiler's objects.
+    pub arm_cpu: Option<(&'static str, u8, u8)>,
 }
 
 macro_rules! cflags {
@@ -76,11 +89,13 @@ pub const TARGETS: &[Target] = &[
         data_model: "ILP32 (ARM11 MPCore, ARMv6K, VFPv2)",
         objdiff: true,
         no_objdiff: "",
-        why_not_matching: "Nintendo's ARM compiler output (RVCT/armcc) is not reproduced by any public toolchain",
+        why_not_matching: "no linker or C runtime ships with the public armcc builds, so no armcc build produces the whole `.code`; `tools/relink.py` instead relinks it from the per-function objects with GNU ld",
         notes: "romwright reads NCCH, NCSD and CIA containers (cleartext, or a title whose NCCH uses the documented all-zero fixed key). \
 A flat ExeFS `.code` is imported with `--raw 0x100000 --language ARM:LE:32:v6`, which carries no section table: the scaffold then has one region. \
-Code mixes ARM and Thumb: every function carries `mode:arm` or `mode:thumb` in the symbol file (the mode the analysis decoded it in), its target object has the matching mapping symbol, and `build.py` compiles its unit with `-marm` or `-mthumb` to match.",
+Code mixes ARM and Thumb: every function carries `mode:arm` or `mode:thumb` in the symbol file (the mode the analysis decoded it in), its target object has the matching mapping symbol, and `build.py` compiles its unit in that mode (`--arm`/`--thumb` with armcc, `-marm`/`-mthumb` with clang). \
+Nintendo's retail compiler is ARM's armcc (RVCT 4.0/4.1, ARM Compiler 5): `romwright-cli new-project --compiler armcc-4.1-b713` (any `armcc-*` build in romwright's tool manifest) builds every unit with it, and `--cflags \"-O3 -Otime\"` replaces its optimisation flags. Without `--compiler` the units only get clang's compile check.",
         keys: "A retail title encrypted with console-provisioned keys (bootrom slots, the CIA common key, ticket title keys) has to be decrypted by you first, or its keys passed to `romwright-cli new-project --keys FILE`; they are used in memory and never written into this repository.",
+        arm_cpu: Some(("MPCore", 9, 2)),
     },
     Target {
         id: "switch",
@@ -96,6 +111,7 @@ Code mixes ARM and Thumb: every function carries `mode:arm` or `mode:thumb` in t
         notes: "A container of several NSOs (`main`, `subsdk0`, `rtld`, ...) becomes one module each: its own `config/<module>/symbols.txt`, its own section map and load address, and, where the file is an NSO, its build id in `config/modules.json`. \
 An NSO is an in-memory image whose module name and symbols come from its own `MOD0` dynamic table.",
         keys: "NCA and XCI content is decrypted with the user's `prod.keys` (`romwright-cli new-project --keys prod.keys`); keys are used in memory and never written into this repository.",
+        arm_cpu: None,
     },
     Target {
         id: "ps3",
@@ -112,6 +128,7 @@ An NSO is an in-memory image whose module name and symbols come from its own `MO
 Target objects are written to `orig/target/` for `romwright-cli export-scratch --target-object` and romwright's matching workspaces; there is no objdiff.json. \
 SPU images in the same container are listed in `config/modules.json` with their symbols and section map but have no C (the decompiler's SPU output is not part of this scaffold).",
         keys: "An encrypted SELF/EBOOT.BIN is decrypted with the user's RAP/klic (`--keys FILE`) or by an external tool first; keys are used in memory and never written into this repository.",
+        arm_cpu: None,
     },
     Target {
         id: "ps4",
@@ -127,6 +144,7 @@ SPU images in the same container are listed in `config/modules.json` with their 
         notes: "romwright imports the decrypted ELF. Unpacking a SELF needs the console's firmware keys, which are the user's; the scaffold records the image sha256 only. \
 Direct `call`/`jmp` rel32 instructions are turned into `R_X86_64_PLT32` relocations in the target objects; RIP-relative data operands are left as retail bytes and show as differences in objdiff.",
         keys: "romwright never decrypts a PS4 SELF and stores no key material.",
+        arm_cpu: None,
     },
     Target {
         id: "vita",
@@ -143,6 +161,7 @@ Direct `call`/`jmp` rel32 instructions are turned into `R_X86_64_PLT32` relocati
 A linker BINMAP, when you have one, is passed to `new-project` with `--map` and names the rest. \
 Every function carries `mode:arm` or `mode:thumb` in the symbol file and `build.py` compiles its unit in that mode (`-marm`/`-mthumb`).",
         keys: "An NPDRM SELF needs the title's klic (`--keys FILE`); it is used in memory and never written into this repository.",
+        arm_cpu: None,
     },
     Target {
         id: "x360",
@@ -158,11 +177,71 @@ Every function carries `mode:arm` or `mode:thumb` in the symbol file and `build.
         notes: "romwright imports the PE inside a XEX2 (or a bare PE). Target objects are written to `orig/target/` for `romwright-cli export-scratch --target-object` and romwright's matching workspaces; there is no objdiff.json. \
 VMX128 instructions are not expressed as intrinsics: the C that uses them says so with `irregular` comments.",
         keys: "XEX2 decryption and decompression use the user's keys (`--keys FILE`) or an already extracted PE; keys are used in memory and never written into this repository.",
+        arm_cpu: None,
     },
 ];
 
 pub fn target(id: &str) -> Option<&'static Target> {
     TARGETS.iter().find(|t| t.id == id)
+}
+
+/// The compiler a scaffold builds its units with.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScaffoldCompiler {
+    /// Manifest id.
+    pub tool: String,
+    /// `clang` (a compile check only) or `armcc` (the retail compiler: every
+    /// unit compares with its function byte for byte).
+    pub family: &'static str,
+    /// Every flag but the per-unit mode and the paths.
+    pub flags: Vec<String>,
+}
+
+impl ScaffoldCompiler {
+    /// Whether the units are built with the retail compiler.
+    pub fn retail(&self) -> bool {
+        self.family == "armcc"
+    }
+}
+
+/// The compiler of a scaffold: `--compiler` (an armcc build of the target's
+/// platform from the manifest) with `--cflags` as its optimisation flags, or
+/// the clang compile check with the target's fixed flags.
+pub fn compiler_for(
+    target: &Target,
+    requested: Option<&str>,
+    opt: Option<Vec<String>>,
+    manifest: &Manifest,
+) -> std::result::Result<ScaffoldCompiler, String> {
+    let retail: Vec<&str> = manifest
+        .tools
+        .iter()
+        .filter(|t| t.family.as_deref() == Some("armcc") && t.platform == target.id)
+        .map(|t| t.id.as_str())
+        .collect();
+    let Some(id) = requested.filter(|id| *id != CLANG_ID) else {
+        if opt.is_some() {
+            return Err(format!(
+                "--cflags sets a retail compiler's optimisation flags; {CLANG_ID}'s are fixed (pick one with --compiler: {})",
+                if retail.is_empty() { "none for this platform".to_string() } else { retail.join(", ") }
+            ));
+        }
+        return Ok(ScaffoldCompiler {
+            tool: CLANG_ID.to_string(),
+            family: "clang",
+            flags: target.cflags.iter().map(|f| f.to_string()).collect(),
+        });
+    };
+    if !retail.contains(&id) {
+        return Err(format!(
+            "--compiler {id}: the {} scaffold builds with {CLANG_ID} or one of its retail compilers ({})",
+            target.name,
+            if retail.is_empty() { "none pinned".to_string() } else { retail.join(", ") }
+        ));
+    }
+    let mut flags: Vec<String> = ARMCC_BASE_FLAGS.iter().map(|f| f.to_string()).collect();
+    flags.extend(opt.unwrap_or_else(|| ARMCC_DEFAULT_OPT.iter().map(|f| f.to_string()).collect()));
+    Ok(ScaffoldCompiler { tool: id.to_string(), family: "armcc", flags })
 }
 
 /// Recognises the containers romwright imports for these six platforms from
@@ -293,8 +372,14 @@ pub struct ScaffoldInputs<'a> {
     pub image_size: u64,
     pub modules: Vec<ModuleInput<'a>>,
     pub manifest: &'a Manifest,
+    /// What the units are built with (`compiler_for`).
+    pub compiler: ScaffoldCompiler,
     /// A toolchain profile (JSON text) written as `config/toolchain.local.json`.
     pub profile: Option<&'a str>,
+    /// `(module id, function address)` -> the original source file the
+    /// function was compiled from (a relative path without extension, e.g.
+    /// `sdds4/program/battle/btlMain`), where evidence places it (`--tus`).
+    pub files: &'a HashMap<(String, u64), String>,
     pub romwright_version: &'a str,
 }
 
@@ -306,8 +391,11 @@ pub struct Unit {
     pub name: String,
     pub cname: String,
     pub size: u64,
-    /// `<module>/<shard>/<stem>`: below `src/`, `build/obj/`, `orig/target/`.
+    /// `<module>/<shard>/<stem>`, or `<module>/<file>/<stem>` for a function
+    /// placed in its original source file: below `src/`, `build/obj/`, `orig/target/`.
     pub tu: String,
+    /// The original source file (see `ScaffoldInputs::files`).
+    pub file: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -383,6 +471,18 @@ pub(super) fn file_stem(cname: &str, address: u64) -> String {
     }
 }
 
+/// Whether `path` can be a directory below `src/`: relative, `/`-separated,
+/// every component a plain name (letters, digits, `_`, `-`, `.`, not `.`/`..`).
+pub fn valid_file_path(path: &str) -> bool {
+    !path.is_empty()
+        && path.split('/').all(|part| {
+            !part.is_empty()
+                && part != "."
+                && part != ".."
+                && part.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+        })
+}
+
 fn buildable(target: &Target, language: &str) -> bool {
     target.languages.iter().any(|prefix| language.starts_with(prefix))
 }
@@ -404,12 +504,15 @@ pub fn layout(inputs: &ScaffoldInputs) -> Vec<Unit> {
             let address = function.entry.offset;
             let cname = names.claim(c_ident(&function.name, address), address);
             let stem = file_stem(&cname, address);
+            let file = inputs.files.get(&(module.id.clone(), address)).filter(|path| valid_file_path(path)).cloned();
+            let directory = file.clone().unwrap_or_else(|| format!("{:04x}", address >> 16));
             units.push(Unit {
                 module: index,
                 address,
                 name: function.name.clone(),
                 size: function.size,
-                tu: format!("{}/{:04x}/{stem}", module.id, address >> 16),
+                tu: format!("{}/{directory}/{stem}", module.id),
+                file,
                 cname,
             });
         }
@@ -666,8 +769,13 @@ fn source_text(inputs: &ScaffoldInputs, unit: &Unit, body: &str) -> String {
     if unit.cname != unit.name && !unit.name.is_empty() {
         body = body.replace(&unit.name, &unit.cname);
     }
+    let check = if inputs.compiler.retail() {
+        "build.py compiles it with the retail compiler and objdiff compares it with the retail bytes: remove this marker once it matches."
+    } else {
+        "It reads the retail function; it does not reproduce its bytes. build.py only checks that it compiles."
+    };
     format!(
-        "/* NON_MATCHING: romwright {} decompilation of `{}` ({} @ {:#x}, {:#x} bytes) from {}.\n * It reads the retail function; it does not reproduce its bytes. build.py only checks that it compiles. */\n#include \"romwright_types.h\"\n\n{}\n",
+        "/* NON_MATCHING: romwright {} decompilation of `{}` ({} @ {:#x}, {:#x} bytes) from {}.\n * {check} */\n#include \"romwright_types.h\"\n\n{}\n",
         inputs.romwright_version,
         unit.cname,
         module.id,
@@ -687,9 +795,17 @@ pub fn plan(
     sources: &HashMap<String, String>,
 ) -> std::result::Result<(Vec<GeneratedFile>, ScaffoldReport), String> {
     let target = inputs.target;
-    let mut ids = vec![CLANG_ID];
+    let compiler = &inputs.compiler;
+    let mut ids = vec![compiler.tool.as_str()];
+    if compiler.retail() {
+        // armcc is a Windows executable: wibo runs it on the other hosts.
+        ids.push(WIBO_ID);
+    }
     if target.objdiff {
         ids.push(OBJDIFF_ID);
+    }
+    if compiler.retail() && target.id == "3ds" {
+        ids.push(BINUTILS_ID);
     }
     let subset = inputs.manifest.subset(&ids)?;
     let arm = target.arch == Arch::Arm32;
@@ -759,10 +875,14 @@ pub fn plan(
     let mut objdiff_rows = Vec::new();
     let mut categories: BTreeMap<String, String> = BTreeMap::new();
     let (mut sources_written, mut targets_written, mut relocated) = (0usize, 0usize, 0usize);
-    // Per module: function extents and names for the call relocations.
+    // Per module: function extents and names for the call relocations, and
+    // the non-executable regions a literal-pool address names as data.
     struct Prepared<'a> {
         names: HashMap<u64, &'a str>,
         transfers: Vec<(u64, u64, bool)>,
+        data: Vec<(u64, u64)>,
+        /// Function entries in address order: where a function's pool must end.
+        starts: Vec<u64>,
     }
     let mut prepared: HashMap<usize, Prepared> = HashMap::new();
     for unit in units {
@@ -779,12 +899,22 @@ pub fn plan(
             "source": format!("src/{}.c", unit.tu),
             "object": format!("build/obj/{}.o", unit.tu),
         });
+        if let Some(file) = &unit.file {
+            row["file"] = json!(file);
+        }
 
         let prepared = prepared.entry(unit.module).or_insert_with(|| {
             let names = units.iter().filter(|u| u.module == unit.module).map(|u| (u.address, u.cname.as_str())).collect();
             let mut transfers = module.facts.transfers.clone();
             transfers.sort_unstable();
-            Prepared { names, transfers }
+            let data = image_regions(&module.facts.facts)
+                .into_iter()
+                .filter(|r| !r.permissions.contains('x'))
+                .map(|r| (r.start.offset, r.start.offset + r.size))
+                .collect();
+            let mut starts: Vec<u64> = units.iter().filter(|u| u.module == unit.module).map(|u| u.address).collect();
+            starts.sort_unstable();
+            Prepared { names, transfers, data, starts }
         });
         if unit.size > 0 && unit.size <= MAX_FUNCTION_BYTES
             && let Some(mut bytes) = (module.code)(unit.address, unit.size as usize) {
@@ -813,23 +943,72 @@ pub fn plan(
                         continue;
                     }
                 }
-                let relocs = scaffold_obj::relocate_transfers(target.arch, unit.address, &mut bytes, thumb, &found);
+                let mut relocs = Vec::new();
+                let mut pools = scaffold_obj::LiteralPools::default();
+                if arm {
+                    pools = scaffold_obj::arm_literal_pools(unit.address, &bytes, thumb);
+                    // The analysis sizes a function to its last instruction; the pool
+                    // its loads read follows it, and belongs to it in the compiler's
+                    // object. Take it in when it ends before the next function.
+                    let next = prepared.starts.get(prepared.starts.partition_point(|&s| s <= unit.address)).copied();
+                    if pools.end > bytes.len() as u64
+                        && next.is_none_or(|next| unit.address + pools.end <= next)
+                        && let Some(longer) = (module.code)(unit.address, pools.end as usize)
+                    {
+                        bytes = longer;
+                        pools = scaffold_obj::arm_literal_pools(unit.address, &bytes, thumb);
+                    }
+                    // A transfer the analysis recorded where the bytes are pool data
+                    // (it decoded a pool word as an instruction) is no branch.
+                    found.retain(|t| {
+                        let offset = t.from - unit.address;
+                        !pools.ranges.iter().any(|&(start, end)| offset >= start && offset < end)
+                    });
+                    // Every direct branch to another known function, recorded or
+                    // not: a tail call (`B`) is a relocation in the compiler's
+                    // object too.
+                    for (from, to) in scaffold_obj::arm_direct_branches(unit.address, &bytes, thumb, &pools) {
+                        if (to >= lo && to < hi) || found.iter().any(|t| t.from == from) {
+                            continue;
+                        }
+                        if let Some(name) = prepared.names.get(&to) {
+                            found.push(Transfer { from, to, name });
+                        }
+                    }
+                    let resolve = |value: u32| -> Option<String> {
+                        let value = value as u64;
+                        let function = if value & 1 == 1 && module.facts.thumb.contains(&(value & !1)) { value & !1 } else { value };
+                        if let Some(name) = prepared.names.get(&function) {
+                            return Some(name.to_string());
+                        }
+                        prepared.data.iter().any(|&(start, end)| value >= start && value < end).then(|| format!("DAT_{value:08x}"))
+                    };
+                    relocs = scaffold_obj::relocate_pool_words(&mut bytes, &pools, resolve);
+                }
+                relocs.extend(scaffold_obj::relocate_transfers(target.arch, unit.address, &mut bytes, thumb, &found));
+                relocs.sort_by_key(|r| r.offset);
                 relocated += relocs.len();
-                let object = scaffold_obj::build_object(target.arch, &unit.cname, &bytes, thumb, &relocs);
+                let attributes = target.arm_cpu.map(|(cpu, arch, fp)| scaffold_obj::arm_attributes(cpu, arch, fp)).unwrap_or_default();
+                let object = scaffold_obj::build_object(target.arch, &unit.cname, &bytes, thumb, &relocs, &pools.ranges, &attributes);
                 files.push(GeneratedFile { path: format!("orig/target/{}.o", unit.tu), bytes: object, executable: false });
                 targets_written += 1;
                 row["target"] = json!(format!("orig/target/{}.o", unit.tu));
                 if target.objdiff {
                     categories.entry(module.id.clone()).or_insert_with(|| module.id.clone());
+                    let mut progress = vec![module.id.clone()];
+                    if let Some(file) = &unit.file {
+                        categories.entry(file.clone()).or_insert_with(|| file.clone());
+                        progress.push(file.clone());
+                    }
                     objdiff_rows.push(json!({
-                        "name": format!("{}/{:04x}/{}", module.id, unit.address >> 16, unit.cname),
+                        "name": unit.tu,
                         "target_path": format!("orig/target/{}.o", unit.tu),
                         "base_path": format!("build/obj/{}.o", unit.tu),
                         "metadata": {
                             "complete": false,
                             "auto_generated": false,
                             "source_path": format!("src/{}.c", unit.tu),
-                            "progress_categories": [module.id],
+                            "progress_categories": progress,
                             "functions": [{"name": unit.cname, "vram": format!("{:#x}", unit.address), "size": unit.size}],
                         },
                     }));
@@ -856,17 +1035,32 @@ pub fn plan(
         files.push(template("objdiff.json", &(serde_json::to_string_pretty(&document).map_err(|e| e.to_string())? + "\n"), false));
     }
 
-    let project = json!({
-        "romwright": {"version": inputs.romwright_version, "schema": 1, "platform": target.id, "kind": "non-matching-scaffold"},
-        "name": inputs.project_name,
-        "image": {"file": inputs.image_name, "orig": format!("orig/{}", inputs.image_name), "sha256": inputs.image_sha256, "size": inputs.image_size},
-        "compiler": {
-            "tool": CLANG_ID,
-            "target": target.triple,
-            "cflags": target.cflags,
+    let compiler_json = if compiler.retail() {
+        json!({
+            "tool": compiler.tool,
+            "family": compiler.family,
+            "cflags": compiler.flags,
+            "modes": {"arm": "--arm", "thumb": "--thumb"},
             "arch": target.arch,
             "data_model": target.data_model,
-        },
+        })
+    } else {
+        json!({
+            "tool": compiler.tool,
+            "family": compiler.family,
+            "target": target.triple,
+            "cflags": compiler.flags,
+            "modes": {"arm": "-marm", "thumb": "-mthumb"},
+            "arch": target.arch,
+            "data_model": target.data_model,
+        })
+    };
+    let kind = if compiler.retail() { "per-function-matching" } else { "non-matching-scaffold" };
+    let project = json!({
+        "romwright": {"version": inputs.romwright_version, "schema": 1, "platform": target.id, "kind": kind},
+        "name": inputs.project_name,
+        "image": {"file": inputs.image_name, "orig": format!("orig/{}", inputs.image_name), "sha256": inputs.image_sha256, "size": inputs.image_size},
+        "compiler": compiler_json,
         "objdiff": target.objdiff && objdiff_units > 0,
         "units": unit_rows,
     });
@@ -883,11 +1077,25 @@ pub fn plan(
         files.push(template("config/toolchain.local.json", profile, false));
     }
 
+    let operands = if arm {
+        "Direct calls and branches to other known functions (tail calls included) are rewritten into the relocations a compiler would emit. Literal pools are marked as data, and a pool word that holds an address is an `R_ARM_ABS32` to that function or to `DAT_<address>` (8 lowercase hex digits): declare the global under that name (`extern int DAT_00412345;`) and the operand matches. Other pool words are constants."
+    } else {
+        "Direct calls and branches to other known functions are rewritten into the relocations a compiler would emit (only when the instruction decodes to exactly the target romwright recorded); data operands are not, so literal-pool and RIP-relative operands show as differences."
+    };
+    let verdict = if compiler.retail() {
+        if target.id == "3ds" {
+            "The base side is the retail compiler's output, so 100% is reachable. 100% in objdiff is necessary but not proof: a function is proven when `tools/relink.py --matched` links it from `build/obj/` into a byte-identical `.code`. Relink lists every 100% function it keeps as retail bytes, with the reason, and a function's `NON_MATCHING` marker goes once it is proven."
+        } else {
+            "The base side is the retail compiler's output, so 100% is reachable. 100% in objdiff is necessary but not proof, since objdiff ignores some operand differences: confirm a function another way before its `NON_MATCHING` marker goes."
+        }
+    } else {
+        "A decompilation this far from the original compiler's output will rarely reach 100%: objdiff is a way to compare, not a pass/fail gate."
+    };
     let (objdiff_line, objdiff_quickstart, target_note) = if target.objdiff {
         (
             "* `objdiff.json` and `orig/target/`: each decompiled function's retail bytes as a relocatable target object, paired with `build/obj/` (what `build.py` compiles from `src/`).".to_string(),
             "python3 build.py report     # objdiff-cli report over objdiff.json -> build/report.json\n# or open this directory in the objdiff GUI\n".to_string(),
-            "**Reading objdiff here.** The retail side of each unit is one function cut out of a linked image. Direct calls and branches to other known functions are rewritten into the relocations a compiler would emit (only when the instruction decodes to exactly the target romwright recorded); data operands are not, so literal-pool and RIP-relative operands show as differences. A decompilation this far from the original compiler's output will rarely reach 100%: objdiff is a way to compare, not a pass/fail gate.".to_string(),
+            format!("**Reading objdiff here.** The retail side of each unit is one function cut out of a linked image. {operands} {verdict}"),
         )
     } else {
         (
@@ -896,30 +1104,114 @@ pub fn plan(
             format!("**Verification here.** There is no objdiff.json ({}): compare a function with romwright's matching workspace (`romwright-cli match`, `export-scratch`) using the target object under `orig/target/`. Direct calls and branches to other known functions are already relocations in that object.", target.no_objdiff),
         )
     };
+    let flags = compiler.flags.join(" ");
+    let tool = &compiler.tool;
+    let retail_ids: Vec<&str> = inputs
+        .manifest
+        .tools
+        .iter()
+        .filter(|t| t.family.as_deref() == Some("armcc") && t.platform == target.id)
+        .map(|t| t.id.as_str())
+        .collect();
+    let (headline, intro, build_line, fetch_line, build_comment, check, tools_note) = if compiler.retail() {
+        (
+            "**per-function matching**",
+            if target.id == "3ds" {
+                format!("Every unit is built with the retail compiler (`{tool}`, `{flags}`) and scored by objdiff against its retail function. `tools/relink.py` rebuilds the whole `.code` with GNU ld from the per-function objects and proves every function that links from its compiled object. What this repository gives you:")
+            } else {
+                format!("Every unit is built with the retail compiler (`{tool}`, `{flags}`) and scored by objdiff against its retail function (100% is necessary, not proof of a match). There is no whole-image build ({}). What this repository gives you:", target.why_not_matching)
+            },
+            format!("* `build.py`: compiles every unit with `{tool}`; objdiff scores each unit against its retail function."),
+            format!("python3 build.py fetch      # download the pinned {tool} (decomp.me's armcc bundle, 73 MB), objdiff-cli, and wibo where Windows executables need it"),
+            format!("python3 build.py            # compile src/ with {tool} ({flags}); writes build/compile_report.json"),
+            "Units compile as C99 (`--c99`): decompiled C has no headers for its callees, so armcc's implicit-declaration warnings are not errors; every error is reported. A unit that fails (a missing struct definition, say) is listed with its first error in `build/compile_report.json`, and the build exits 0 unless you pass `--strict`. Each unit compiles in the mode its function was decoded in (`--arm`/`--thumb`).".to_string(),
+            format!("`{tool}` is proprietary (ARM): `config/toolchain.json` records where the decomp.me compilers project hosts it and its sha256; use it only if you are entitled to. objdiff is Apache-2.0 or MIT, wibo MIT. `$ARMCC`, `--armcc PATH` or a toolchain profile (`config/toolchain.local.json` with `{{\"armcc\": \"/path/to/armcc.exe\"}}`) overrides the download."),
+        )
+    } else {
+        let intro = if retail_ids.is_empty() {
+            format!("There is no byte-matching build for this platform ({}). What this repository gives you instead:", target.why_not_matching)
+        } else {
+            format!("Units are only checked to compile with clang here. The retail compiler is pinned too ({}): regenerate with `romwright-cli new-project --compiler <id> --cflags \"...\"` to compare every unit with its retail function. What this repository gives you instead:", retail_ids.join(", "))
+        };
+        (
+            "**non-matching**",
+            intro,
+            "* `build.py`: compiles every unit with clang to prove it compiles, nothing more.".to_string(),
+            "python3 build.py fetch      # download the pinned clang (about 2 GB), and objdiff-cli where the platform has an objdiff backend; optional if clang is on PATH".to_string(),
+            format!("python3 build.py            # compile src/ for {}; writes build/compile_report.json", target.triple),
+            "The compile check is a syntax and type check against `include/romwright_types.h`, in lenient C: implicit function declarations and integer/pointer conversions are accepted because decompiled C has no headers for its callees; every other error is reported. A unit that fails (a missing struct definition, say) is listed with its first error in `build/compile_report.json`, and the build exits 0 unless you pass `--strict`.".to_string(),
+            "LLVM is Apache-2.0 with LLVM exceptions; objdiff is Apache-2.0. A toolchain profile (`--toolchain`, `config/toolchain.local.json` with `{\"clang\": \"/path/to/clang\"}`) overrides the download.".to_string(),
+        )
+    };
+    let fresh_clone = if target.id == "3ds" {
+        let image = inputs.image_name;
+        let mut steps = format!(
+            "\n## From a fresh clone\n\n`orig/` and `build/` hold retail bytes and are not in version control. With only Python 3 (romwright is not needed):\n\n```sh\npython3 build.py fetch      # pinned tools{}\n# put your decrypted dump at orig/{image}: this file (sha256 {}), or any .cxi/.3ds/.cci/decrypted .cia of the same build\npython3 build.py split      # tools/split.py: checks the dump's program, rebuilds orig/target/**.o from it and config/\npython3 build.py            # compile src/\npython3 build.py report     # objdiff-cli -> build/report.json\n",
+            if compiler.retail() { " (the compiler, objdiff-cli, wibo where needed, arm-none-eabi binutils)" } else { "" },
+            inputs.image_sha256,
+        );
+        if compiler.retail() {
+            steps.push_str("python3 tools/relink.py --matched   # relink the retail .code with every matched function from build/obj/: must print MATCH\n");
+        }
+        steps.push_str("```\n\n`tools/split.py` writes the target objects romwright wrote, byte for byte, from `orig/");
+        steps.push_str(image);
+        steps.push_str("`, `config/symbols.txt` (a function renamed there is the name its callers' relocations use), `config/modules.json` and `config/project.json`, after checking the dump's decompressed `.code` against `mapped_sha256` in `config/modules.json` (another version of the game is refused). `tools/n3ds.py` reads NCCH, NCSD and decrypted CIA dumps (`.cxi`/`.3ds`/`.cci`/`.cia`; encrypted content is refused with a message). ");
+        if compiler.retail() {
+            steps.push_str("`tools/relink.py` links the whole `.code` with GNU ld from `orig/target` objects (retail bytes) and, with `--matched`, from the objects `build.py` compiled for the functions objdiff reports at 100%; `--full` links every function from its target object, which proves those objects relocate back to retail. Relink lists every 100% function it keeps as retail bytes with its reason, reports how many were proven (linked from `build/obj`) of how many objdiff claimed, and exits non-zero when a compiled object is missing (`--exclude FUN_a,FUN_b` names functions to keep as retail bytes on purpose). It prints MATCH when the image is byte-identical to retail and every function objdiff scores 100% has its compiled object; a function whose object does not reproduce its bytes is listed with the `--exclude` line to rerun with.\n\n");
+        }
+        steps.push_str("`romwright new-project` writes `src/` too: do not regenerate into a directory whose `src/` you have edited. Personal ignore rules (your dump's directory, say) go in `.git/info/exclude`, because regenerating rewrites `.gitignore`.\n");
+        steps
+    } else {
+        String::new()
+    };
     let readme = render(
         include_str!("templates/scaffold/README.md.tmpl"),
         &[
             ("NAME", inputs.project_name.to_string()),
+            ("HEADLINE", headline.to_string()),
             ("PLATFORM_NAME", target.name.to_string()),
             ("IMAGE", inputs.image_name.to_string()),
             ("SHA256", inputs.image_sha256.clone()),
             ("ROMWRIGHT", inputs.romwright_version.to_string()),
-            ("WHY_NOT_MATCHING", target.why_not_matching.to_string()),
+            ("INTRO", intro),
             ("DATA_MODEL", target.data_model.to_string()),
+            ("BUILD_LINE", build_line),
             ("OBJDIFF_LINE", objdiff_line),
+            ("FETCH_LINE", fetch_line),
+            ("BUILD_COMMENT", build_comment),
             ("OBJDIFF_QUICKSTART", objdiff_quickstart),
-            ("TRIPLE", target.triple.to_string()),
             ("UNITS", sources_written.to_string()),
+            ("FILES_NOTE", {
+                let placed: Vec<&Unit> = units.iter().filter(|u| u.file.is_some() && sources.contains_key(&u.tu)).collect();
+                let count = placed.iter().filter_map(|u| u.file.as_deref()).collect::<HashSet<_>>().len();
+                if placed.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        "\n  {} function(s) the evidence places in {count} original source file(s) are in\n  `src/<module>/<file>/<function>.c` instead, one objdiff progress category per file\n  (`file` in `config/project.json`); the placement is evidence, not proof: move a function by\n  correcting its entry in the `--tus` file and regenerating.",
+                        placed.len()
+                    )
+                }
+            }),
             ("SYMBOLS", symbol_count.to_string()),
             ("MODULES", inputs.modules.len().to_string()),
+            ("CHECK", check),
+            ("FRESH_CLONE", fresh_clone),
             ("PLATFORM_NOTES", target.notes.to_string()),
             ("TARGET_NOTE", target_note),
+            ("TOOLS_NOTE", tools_note),
             ("KEYS_NOTE", target.keys.to_string()),
         ],
     );
     files.push(template("README.md", &readme, false));
     files.push(template("build.py", include_str!("templates/scaffold/build.py"), true));
     files.push(template("tools/download_tool.py", include_str!("templates/ps2/tools/download_tool.py"), true));
+    if target.id == "3ds" {
+        // Everything needed to rebuild `orig/target/` and relink the `.code` from a fresh clone.
+        files.push(template("tools/n3ds.py", include_str!("templates/scaffold/tools/n3ds.py"), true));
+        files.push(template("tools/split.py", include_str!("templates/scaffold/tools/split.py"), true));
+        files.push(template("tools/relink.py", include_str!("templates/scaffold/tools/relink.py"), true));
+    }
     files.push(template(".gitignore", include_str!("templates/scaffold/gitignore"), false));
     if sources_written == 0 {
         files.push(template("src/.gitkeep", "", false));
@@ -1033,7 +1325,9 @@ mod tests {
                 mapped_sha256: "0".repeat(64),
             }],
             manifest: &manifest,
+            compiler: compiler_for(target("switch").unwrap(), None, None, &manifest).unwrap(),
             profile: None,
+            files: &HashMap::new(),
             romwright_version: "0.0.0",
         };
         let units = layout(&inputs);
@@ -1087,7 +1381,9 @@ mod tests {
                 mapped_sha256: String::new(),
             }],
             manifest: &manifest,
+            compiler: compiler_for(target("ps3").unwrap(), None, None, &manifest).unwrap(),
             profile: None,
+            files: &HashMap::new(),
             romwright_version: "0.0.0",
         };
         let units = layout(&inputs);
@@ -1113,7 +1409,9 @@ mod tests {
             image_size: 0,
             modules: vec![ModuleInput { id: "spu0".into(), program: "g.spu0".into(), facts: &facts, code: &|_, _| None, build_id: None, mapped_sha256: String::new() }],
             manifest: &manifest,
+            compiler: compiler_for(target("ps3").unwrap(), None, None, &manifest).unwrap(),
             profile: None,
+            files: &HashMap::new(),
             romwright_version: "0",
         };
         assert!(layout(&inputs).is_empty());
@@ -1162,6 +1460,15 @@ mod tests {
     }
 
     #[test]
+    fn a_source_file_path_stays_below_src() {
+        assert!(valid_file_path("sdds4/program/battle/btlMain"));
+        assert!(valid_file_path("AsdSDK/Source/Gfx/Effect/effMisc.inl"));
+        for bad in ["", "/abs/path", "a//b", "a/../b", "./a", "a\\b", "c:/SMT4/x", "a/b c"] {
+            assert!(!valid_file_path(bad), "{bad:?}");
+        }
+    }
+
+    #[test]
     fn names_never_collide_with_types_keywords_or_each_other() {
         let mut names = Names::default();
         assert_eq!(names.claim(c_ident("int", 0x10), 0x10), "int_10");
@@ -1170,5 +1477,148 @@ mod tests {
         assert_eq!(c_ident(".ARM.Collect$$libshutdown$$00000002", 0), "_ARM_Collect__libshutdown__00000002");
         assert_eq!(c_ident("$$", 0x44), "sub_44");
         assert_eq!(c_ident("1abc", 0), "_1abc");
+    }
+
+    #[test]
+    fn a_3ds_scaffold_takes_an_armcc_build_and_only_that_platform_does() {
+        let manifest = Manifest::builtin();
+        let n3ds = target("3ds").unwrap();
+        let armcc = compiler_for(n3ds, Some("armcc-4.1-b713"), Some(vec!["-O3".into(), "-Otime".into()]), &manifest).unwrap();
+        assert_eq!(armcc.family, "armcc");
+        assert_eq!(armcc.flags, ["--cpu=MPCore", "--fpmode=fast", "--apcs=/interwork", "--c99", "-O3", "-Otime"]);
+        assert_eq!(compiler_for(n3ds, Some("armcc-4.1-b713"), None, &manifest).unwrap().flags[4..], ["-O2", "-Ospace"]);
+        assert_eq!(compiler_for(n3ds, None, None, &manifest).unwrap().tool, CLANG_ID);
+        // --cflags only means something for a retail compiler; another platform's or an unknown id is refused.
+        assert!(compiler_for(n3ds, None, Some(vec!["-O3".into()]), &manifest).is_err());
+        assert!(compiler_for(target("switch").unwrap(), Some("armcc-4.1-b713"), None, &manifest).is_err());
+        assert!(compiler_for(n3ds, Some("msvc6.0"), None, &manifest).is_err());
+    }
+
+    #[test]
+    fn an_armcc_3ds_project_relocates_tail_calls_and_pool_addresses() {
+        use object::{Object, ObjectSection, ObjectSymbol};
+        let manifest = Manifest::builtin();
+        let region = |name: &str, start: u64, permissions: &str| MemoryRegion {
+            name: name.into(),
+            start: Address::ram(start),
+            size: 0x1000,
+            permissions: permissions.into(),
+            source: "native-import".into(),
+        };
+        let facts = ScaffoldFacts {
+            facts: ExportFacts {
+                program: "game".into(),
+                language: "ARM:LE:32:v6".into(),
+                // The analysis sized f to its code: its pool word at +0xC lies past it.
+                functions: vec![function(0x10_0000, "f", 0xC), function(0x10_0100, "g", 4)],
+                regions: vec![region(".text", 0x10_0000, "r-x"), region(".data", 0x20_0000, "rw-")],
+                ..Default::default()
+            },
+            // The tail call is found from the bytes; the one transfer the analysis recorded
+            // starts in f's literal pool (it decoded the pool word), so it is no call.
+            transfers: vec![(0x10_000C, 0x10_0100, true)],
+            ..Default::default()
+        };
+        // f: ldr r0, [pc, #4] ; b g ; bx lr ; .word 0x00200010     g: bx lr
+        let image: HashMap<u64, u32> = [(0x10_0000, 0xE59F_0004), (0x10_0004, 0xEA00_003D), (0x10_0008, 0xE12F_FF1E), (0x10_000C, 0x0020_0010), (0x10_0100, 0xE12F_FF1E)].into();
+        let code = |address: u64, size: usize| -> Option<Vec<u8>> {
+            (0..size as u64).step_by(4).map(|at| image.get(&(address + at)).map(|w| w.to_le_bytes())).collect::<Option<Vec<_>>>().map(|words| words.concat())
+        };
+        let n3ds = target("3ds").unwrap();
+        let inputs = ScaffoldInputs {
+            target: n3ds,
+            image_name: "game.cxi",
+            project_name: "game",
+            image_sha256: sha256_hex(b"image"),
+            image_size: 5,
+            modules: vec![ModuleInput { id: "_code".into(), program: "game".into(), facts: &facts, code: &code, build_id: None, mapped_sha256: "0".repeat(64) }],
+            manifest: &manifest,
+            compiler: compiler_for(n3ds, Some("armcc-4.1-b713"), Some(vec!["-O3".into(), "-Otime".into()]), &manifest).unwrap(),
+            profile: None,
+            files: &[(("_code".to_string(), 0x10_0000u64), "sdds4/program/battle/btlMain".to_string())].into(),
+            romwright_version: "0.0.0",
+        };
+        let units = layout(&inputs);
+        let sources: HashMap<String, String> = units.iter().map(|u| (u.tu.clone(), "void f(void) {}\n".to_string())).collect();
+        let (files, _) = plan(&inputs, &units, &sources).unwrap();
+        let get = |path: &str| files.iter().find(|f| f.path == path).map(|f| f.bytes.clone()).unwrap();
+        let project: serde_json::Value = serde_json::from_slice(&get("config/project.json")).unwrap();
+        assert_eq!(project["compiler"]["family"], "armcc");
+        assert_eq!(project["compiler"]["modes"]["arm"], "--arm");
+        let toolchain = String::from_utf8(get("config/toolchain.json")).unwrap();
+        assert!(toolchain.contains("\"armcc-4.1-b713\"") && toolchain.contains("\"wibo\"") && !toolchain.contains(CLANG_ID));
+        // f is placed in its original source file's folder; g, unplaced, stays in its address shard.
+        assert_eq!(project["units"][0]["file"], "sdds4/program/battle/btlMain");
+        assert_eq!(project["units"][0]["source"], "src/_code/sdds4/program/battle/btlMain/f.c");
+        assert_eq!(project["units"][1]["source"], "src/_code/0010/g.c");
+        let objdiff: serde_json::Value = serde_json::from_slice(&get("objdiff.json")).unwrap();
+        assert_eq!(objdiff["units"][0]["metadata"]["progress_categories"], json!(["_code", "sdds4/program/battle/btlMain"]));
+        assert_eq!(objdiff["units"][1]["metadata"]["progress_categories"], json!(["_code"]));
+        assert!(objdiff["progress_categories"].as_array().unwrap().iter().any(|c| c["id"] == "sdds4/program/battle/btlMain"));
+        let object = get("orig/target/_code/sdds4/program/battle/btlMain/f.o");
+        let file = object::File::parse(&*object).unwrap();
+        let names: HashMap<usize, String> = file.symbols().map(|s| (s.index().0, s.name().unwrap().to_string())).collect();
+        let relocs: Vec<(u64, u32, String)> = file
+            .section_by_name(".text")
+            .unwrap()
+            .relocations()
+            .map(|(offset, r)| {
+                let object::RelocationFlags::Elf { r_type } = r.flags() else { unreachable!() };
+                let object::RelocationTarget::Symbol(index) = r.target() else { unreachable!() };
+                (offset, r_type, names[&index.0].clone())
+            })
+            .collect();
+        assert_eq!(relocs, [(4, 29, "g".to_string()), (12, 2, "DAT_00200010".to_string())]);
+        assert!(file.symbols().any(|s| s.name() == Ok("$d") && s.address() == 12));
+        // The pool is in the section after the code, outside the function symbol, as armcc writes it.
+        assert_eq!(file.section_by_name(".text").unwrap().size(), 0x10);
+        let f = file.symbols().find(|s| s.name() == Ok("f")).unwrap();
+        assert_eq!(f.size(), 0xC);
+        assert!(file.section_by_name(".ARM.attributes").is_some());
+
+        // A 3DS project carries the stdlib-only tools that rebuild orig/target and relink the .code.
+        for tool in ["tools/n3ds.py", "tools/split.py", "tools/relink.py", "tools/download_tool.py"] {
+            assert!(files.iter().any(|f| f.path == tool && !f.bytes.is_empty()), "{tool}");
+        }
+        let split = String::from_utf8(get("tools/split.py")).unwrap();
+        assert!(split.contains("import n3ds") && !split.contains(".romwright") && !split.contains("subprocess"), "split.py reads the dump, not romwright's store");
+        let relink = String::from_utf8(get("tools/relink.py")).unwrap();
+        assert!(relink.contains("import n3ds") && !relink.contains("smt4"), "relink.py takes the image from config/project.json");
+        // relink needs GNU ld: the retail subset pins binutils, with a Windows asset that extracts only the standalone tools.
+        let toolchain: Manifest = serde_json::from_str(&toolchain).unwrap();
+        let binutils = toolchain.tool("binutils-arm-none-eabi").expect("binutils pinned for relink");
+        assert_eq!(binutils.assets["windows-x86_64"].archive, "zip");
+        let build = String::from_utf8(get("build.py")).unwrap();
+        assert!(build.contains("\"split\"") && build.contains("binutils-arm-none-eabi"));
+        let readme = String::from_utf8(get("README.md")).unwrap();
+        for step in ["python3 build.py fetch", "python3 build.py split", "python3 build.py report", "python3 tools/relink.py --matched"] {
+            assert!(readme.contains(step), "{step}");
+        }
+        assert!(!readme.contains("no build relinks the retail"), "relink.py does relink it");
+        // 100% in objdiff is not proof: only relink --matched proves a function, and it lists the ones it does not link.
+        assert!(readme.contains("necessary but not proof") && readme.contains("links it from `build/obj/`"), "{readme}");
+        assert!(!readme.contains("matches its retail function") && !readme.contains("marker can go"), "100% must not be sold as a match");
+        assert!(readme.contains("prints MATCH when the image is byte-identical") && readme.contains("exits non-zero"), "a missing object fails relink");
+
+        // The non-matching clang scaffold keeps the split tools but pins no binutils; another platform has none of them.
+        let clang = ScaffoldInputs {
+            target: n3ds,
+            image_name: "game.cxi",
+            project_name: "game",
+            image_sha256: sha256_hex(b"image"),
+            image_size: 5,
+            modules: vec![ModuleInput { id: "_code".into(), program: "game".into(), facts: &facts, code: &code, build_id: None, mapped_sha256: "0".repeat(64) }],
+            manifest: &manifest,
+            compiler: compiler_for(n3ds, None, None, &manifest).unwrap(),
+            profile: None,
+            files: &HashMap::new(),
+            romwright_version: "0.0.0",
+        };
+        let (clang_files, _) = plan(&clang, &layout(&clang), &HashMap::new()).unwrap();
+        assert!(clang_files.iter().any(|f| f.path == "tools/split.py"));
+        let clang_toolchain = clang_files.iter().find(|f| f.path == "config/toolchain.json").unwrap();
+        assert!(!String::from_utf8_lossy(&clang_toolchain.bytes).contains("binutils-arm-none-eabi"));
+        let clang_readme = String::from_utf8(clang_files.iter().find(|f| f.path == "README.md").unwrap().bytes.clone()).unwrap();
+        assert!(!clang_readme.contains("necessary but not proof") && !clang_readme.contains("relink.py --matched"), "{clang_readme}");
     }
 }

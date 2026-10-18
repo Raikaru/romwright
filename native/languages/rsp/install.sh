@@ -9,17 +9,14 @@
 #
 # Usage: native/languages/rsp/install.sh [GHIDRA_INSTALL_DIR]
 #   default: $ROMWRIGHT_GHIDRA or ~/ghidra_12.1.3_PUBLIC
+
+# The build itself is packaging/languages.py (Python, so the same code runs on
+# Windows, Linux and macOS; `python setup.py` and the release workflow call it
+# for all languages at once). This script installs RSP:BE:32:default alone, always
+# recompiling, into GHIDRA_INSTALL_DIR (a full Ghidra install, whose own sleigh
+# compiler is used, or the data directory `setup.py` made).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-SRC="$ROOT/native/languages/rsp"
 GHIDRA="${1:-${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
-SLEIGH="$GHIDRA/Ghidra/Features/Decompiler/os/linux_x86_64/sleigh"
-DEST="$GHIDRA/Ghidra/Extensions/RSP/data/languages"
-
-[ -x "$SLEIGH" ] || { echo "no sleigh compiler at $SLEIGH" >&2; exit 1; }
-
-"$SLEIGH" "$SRC/rsp.slaspec" "$SRC/rsp.sla"
-mkdir -p "$DEST"
-cp "$SRC/rsp.sla" "$SRC/rsp.ldefs" "$SRC/rsp.pspec" "$SRC/rsp.cspec" "$DEST/"
-echo "installed RSP:BE:32:default -> $DEST"
+exec "${PYTHON:-python3}" "$ROOT/packaging/languages.py" --ghidra "$GHIDRA" --only rsp --force

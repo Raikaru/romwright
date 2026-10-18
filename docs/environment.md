@@ -22,16 +22,54 @@ test run on a `--release` build, the cheap profile is
 
 | Variable | Default | What it names |
 |---|---|---|
-| `ROMWRIGHT_GHIDRA` | `~/ghidra_12.1.3_PUBLIC` | The pinned Ghidra install whose processor specs and `.sla` files the in-process SLEIGH decoder and the worker load. Without it, discovery reports a degraded import. |
-| `ROMWRIGHT_GHIDRA_OPT` | `native/build/ghidra_opt` | The decompiler binary the worker drives. |
-| `ROMWRIGHT_SPECS` | `native/specs` | Compiled language specs for the worker. |
+| `ROMWRIGHT_GHIDRA` | first existing of `<exe dir>/../share/romwright/ghidra`, `<repo>/build/ghidra`, `~/ghidra_12.1.3_PUBLIC` (`%USERPROFILE%\ghidra_12.1.3_PUBLIC` on Windows) (see "Default resolution order") | The pinned Ghidra install whose `Ghidra/Processors/*/data` (processor specs and `.sla` files) the in-process SLEIGH decoder and the worker load. Without it, discovery reports a degraded import. |
+| `ROMWRIGHT_GHIDRA_OPT` | `<exe dir>/ghidra_opt`, then `native/build/ghidra_opt` (`ghidra_opt.exe` on Windows) | The decompiler binary the worker drives. |
+| `ROMWRIGHT_SPECS` | `<exe dir>/../share/romwright/specs`, then `native/specs` | Compiled language specs for the worker. |
 | `ROMWRIGHT_WORKER` | `romwright-worker` beside the running executable (so a `target/dist` build finds its own), then `target/release`, `target/debug` | The decompiler worker process. |
 | `ROMWRIGHT_CLI` | `romwright-cli` beside the desktop app, then `target/release`, `target/debug` | The CLI the desktop's Program setup runs for **Create project** (`new-project`). |
-| `ROMWRIGHT_LIBRARY_PROTOTYPES` | `oracle/library-prototypes-v1/generic_clib_64.json` | Library prototypes applied to known imports. |
+| `ROMWRIGHT_LIBRARY_PROTOTYPES` | `<exe dir>/../share/romwright/library-prototypes-v1/generic_clib_64.json`, then `oracle/library-prototypes-v1/generic_clib_64.json` | Library prototypes applied to known imports; `runtime_helpers.json` is read from the same directory. |
 | `ROMWRIGHT_OBJDIFF` | `objdiff-cli` on `PATH` | objdiff, for matching reports. |
 | `ROMWRIGHT_SERVICE_JAR` | next to the CLI's build | The Java bridge, used only to produce oracles. |
 | `ROMWRIGHT_IMPORT_CACHE` | `~/.cache/romwright/imports` | Where imports are cached for reuse. |
 | `ROMWRIGHT_SCRATCH` | `~/.cache/romwright/scratch` | Scratch stores for switch recovery. |
+
+## Default resolution order
+
+With no variable set, romwright finds its own files the same way from a source
+checkout and from a release archive (`crates/romwright-core/src/runtime_paths.rs`).
+For each file the first existing candidate wins, and an environment variable
+above beats all of them:
+
+1. **beside the running executable**, the layout of a release archive
+   (`romwright-<version>-<os>-<arch>/`): `bin/ghidra_opt[.exe]` next to
+   `bin/romwright-cli`, and `share/romwright/` one level up
+   (`specs/`, `library-prototypes-v1/`, `ghidra/`, holding
+   `Ghidra/Processors/*/data`). The worker is looked for beside the executable
+   too (`ROMWRIGHT_WORKER`'s default);
+2. **inside the source checkout the binary was built from**:
+   `native/build/ghidra_opt[.exe]`, `native/specs`,
+   `oracle/library-prototypes-v1/`, and `build/ghidra`, where `setup.py`
+   extracts the Ghidra language data (gitignored with the rest of `build/`);
+3. **the home directory**, for Ghidra only: `~/ghidra_12.1.3_PUBLIC`
+   (`%USERPROFILE%\ghidra_12.1.3_PUBLIC`), the location before `setup.py`
+   existed, so an existing install keeps working.
+
+A Ghidra candidate counts only when its `Ghidra/` directory exists. When no
+candidate exists, the last one is used so the error names a path, and the
+message for a missing decompiler or language file says to run `setup.py`.
+Nothing is resolved against the working directory. `romwright-cli paths` prints
+the five resolved locations (worker, decompiler, specs, library prototypes,
+Ghidra data) and whether each exists.
+
+romwright reads only `Ghidra/Processors/<processor>/data/**` of the Ghidra
+release (`.sla`, `.ldefs`, `.opinion`, `.pspec`, `.cspec`, patterns, and the
+`.slaspec`/`.sinc` sources the language installers in `native/languages/`
+link against), never its Java code or jars; only the `--oracle` bridge needs a
+full install. `packaging/ghidra_data.py` extracts exactly that subset (26 MB,
+967 files, without `data/manuals`) from the pinned release zip, which it keeps
+in a per-user cache (`%LOCALAPPDATA%\romwright\cache`,
+`~/Library/Caches/romwright`, `$XDG_CACHE_HOME/romwright` or
+`~/.cache/romwright`) after verifying its SHA-256.
 
 ## How much of the machine
 
@@ -76,6 +114,84 @@ made for a different input is ignored).
 
 ## Build prerequisites
 
+### One command: `setup.py`
+
+`python setup.py` (`python3` on Linux and macOS; standard library only) at the
+repository root does the following, then smoke-tests it:
+
+1. checks the prerequisites and, for each one missing, says how to get it:
+   Rust via rustup (and on Windows the Visual Studio C++ build tools the MSVC
+   toolchain links with); a C++11 compiler, `make`, zlib and `git` on Linux
+   and macOS (the message carries the `apt`, `dnf`, `pacman` or
+   `xcode-select` line); on Windows MSYS2 with its MinGW64 packages
+   `mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-x86_64-zlib` and
+   Git for Windows. `--check` stops after this step, and
+   `--install-msys2-packages` runs `pacman` for the missing MinGW64 packages;
+2. downloads the pinned Ghidra 12.1.3 release, verifies its SHA-256, and
+   extracts the language data (see above) into `build/ghidra`, where romwright
+   finds it with no variable set (`--ghidra-dir` chooses another place, which
+   then needs `ROMWRIGHT_GHIDRA`; `--ghidra-zip` uses a zip you already have, and
+   its SHA-256 is checked against the pinned digest before anything is read from
+   it, whether or not the data is already extracted),
+   then compiles the languages this repository carries (below) and installs them
+   beside it (`--skip-languages` skips that);
+3. builds `native/build/ghidra_opt` (on Windows by driving MSYS2's MINGW64
+   bash, found at `C:\msys64`, `%MSYS2_ROOT%` or `--msys2`);
+4. runs `cargo build --release -p romwright-cli -p romwright-worker`;
+5. imports `tests/fixtures-src/tiny_bin` into a temporary project and
+   decompiles `00400466` with every `ROMWRIGHT_*` variable removed from the
+   environment, expecting `return param_2 + param_1;`, then imports and
+   decompiles a generated PlayStation 2 ELF (`packaging/smoke_fixtures.py`),
+   which needs the `r5900` language compiled in step 2.
+
+### romwright's own languages
+
+Six languages are not in the Ghidra release and come from sources in this
+repository; without them a PS1, PS2, N64 or Xbox 360 import fails
+(`No sleigh specification for r5900:LE:32:default`):
+
+| Language | Sources | Console |
+|---|---|---|
+| `PSX:LE:32:default` | `native/languages/psx` + stock MIPS in `third_party/ghidra/languages/mips` | PlayStation |
+| `r5900:LE:32:default` | `native/languages/r5900` | PlayStation 2 |
+| `VU:LE:64:micro` | `native/languages/vu` | PlayStation 2 vector units |
+| `RSP:BE:32:default` | `native/languages/rsp` | Nintendo 64 |
+| `PowerPC:BE:64:Xenon-32addr` | `native/languages/xenon` + the stock PowerPC sources in the Ghidra data | Xbox 360 |
+| `PowerPC:BE:32:Gekko_Broadway` | `third_party/ghidra/languages/gamecube` | GameCube, Wii |
+
+`packaging/languages.py` compiles each to a `.sla` and installs it as an
+extension module of the Ghidra data directory
+(`Ghidra/Extensions/<Module>/data/languages/`, where `architecture::discover`
+finds it), recording the sources' hash in `.romwright-languages.json` so that a
+rerun recompiles only what changed. It is the logic of the
+`native/languages/*/install.sh` scripts, which now call it, so it runs on
+Windows too. The compiler is, in order: `--sleigh`; the `sleigh` of a full Ghidra
+install; the one in the pinned release zip (`Ghidra/Features/Decompiler/os/
+win_x86_64` or `linux_x86_64`, extracted into the cache, not into the shipped
+data); else `sleigh_opt` built from the pinned, unmodified decompiler sources by
+`native/build_sleigh.sh` (macOS, Linux on ARM; the release ships no compiler
+for them; on macOS it builds for the host's architecture, arm64 or x86_64,
+`native/darwin_arch.sh`). The `.sla` files are byte-identical from the Windows release
+compiler and the source-built one. Languages of other third-party Ghidra
+extensions (Allegrex/PSP, SPU/PS3, Game Boy, 65816, M16C, the RISC-V
+`RV32G`/`RV64G` variants) have no vendored source and are not produced: install
+those extensions' own `data/languages` under `ROMWRIGHT_GHIDRA` if you need them.
+
+A test that needs one of these languages (the `native::vsa` and `native::discovery`
+tests for r5900 and Gekko, the Xenon lookup in `architecture.rs`) prints `SKIP:` and
+passes when the language is not installed, so a contributor who has not run
+`python setup.py` is not told the code is broken. CI provisions the languages
+first and sets `ROMWRIGHT_REQUIRE_LANGUAGES=1`, which turns that skip into a
+failure: the coverage cannot silently disappear.
+
+A rerun skips what is done: the extraction when `build/ghidra` carries the
+matching marker, the download when the cache holds the verified zip,
+`ghidra_opt` when it is newer than its sources (`--rebuild-native` forces
+it), and cargo when nothing changed. `--skip-ghidra`, `--skip-native`,
+`--skip-cargo` and `--skip-smoke` skip a step outright.
+
+### By hand
+
 Rust stable, and for the one C++ product, the patched decompiler
 `native/build/ghidra_opt` (`native/build_ghidra_opt.sh`): a C++11 compiler,
 `make`, `git` and zlib. No `binutils-devel` (`bfd.h`) and no `libzstd` are
@@ -90,6 +206,24 @@ their vendored C sources). No system library and no environment variable is
 involved: the disc reader is configured by the file it is given. It holds no
 key; the Wii common keys it embeds are `nod`'s, used only to unwrap the
 title key stored in the disc's own ticket.
+
+### Windows
+
+The CLI, worker and desktop build natively with the MSVC Rust toolchain
+(`x86_64-pc-windows-msvc`; Visual Studio Build Tools supply `cc`). The
+decompiler builds with MSYS2's MinGW-w64 toolchain (packages
+`mingw-w64-x86_64-gcc`, `mingw-w64-x86_64-make`, `mingw-w64-x86_64-zlib`) and
+Git for Windows on `PATH`, from an MSYS2 MINGW64 shell:
+
+```sh
+export PATH="$PATH:/c/Program Files/Git/cmd"
+native/build_ghidra_opt.sh --jobs 8
+```
+
+The script defines `_WINDOWS` (Ghidra's binary-mode stdio and Win32 paths) and
+links statically, so `native/build/ghidra_opt.exe` needs no MinGW DLLs and runs
+from any shell. Tools romwright runs under a deadline (`exec::run_command`) are
+supervised by a kill-on-close job object instead of a Unix process group.
 
 ## Tracing
 

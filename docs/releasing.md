@@ -73,6 +73,108 @@ and the OFL licences of the fonts compiled into the executable. Without
 system and processor, so the staging step finds it rather than naming it.
 `docs/desktop.md` covers how that archive is gated.
 
+## Portable archives
+
+The downloadable release is a *portable archive* per platform and architecture,
+built by `.github/workflows/release.yml` (pushing a `v*` tag runs it and attaches
+the archives to the tag's GitHub release; **Run workflow** on the Actions page
+runs it without a tag and keeps the archives as workflow artifacts). Each
+archive is built on a runner of its own architecture, natively (nothing is
+cross-compiled), and named by it, `romwright-<version>-<os>-<arch>`:
+
+| Runner | Archive | Architecture |
+|---|---|---|
+| `windows-latest` | `romwright-<version>-windows-x86_64.zip` | x86-64 |
+| `ubuntu-latest` | `romwright-<version>-linux-x86_64.tar.gz` | x86-64 |
+| `macos-latest` | `romwright-<version>-macos-aarch64.tar.gz` | arm64 (Apple silicon) |
+| `macos-15-intel` | `romwright-<version>-macos-x86_64.tar.gz` | x86-64 (Intel); the previous Intel label, `macos-13`, has been retired by GitHub |
+
+The workflow's permissions are `contents: read`; only the final `publish` job
+has `contents: write`, because it is the one that creates the release and
+uploads to it.
+
+Each package job does, in order:
+
+1. builds `ghidra_opt` with `native/build_ghidra_opt.sh` (Windows: inside
+   `msys2/setup-msys2` with `MINGW64` and the packages
+   `mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-x86_64-zlib`, so the
+   binary is static and needs no MinGW DLLs; Linux: `build-essential
+   zlib1g-dev`; macOS: the Xcode command line tools the runner carries). The
+   vendored `third_party/ghidra/decompiler/Makefile` hard-codes `-arch x86_64`
+   and `-mmacosx-version-min=10.6` for macOS and may not be edited
+   (`tools/vendor_ghidra.py --verify`), so on macOS the script reads `uname -m`
+   (`native/darwin_arch.sh`) and overrides `ARCH_TYPE` and `ADDITIONAL_FLAGS` on
+   the `make` command line: `-arch arm64` with `-mmacosx-version-min=11.0`
+   (the oldest macOS that runs arm64) on an Apple-silicon host, `-arch x86_64`
+   on an Intel one. `native/build_sleigh.sh` does the same;
+2. `cargo build --profile dist -p romwright-cli -p romwright-worker`;
+3. `python packaging/ghidra_data.py --dest build/ghidra`: downloads the pinned
+   Ghidra 12.1.3 zip, verifies its SHA-256 (the digest is a constant in the
+   script; a mismatch fails the job) and extracts only
+   `Ghidra/Processors/*/data/**` and Ghidra's `LICENSE`, the part romwright
+   reads (`docs/environment.md`, "Default resolution order");
+4. `python packaging/languages.py --ghidra build/ghidra`: compiles romwright's own
+   languages (PSX, r5900, VU, RSP, Xenon, Gekko; `docs/environment.md`, "romwright's
+   own languages") with the sleigh compiler of the Ghidra release (Windows, Linux)
+   or one built from `third_party/ghidra/decompiler` by `native/build_sleigh.sh`
+   (macOS), and installs them into the same data directory;
+5. `python packaging/stage_portable.py --tag $GITHUB_REF_NAME --smoke`: assembles
+   `romwright-<version>-<os>-<arch>` and packs it as `.zip` on Windows and
+   `.tar.gz` elsewhere, with a `.sha256` beside it. `--tag` must equal
+   `v` plus the workspace version in `Cargo.toml`, so a tag that disagrees with
+   the binaries' own version fails before anything is published. `--smoke`
+   then unpacks the archive into a temporary directory and, from a working
+   directory outside any checkout, with no `ROMWRIGHT_*` variable and an empty
+   home directory, runs `romwright-cli paths` (every file must resolve inside
+   the unpacked archive), imports `tests/fixtures-src/tiny_bin` and decompiles
+   `00400466` (it must print `return param_2 + param_1;`);
+6. `python packaging/check_archive_arch.py dist-portable`: reads the executable
+   header of every file in the archive (ELF on Linux, Mach-O on macOS, PE on
+   Windows) and fails the job unless each binary is built for the architecture
+   in the archive's name; a macOS universal binary must hold that architecture
+   only. An archive named `macos-aarch64` that carries an Intel `ghidra_opt`
+   does not get published;
+7. uploads `dist-portable/*` as `romwright-<os>-<arch>`; a final job creates the
+   release if the tag has none and runs `gh release upload --clobber`.
+
+`packaging/ghidra_data.py` and `packaging/languages.py` never trust a Ghidra zip
+they were handed (`--ghidra-zip`): its SHA-256 is compared with the pinned digest
+before a member is extracted and before the `sleigh` inside it is run, on every
+path, including when the data is already extracted. A download interrupted
+earlier resumes from its `.part` file; one that is already complete (or that the
+server answers with HTTP 416) is checked against the digest and promoted, or
+deleted and fetched again.
+
+The archive layout is what `crates/romwright-core/src/runtime_paths.rs` looks
+for first, which is why it runs from wherever it is unpacked:
+
+<!-- not gated: layout sketch of the archive the release workflow builds -->
+```sh
+romwright-<version>-<os>-<arch>/
+    bin/romwright-cli  bin/romwright-worker  bin/ghidra_opt      # .exe on Windows
+    share/romwright/specs/                    # native/specs
+    share/romwright/library-prototypes-v1/    # oracle/library-prototypes-v1
+    share/romwright/ghidra/                   # Ghidra/Processors/*/data of Ghidra 12.1.3, LICENSE,
+                                              # Ghidra/Extensions/* (romwright's own languages)
+    share/doc/romwright/                      # LICENSE, NOTICE, THIRD_PARTY_NOTICES.md,
+                                              # GHIDRA-LICENSE (Apache-2.0 text of Ghidra)
+    README.txt
+```
+
+Ghidra is Apache-2.0: its `LICENSE` ships with the language data it came
+with, and again as `share/doc/romwright/GHIDRA-LICENSE`. The 12.1.3 release zip
+carries no `NOTICE` file; `stage_portable.py` ships one if a later release adds
+it. `THIRD_PARTY_NOTICES.md` records the provenance of the other vendored
+material.
+
+To build the same archive by hand from a checkout `python setup.py` has set up
+(it builds the `release` profile; the workflow uses `dist`):
+
+<!-- not gated: builds the whole workspace; the archive step is what tests/m6-004 does not cover and the release workflow runs with --smoke -->
+```sh
+python packaging/stage_portable.py --binaries target/release --output dist-portable --smoke
+```
+
 ## Describe
 
 ```console

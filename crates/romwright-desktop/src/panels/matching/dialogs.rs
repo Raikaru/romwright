@@ -126,7 +126,7 @@ fn collect_sources(root: &Path, directory: &Path, files: &mut serde_json::Map<St
             collect_sources(root, &path, files)?;
         } else if path.extension().and_then(|extension| extension.to_str()).is_some_and(|extension| SOURCE_PATTERNS.contains(&extension)) {
             let relative = path.strip_prefix(root).map_err(|error| error.to_string())?;
-            files.insert(relative.to_string_lossy().into_owned(), file_input(&path.display().to_string(), false));
+            files.insert(portable_name(relative), file_input(&path.display().to_string(), false));
             if files.len() > MAX_INPUTS {
                 return Err("Too many inputs: choose a smaller root or an explicit setup JSON (maximum 4096 files).".into());
             }
@@ -138,6 +138,12 @@ fn collect_sources(root: &Path, directory: &Path, files: &mut serde_json::Map<St
 fn absolute(path: &str) -> std::path::PathBuf {
     let path = Path::new(path);
     if path.is_absolute() { path.to_path_buf() } else { std::env::current_dir().unwrap_or_default().join(path) }
+}
+
+/// A project-relative file name as a workspace setup spells it: components
+/// joined with `/` on every platform (a Windows path would give `include\types.h`).
+fn portable_name(relative: &Path) -> String {
+    relative.components().map(|part| part.as_os_str().to_string_lossy()).collect::<Vec<_>>().join("/")
 }
 
 impl NewWorkspaceForm {
@@ -188,11 +194,11 @@ impl NewWorkspaceForm {
         let mut files = serde_json::Map::new();
         if !self.root.is_empty() {
             let root = absolute(&self.root);
-            source_name = source_path
-                .strip_prefix(&root)
-                .map_err(|_| "Source outside root: choose a root containing the primary source.".to_string())?
-                .to_string_lossy()
-                .into_owned();
+            source_name = portable_name(
+                source_path
+                    .strip_prefix(&root)
+                    .map_err(|_| "Source outside root: choose a root containing the primary source.".to_string())?,
+            );
             collect_sources(&root, &root, &mut files)?;
         }
         files.insert(source_name.clone(), file_input(&source_path.display().to_string(), self.public_source));

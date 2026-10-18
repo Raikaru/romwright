@@ -23,7 +23,8 @@ pub(crate) fn capture(
 
 /// `capture` for an input that is a file: it is streamed into the artifact
 /// store and mapped from there, so a multi-gigabyte disc image is never held
-/// in memory by the importing process.
+/// in memory by the importing process. A large 3DS card stores its program
+/// view instead (`native::read_input`): its RomFS is never read at all.
 pub(crate) fn capture_file(
     project: &Path,
     source: &Path,
@@ -31,7 +32,11 @@ pub(crate) fn capture_file(
     raw: Option<(u64, &str)>,
     keys: &native::keys::KeyStore,
 ) -> Result<(Artifact, ProgramInput)> {
-    record(project, source, Artifact::capture(project, source)?, map, raw, keys)
+    let binary = match native::threeds::program_view(source)? {
+        Some(view) => Artifact::from_bytes(project, view.into())?,
+        None => Artifact::capture(project, source)?,
+    };
+    record(project, source, binary, map, raw, keys)
 }
 
 fn record(
@@ -162,7 +167,7 @@ impl Core {
         let stored = self.db_path().join("artifacts").join(&input.binary_digest);
         if canonical != Path::new(&input.source_path)
             && canonical != stored.canonicalize().unwrap_or(stored)
-            && super::import_cache::digest(binary).as_deref() != Some(input.binary_digest.as_str())
+            && super::import_cache::input_digest(binary).as_deref() != Some(input.binary_digest.as_str())
         {
             return Err(native::ImportError::Bad(
                 "binary does not identify this program's imported source".into(),

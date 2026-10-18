@@ -14,23 +14,14 @@
 #   default: $ROMWRIGHT_GHIDRA or ~/ghidra_12.1.3_PUBLIC
 # An import cache entry keyed on the old .sla is not reused (import_cache.rs hashes the
 # language files), so a re-import is all a new .sla needs.
+
+# The build itself is packaging/languages.py (Python, so the same code runs on
+# Windows, Linux and macOS; `python setup.py` and the release workflow call it
+# for all languages at once). This script installs r5900:LE:32:default alone, always
+# recompiling, into GHIDRA_INSTALL_DIR (a full Ghidra install, whose own sleigh
+# compiler is used, or the data directory `setup.py` made).
 set -euo pipefail
 
-SRC="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 GHIDRA="${1:-${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
-SLEIGH="$GHIDRA/Ghidra/Features/Decompiler/os/linux_x86_64/sleigh"
-DEST="$GHIDRA/Ghidra/Extensions/ghidra-emotionengine-reloaded/data/languages"
-
-[ -x "$SLEIGH" ] || { echo "no sleigh compiler at $SLEIGH" >&2; exit 1; }
-[ -d "$DEST" ] || { echo "no ghidra-emotionengine-reloaded language directory at $DEST" >&2; exit 1; }
-
-python3 "$SRC/gen_vu.py" --check
-
-STAGE=$(mktemp -d "${TMPDIR:-/tmp}/romwright-r5900.XXXXXX")
-trap 'rm -rf "$STAGE"' EXIT
-cp "$SRC"/*.sinc "$SRC"/r5900.slaspec "$STAGE/"
-"$SLEIGH" "$STAGE/r5900.slaspec" "$STAGE/r5900.sla"
-
-cp "$SRC"/*.sinc "$SRC"/r5900.slaspec "$SRC"/r5900.pspec "$SRC"/r5900.cspec \
-   "$SRC"/emotionengine.ldefs "$SRC"/r5900.opinion "$STAGE/r5900.sla" "$DEST/"
-echo "installed r5900:LE:32:default -> $DEST"
+exec "${PYTHON:-python3}" "$ROOT/packaging/languages.py" --ghidra "$GHIDRA" --only r5900 --force

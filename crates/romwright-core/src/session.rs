@@ -152,9 +152,10 @@ fn worker_candidate() -> PathBuf {
     if let Ok(pinned) = std::env::var("ROMWRIGHT_WORKER") {
         return PathBuf::from(pinned);
     }
+    let worker = format!("romwright-worker{}", std::env::consts::EXE_SUFFIX);
     let sibling = std::env::current_exe()
         .ok()
-        .and_then(|exe| exe.parent().map(|dir| dir.join("romwright-worker")));
+        .and_then(|exe| exe.parent().map(|dir| dir.join(&worker)));
     // The target/ fallbacks resolve against the repository root, not the
     // process cwd — a GUI launched from desktop/.../build must still find
     // target/release/romwright-worker.
@@ -163,16 +164,16 @@ fn worker_candidate() -> PathBuf {
         .canonicalize()
         .unwrap_or_else(|_| PathBuf::from("."));
     let fallbacks = [
-        repo_root.join("target/release/romwright-worker"),
-        repo_root.join("target/debug/romwright-worker"),
-        PathBuf::from("target/release/romwright-worker"),
-        PathBuf::from("target/debug/romwright-worker"),
+        repo_root.join("target/release").join(&worker),
+        repo_root.join("target/debug").join(&worker),
+        PathBuf::from("target/release").join(&worker),
+        PathBuf::from("target/debug").join(&worker),
     ];
     sibling
         .into_iter()
         .chain(fallbacks)
         .find(|candidate| candidate.is_file())
-        .unwrap_or_else(|| repo_root.join("target/debug/romwright-worker"))
+        .unwrap_or_else(|| repo_root.join("target/debug").join(&worker))
 }
 
 /// The worker memory cap in bytes: `ROMWRIGHT_WORKER_MEMORY_CAP` when it names
@@ -194,14 +195,7 @@ impl RuntimeConfig {
     /// Builds a config from the environment (the CLI's documented surface),
     /// with repo/install-relative defaults.
     pub fn from_env() -> Self {
-        let install = std::env::var("ROMWRIGHT_GHIDRA")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                PathBuf::from(format!(
-                    "{}/ghidra_12.1.3_PUBLIC",
-                    std::env::var("HOME").unwrap_or_default()
-                ))
-            });
+        let install = crate::native_runtime::ghidra_dir();
         let language_id =
             std::env::var("ROMWRIGHT_LANGUAGE").unwrap_or_else(|_| "x86:LE:64:default".into());
         let pinned_dir = std::env::var("ROMWRIGHT_LANGUAGE_DIR")
@@ -216,25 +210,20 @@ impl RuntimeConfig {
             })
             .unwrap_or_else(|| install.join("Ghidra/Processors/x86/data/languages"));
         let worker_path = worker_candidate();
-        // Relative defaults resolve against the repository root, not the
-        // process cwd — a GUI launched from desktop/.../build must still
-        // find native/build/ghidra_opt and native/specs. CARGO_MANIFEST_DIR
-        // is crates/romwright-core, so ../.. is the repo root.
-        let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../..")
-            .canonicalize()
-            .unwrap_or_else(|_| PathBuf::from("."));
+        // Defaults resolve beside the running executable first (a release
+        // archive), then inside the source checkout, never against the
+        // process cwd -- a GUI launched from desktop/.../build must still
+        // find native/build/ghidra_opt and native/specs (`runtime_paths`).
+        let layout = crate::runtime_paths::Layout::current();
         let decompiler_path = std::env::var("ROMWRIGHT_GHIDRA_OPT")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| repo_root.join("native/build/ghidra_opt"));
+            .unwrap_or_else(|_| layout.decompiler());
         let library_prototypes = std::env::var("ROMWRIGHT_LIBRARY_PROTOTYPES")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                repo_root.join("oracle/library-prototypes-v1/generic_clib_64.json")
-            });
+            .unwrap_or_else(|_| layout.library_prototypes());
         let spec_root = std::env::var("ROMWRIGHT_SPECS")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| repo_root.join("native/specs"));
+            .unwrap_or_else(|_| layout.specs());
         let sla_path = std::env::var("ROMWRIGHT_SLA")
             .ok()
             .filter(|p| {
@@ -375,7 +364,12 @@ impl ProgramImage {
         program: Option<&str>,
         raw_base: Option<u64>,
     ) -> crate::Result<Self> {
-        let map: SharedBytes = std::fs::read(binary)?.into();
+        // A large 3DS card is read as its program view; anything else straight
+        // into the shared buffer (`fs::read(..).into()` would hold it twice).
+        let map: SharedBytes = match crate::native::threeds::program_view(binary)? {
+            Some(view) => std::sync::Arc::<[u8]>::from(view).into(),
+            None => crate::artifact::read_shared(binary)?.into(),
+        };
         let images = match crate::native::parse_container(&map) {
             Ok(images) => images,
             Err(_)

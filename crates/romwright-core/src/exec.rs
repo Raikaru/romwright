@@ -352,7 +352,202 @@ pub(crate) fn run_command(
     result
 }
 
-#[cfg(not(unix))]
+/// A kill-on-close job object: terminating it, or dropping the last handle,
+/// kills the tool and every process the tool started inside it.
+#[cfg(windows)]
+struct ToolJob(windows_sys::Win32::Foundation::HANDLE);
+
+#[cfg(windows)]
+impl ToolJob {
+    fn create() -> std::io::Result<Self> {
+        use windows_sys::Win32::System::JobObjects::{
+            CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+            JobObjectExtendedLimitInformation, SetInformationJobObject,
+        };
+        // SAFETY: both arguments may be null (default security, unnamed job).
+        let handle = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
+        if handle.is_null() {
+            return Err(std::io::Error::last_os_error());
+        }
+        let job = ToolJob(handle);
+        let mut limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        // SAFETY: the pointer and length describe `limits`, the structure
+        // this information class reads; the handle is the live job above.
+        let set = unsafe {
+            SetInformationJobObject(
+                job.0,
+                JobObjectExtendedLimitInformation,
+                (&limits as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),
+                std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+            )
+        };
+        if set == 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        Ok(job)
+    }
+
+    fn assign(&self, child: &std::process::Child) -> std::io::Result<()> {
+        use std::os::windows::io::AsRawHandle;
+        // SAFETY: both handles are live: the job is owned, the child unreaped.
+        if unsafe { windows_sys::Win32::System::JobObjects::AssignProcessToJobObject(self.0, child.as_raw_handle()) } == 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        Ok(())
+    }
+
+    fn terminate(&self) {
+        // SAFETY: the job handle is owned and live until drop.
+        unsafe {
+            windows_sys::Win32::System::JobObjects::TerminateJobObject(self.0, 1);
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for ToolJob {
+    fn drop(&mut self) {
+        // SAFETY: closes the handle this value owns, exactly once.
+        unsafe {
+            windows_sys::Win32::Foundation::CloseHandle(self.0);
+        }
+    }
+}
+
+/// The Windows form of the Unix supervisor above: the tool runs in a
+/// kill-on-close job object (so a deadline, a cancellation or completion
+/// also ends whatever it started), and its pipes drain on threads, so a
+/// descendant holding stdout cannot hold result collection past the deadline.
+/// A process the tool starts before it is assigned to the job escapes it;
+/// the window is the few instructions between spawn and assignment.
+#[cfg(windows)]
+pub(crate) fn run_command(
+    command: &mut std::process::Command,
+    request: &ExecutionRequest,
+    input: Option<&[u8]>,
+    output_limit: usize,
+) -> Result<std::process::Output> {
+    use std::io::{Read, Write};
+    use std::process::Stdio;
+    use std::sync::mpsc;
+
+    enum Event {
+        Out(Vec<u8>),
+        Err(Vec<u8>),
+        OutDone,
+        ErrDone,
+        Failed(std::io::Error),
+    }
+    fn pump(
+        mut pipe: impl Read + Send + 'static,
+        events: mpsc::Sender<Event>,
+        chunk: fn(Vec<u8>) -> Event,
+        done: Event,
+    ) {
+        std::thread::spawn(move || {
+            let mut buffer = [0u8; 16384];
+            loop {
+                match pipe.read(&mut buffer) {
+                    Ok(0) => break,
+                    Ok(count) => {
+                        if events.send(chunk(buffer[..count].to_vec())).is_err() {
+                            return;
+                        }
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+                    // A pipe whose writers all exited reads as broken on Windows: that is EOF.
+                    Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => break,
+                    Err(error) => {
+                        let _ = events.send(Event::Failed(error));
+                        return;
+                    }
+                }
+            }
+            let _ = events.send(done);
+        });
+    }
+
+    request.cancel.checkpoint(request.deadline)?;
+    let job = ToolJob::create()?;
+    let mut child = command
+        .stdin(if input.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    let mut reaped = false;
+    let result = (|| {
+        job.assign(&child)?;
+        let (events, received) = mpsc::channel();
+        pump(child.stdout.take().expect("piped stdout"), events.clone(), Event::Out, Event::OutDone);
+        pump(child.stderr.take().expect("piped stderr"), events.clone(), Event::Err, Event::ErrDone);
+        if let Some(mut stdin) = child.stdin.take() {
+            let input = input.unwrap_or_default().to_vec();
+            let events = events.clone();
+            std::thread::spawn(move || {
+                if let Err(error) = stdin.write_all(&input) {
+                    let _ = events.send(Event::Failed(error));
+                }
+            });
+        }
+        drop(events);
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let (mut out_done, mut err_done) = (false, false);
+        let mut status = None;
+        loop {
+            request.cancel.checkpoint(request.deadline)?;
+            let wait = request
+                .deadline
+                .saturating_duration_since(Instant::now())
+                .min(Duration::from_millis(5));
+            match received.recv_timeout(wait) {
+                Ok(Event::Out(bytes)) => {
+                    if out.len() + bytes.len() > output_limit {
+                        return Err(std::io::Error::other("tool output exceeds the configured limit").into());
+                    }
+                    out.extend_from_slice(&bytes);
+                }
+                Ok(Event::Err(bytes)) => {
+                    if err.len() + bytes.len() > output_limit {
+                        return Err(std::io::Error::other("tool output exceeds the configured limit").into());
+                    }
+                    err.extend_from_slice(&bytes);
+                }
+                Ok(Event::OutDone) => out_done = true,
+                Ok(Event::ErrDone) => err_done = true,
+                Ok(Event::Failed(error)) => return Err(error.into()),
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                // Both pipes reached EOF and stdin is written: only the exit is left.
+                Err(mpsc::RecvTimeoutError::Disconnected) => std::thread::sleep(wait),
+            }
+            if status.is_none() {
+                status = child.try_wait()?;
+            }
+            if let (Some(status), true, true) = (status, out_done, err_done) {
+                // Even a successful driver must not leave background children.
+                job.terminate();
+                reaped = true;
+                return Ok(std::process::Output {
+                    status,
+                    stdout: out,
+                    stderr: err,
+                });
+            }
+        }
+    })();
+    if !reaped {
+        job.terminate();
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    result
+}
+
+#[cfg(not(any(unix, windows)))]
 pub(crate) fn run_command(
     _command: &mut std::process::Command,
     _request: &ExecutionRequest,
@@ -361,12 +556,12 @@ pub(crate) fn run_command(
 ) -> Result<std::process::Output> {
     Err(std::io::Error::new(
         std::io::ErrorKind::Unsupported,
-        "bounded tool execution requires Unix process supervision",
+        "bounded tool execution requires Unix or Windows process supervision",
     )
     .into())
 }
 
-#[cfg(all(test, unix))]
+#[cfg(all(test, any(unix, windows)))]
 mod tests {
     use super::*;
 
@@ -394,6 +589,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn tool_deadline_interrupts_driver_and_child_output() {
         let request = request(Duration::from_millis(100));
         let start = Instant::now();
@@ -405,6 +601,76 @@ mod tests {
         );
         assert!(result.is_err());
         assert!(start.elapsed() < Duration::from_secs(2));
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn tool_deadline_interrupts_driver_and_child_output() {
+        let request = request(Duration::from_millis(300));
+        let start = Instant::now();
+        let result = run_command(
+            std::process::Command::new("cmd").args(["/d", "/c", "ping -n 6 127.0.0.1 >nul & echo late"]),
+            &request,
+            None,
+            8 * 1024 * 1024,
+        );
+        assert!(result.is_err());
+        assert!(start.elapsed() < Duration::from_secs(2));
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn captures_output_and_input() {
+        let request = request(Duration::from_secs(20));
+        let output = run_command(
+            std::process::Command::new("cmd").args(["/d", "/c", "findstr x"]),
+            &request,
+            Some(b"axb\r\nnothing\r\n"),
+            8 * 1024 * 1024,
+        )
+        .unwrap();
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "axb");
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn deadline_kills_descendants_after_the_driver_exits() {
+        use std::os::windows::process::CommandExt;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("romwright-descendant-{}-{stamp}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let marker = dir.join("marker");
+        let child = dir.join("child.cmd");
+        // The descendant writes the marker two seconds after it starts.
+        std::fs::write(
+            &child,
+            format!("@ping -n 3 127.0.0.1 >nul\r\n@echo x> \"{}\"\r\n", marker.display()),
+        )
+        .unwrap();
+        // Control: unsupervised, the descendant does write the marker.
+        std::process::Command::new("cmd").args(["/d", "/c"]).arg(&child).status().unwrap();
+        assert!(marker.exists(), "the descendant script never writes its marker");
+        std::fs::remove_file(&marker).unwrap();
+        // The driver starts the descendant and exits at once; the descendant
+        // inherits the output pipes, so only the deadline ends collection.
+        let request = request(Duration::from_millis(300));
+        let result = run_command(
+            std::process::Command::new("cmd")
+                .args(["/d", "/c"])
+                .raw_arg(format!("start \"\" /b cmd /d /c \"{}\"", child.display())),
+            &request,
+            None,
+            8 * 1024 * 1024,
+        );
+        std::thread::sleep(Duration::from_secs(4));
+        let survived = marker.exists();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(result.is_err());
+        assert!(!survived, "deadline left a descendant running after its driver exited");
     }
 
     #[test]
