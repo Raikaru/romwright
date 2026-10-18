@@ -373,9 +373,12 @@ impl ProgramImage {
         program: Option<&str>,
         raw_base: Option<u64>,
     ) -> crate::Result<Self> {
-        // Straight into the shared buffer: `fs::read(..).into()` holds a
-        // multi-gigabyte card twice while the `Vec` is copied into the `Arc`.
-        let map: SharedBytes = crate::artifact::read_shared(binary)?.into();
+        // A large 3DS card is read as its program view; anything else straight
+        // into the shared buffer (`fs::read(..).into()` would hold it twice).
+        let map: SharedBytes = match crate::native::threeds::program_view(binary)? {
+            Some(view) => std::sync::Arc::<[u8]>::from(view).into(),
+            None => crate::artifact::read_shared(binary)?.into(),
+        };
         let images = match crate::native::parse_container(&map) {
             Ok(images) => images,
             Err(_)

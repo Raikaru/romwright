@@ -130,6 +130,96 @@ pub(crate) fn is_ncsd(data: &[u8]) -> bool {
     data.len() >= 0x104 && data[0x100..0x104] == *b"NCSD"
 }
 
+/// Files smaller than this are read whole: there is nothing worth leaving out.
+const PROGRAM_VIEW_MIN: u64 = 64 << 20;
+
+/// The program part of a large NCCH (`.cxi`) or NCSD (`.3ds`/`.cci`) file: what
+/// the ARM11 program is loaded from, which is a few megabytes of a card whose
+/// RomFS is gigabytes. An NCCH keeps its header, exheader and ExeFS at their
+/// offsets and ends after the ExeFS, its header's content size cut to match and
+/// its RomFS fields cleared. An NCSD keeps its header and, back to back, the
+/// program view of every partition that has an ExeFS, with the partition table
+/// rewritten to their new offsets (an NCCH's own offsets are relative to its
+/// start, so its ExeFS counters are unchanged). The result is a container the
+/// loaders read like the original. `None`: not one of these, a CIA, or small.
+pub fn program_view(path: &std::path::Path) -> std::io::Result<Option<Vec<u8>>> {
+    program_view_from(path, PROGRAM_VIEW_MIN)
+}
+
+fn program_view_from(path: &std::path::Path, min_length: u64) -> std::io::Result<Option<Vec<u8>>> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path)?;
+    let length = file.metadata()?.len();
+    if length < min_length {
+        return Ok(None);
+    }
+    let mut header = [0u8; 0x200];
+    if file.read_exact(&mut header).is_err() {
+        return Ok(None);
+    }
+    let mut read_at = |offset: u64, length: u64| -> std::io::Result<Vec<u8>> {
+        let mut out = vec![0u8; length as usize];
+        file.seek(SeekFrom::Start(offset))?;
+        file.read_exact(&mut out)?;
+        Ok(out)
+    };
+    let word = |data: &[u8], at: usize| u32::from_le_bytes(data[at..at + 4].try_into().unwrap()) as u64;
+    if is_ncch(&header) {
+        return Ok(Some(ncch_view(&mut read_at, 0)?.unwrap_or_default()).filter(|view| !view.is_empty()));
+    }
+    if !is_ncsd(&header) {
+        return Ok(None);
+    }
+    let unit = 0x200u64 << header[0x188 + 6].min(8);
+    let first = (0..8).map(|i| word(&header, 0x120 + i * 8)).filter(|&o| o > 0).min().unwrap_or(0) * unit;
+    if first == 0 || first > length {
+        return Ok(None);
+    }
+    let mut out = read_at(0, first)?;
+    for index in 0..8 {
+        let (offset, size) = (word(&out, 0x120 + index * 8) * unit, word(&out, 0x124 + index * 8) * unit);
+        let view = if size == 0 { None } else { ncch_view(&mut read_at, offset)? };
+        let (new_offset, new_size) = match view {
+            Some(view) => {
+                let at = out.len() as u64;
+                out.extend_from_slice(&view);
+                out.resize(out.len().next_multiple_of(unit as usize), 0);
+                (at / unit, view.len() as u64 / unit)
+            }
+            None => (0, 0),
+        };
+        out[0x120 + index * 8..0x124 + index * 8].copy_from_slice(&(new_offset as u32).to_le_bytes());
+        out[0x124 + index * 8..0x128 + index * 8].copy_from_slice(&(new_size as u32).to_le_bytes());
+    }
+    let total = out.len() as u64 / unit;
+    out[0x104..0x108].copy_from_slice(&(total as u32).to_le_bytes());
+    Ok(Some(out))
+}
+
+/// The program view of the NCCH at `offset` (see [`program_view`]), `None`
+/// when it is not an NCCH or has no ExeFS (a CFA: manual, update data).
+fn ncch_view(
+    read_at: &mut dyn FnMut(u64, u64) -> std::io::Result<Vec<u8>>,
+    offset: u64,
+) -> std::io::Result<Option<Vec<u8>>> {
+    let header = read_at(offset, 0x200)?;
+    if !is_ncch(&header) {
+        return Ok(None);
+    }
+    let unit = 0x200u64 << header[0x188 + 6].min(8);
+    let word = |at: usize| u32::from_le_bytes(header[at..at + 4].try_into().unwrap()) as u64;
+    let (exefs_offset, exefs_size) = (word(0x1A0) * unit, word(0x1A4) * unit);
+    if exefs_size == 0 {
+        return Ok(None);
+    }
+    let end = (exefs_offset + exefs_size).max(0x200 + word(0x180)).next_multiple_of(unit);
+    let mut view = read_at(offset, end)?;
+    view[0x104..0x108].copy_from_slice(&((end / unit) as u32).to_le_bytes());
+    // RomFS offset, size and hash-region size.
+    view[0x1B0..0x1BC].fill(0);
+    Ok(Some(view))
+}
+
 /// True when `data` is a CIA installer: archive header size 0x2020 with
 /// type 0 / version 1 (the same two-field check `xbox_3ds::is_cia` uses).
 pub(crate) fn is_cia(data: &[u8]) -> bool {
@@ -1026,6 +1116,46 @@ mod tests {
             ncsd[at..at + part.len()].copy_from_slice(part);
         }
         ncsd
+    }
+
+    /// `ncch` with `romfs` bytes of RomFS after its ExeFS, declared in the header.
+    fn with_romfs(mut ncch: Vec<u8>, romfs: usize) -> Vec<u8> {
+        let at = ncch.len();
+        ncch.resize(at + romfs, 0xAB);
+        let units = (ncch.len() / 0x200) as u32;
+        put32(&mut ncch, 0x104, units);
+        put32(&mut ncch, 0x1B0, (at / 0x200) as u32);
+        put32(&mut ncch, 0x1B4, (romfs / 0x200) as u32);
+        ncch
+    }
+
+    #[test]
+    fn a_program_view_imports_like_the_whole_card_without_its_romfs() {
+        let dir = std::env::temp_dir().join(format!("romwright-view-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let ncch = build_ncch(&test_code(), false, NO_CRYPTO, TEST_PID);
+        let exefs_end = ncch.len();
+        let card = with_romfs(ncch, 0x10_0000);
+        let mut cfa = build_ncch(&[], false, NO_CRYPTO, TEST_PID);
+        cfa[0x600..0x605].copy_from_slice(b"icon\0");
+        let manual = with_romfs(cfa, 0x8000);
+        for (name, whole) in [("cxi", card.clone()), ("cci", build_ncsd(&[card.clone(), manual]))] {
+            let path = dir.join(format!("game.{name}"));
+            std::fs::write(&path, &whole).unwrap();
+            let view = program_view_from(&path, 0).unwrap().expect("a program view");
+            assert!(view.len() < whole.len() / 4, "{name}: the RomFS is left out");
+            assert!(!view.windows(16).any(|w| w == [0xAB; 16]), "{name}: no RomFS byte is read");
+            let mapped = |data: &[u8]| -> Vec<(u64, Vec<u8>)> {
+                import(data).unwrap().unwrap().into_iter().flat_map(|(_, imp)| imp.mappings).map(|m| (m.vaddr, m.bytes)).collect()
+            };
+            assert_eq!(mapped(&view), mapped(&whole), "{name}: the same program");
+            if name == "cxi" {
+                assert_eq!(view.len(), exefs_end);
+            }
+        }
+        // Small files are read whole.
+        assert!(program_view(&dir.join("game.cxi")).unwrap().is_none());
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     fn build_tmd(content_size: u64, ctype: u16) -> Vec<u8> {

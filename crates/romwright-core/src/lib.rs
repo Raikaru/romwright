@@ -2518,7 +2518,8 @@ impl Core {
         let opts = &emit_m2c::M2cOptions {
             compiler: self.db.program_compiler(id).unwrap_or_default(),
             stdcall_imports: if emit_m2c::stdcall_imports_enabled() {
-                std::fs::read(binary).map(|data| native::stdcall_import_slots(&data)).unwrap_or_default()
+                // Import slots are a PE's; a 3DS card's RomFS is never read for them.
+                native::read_input(binary).map(|data| native::stdcall_import_slots(&data)).unwrap_or_default()
             } else {
                 Default::default()
             },

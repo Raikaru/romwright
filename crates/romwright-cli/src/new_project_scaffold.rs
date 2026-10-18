@@ -64,8 +64,8 @@ const BATCH: usize = 48;
 /// its own store connection and worker, `BATCH` functions per call. Returns
 /// how many functions the decompiler refused.
 ///
-/// The threads use forks of `core`: their own connection, but the one parsed
-/// image the emitter reads machine code from (a 3DS card is gigabytes).
+/// The threads use forks of `core`: their own connection, but one parsed image
+/// (the emitter reads machine code from it) instead of one per thread.
 fn decompile_parallel(
     core: &Core,
     orig: &Path,
@@ -157,7 +157,7 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
     let orig = outdir.join("orig").join(image_name);
     std::fs::create_dir_all(orig.parent().unwrap()).map_err(|e| e.to_string())?;
     if std::fs::canonicalize(image_path).ok() != std::fs::canonicalize(&orig).ok() {
-        std::fs::write(&orig, bytes).map_err(|e| format!("{}: {e}", orig.display()))?;
+        std::fs::copy(image_path, &orig).map_err(|e| format!("{}: {e}", orig.display()))?;
     }
 
     // Keys are the user's: loaded for this process only.
@@ -255,8 +255,9 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
         target,
         image_name,
         project_name: &project_name,
-        image_sha256: scaffold::sha256_hex(bytes),
-        image_size: bytes.len() as u64,
+        // The retail file itself, streamed: `bytes` may be only its program view.
+        image_sha256: romwright_core::import_cache::digest(image_path).ok_or_else(|| format!("{}: unreadable", image_path.display()))?,
+        image_size: std::fs::metadata(image_path).map_err(|e| e.to_string())?.len(),
         modules,
         manifest: &manifest,
         profile: profile.as_deref(),
