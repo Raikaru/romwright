@@ -8,10 +8,11 @@ Reads the ARM11 code set of a decrypted dump without romwright:
   exheader says the code is compressed, and the exheader's code-set segments
   (`.text`, `.rodata`, `.data`, `.bss` with their load addresses);
 * an NCSD (`.3ds`, `.cci` cartridge): the executable partition (partition 0,
-  or the one named `partition<N>`).
+  or the one named `partition<N>`);
+* a decrypted CIA (an eShop title or update): its first content, an NCCH.
 
 Only the parts of the file that are needed are read, so a multi-gigabyte card
-dump is cheap to open. Encrypted content (secure NCCH keys, a CIA) is refused
+dump is cheap to open. Encrypted content (secure NCCH keys, an encrypted CIA) is refused
 with a message: this loader does no cryptography.
 
     import n3ds
@@ -195,8 +196,17 @@ def open_program(path, module=None):
     `_code` for an NCCH, `partition<N>` for NCSD partition N (default: the first executable one)."""
     with open(path, "rb") as handle:
         head = handle.read(0x200)
-        if len(head) >= 8 and head[0:4] == b"\x20\x20\x00\x00" and head[4:8] == b"\x00\x00\x01\x00":
-            raise ImageError(f"{path}: a CIA installer; extract its decrypted NCCH (.cxi) first (this loader reads NCCH and NCSD)")
+        if len(head) >= 0x20 and head[0:4] == b"\x20\x20\x00\x00" and head[8:12] == b"\x00\x0a\x00\x00":  # CIA: 0x2020 header, 0xA00 certs
+            # CIA: header, certificate chain, ticket, TMD, then the contents, each 64-byte aligned;
+            # content 0 is the program. A decrypted CIA (title-key layer removed) holds it as plain NCCH.
+            header_size, _, _, cert_size, ticket_size, tmd_size = struct.unpack_from("<IHHIII", head, 0)
+            align = lambda size: (size + 63) // 64 * 64
+            content = align(header_size) + align(cert_size) + align(ticket_size) + align(tmd_size)
+            handle.seek(content)
+            if handle.read(0x104)[0x100:0x104] != b"NCCH":
+                raise ImageError(f"{path}: a CIA whose contents are encrypted with its title key; "
+                                 "decrypt the CIA first (this loader does no cryptography)")
+            return _ncch_program(handle, content, f"{path} (CIA content 0)")
         if head[0x100:0x104] == b"NCCH":
             return _ncch_program(handle, 0, str(path))
         if head[0x100:0x104] != b"NCSD":

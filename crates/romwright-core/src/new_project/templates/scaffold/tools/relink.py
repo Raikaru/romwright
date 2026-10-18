@@ -69,6 +69,65 @@ def elf_sections(path):
     return {name(h[0]): (h[5], h[2]) for h in headers}
 
 
+def text_section(path):
+    """(`.text` bytes, [(offset, type, symbol name)] of its relocations) of an ELF32 ARM object."""
+    data = Path(path).read_bytes()
+    shoff, = struct.unpack_from("<I", data, 0x20)
+    shentsize, shnum, shstrndx = struct.unpack_from("<HHH", data, 0x2E)
+    headers = [struct.unpack_from("<IIIIIIIIII", data, shoff + i * shentsize) for i in range(shnum)]
+    cstr = lambda at: data[at:data.index(b"\0", at)].decode()
+    section_name = lambda h: cstr(headers[shstrndx][4] + h[0])
+    text_index = next(i for i, h in enumerate(headers) if section_name(h) == ".text")
+    text = headers[text_index]
+    relocations = []
+    for header in headers:
+        if header[1] != 9 or header[7] != text_index:  # SHT_REL applying to .text
+            continue
+        symtab = headers[header[6]]
+        strtab = headers[symtab[6]]
+        for at in range(header[4], header[4] + header[5], 8):
+            offset, info = struct.unpack_from("<II", data, at)
+            name_at, = struct.unpack_from("<I", data, symtab[4] + (info >> 8) * 16)
+            relocations.append((offset, info & 0xFF, cstr(strtab[4] + name_at)))
+    return data[text[4]:text[4] + text[5]], sorted(relocations)
+
+
+R_ARM_ABS32 = 2
+
+
+def code_difference(built, retail, resolve):
+    """Why the compiled object `built` would not put the retail object's bytes in the
+    image, or None. Relocated words are compared by what they resolve to (`resolve`:
+    symbol name -> address, Thumb bit included, or None), so `DAT_x` and `s_..._x`, or a
+    pool word one object writes as a constant and the other relocates, are the same."""
+    (built_text, built_relocations), (retail_text, retail_relocations) = text_section(built), text_section(retail)
+    if len(built_text) != len(retail_text):
+        return "size"
+
+    def values(text, relocations):
+        out = {}
+        for offset, kind, name in relocations:
+            address = resolve(name)
+            if address is None:
+                out[offset] = ("unknown", name)
+            elif kind == R_ARM_ABS32:
+                out[offset] = ("word", (address + struct.unpack_from("<I", text, offset)[0]) & 0xFFFFFFFF)
+            else:  # a branch: what it reaches (an ARM B to a Thumb address is a mismatch too)
+                out[offset] = ("branch", kind, address)
+        return out
+
+    built_values, retail_values = values(built_text, built_relocations), values(retail_text, retail_relocations)
+    relocated = set(built_values) | set(retail_values)
+    for offset in relocated:
+        word = lambda text: ("word", struct.unpack_from("<I", text, offset)[0])
+        if built_values.get(offset, word(built_text)) != retail_values.get(offset, word(retail_text)):
+            return "relocation"
+    a, b = bytearray(built_text), bytearray(retail_text)
+    for offset in relocated:
+        a[offset:offset + 4] = b[offset:offset + 4] = b"\0\0\0\0"
+    return "bytes" if a != b else None
+
+
 def blob_object(path, section, payload, executable, symbols=()):
     """A relocatable ELF32 ARM object holding `payload` as one section, and
     `symbols` (name, value, is_function) as absolute global symbols: a
@@ -173,7 +232,15 @@ def main():
     # The function objects, each at its retail address: every one with --full,
     # else only the matched ones (the rest are retail bytes either way).
     placed = []
-    swapped, oversized = 0, []
+    swapped, oversized, with_data, retargeted, rewritten = 0, [], [], [], []
+    address_name = re.compile(r"_([0-9a-f]{8})$")
+
+    def resolve(name):
+        if name in names:
+            return names[name]
+        match = address_name.search(name)
+        return int(match[1], 16) if match else None
+
     for unit in units:
         address = int(unit["address"], 16)
         if "target" not in unit or address in misread:
@@ -187,8 +254,27 @@ def main():
         if unit["function"] in matched and (ROOT / unit["object"]).exists():
             # objdiff compares the function symbol; the image needs the whole
             # section to be the retail size (armcc pads a Thumb section to 4).
-            size = elf_sections(ROOT / unit["object"])[".text"][0]
-            if size == retail_size:
+            built = elf_sections(ROOT / unit["object"])
+            size = built[".text"][0]
+            data = [name for name, (length, flags) in built.items() if flags & 0x2 and length and name != ".text"]
+            difference = None if data or size != retail_size else code_difference(ROOT / unit["object"], ROOT / target, resolve)
+            if data:
+                # Its own constants or variables (`.constdata`, `.data`, `.bss`) live at
+                # retail addresses nothing records yet: the code goes in as retail bytes.
+                with_data.append((unit["function"], ",".join(data)))
+                if not args.full:
+                    continue
+            elif difference == "relocation":
+                # Calls or addresses something else than retail (objdiff can score that 100%).
+                retargeted.append(unit["function"])
+                if not args.full:
+                    continue
+            elif difference == "bytes":
+                # objdiff ignores some operand differences (`vldmia r1!` writeback vs `vldmia r1`).
+                rewritten.append(unit["function"])
+                if not args.full:
+                    continue
+            elif size == retail_size:
                 target = unit["object"]
                 function = unit["function"]
                 swapped += 1
@@ -293,6 +379,15 @@ def main():
     if oversized:
         print(f"{len(oversized)} functions at 100% in objdiff keep their retail bytes (compiled section size differs): "
               + ", ".join(f"{name} {size:#x} vs {want:#x}" for name, size, want in oversized[:8]))
+    if with_data:
+        print(f"{len(with_data)} functions at 100% in objdiff keep their retail bytes (they define data the image has "
+              "no recorded address for): " + ", ".join(f"{name} ({kinds})" for name, kinds in with_data[:8]))
+    if retargeted:
+        print(f"{len(retargeted)} functions at 100% in objdiff keep their retail bytes (they call or address something "
+              "else than retail): " + ", ".join(retargeted[:8]))
+    if rewritten:
+        print(f"{len(rewritten)} functions at 100% in objdiff keep their retail bytes (their instructions differ in "
+              "operands objdiff does not compare): " + ", ".join(rewritten[:8]))
     print(f"prepare {prepared - started:.1f}s, ld {linked - prepared:.1f}s, objcopy+compare {finished - linked:.1f}s")
     want = hashlib.sha256(code).hexdigest()
     got = hashlib.sha256(rebuilt).hexdigest()

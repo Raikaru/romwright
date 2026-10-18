@@ -513,7 +513,7 @@ ELF's machine and OS ABI, a PE with machine `0x1F2`) or given with `--platform 3
 romwright-cli new-project <image> <outdir> [--platform ID] [--name NAME] [--keys FILE...] [--map FILE]
               [--raw BASE --language ID] [--decompile all|first:N|ADDR,ADDR|none] [--budget-ms N] [--jobs N]
               [--toolchain PROFILE.json] [--manifest FILE] [--fact-pack PACK] [--json]
-              [--compiler armcc-<version>-b<build> [--cflags FLAGS]] [--tus FILE]
+              [--compiler armcc-<version>-b<build> [--cflags FLAGS]] [--tus FILE] [--names FILE]
 ```
 
 `--keys` hands the container loaders the user's keys (`prod.keys`, a RAP/klic, a 3DS `aes_keys.txt`); they
@@ -531,6 +531,12 @@ listed function's unit becomes `src/<module>/<file>/<function>.c` (and the same 
 `orig/target/`), `config/project.json` records its `file`, and objdiff gets one progress category per file. Every
 other function stays in its address shard. A path must be relative, `/`-separated plain names; anything else is
 refused. Functions stay one per unit, so the build, objdiff and a relink are unchanged.
+
+`--names FILE` (`ADDR NAME` per line, `#` comments) renames the functions the import found at those addresses,
+before anything is decompiled, so callers' C, `config/symbols.txt` and the objects use the names. It seeds
+nothing: `--map` hands every row to the analysis as a function entry, which changes what it finds (an SMT IV
+import with 895 names of functions it already found came back with 60 more functions, 376 resized and 138 in
+the other instruction set), while `--names` leaves the function set exactly as an unnamed import's.
 
 **3DS with armcc.** Nintendo's 3DS SDK builds with ARM's armcc (RVCT 4.0/4.1, ARM Compiler 5). The
 decomp.me compilers project hosts fourteen builds (`armcc.zip`, compiler and headers only); the manifest pins

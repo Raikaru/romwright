@@ -26,6 +26,7 @@ Standard library only.
 """
 import argparse
 import bisect
+import hashlib
 import json
 import re
 import struct
@@ -394,7 +395,8 @@ def main():
     if not image.exists():
         raise SystemExit(
             f"{image.relative_to(ROOT)} not found: put your decrypted dump there "
-            f"(sha256 {project['image']['sha256']}, {project['image']['size']} bytes)"
+            f"(sha256 {project['image']['sha256']}, {project['image']['size']} bytes; any container holding the "
+            "same program works: a .cxi, a .3ds/.cci card or a decrypted .cia)"
         )
     attributes = arm_attributes()
     written = skipped = 0
@@ -410,6 +412,15 @@ def main():
             program = n3ds.open_program(image, module["id"])
         except n3ds.ImageError as error:
             raise SystemExit(str(error))
+        # The program, not the container file: a card, its NCCH and a decrypted CIA of one
+        # build all hold the same code, and any other build would give wrong objects silently.
+        want = module.get("mapped_sha256")
+        if want and hashlib.sha256(program.code).hexdigest() != want:
+            raise SystemExit(
+                f"{image.relative_to(ROOT)}: its {module['id']} program is not the one this project was made from "
+                f"(decompressed .code sha256 {hashlib.sha256(program.code).hexdigest()}, expected {want}): "
+                "another version or region of the game?"
+            )
         functions = read_symbols(ROOT / module["symbols"])
         data = [(int(s["start"], 16), int(s["start"], 16) + int(s["size"], 16))
                 for s in module["sections"] if "x" not in s["permissions"]]
