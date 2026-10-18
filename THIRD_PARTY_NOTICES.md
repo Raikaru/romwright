@@ -14,6 +14,17 @@ described by Ghidra 12.1.3 source. The compatibility reference is upstream tag
 `slghpatexpress.cc`, `slghsymbol.cc`, `semantics.cc`, `context.cc`, and
 `sleigh.cc`. Ghidra is licensed under Apache-2.0.
 
+The portable release archives (`docs/releasing.md`) and `python setup.py`
+(`packaging/ghidra_data.py`) also carry a subset of the unmodified Ghidra
+12.1.3 release: `Ghidra/Processors/*/data/**` (the compiled `.sla` files and the
+`.ldefs`, `.pspec`, `.cspec`, `.opinion`, pattern and source files beside them)
+from `ghidra_12.1.3_PUBLIC_20260817.zip`
+(SHA-256 `93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54`),
+downloaded from the NationalSecurityAgency/ghidra GitHub release. Ghidra is
+licensed under Apache-2.0; its `LICENSE` text is shipped in the archive as
+`share/doc/romwright/GHIDRA-LICENSE` and beside the data it covers
+(`share/romwright/ghidra/LICENSE`). The release has no `NOTICE` file.
+
 `romwright-worker`'s block structurer (`crates/romwright-worker/src/printc/collapse.rs`
 and `collapse/`) is a Rust port of the same release's `decompile/cpp/blockaction.cc`
 (`CollapseStructure`, `LoopBody`, `TraceDAG`, `ActionFinalStructure`) and the
