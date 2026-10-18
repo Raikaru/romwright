@@ -56,15 +56,15 @@ fn err<T>(msg: impl Into<String>) -> Result<T> {
     Err(NativeRuntimeError(msg.into()))
 }
 
-/// The pinned Ghidra install root (env override, then the default path).
+/// The pinned Ghidra install root (env override, then `ghidra_12.1.3_PUBLIC`
+/// in the user's home directory: `$HOME`, or `%USERPROFILE%` on Windows).
 pub fn ghidra_dir() -> PathBuf {
     std::env::var("ROMWRIGHT_GHIDRA")
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
-            PathBuf::from(format!(
-                "{}/ghidra_12.1.3_PUBLIC",
-                std::env::var("HOME").unwrap_or_default()
-            ))
+            std::env::home_dir()
+                .unwrap_or_default()
+                .join("ghidra_12.1.3_PUBLIC")
         })
 }
 

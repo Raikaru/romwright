@@ -171,16 +171,7 @@ fn launch_bridge(args: &[String]) -> Result<Bridge, String> {
 fn ghidra_dir(args: &[String]) -> PathBuf {
     flag(args, "--ghidra")
         .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            std::env::var("ROMWRIGHT_GHIDRA")
-                .unwrap_or_else(|_| {
-                    format!(
-                        "{}/ghidra_12.1.3_PUBLIC",
-                        std::env::var("HOME").unwrap_or_default()
-                    )
-                })
-                .into()
-        })
+        .unwrap_or_else(romwright_core::native_runtime::ghidra_dir)
 }
 
 fn jvm_opens() -> Vec<String> {
