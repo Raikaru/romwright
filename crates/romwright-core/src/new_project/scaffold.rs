@@ -958,6 +958,12 @@ pub fn plan(
                         bytes = longer;
                         pools = scaffold_obj::arm_literal_pools(unit.address, &bytes, thumb);
                     }
+                    // A transfer the analysis recorded where the bytes are pool data
+                    // (it decoded a pool word as an instruction) is no branch.
+                    found.retain(|t| {
+                        let offset = t.from - unit.address;
+                        !pools.ranges.iter().any(|&(start, end)| offset >= start && offset < end)
+                    });
                     // Every direct branch to another known function, recorded or
                     // not: a tail call (`B`) is a relocation in the compiler's
                     // object too.
@@ -1500,7 +1506,9 @@ mod tests {
                 regions: vec![region(".text", 0x10_0000, "r-x"), region(".data", 0x20_0000, "rw-")],
                 ..Default::default()
             },
-            // No transfer recorded: the tail call is found from the bytes.
+            // The tail call is found from the bytes; the one transfer the analysis recorded
+            // starts in f's literal pool (it decoded the pool word), so it is no call.
+            transfers: vec![(0x10_000C, 0x10_0100, true)],
             ..Default::default()
         };
         // f: ldr r0, [pc, #4] ; b g ; bx lr ; .word 0x00200010     g: bx lr
