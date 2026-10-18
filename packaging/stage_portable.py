@@ -2,7 +2,7 @@
 """Assemble the portable romwright archive from built artifacts.
 
     python packaging/stage_portable.py --binaries target/dist --ghidra-opt native/build/ghidra_opt \\
-        --ghidra-data build/ghidra --output dist-portable [--smoke]
+        --ghidra-data build/ghidra --output dist-portable [--tag vX.Y.Z] [--smoke]
 
 writes `romwright-<version>-<os>-<arch>.zip` (Windows) or `.tar.gz` and a
 `.sha256` file beside it. The archive has one top-level directory that unpacks
@@ -159,6 +159,22 @@ def smoke(archive: Path, name: str) -> None:
         project.mkdir()
         env = {key: value for key, value in os.environ.items() if not key.startswith("ROMWRIGHT_")}
         env["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
+        # No home directory to fall back on either.
+        home = scratch_dir / "home"
+        home.mkdir()
+        env.update(HOME=str(home), USERPROFILE=str(home))
+        # Every file romwright looks for must resolve inside the unpacked archive:
+        # the build's own checkout may still exist on this machine (CI), so a
+        # successful decompile alone would not prove the executable-relative lookup.
+        paths = subprocess.run([str(cli), "paths"], cwd=project, env=env, capture_output=True,
+                               text=True, errors="replace")
+        print(paths.stdout.rstrip())
+        unpacked = (scratch_dir / "unpacked" / name).resolve()
+        for line in paths.stdout.splitlines():
+            label, state, location = line.split("\t", 2)
+            if state != "found" or unpacked not in Path(location).resolve().parents:
+                raise SystemExit(f"error: {label} resolves to {location} ({state}), "
+                                 f"not inside the unpacked archive {unpacked}")
         output = ""
         for command in ([cli, "import", FIXTURE, "--project", project],
                         [cli, "decompile", FIXTURE, SMOKE_ADDRESS, "--project", project]):
@@ -192,9 +208,14 @@ def main() -> int:
     parser.add_argument("--version", default=version(), help="default: the workspace version")
     parser.add_argument("--os", default=os_name())
     parser.add_argument("--arch", default=arch_name())
+    parser.add_argument("--tag", help="the release tag being built (vX.Y.Z); it must name the "
+                                      "workspace version the binaries carry")
     parser.add_argument("--smoke", action="store_true",
                         help="unpack the archive elsewhere and decompile the tiny fixture with it")
     arguments = parser.parse_args()
+    if arguments.tag and arguments.tag != f"v{arguments.version}":
+        raise SystemExit(f"error: tag {arguments.tag} does not match the workspace version "
+                         f"{arguments.version} (Cargo.toml [workspace.package]); bump it before tagging")
 
     name = f"romwright-{arguments.version}-{arguments.os}-{arguments.arch}"
     with tempfile.TemporaryDirectory(prefix="romwright-stage-") as staging:

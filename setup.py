@@ -346,7 +346,8 @@ def smoke_test(arguments, release: Path) -> None:
         say("  no ROMWRIGHT_* variable set: romwright resolves its files by default")
     cli = release / f"romwright-cli{EXE}"
     with tempfile.TemporaryDirectory(prefix="romwright-smoke-") as project:
-        for command in ([cli, "import", FIXTURE, "--project", project],
+        for command in ([cli, "paths"],
+                        [cli, "import", FIXTURE, "--project", project],
                         [cli, "decompile", FIXTURE, SMOKE_ADDRESS, "--project", project]):
             say("  $ " + " ".join(str(part) for part in command))
             result = subprocess.run([str(part) for part in command], cwd=project, env=env,
@@ -355,6 +356,14 @@ def smoke_test(arguments, release: Path) -> None:
                 say(result.stdout)
                 say(result.stderr)
                 raise SystemExit(f"error: `{command[1]}` failed with exit code {result.returncode}")
+            if command[1] == "paths":
+                say("  " + "\n  ".join(result.stdout.rstrip().splitlines()))
+                located = {line.split("\t")[0]: line.split("\t") for line in result.stdout.splitlines()}
+                ghidra = located.get("ghidra")
+                if (not ghidra or ghidra[1] != "found"
+                        or Path(ghidra[2]).resolve() != arguments.ghidra_dir.resolve()):
+                    raise SystemExit(f"error: romwright resolves its Ghidra data to {ghidra}, "
+                                     f"not {arguments.ghidra_dir}")
             output = result.stdout
         say("  " + "\n  ".join(output.rstrip().splitlines()))
     if SMOKE_EXPECTED not in output:

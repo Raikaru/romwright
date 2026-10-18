@@ -56,15 +56,33 @@ supports: [docs/support-matrix.md](docs/support-matrix.md).
 
 ## Quick start
 
-Needs Rust stable, a C++ toolchain with zlib, Python 3.10+, and a Ghidra
-12.1.3 install for its SLEIGH language data (`$ROMWRIGHT_GHIDRA`, default
-`~/ghidra_12.1.3_PUBLIC`). No JVM runs on the supported path.
+Two ways in; neither needs a JVM, a Ghidra install or an environment variable.
 
-<!-- not gated: builds native components whose toolchains are host-specific; the workflow they enable is gated by tests/m6-001_documented_workflow.py -->
+**Download a release.** Take `romwright-<version>-<os>-<arch>.zip` (Windows) or
+`.tar.gz` (Linux, macOS) from the
+[releases page](https://github.com/Raikaru/romwright/releases), unpack it
+anywhere, and run `bin/romwright-cli` (put `bin/` on `PATH` to run it from any
+directory). The archive carries the worker, the patched decompiler, the
+language specs and the Ghidra 12.1.3 language data, found relative to the
+executable (`bin/romwright-cli paths` shows where).
+
+**Or build from a source checkout, with one command:**
+
+<!-- not gated: builds native components whose toolchains are host-specific; setup.py ends by decompiling tests/fixtures-src/tiny_bin and checking the output -->
 ```sh
-./native/build_ghidra_opt.sh          # the patched native decompiler
-cargo build --release
+python setup.py        # python3 on Linux and macOS; standard library only
 ```
+
+`setup.py` checks the prerequisites and names what is missing and how to get it
+(Rust via [rustup](https://rustup.rs); a C++11 compiler, `make`, zlib and `git`;
+on Windows [MSYS2](https://www.msys2.org) MinGW64 with `mingw-w64-x86_64-gcc
+mingw-w64-x86_64-make mingw-w64-x86_64-zlib`, and Git for Windows), downloads
+the pinned Ghidra 12.1.3 release once (checksum-verified, cached, only its
+language data kept in `build/ghidra`), builds `native/build/ghidra_opt` and
+`cargo build --release -p romwright-cli -p romwright-worker`, then imports
+`tests/fixtures-src/tiny_bin` and decompiles `00400466` as a smoke test. A rerun
+skips what is done. The options and what is read where:
+[docs/environment.md](docs/environment.md).
 
 `romwright-cli import <binary>` imports natively; `--oracle` (with
 `--ghidra DIR`) runs the Ghidra bridge instead and exists only to produce
