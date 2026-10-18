@@ -130,7 +130,9 @@ repository root does the following, then smoke-tests it:
 2. downloads the pinned Ghidra 12.1.3 release, verifies its SHA-256, and
    extracts the language data (see above) into `build/ghidra`, where romwright
    finds it with no variable set (`--ghidra-dir` chooses another place, which
-   then needs `ROMWRIGHT_GHIDRA`; `--ghidra-zip` uses a zip you already have),
+   then needs `ROMWRIGHT_GHIDRA`; `--ghidra-zip` uses a zip you already have, and
+   its SHA-256 is checked against the pinned digest before anything is read from
+   it, whether or not the data is already extracted),
    then compiles the languages this repository carries (below) and installs them
    beside it (`--skip-languages` skips that);
 3. builds `native/build/ghidra_opt` (on Windows by driving MSYS2's MINGW64
@@ -168,11 +170,19 @@ install; the one in the pinned release zip (`Ghidra/Features/Decompiler/os/
 win_x86_64` or `linux_x86_64`, extracted into the cache, not into the shipped
 data); else `sleigh_opt` built from the pinned, unmodified decompiler sources by
 `native/build_sleigh.sh` (macOS, Linux on ARM; the release ships no compiler
-for them). The `.sla` files are byte-identical from the Windows release
+for them; on macOS it builds for the host's architecture, arm64 or x86_64,
+`native/darwin_arch.sh`). The `.sla` files are byte-identical from the Windows release
 compiler and the source-built one. Languages of other third-party Ghidra
 extensions (Allegrex/PSP, SPU/PS3, Game Boy, 65816, M16C, the RISC-V
 `RV32G`/`RV64G` variants) have no vendored source and are not produced: install
 those extensions' own `data/languages` under `ROMWRIGHT_GHIDRA` if you need them.
+
+A test that needs one of these languages (the `native::vsa` and `native::discovery`
+tests for r5900 and Gekko, the Xenon lookup in `architecture.rs`) prints `SKIP:` and
+passes when the language is not installed, so a contributor who has not run
+`python setup.py` is not told the code is broken. CI provisions the languages
+first and sets `ROMWRIGHT_REQUIRE_LANGUAGES=1`, which turns that skip into a
+failure: the coverage cannot silently disappear.
 
 A rerun skips what is done: the extraction when `build/ghidra` carries the
 matching marker, the download when the cache holds the verified zip,

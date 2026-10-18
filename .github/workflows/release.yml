@@ -1,31 +1,42 @@
 name: Release
 
 # Builds the portable archives (docs/releasing.md, "Portable archives") on
-# Windows, Linux and macOS and attaches them to the release of the pushed
-# `v*` tag. workflow_dispatch builds and uploads them as workflow artifacts
-# only. Every script step below is a script in this repository that was run
-# locally: packaging/ghidra_data.py, packaging/languages.py, packaging/stage_portable.py and
-# native/build_ghidra_opt.sh (and native/build_sleigh.sh on macOS).
+# Windows, Linux and macOS (Apple silicon and Intel) and attaches them to the
+# release of the pushed `v*` tag. workflow_dispatch builds and uploads them as
+# workflow artifacts only. Every script step below is a script in this
+# repository that was run locally: packaging/ghidra_data.py,
+# packaging/languages.py, packaging/stage_portable.py,
+# packaging/check_archive_arch.py and native/build_ghidra_opt.sh (and
+# native/build_sleigh.sh on macOS).
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
 
+# Least privilege: the package jobs only read the repository. Only `publish`
+# writes (it creates the release and uploads to it).
 permissions:
-  contents: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   package:
-    name: Package (${{ matrix.os }})
+    name: Package (${{ matrix.artifact }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        # Each runner builds for its own architecture and names its archive by it
+        # (romwright-<version>-<os>-<arch>). macos-latest is Apple silicon (arm64);
+        # macos-15-intel is the Intel runner (macos-13, the previous one, is retired).
+        include:
+          - {os: windows-latest, artifact: windows-x86_64}
+          - {os: ubuntu-latest, artifact: linux-x86_64}
+          - {os: macos-latest, artifact: macos-aarch64}
+          - {os: macos-15-intel, artifact: macos-x86_64}
     steps:
       - uses: actions/checkout@v4
 
@@ -84,9 +95,17 @@ jobs:
           if [ "$GITHUB_REF_TYPE" = tag ]; then TAG_ARGS="--tag $GITHUB_REF_NAME"; else TAG_ARGS=""; fi
           python packaging/stage_portable.py $TAG_ARGS --output dist-portable --smoke
 
+      # The archive is named after the runner's architecture, not after what was
+      # compiled: fail the job if any binary in it is for another one. The script
+      # reads the ELF (Linux), Mach-O (macOS, `lipo -archs` equivalent, so a
+      # universal binary must hold only that architecture) or PE (Windows) header.
+      - name: Check every binary has the archive's architecture
+        shell: bash
+        run: python packaging/check_archive_arch.py dist-portable
+
       - uses: actions/upload-artifact@v4
         with:
-          name: romwright-${{ runner.os }}
+          name: romwright-${{ matrix.artifact }}
           path: dist-portable/*
           if-no-files-found: error
 
@@ -95,6 +114,8 @@ jobs:
     needs: package
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}

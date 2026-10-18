@@ -103,6 +103,34 @@ pub fn slafile_for_id(language_dir: &Path, id: &str) -> Result<Option<String>> {
     Ok(None)
 }
 
+/// Test gate for a test that lifts with language `id`: true when `install`
+/// holds its compiled `.sla`. Otherwise the test is skipped with a message that
+/// says what to run, because a missing language (romwright compiles PSX, r5900,
+/// VU, RSP, Xenon and Gekko itself, `python setup.py`) is not a defect in the
+/// code under test. CI sets `ROMWRIGHT_REQUIRE_LANGUAGES` after provisioning the
+/// languages, so there a missing one fails instead of silently dropping coverage.
+#[cfg(test)]
+pub(crate) fn language_installed(install: &Path, id: &str) -> bool {
+    let compiled = directory_for_id(install, id)
+        .ok()
+        .flatten()
+        .and_then(|dir| Some(dir.join(slafile_for_id(&dir, id).ok().flatten()?)))
+        .is_some_and(|sla| sla.is_file());
+    if compiled {
+        return true;
+    }
+    let message = format!(
+        "language {id} is not installed in {}; run `python setup.py` \
+         (packaging/languages.py compiles romwright's own languages)",
+        install.display()
+    );
+    if std::env::var_os("ROMWRIGHT_REQUIRE_LANGUAGES").is_some() {
+        panic!("{message}");
+    }
+    eprintln!("SKIP: {message}");
+    false
+}
+
 fn language_dir_files(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut files = std::fs::read_dir(dir)?
         .filter_map(|entry| entry.ok().map(|entry| entry.path()))
@@ -168,21 +196,12 @@ mod tests {
     #[test]
     fn resolves_installed_xenon_language() {
         let install = crate::native_runtime::ghidra_dir();
-        if !install.join("Ghidra").is_dir() {
-            eprintln!("SKIP: no Ghidra install at {}", install.display());
+        let id = "PowerPC:BE:64:Xenon-32addr";
+        if !language_installed(&install, id) {
             return;
         }
-        let Some(dir) = directory_for_id(&install, "PowerPC:BE:64:Xenon-32addr").unwrap() else {
-            eprintln!(
-                "SKIP: Xenon-32addr is not installed in {}; run `python setup.py` \
-                 (packaging/languages.py)",
-                install.display()
-            );
-            return;
-        };
-        let sla = slafile_for_id(&dir, "PowerPC:BE:64:Xenon-32addr")
-            .unwrap()
-            .expect("no slafile in xenon.ldefs");
+        let dir = directory_for_id(&install, id).unwrap().expect("language_installed found it");
+        let sla = slafile_for_id(&dir, id).unwrap().expect("no slafile in xenon.ldefs");
         assert!(dir.join(sla).is_file(), "xenon.sla missing in {}", dir.display());
     }
 }

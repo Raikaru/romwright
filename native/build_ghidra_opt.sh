@@ -44,6 +44,9 @@ touch slghparse.cc slghparse.hh slghscan.cc grammar.cc xml.cc pcodeparse.cc
 # Windows (MSYS2 MinGW-w64): Ghidra's sources select their Windows paths
 # (binary-mode stdio, Win32 directory listing) on _WINDOWS, and a static link
 # keeps the binary free of the MinGW runtime DLLs. The product is ghidra_opt.exe.
+#
+# macOS: the vendored Makefile builds x86_64 only; native/darwin_arch.sh
+# overrides that for the host architecture (arm64 or x86_64).
 MAKE_ARGS=()
 EXE=""
 WINDOWS=""
@@ -52,6 +55,12 @@ case "$(uname -s)" in
         MAKE_ARGS=(ADDITIONAL_FLAGS=-D_WINDOWS MAKE_STATIC=-static)
         EXE=".exe"
         WINDOWS=1
+        ;;
+    Darwin)
+        # shellcheck source=native/darwin_arch.sh
+        . "$ROOT/native/darwin_arch.sh"
+        host_darwin_make_args
+        MAKE_ARGS=("${DARWIN_MAKE_ARGS[@]}")
         ;;
 esac
 MAKE_BIN="${MAKE:-make}"
