@@ -127,7 +127,14 @@ pub fn relocate_transfers(arch: Arch, entry: u64, bytes: &mut [u8], thumb: bool,
             continue;
         }
         let at = (t.from - entry) as usize;
-        if at >= bytes.len() {
+        // An instruction sits on its own width: a transfer the analysis recorded
+        // mid-word (Thumb decoding of A32 code) is not a branch in these bytes.
+        let width = match arch {
+            Arch::Arm32 if thumb => 2,
+            Arch::X86_64 => 1,
+            _ => 4,
+        };
+        if at >= bytes.len() || at % width != 0 {
             continue;
         }
         let offset = at as u64;
@@ -237,15 +244,18 @@ pub struct LiteralPools {
 /// One pass in address order: compilers place a pool after the code that
 /// reads it, so a pool word is already known to be data when the scan reaches
 /// it and is not decoded as an instruction (a pool constant that happens to
-/// look like a PC-relative load reads nothing).
-pub fn arm_literal_pools(bytes: &[u8], thumb: bool) -> LiteralPools {
+/// look like a PC-relative load reads nothing). `entry` is the function's
+/// address: a Thumb function may start mid-word, and a Thumb load's base and
+/// its pool word are word-aligned in memory, not in the function.
+pub fn arm_literal_pools(entry: u64, bytes: &[u8], thumb: bool) -> LiteralPools {
     let len = bytes.len() as u64;
+    let skew = entry % 4;
     let mut data: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
     let mut ranges: Vec<(u64, u64)> = Vec::new();
     let mut words: Vec<u64> = Vec::new();
     let mut reach = len;
     let mut read = |data: &mut std::collections::BTreeSet<u64>, at: u64, size: u64, word: bool| {
-        if at % 4 != 0 {
+        if (at + skew) % 4 != 0 {
             return;
         }
         if at + size <= len {
@@ -263,12 +273,13 @@ pub fn arm_literal_pools(bytes: &[u8], thumb: bool) -> LiteralPools {
         let mut at = 0u64;
         while at + 2 <= len {
             let Some(half) = read_u16(bytes, at as usize) else { break };
-            if data.contains(&(at & !3)) {
+            let word_start = ((at + skew) & !3).checked_sub(skew);
+            if word_start.is_some_and(|start| data.contains(&start)) {
                 at += 2;
                 continue;
             }
             if half & 0xF800 == 0x4800 {
-                read(&mut data, ((at + 4) & !3) + (half as u64 & 0xFF) * 4, 4, true);
+                read(&mut data, ((at + skew + 4) & !3) - skew + (half as u64 & 0xFF) * 4, 4, true);
             } else if half & 0xF800 == 0xF000 {
                 // The first half of a BL/BLX pair: skip its second half.
                 at += 2;
@@ -818,6 +829,29 @@ mod tests {
     }
 
     #[test]
+    fn a_thumb_function_starting_mid_word_reads_its_pool_from_the_aligned_word() {
+        // At 0x2c68e2: lsls r0, r1, #3 ; ldr r1, [pc, #4] ; adds r0, r0, r1 ; bx lr ; .short 0 ; .word pool
+        // The load at +2 reads ((0x2c68e4 + 4) & ~3) + 4 = 0x2c68ec: offset 0xa, not 8.
+        let bytes: Vec<u8> = [0x00C8u16, 0x4901, 0x1840, 0x4770, 0x0000, 0x0010, 0x0020]
+            .iter()
+            .flat_map(|h| h.to_le_bytes())
+            .collect();
+        let pools = arm_literal_pools(0x2c_68e2, &bytes, true);
+        assert_eq!(pools.words, [0xa]);
+        assert_eq!(pools.ranges, [(0xa, 0xe)]);
+    }
+
+    #[test]
+    fn a_transfer_recorded_mid_word_leaves_arm_bytes_alone() {
+        // `vsub.f32` then a word whose upper half reads as a branch when decoded from +6.
+        let mut bytes: Vec<u8> = [0xEE32_2AC1u32, 0x0A90_FFFE].iter().flat_map(|w| w.to_le_bytes()).collect();
+        let before = bytes.clone();
+        let transfers = [Transfer { from: 0x1006, to: 0x2000, name: "g" }];
+        assert!(relocate_transfers(Arch::Arm32, 0x1000, &mut bytes, false, &transfers).is_empty());
+        assert_eq!(bytes, before);
+    }
+
+    #[test]
     fn arm_tail_calls_and_conditional_calls_are_jump24() {
         // b 0x1100 from 0x1000 (imm24 0x3E); blne 0x1100 from 0x1004 (imm24 0x3D).
         let mut bytes: Vec<u8> = [0xEA00_003Eu32, 0x1B00_003D].iter().flat_map(|w| w.to_le_bytes()).collect();
@@ -836,7 +870,7 @@ mod tests {
             .iter()
             .flat_map(|w| w.to_le_bytes())
             .collect();
-        let pools = arm_literal_pools(&bytes, false);
+        let pools = arm_literal_pools(0x1000, &bytes, false);
         assert_eq!(pools.ranges, [(12, 20)]);
         assert_eq!(pools.words, [12, 16]);
         assert!(arm_direct_branches(0x1000, &bytes, false, &pools).is_empty());

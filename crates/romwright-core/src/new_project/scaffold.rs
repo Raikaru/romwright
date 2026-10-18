@@ -916,7 +916,7 @@ pub fn plan(
                 let mut relocs = Vec::new();
                 let mut pools = scaffold_obj::LiteralPools::default();
                 if arm {
-                    pools = scaffold_obj::arm_literal_pools(&bytes, thumb);
+                    pools = scaffold_obj::arm_literal_pools(unit.address, &bytes, thumb);
                     // The analysis sizes a function to its last instruction; the pool
                     // its loads read follows it, and belongs to it in the compiler's
                     // object. Take it in when it ends before the next function.
@@ -926,7 +926,7 @@ pub fn plan(
                         && let Some(longer) = (module.code)(unit.address, pools.end as usize)
                     {
                         bytes = longer;
-                        pools = scaffold_obj::arm_literal_pools(&bytes, thumb);
+                        pools = scaffold_obj::arm_literal_pools(unit.address, &bytes, thumb);
                     }
                     // Every direct branch to another known function, recorded or
                     // not: a tail call (`B`) is a relocation in the compiler's
