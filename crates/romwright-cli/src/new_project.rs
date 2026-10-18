@@ -158,7 +158,9 @@ fn new_project(args: &[String]) -> Result<(), String> {
     let image_arg = args.get(2).ok_or("new-project needs an image and an outdir")?;
     let outdir = PathBuf::from(args.get(3).ok_or("new-project needs an outdir")?);
     let mut image_path = PathBuf::from(image_arg);
-    let mut bytes = std::fs::read(&image_path).map_err(|e| format!("{image_arg}: {e}"))?;
+    // A large 3DS card is read as its program view (headers, exheader, ExeFS),
+    // not its gigabytes of RomFS; every other image whole.
+    let mut bytes = romwright_core::native::read_input(&image_path).map_err(|e| format!("{image_arg}: {e}"))?;
     let mut image_name = image_path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())

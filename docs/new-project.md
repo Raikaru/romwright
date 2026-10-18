@@ -542,7 +542,10 @@ function), and a pool word holding a function address or an address in a non-exe
 `R_ARM_ABS32` to that function or to `DAT_<address>` (eight lowercase hex digits). Each object carries the
 `.ARM.attributes` armcc writes (MPCore, ARMv6K, VFPv2), so objdiff decodes both sides as ARMv6K. An NCCH's
 exheader code-set info maps `.code` as `.text` (r-x), `.rodata` (r--), `.data` (rw-) and the zero-filled
-`.bss`, so the decompiler treats pools as constants and names the global they hold.
+`.bss`, so the decompiler treats pools as constants and names the global they hold. A large NCCH or NCSD
+(64 MiB and up) is read as its program view: headers, exheader and ExeFS, with the RomFS and code-less
+partitions left out (`threeds::program_view`). The import stores and maps that view (Shin Megami Tensei IV:
+a few MB of a 1.8 GB card), and `config/project.json` still records the whole file's sha256.
 
 Finding the build and flags: compile a few hundred decompiled functions with every build and a few flag sets and
 rank them by objdiff score. On Shin Megami Tensei IV (USA, 9,350 functions, 240 sampled) every RVCT 4.1 build
