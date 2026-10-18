@@ -157,15 +157,20 @@ fn program_view_from(path: &std::path::Path, min_length: u64) -> std::io::Result
     if file.read_exact(&mut header).is_err() {
         return Ok(None);
     }
-    let mut read_at = |offset: u64, length: u64| -> std::io::Result<Vec<u8>> {
-        let mut out = vec![0u8; length as usize];
+    // Every range is checked against the file before anything is allocated: a
+    // header's offsets and sizes are untrusted.
+    let mut read_at = |offset: u64, size: u64| -> std::io::Result<Vec<u8>> {
+        if !offset.checked_add(size).is_some_and(|end| end <= length) {
+            return Err(invalid_range("a range lies beyond the end of the file"));
+        }
+        let mut out = vec![0u8; usize::try_from(size).map_err(|_| invalid_range("a range is too large"))?];
         file.seek(SeekFrom::Start(offset))?;
         file.read_exact(&mut out)?;
         Ok(out)
     };
     let word = |data: &[u8], at: usize| u32::from_le_bytes(data[at..at + 4].try_into().unwrap()) as u64;
     if is_ncch(&header) {
-        return Ok(Some(ncch_view(&mut read_at, 0)?.unwrap_or_default()).filter(|view| !view.is_empty()));
+        return Ok(Some(ncch_view(&mut read_at, 0, length)?.unwrap_or_default()).filter(|view| !view.is_empty()));
     }
     if !is_ncsd(&header) {
         return Ok(None);
@@ -178,7 +183,8 @@ fn program_view_from(path: &std::path::Path, min_length: u64) -> std::io::Result
     let mut out = read_at(0, first)?;
     for index in 0..8 {
         let (offset, size) = (word(&out, 0x120 + index * 8) * unit, word(&out, 0x124 + index * 8) * unit);
-        let view = if size == 0 { None } else { ncch_view(&mut read_at, offset)? };
+        // An NCCH may not reach past its own partition.
+        let view = if size == 0 { None } else { ncch_view(&mut read_at, offset, offset.saturating_add(size))? };
         let (new_offset, new_size) = match view {
             Some(view) => {
                 let at = out.len() as u64;
@@ -196,23 +202,36 @@ fn program_view_from(path: &std::path::Path, min_length: u64) -> std::io::Result
     Ok(Some(out))
 }
 
+fn invalid_range(message: &str) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::InvalidData, format!("malformed 3DS image: {message}"))
+}
+
 /// The program view of the NCCH at `offset` (see [`program_view`]), `None`
 /// when it is not an NCCH or has no ExeFS (a CFA: manual, update data).
+/// `limit` is the end of the container it must fit in: its partition in an
+/// NCSD, the file for a bare NCCH. A header that points outside it is an error.
 fn ncch_view(
     read_at: &mut dyn FnMut(u64, u64) -> std::io::Result<Vec<u8>>,
     offset: u64,
+    limit: u64,
 ) -> std::io::Result<Option<Vec<u8>>> {
+    if limit.saturating_sub(offset) < 0x200 {
+        return Err(invalid_range("an NCCH is smaller than its header"));
+    }
     let header = read_at(offset, 0x200)?;
     if !is_ncch(&header) {
         return Ok(None);
     }
-    let unit = 0x200u64 << header[0x188 + 6].min(8);
-    let word = |at: usize| u32::from_le_bytes(header[at..at + 4].try_into().unwrap()) as u64;
-    let (exefs_offset, exefs_size) = (word(0x1A0) * unit, word(0x1A4) * unit);
+    let parsed = parse_ncch_header(&header).map_err(|e| invalid_range(&e.to_string()))?;
+    let unit = ncch_media_unit(&parsed).map_err(|e| invalid_range(&e.to_string()))?;
+    let (exefs_offset, exefs_size) = (parsed.exefs_off_units as u64 * unit, parsed.exefs_size_units as u64 * unit);
     if exefs_size == 0 {
         return Ok(None);
     }
-    let end = (exefs_offset + exefs_size).max(0x200 + word(0x180)).next_multiple_of(unit);
+    let end = (exefs_offset + exefs_size).max(0x200 + parsed.exheader_size as u64).next_multiple_of(unit);
+    if end > limit - offset {
+        return Err(invalid_range("an NCCH's ExeFS lies beyond its partition"));
+    }
     let mut view = read_at(offset, end)?;
     view[0x104..0x108].copy_from_slice(&((end / unit) as u32).to_le_bytes());
     // RomFS offset, size and hash-region size.
@@ -1156,6 +1175,76 @@ mod tests {
         // Small files are read whole.
         assert!(program_view(&dir.join("game.cxi")).unwrap().is_none());
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    /// A 64 MiB file (the size `program_view` starts to trim at) with an NCCH header
+    /// at 0: the given version and ncchflag[6], ExeFS offset and size, exheader size 0.
+    fn big_ncch(name: &str, version: u16, shift: u8, exefs: (u32, u32)) -> std::path::PathBuf {
+        use std::io::{Seek, SeekFrom, Write};
+        let path = std::env::temp_dir().join(format!("romwright-{name}-{}.cxi", std::process::id()));
+        let mut header = vec![0u8; 0x200];
+        header[0x100..0x104].copy_from_slice(b"NCCH");
+        put16(&mut header, 0x112, version);
+        header[0x188 + 6] = shift;
+        put32(&mut header, 0x1A0, exefs.0);
+        put32(&mut header, 0x1A4, exefs.1);
+        let mut file = std::fs::File::create(&path).unwrap();
+        file.set_len(PROGRAM_VIEW_MIN).unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+        file.write_all(&header).unwrap();
+        path
+    }
+
+    #[test]
+    fn an_ncch_header_pointing_past_the_file_is_an_error_not_an_allocation() {
+        // ExeFS offset and size 0xFFFFFFFF units of 0x200 << 8: about 2^49 bytes.
+        let path = big_ncch("huge", 0, 8, (u32::MAX, u32::MAX));
+        let error = program_view(&path).expect_err("a range that cannot fit the file");
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert!(error.to_string().contains("beyond"), "{error}");
+    }
+
+    #[test]
+    fn an_ncch_whose_exefs_ends_past_the_file_is_an_error() {
+        // Units of 0x200: the ExeFS ends 0x1E000 bytes past the 64 MiB file.
+        let path = big_ncch("past-end", 0, 0, (0x1FFF0, 0x100));
+        let error = program_view(&path).expect_err("an ExeFS past the end of the file");
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn a_version_1_ncch_counts_its_offsets_in_bytes() {
+        // ExeFS at byte 0x20000, 0x400 long: the view reads through 0x20400.
+        let path = big_ncch("v1", 1, 0, (0x20000, 0x400));
+        let view = program_view(&path).unwrap().expect("a program view");
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(view.len(), 0x20400);
+        assert_eq!(&view[0x104..0x108], &0x20400u32.to_le_bytes());
+    }
+
+    #[test]
+    fn an_ncch_may_not_reach_past_its_ncsd_partition() {
+        let dir = std::env::temp_dir().join(format!("romwright-part-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // One partition of 4 units at unit 0x20 (byte 0x4000), its NCCH a version-1
+        // image whose ExeFS (0x1000 bytes at 0x1000) ends after the partition but
+        // inside the file.
+        let mut ncsd = vec![0u8; 0x4000 + 0x10000];
+        ncsd[0x100..0x104].copy_from_slice(b"NCSD");
+        put32(&mut ncsd, 0x120, 0x20);
+        put32(&mut ncsd, 0x124, 4);
+        ncsd[0x4100..0x4104].copy_from_slice(b"NCCH");
+        put16(&mut ncsd, 0x4112, 1);
+        put32(&mut ncsd, 0x41A0, 0x1000);
+        put32(&mut ncsd, 0x41A4, 0x1000);
+        let path = dir.join("part.cci");
+        std::fs::write(&path, &ncsd).unwrap();
+        let error = program_view_from(&path, 0).expect_err("an ExeFS outside its partition");
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert!(error.to_string().contains("partition"), "{error}");
     }
 
     fn build_tmd(content_size: u64, ctype: u16) -> Vec<u8> {
