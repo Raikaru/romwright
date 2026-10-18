@@ -8,17 +8,14 @@
 #
 # Usage: native/languages/vu/install.sh [GHIDRA_INSTALL_DIR]
 #   default: $ROMWRIGHT_GHIDRA or ~/ghidra_12.1.3_PUBLIC
+
+# The build itself is packaging/languages.py (Python, so the same code runs on
+# Windows, Linux and macOS; `python setup.py` and the release workflow call it
+# for all languages at once). This script installs VU:LE:64:micro alone, always
+# recompiling, into GHIDRA_INSTALL_DIR (a full Ghidra install, whose own sleigh
+# compiler is used, or the data directory `setup.py` made).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-SRC="$ROOT/native/languages/vu"
 GHIDRA="${1:-${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
-SLEIGH="$GHIDRA/Ghidra/Features/Decompiler/os/linux_x86_64/sleigh"
-DEST="$GHIDRA/Ghidra/Extensions/VU/data/languages"
-
-[ -x "$SLEIGH" ] || { echo "no sleigh compiler at $SLEIGH" >&2; exit 1; }
-
-"$SLEIGH" "$SRC/vu.slaspec" "$SRC/vu.sla"
-mkdir -p "$DEST"
-cp "$SRC/vu.sla" "$SRC/vu.ldefs" "$SRC/vu.pspec" "$SRC/vu.cspec" "$DEST/"
-echo "installed VU:LE:64:micro -> $DEST"
+exec "${PYTHON:-python3}" "$ROOT/packaging/languages.py" --ghidra "$GHIDRA" --only vu --force

@@ -24,6 +24,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "packaging"))
 import ghidra_data  # noqa: E402
+import languages  # noqa: E402
+import smoke_fixtures  # noqa: E402
 
 P = f"{ghidra_data.ZIP_ROOT}/Ghidra/Processors"
 MEMBERS = {
@@ -112,6 +114,33 @@ class GhidraData(unittest.TestCase):
         with self.assertRaises(ghidra_data.SetupError):
             ghidra_data.extract(other, self.root / "ghidra")
         self.assertFalse((self.root / "ghidra").exists())
+
+
+class Languages(unittest.TestCase):
+    def test_every_language_has_sources_and_installs_a_module(self) -> None:
+        chosen = languages.specs()
+        self.assertEqual({spec.name for spec in chosen},
+                         {"psx", "r5900", "rsp", "vu", "xenon", "gekko"})
+        for spec in chosen:
+            for source, _ in spec.copy_to_stage:
+                self.assertTrue(source.is_file(), source)
+            for source, name in spec.install:
+                self.assertTrue(source == "stage" or source.is_file(), name)
+            self.assertTrue(any(name.endswith(".ldefs") for _, name in spec.install), spec.name)
+
+    def test_unknown_language_is_refused_and_nothing_is_current_in_an_empty_install(self) -> None:
+        with self.assertRaises(ghidra_data.SetupError):
+            languages.select(["nonesuch"])
+        with tempfile.TemporaryDirectory() as scratch:
+            self.assertFalse(languages.is_current(Path(scratch)))
+            with self.assertRaises(ghidra_data.SetupError):
+                languages.install(Path(scratch), Path(scratch) / "cache")
+
+    def test_the_ps2_fixture_is_a_little_endian_mips_elf_with_the_ee_flags(self) -> None:
+        image = smoke_fixtures.ps2_elf()
+        self.assertEqual(image[:4], b"\x7fELF")
+        self.assertEqual(int.from_bytes(image[18:20], "little"), 8)  # EM_MIPS
+        self.assertEqual(int.from_bytes(image[36:40], "little") >> 28, 2)  # EF_MIPS_ARCH_3
 
 
 if __name__ == "__main__":

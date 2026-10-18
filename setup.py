@@ -15,7 +15,9 @@ does what a download of the source needs before `romwright-cli` can decompile:
  2. downloads the pinned Ghidra 12.1.3 release (cached, SHA-256 verified) and
     extracts only the language data romwright reads into `build/ghidra`, where
     romwright finds it without an environment variable
-    (`packaging/ghidra_data.py`);
+    (`packaging/ghidra_data.py`), then compiles the languages this repository
+    carries (PSX, r5900, VU, RSP, Xenon, Gekko) with the release's sleigh compiler
+    and installs them beside it (`packaging/languages.py`);
  3. builds the patched decompiler `native/build/ghidra_opt`
     (`native/build_ghidra_opt.sh`; on Windows through MSYS2's bash);
  4. runs `cargo build --release -p romwright-cli -p romwright-worker`;
@@ -41,7 +43,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "packaging"))
-import ghidra_data  # noqa: E402  (stdlib-only helper shared with the release workflow)
+import ghidra_data  # noqa: E402  (stdlib-only helpers shared with the release workflow)
+import languages  # noqa: E402
+import smoke_fixtures  # noqa: E402
 
 WINDOWS = os.name == "nt"
 EXE = ".exe" if WINDOWS else ""
@@ -271,6 +275,15 @@ def provision_ghidra(arguments) -> None:
     if result == "kept":
         say(f"  already extracted: {dest}")
     say(f"  Ghidra {ghidra_data.VERSION} language data: {dest}")
+    if arguments.skip_languages:
+        say("  romwright's own languages skipped (--skip-languages)")
+        return
+    # PS1, PS2 (r5900, VU), N64 RSP, Xbox 360 and GameCube/Wii languages are compiled from
+    # this repository's sources with Ghidra's sleigh compiler (packaging/languages.py).
+    result = languages.install(dest, arguments.cache_dir, zip_path=arguments.ghidra_zip,
+                               jobs=arguments.jobs)
+    if result == "kept":
+        say("  romwright's own languages (psx, r5900, rsp, vu, xenon, gekko): already compiled")
 
 
 def newest_native_source() -> float:
@@ -279,7 +292,7 @@ def newest_native_source() -> float:
         newest = max(newest, path.stat().st_mtime)
     for tree in NATIVE_INPUT_TREES:
         for base, directories, files in os.walk(tree):
-            directories[:] = [d for d in directories if d != "build"]
+            directories[:] = [d for d in directories if d not in ("build", "languages")]
             for name in files:
                 if Path(name).suffix in NATIVE_SUFFIXES:
                     newest = max(newest, (Path(base) / name).stat().st_mtime)
@@ -369,6 +382,28 @@ def smoke_test(arguments, release: Path) -> None:
     if SMOKE_EXPECTED not in output:
         raise SystemExit(f"error: the decompile of {SMOKE_ADDRESS} lacks `{SMOKE_EXPECTED}`")
     say(f"  ok: decompiled {SMOKE_ADDRESS} to `{SMOKE_EXPECTED}`")
+    if arguments.skip_languages:
+        return
+    # A language this repository compiles (r5900, not in the Ghidra release): import and
+    # decompile a PlayStation 2 ELF.
+    with tempfile.TemporaryDirectory(prefix="romwright-smoke-ps2-") as scratch:
+        elf = smoke_fixtures.write_ps2_elf(Path(scratch) / "ee.elf")
+        for command in ([cli, "import", elf, "--project", scratch + "/project"],
+                        [cli, "decompile", elf, f"{smoke_fixtures.ENTRY:08x}", "--project",
+                         scratch + "/project"]):
+            say("  $ " + " ".join(str(part) for part in command))
+            result = subprocess.run([str(part) for part in command], cwd=scratch, env=env,
+                                    capture_output=True, text=True, errors="replace")
+            if result.returncode != 0:
+                say(result.stdout)
+                say(result.stderr)
+                raise SystemExit(f"error: PS2 `{command[1]}` failed with exit code {result.returncode}")
+            say("  " + "\n  ".join(result.stdout.rstrip().splitlines()))
+            if command[1] == "import" and smoke_fixtures.LANGUAGE not in result.stdout:
+                raise SystemExit(f"error: the PS2 ELF was not imported as {smoke_fixtures.LANGUAGE}")
+    if "return param_1 + param_2;" not in result.stdout:
+        raise SystemExit("error: the PS2 decompile lacks `return param_1 + param_2;`")
+    say(f"  ok: imported and decompiled a PS2 ELF as {smoke_fixtures.LANGUAGE}")
 
 
 def main() -> int:
@@ -383,6 +418,8 @@ def main() -> int:
     parser.add_argument("--ghidra-zip", type=Path,
                         help=f"use this {ghidra_data.ZIP_NAME} instead of downloading it")
     parser.add_argument("--force-ghidra", action="store_true", help="extract the Ghidra data again")
+    parser.add_argument("--skip-languages", action="store_true",
+                        help="do not compile romwright's own languages (PS1, PS2, N64 RSP, Xbox 360, GameCube)")
     parser.add_argument("--msys2", help=r"MSYS2 root on Windows (default: C:\msys64, %%MSYS2_ROOT%%)")
     parser.add_argument("--install-msys2-packages", action="store_true",
                         help="Windows: run pacman for the missing MinGW64 packages")
@@ -398,6 +435,8 @@ def main() -> int:
     say(f"romwright setup ({platform.system()} {platform.machine()}, Python {platform.python_version()})")
     try:
         msys2, git_dir = check_prerequisites(arguments)
+        if git_dir is not None:  # `git apply` in the language build, `git` in native/build_*.sh
+            os.environ["PATH"] = str(git_dir) + os.pathsep + os.environ.get("PATH", "")
         if arguments.check:
             return 0
         step(1, "Ghidra language data")

@@ -130,13 +130,49 @@ repository root does the following, then smoke-tests it:
 2. downloads the pinned Ghidra 12.1.3 release, verifies its SHA-256, and
    extracts the language data (see above) into `build/ghidra`, where romwright
    finds it with no variable set (`--ghidra-dir` chooses another place, which
-   then needs `ROMWRIGHT_GHIDRA`; `--ghidra-zip` uses a zip you already have);
+   then needs `ROMWRIGHT_GHIDRA`; `--ghidra-zip` uses a zip you already have),
+   then compiles the languages this repository carries (below) and installs them
+   beside it (`--skip-languages` skips that);
 3. builds `native/build/ghidra_opt` (on Windows by driving MSYS2's MINGW64
    bash, found at `C:\msys64`, `%MSYS2_ROOT%` or `--msys2`);
 4. runs `cargo build --release -p romwright-cli -p romwright-worker`;
 5. imports `tests/fixtures-src/tiny_bin` into a temporary project and
    decompiles `00400466` with every `ROMWRIGHT_*` variable removed from the
-   environment, expecting `return param_2 + param_1;`.
+   environment, expecting `return param_2 + param_1;`, then imports and
+   decompiles a generated PlayStation 2 ELF (`packaging/smoke_fixtures.py`),
+   which needs the `r5900` language compiled in step 2.
+
+### romwright's own languages
+
+Six languages are not in the Ghidra release and come from sources in this
+repository; without them a PS1, PS2, N64 or Xbox 360 import fails
+(`No sleigh specification for r5900:LE:32:default`):
+
+| Language | Sources | Console |
+|---|---|---|
+| `PSX:LE:32:default` | `native/languages/psx` + stock MIPS in `third_party/ghidra/languages/mips` | PlayStation |
+| `r5900:LE:32:default` | `native/languages/r5900` | PlayStation 2 |
+| `VU:LE:64:micro` | `native/languages/vu` | PlayStation 2 vector units |
+| `RSP:BE:32:default` | `native/languages/rsp` | Nintendo 64 |
+| `PowerPC:BE:64:Xenon-32addr` | `native/languages/xenon` + the stock PowerPC sources in the Ghidra data | Xbox 360 |
+| `PowerPC:BE:32:Gekko_Broadway` | `third_party/ghidra/languages/gamecube` | GameCube, Wii |
+
+`packaging/languages.py` compiles each to a `.sla` and installs it as an
+extension module of the Ghidra data directory
+(`Ghidra/Extensions/<Module>/data/languages/`, where `architecture::discover`
+finds it), recording the sources' hash in `.romwright-languages.json` so that a
+rerun recompiles only what changed. It is the logic of the
+`native/languages/*/install.sh` scripts, which now call it, so it runs on
+Windows too. The compiler is, in order: `--sleigh`; the `sleigh` of a full Ghidra
+install; the one in the pinned release zip (`Ghidra/Features/Decompiler/os/
+win_x86_64` or `linux_x86_64`, extracted into the cache, not into the shipped
+data); else `sleigh_opt` built from the pinned, unmodified decompiler sources by
+`native/build_sleigh.sh` (macOS, Linux on ARM; the release ships no compiler
+for them). The `.sla` files are byte-identical from the Windows release
+compiler and the source-built one. Languages of other third-party Ghidra
+extensions (Allegrex/PSP, SPU/PS3, Game Boy, 65816, M16C, the RISC-V
+`RV32G`/`RV64G` variants) have no vendored source and are not produced: install
+those extensions' own `data/languages` under `ROMWRIGHT_GHIDRA` if you need them.
 
 A rerun skips what is done: the extraction when `build/ghidra` carries the
 matching marker, the download when the cache holds the verified zip,
