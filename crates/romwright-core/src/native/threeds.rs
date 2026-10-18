@@ -536,15 +536,9 @@ fn import_ncch_slice(ncch: &[u8], base: u64, keys: &super::keys::KeyStore) -> Re
         .ok_or_else(|| super::ImportError::Bad("ExeFS .code file offset overflow".into()))?;
     let entry = text_addr as u64;
     let mut imp = NativeImport::default();
-    imp.mappings = vec![Mapping {
-        vaddr: entry,
-        size: code_bytes.len() as u64,
-        file_off,
-        // The blob holds text plus ro/data: readable, writable, executable.
-        flags: 0x7,
-        bytes: code_bytes,
-    }];
-    imp.mapping_names = vec![".code".into()];
+    let (mappings, names) = code_set_mappings(&exheader_blob, entry, file_off, code_bytes);
+    imp.mappings = mappings;
+    imp.mapping_names = names;
     imp.functions = vec![NativeFunction {
         entry,
         name: "entry".into(),
@@ -553,6 +547,55 @@ fn import_ncch_slice(ncch: &[u8], base: u64, keys: &super::keys::KeyStore) -> Re
     imp.format = "ncch".into();
     imp.language = LANGUAGE.into();
     Ok(Some(imp))
+}
+
+/// The ARM11 code set as the kernel maps it (gbatek/3dbrew exheader SCI
+/// code-set info: text, ro and data at +0x10/+0x20/+0x30 as address, page
+/// count, byte size, then the .bss size at +0x3C). The decompressed `.code`
+/// holds the three segments back to back, each padded to its page count;
+/// .bss follows .data in memory and has no bytes. Separate permissions are
+/// what let analysis treat literal pools in .text and .rodata as constants.
+/// A code set whose segments do not tile the blob that way is mapped as one
+/// read/write/execute region, as before.
+fn code_set_mappings(exheader: &[u8], entry: u64, file_off: u64, code: Vec<u8>) -> (Vec<Mapping>, Vec<String>) {
+    let word = |at: usize| u32::from_le_bytes([exheader[at], exheader[at + 1], exheader[at + 2], exheader[at + 3]]) as u64;
+    let segments = [(".text", 0x10, 6u64), (".rodata", 0x20, 2), (".data", 0x30, 3)];
+    let mut layout = Vec::new();
+    let mut offset = 0u64;
+    let mut fits = true;
+    for (name, at, flags) in segments {
+        let (addr, pages, size) = (word(at), word(at + 4), word(at + 8));
+        if size == 0 && pages == 0 {
+            continue;
+        }
+        let span = pages * 0x1000;
+        fits &= size <= span;
+        layout.push((name, addr, offset, span, flags));
+        offset += span;
+    }
+    let tiles = fits
+        && layout.first().is_some_and(|first| first.1 == entry)
+        && offset as usize == code.len()
+        && layout.windows(2).all(|pair| pair[0].1 + pair[0].3 <= pair[1].1);
+    if !tiles {
+        let size = code.len() as u64;
+        return (vec![Mapping { vaddr: entry, size, file_off, flags: 0x7, bytes: code }], vec![".code".into()]);
+    }
+    let mut mappings = Vec::new();
+    let mut names = Vec::new();
+    for (name, addr, start, span, flags) in &layout {
+        let bytes = code[*start as usize..(*start + *span) as usize].to_vec();
+        mappings.push(Mapping { vaddr: *addr, size: *span, file_off: file_off + start, flags: *flags, bytes });
+        names.push(name.to_string());
+    }
+    let (data_addr, data_size, bss_size) = (word(0x30), word(0x38), word(0x3C));
+    let mapped_end = layout.last().map_or(entry, |last| last.1 + last.3);
+    let bss_end = data_addr + data_size + bss_size;
+    if bss_size > 0 && bss_end > mapped_end {
+        mappings.push(Mapping { vaddr: mapped_end, size: bss_end - mapped_end, file_off: 0, flags: 3, bytes: Vec::new() });
+        names.push(".bss".into());
+    }
+    (mappings, names)
 }
 
 /// Imports a lone NCCH image.
@@ -1200,5 +1243,30 @@ mod tests {
         cfa[0x600..0x605].copy_from_slice(b"icon\0");
         let result = import(&cfa).expect("NCCH recognised");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn code_set_info_splits_code_into_segments_with_permissions_and_bss() {
+        let mut exheader = vec![0u8; 0x400];
+        let mut set = |at: usize, values: [u32; 3]| {
+            for (i, v) in values.iter().enumerate() {
+                exheader[at + i * 4..at + i * 4 + 4].copy_from_slice(&v.to_le_bytes());
+            }
+        };
+        // text 2 pages, ro 1 page, data 1 page (0x800 bytes used), then 0x1900 bytes of .bss.
+        set(0x10, [0x10_0000, 2, 0x1F00]);
+        set(0x20, [0x10_2000, 1, 0x100]);
+        set(0x30, [0x10_3000, 1, 0x800]);
+        exheader[0x3C..0x40].copy_from_slice(&0x1900u32.to_le_bytes());
+        let code: Vec<u8> = (0..0x4000u32).map(|i| (i / 0x1000) as u8).collect();
+        let (mappings, names) = code_set_mappings(&exheader, 0x10_0000, 0x1000, code.clone());
+        assert_eq!(names, [".text", ".rodata", ".data", ".bss"]);
+        let layout: Vec<(u64, u64, u64)> = mappings.iter().map(|m| (m.vaddr, m.size, m.flags)).collect();
+        assert_eq!(layout, [(0x10_0000, 0x2000, 6), (0x10_2000, 0x1000, 2), (0x10_3000, 0x1000, 3), (0x10_4000, 0x1100, 3)]);
+        assert_eq!(mappings[1].bytes, [2u8; 0x1000]);
+        assert!(mappings[3].bytes.is_empty(), ".bss has no file bytes");
+        // A blob the page counts do not tile stays one read/write/execute region.
+        let (whole, names) = code_set_mappings(&exheader, 0x10_0000, 0x1000, code[..0x3000].to_vec());
+        assert_eq!((whole.len(), whole[0].flags, names), (1, 7, vec![".code".to_string()]));
     }
 }

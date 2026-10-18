@@ -129,10 +129,10 @@ pub const PLATFORMS: &[Platform] = &[
         id: "3ds",
         name: "Nintendo 3DS",
         status: Status::Scaffold,
-        toolkit: "Non-matching scaffold (no public toolchain reproduces Nintendo's RVCT/armcc output): pinned clang 22.1.8 compile check, objdiff-cli for ARMv6K target objects",
+        toolkit: "Per-function matching with `--compiler armcc-<version>-b<build>` (decomp.me's RVCT 4.0/4.1 and ARM Compiler 5.04 builds, wibo off Windows) and objdiff-cli against ARMv6K target objects; without it, a pinned clang 22.1.8 compile check. No whole-image build: the public armcc bundle has no linker or C runtime",
         needs: &[
-            "writes config/symbols.txt (mode:arm|thumb per function), config/modules.json (sections, load addresses, mapped-image sha256), include/, src/<module>/<shard>/<function>.c marked NON_MATCHING, orig/target/*.o and objdiff.json; `build.py` only proves the C compiles",
-            "input: an NCCH/NCSD/CIA (cleartext or zero fixed key; other keys via --keys), or a flat ExeFS .code with `--raw 0x100000 --language ARM:LE:32:v6 [--map symbols.map]`; a raw .code has no section table (one region) and the decompiler refuses functions that read the missing .bss",
+            "writes config/symbols.txt (mode:arm|thumb per function), config/modules.json (sections, load addresses, mapped-image sha256), include/, src/<module>/<shard>/<function>.c marked NON_MATCHING, orig/target/*.o (calls, tail calls and literal-pool addresses as relocations) and objdiff.json",
+            "input: an NCCH/NCSD/CIA (cleartext or zero fixed key; other keys via --keys), mapped as .text/.rodata/.data/.bss from the exheader, or a flat ExeFS .code with `--raw 0x100000 --language ARM:LE:32:v6 [--map symbols.map]`; a raw .code has no section table (one region) and the decompiler refuses functions that read the missing .bss",
             "retail-encrypted titles need the user's keys; none are stored",
         ],
     },

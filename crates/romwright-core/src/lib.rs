@@ -2496,6 +2496,21 @@ impl Core {
         entry: Option<u64>,
         opts: &emit_m2c::M2cOptions,
     ) -> Result<serde_json::Value> {
+        self.export_m2c_entries(binary, program, outdir, splits, entry.as_ref().map(std::slice::from_ref), opts)
+    }
+
+    /// [`Core::export_m2c`] for the functions at `entries` (all functions when
+    /// `None`) in one batch: one worker session decompiles them all, so a
+    /// selection costs one worker start, not one per function.
+    pub fn export_m2c_entries(
+        &self,
+        binary: &Path,
+        program: &str,
+        outdir: &Path,
+        splits: Option<&[crate::native::linkmap::SplitExtent]>,
+        entries: Option<&[u64]>,
+        opts: &emit_m2c::M2cOptions,
+    ) -> Result<serde_json::Value> {
         let budget = opts.budget.unwrap_or(exec::DEFAULT_BUDGET);
         let mut request = self.execution_request(binary, program, None, budget)?;
         let id = self.db.program_id(program)?;
@@ -2527,11 +2542,12 @@ impl Core {
             functions.iter().map(|f| (f.entry.offset, f.name.as_str())),
             self.symbols(program)?.iter().map(|s| (s.address.offset, s.name.as_str())),
         );
-        if let Some(entry) = entry {
-            functions.retain(|function| function.entry.offset == entry);
+        if let Some(entries) = entries {
+            let wanted: std::collections::HashSet<u64> = entries.iter().copied().collect();
+            functions.retain(|function| wanted.contains(&function.entry.offset));
             if functions.is_empty() {
                 return Err(CoreError::Io(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput, format!("no function at {entry:#x} in {program}"),
+                    std::io::ErrorKind::InvalidInput, format!("no function at {entries:x?} in {program}"),
                 )));
             }
         }
