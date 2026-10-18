@@ -213,6 +213,10 @@ jobs:
           echo "93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54  $RUNNER_TEMP/ghidra.zip" | sha256sum --check
           unzip -q "$RUNNER_TEMP/ghidra.zip" -d "$RUNNER_TEMP"
           echo "ROMWRIGHT_GHIDRA=$RUNNER_TEMP/ghidra_12.1.3_PUBLIC" >> "$GITHUB_ENV"
+      # `decompile` runs through native/build/ghidra_opt; without it every decompile
+      # in the gates below fails.
+      - name: Build the native decompiler
+        run: bash native/build_ghidra_opt.sh --jobs 4
       - name: Generate and validate all 20 ELF oracles
         run: |
           python3 tests/m1-007_oracle_test.py
