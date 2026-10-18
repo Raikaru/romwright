@@ -95,3 +95,6 @@ native/languages/xenon/vsx.sinc
 # Build artifact from the disasm harness.
 third_party/ghidra/decompiler/libsla.a
 third_party/ghidra/decompiler/com_opt/
+
+# Portable release archives (packaging/stage_portable.py)
+/dist-portable/

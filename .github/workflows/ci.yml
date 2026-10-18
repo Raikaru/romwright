@@ -33,7 +33,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m py_compile python/*.py packaging/*.py scripts/*.py
+      - run: python -m py_compile setup.py python/*.py packaging/*.py scripts/*.py
+      - name: Check the Ghidra data fetch the setup script and release workflow share
+        run: python3 tests/m6-008_ghidra_data.py
       - name: Produce and verify the release artifacts
         run: |
           python3 tests/m6-004_release_artifacts.py \
