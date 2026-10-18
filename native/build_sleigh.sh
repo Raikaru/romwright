@@ -28,6 +28,12 @@ BUILD=$(mktemp -d "${TMPDIR:-/tmp}/sleigh-opt-build.XXXXXX")
 trap 'rm -rf "$BUILD"' EXIT
 cp -r "$ROOT/third_party/ghidra/decompiler" "$BUILD/decompiler"
 cd "$BUILD/decompiler"
+# The generated parsers are committed with their grammars. A fresh checkout or a
+# copy gives the files timestamps in arbitrary order, and make then runs bison
+# or flex (not required, often absent) for a parser that looks older than its
+# grammar. Touch the generated files, in dependency order, so they never do.
+touch slghparse.cc slghparse.hh slghscan.cc grammar.cc xml.cc pcodeparse.cc
+
 
 MAKE_BIN="${MAKE:-make}"
 if ! command -v "$MAKE_BIN" > /dev/null 2>&1 && command -v mingw32-make > /dev/null 2>&1; then

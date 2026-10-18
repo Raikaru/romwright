@@ -35,6 +35,12 @@ git -C "$BUILD" add -A
 git -C "$BUILD" apply --whitespace=nowarn --ignore-space-change "$BUILD/apply.patch"
 
 cd "$BUILD/decompiler"
+# The generated parsers are committed with their grammars. A fresh checkout or a
+# copy gives the files timestamps in arbitrary order, and make then runs bison
+# or flex (not required, often absent) for a parser that looks older than its
+# grammar. Touch the generated files, in dependency order, so they never do.
+touch slghparse.cc slghparse.hh slghscan.cc grammar.cc xml.cc pcodeparse.cc
+
 # Windows (MSYS2 MinGW-w64): Ghidra's sources select their Windows paths
 # (binary-mode stdio, Win32 directory listing) on _WINDOWS, and a static link
 # keeps the binary free of the MinGW runtime DLLs. The product is ghidra_opt.exe.
