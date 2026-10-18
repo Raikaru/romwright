@@ -10,6 +10,8 @@
 //! check). `--decompile` takes `all` (the default), `first:N` (the first N
 //! functions of each module by address), `ADDR,ADDR` or `none`; `--jobs N`
 //! decompiles on N workers at once (default: the host's cores, at most 16).
+//! `--tus FILE` places functions in folders named after their original source
+//! files (`src/<module>/<file>/<function>.c`), one objdiff progress category each.
 
 use super::{flag, has_flag};
 use romwright_core::native::linkmap::SplitExtent;
@@ -54,6 +56,26 @@ fn selection(args: &[String]) -> Result<Selection, String> {
 
 fn extent(unit: &scaffold::Unit) -> SplitExtent {
     SplitExtent { tu: unit.tu.clone(), start: unit.address, end: unit.address + 1, name: String::new(), kind: "code".into() }
+}
+
+/// `--tus FILE`: `{"units": [{"module", "address", "tu"}, ...]}`, each function
+/// placed in its original source file (a relative path without extension).
+fn source_files(path: &str) -> Result<HashMap<(String, u64), String>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let document: serde_json::Value = serde_json::from_str(&text).map_err(|e| format!("{path}: not JSON: {e}"))?;
+    let units = document["units"].as_array().ok_or_else(|| format!("{path}: no `units` array"))?;
+    let mut files = HashMap::new();
+    for (index, unit) in units.iter().enumerate() {
+        let field = |name: &str| unit[name].as_str().ok_or_else(|| format!("{path}: units[{index}] has no `{name}`"));
+        let (module, address, file) = (field("module")?, field("address")?, field("tu")?);
+        let address = u64::from_str_radix(address.trim_start_matches("0x"), 16)
+            .map_err(|e| format!("{path}: units[{index}] address {address}: {e}"))?;
+        if !scaffold::valid_file_path(file) {
+            return Err(format!("{path}: units[{index}] file {file:?} is not a relative path of plain names"));
+        }
+        files.insert((module.to_string(), address), file.to_string());
+    }
+    Ok(files)
 }
 
 /// Functions per decompile batch: one worker start serves this many, and a
@@ -152,6 +174,10 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
         flag(args, "--cflags").map(|f| f.split_whitespace().map(str::to_string).collect()),
         &manifest,
     )?;
+    let files = match flag(args, "--tus") {
+        Some(path) => source_files(&path)?,
+        None => HashMap::new(),
+    };
 
     // The retail image goes into orig/ (user-owned bytes, ignored by git).
     let orig = outdir.join("orig").join(image_name);
@@ -261,6 +287,7 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
         modules,
         manifest: &manifest,
         profile: profile.as_deref(),
+        files: &files,
         compiler,
         romwright_version: env!("CARGO_PKG_VERSION"),
     };
