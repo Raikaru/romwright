@@ -12,12 +12,12 @@ A {{HEADLINE}} decompilation scaffold for the {{PLATFORM_NAME}} image `{{IMAGE}}
 * `include/`: `romwright_types.h` (base types for the {{DATA_MODEL}} data model and the
   decompiler's primitive names) and `romwright_protos.h` (recovered prototypes).
 * `src/<module>/<shard>/<function>.c`: romwright's decompiled C, one function per file, each
-  marked `NON_MATCHING`. It is a reading aid and a starting point, not retail-equivalent.{{FILES_NOTE}}
+  marked `NON_MATCHING`. It is a reading aid and a starting point to refine into retail-equivalent C.{{FILES_NOTE}}
 {{BUILD_LINE}}
 {{OBJDIFF_LINE}}
 
-The retail image is not part of this repository and neither is anything derived from its
-bytes (`orig/`, `build/`): put your own dump at `orig/{{IMAGE}}`.
+`orig/` and `build/` hold bytes derived from your own retail dump and stay out of version
+control: put your dump at `orig/{{IMAGE}}`.
 
 ## Quick start
 
