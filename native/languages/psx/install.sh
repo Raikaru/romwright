@@ -20,43 +20,14 @@
 #
 # Usage: native/languages/psx/install.sh [GHIDRA_INSTALL_DIR]
 #   default: $ROMWRIGHT_GHIDRA or ~/ghidra_12.1.3_PUBLIC
+
+# The build itself is packaging/languages.py (Python, so the same code runs on
+# Windows, Linux and macOS; `python setup.py` and the release workflow call it
+# for all languages at once). This script installs PSX:LE:32:default alone, always
+# recompiling, into GHIDRA_INSTALL_DIR (a full Ghidra install, whose own sleigh
+# compiler is used, or the data directory `setup.py` made).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-SRC="$ROOT/native/languages/psx"
-STOCK="$ROOT/third_party/ghidra/languages/mips"
 GHIDRA="${1:-${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
-SLEIGH="$GHIDRA/Ghidra/Features/Decompiler/os/linux_x86_64/sleigh"
-EXT="$GHIDRA/Ghidra/Extensions"
-DEST="$EXT/RomwrightPsx/data/languages"
-
-[ -x "$SLEIGH" ] || { echo "no sleigh compiler at $SLEIGH" >&2; exit 1; }
-
-STAGE=$(mktemp -d "${TMPDIR:-/tmp}/romwright-psx.XXXXXX")
-trap 'rm -rf "$STAGE"' EXIT
-cp "$STOCK/mips.sinc" "$STOCK/mips32Instructions.sinc" "$STOCK/mipsfloat.sinc" "$STAGE/"
-(cd "$STAGE" && git apply -p1 "$SRC/stock-cop2.patch")
-cp "$SRC/gte.sinc" "$SRC/psx.slaspec" "$STAGE/"
-"$SLEIGH" "$STAGE/psx.slaspec" "$STAGE/psx.sla"
-
-PSXLOADER="$EXT/PsxLoader/data"
-if [ -d "$PSXLOADER/languages" ]; then
-    mkdir -p "$GHIDRA/.romwright-replaced"
-    rm -rf "$GHIDRA/.romwright-replaced/PsxLoader-languages"
-    mv "$PSXLOADER/languages" "$GHIDRA/.romwright-replaced/PsxLoader-languages"
-fi
-mkdir -p "$DEST"
-# Ghidra's JVM only reads languages from a module: Module.manifest marks one
-# and extension.properties names it.
-: > "$EXT/RomwrightPsx/Module.manifest"
-cat > "$EXT/RomwrightPsx/extension.properties" <<PROPS
-name=RomwrightPsx
-description=PlayStation R3000A language with GTE (COP2) definitions, built from Ghidra's MIPS32 spec and psx-spx
-author=romwright
-version=12.1.3
-PROPS
-# The JVM checks psx.sla against psx.slaspec and its includes (and would
-# recompile it itself), so the staged sources install beside the sla.
-cp "$STAGE/psx.sla" "$STAGE/psx.slaspec" "$STAGE/mips.sinc" "$STAGE/mips32Instructions.sinc" \
-   "$STAGE/mipsfloat.sinc" "$STAGE/gte.sinc" "$SRC/psx.ldefs" "$SRC/psx.pspec" "$SRC/psx.cspec" "$DEST/"
-echo "installed PSX:LE:32:default -> $DEST"
+exec "${PYTHON:-python3}" "$ROOT/packaging/languages.py" --ghidra "$GHIDRA" --only psx --force

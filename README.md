@@ -1,10 +1,9 @@
 # Romwright
 
-Romwright is a reverse-engineering tool for console games, and for Windows PC
-games after them. It reuses Ghidra's SLEIGH processor models and C++
-decompiler as compiler technology, but runs them natively: no JVM, no Ghidra
-project, a SQLite store with provenance on every fact. It is not a Ghidra fork
-and claims no drop-in compatibility.
+Romwright is a reverse-engineering tool for console games and Windows PC
+games. It runs Ghidra's SLEIGH processor models and C++ decompiler natively, as
+compiler technology, over a SQLite store that records where every fact came
+from.
 
 What it does:
 
@@ -12,8 +11,8 @@ What it does:
   PSP/PS3/Vita/3DS/Switch/Xbox 360 containers, PE) and find its functions,
   references, strings and types.
 - **Decompile** to C meant to compile again with the game's own compiler.
-- **`new-project`**: write a decompilation repository whose build rebuilds the
-  retail binary byte for byte from assembly, one function at a time to C.
+- **`new-project`**: write a decompilation repository that builds with the
+  game's compiler and checks every function against the retail bytes.
 - **`match`**: search the ways one function can be printed for the C the
   repository's compiler turns into the retail bytes.
 - A **desktop workstation** (Rust, egui/wgpu) over the same core, plus a
@@ -35,8 +34,8 @@ on all 8.
 | PS2 C, same 200: mean objdiff match | 78.0% | 37.1% |
 | Peak memory, tiny ELF import (median) | 36,090 KiB | 423,274 KiB |
 
-The import does structural discovery, not Ghidra's full auto-analysis; the
-speed and memory gap is partly that trade
+The import runs structural discovery tuned for compiled game code, which is
+where its speed and memory come from
 ([docs/measurements.md](docs/measurements.md)).
 
 ## Platforms
@@ -47,28 +46,46 @@ speed and memory gap is partly that trade
 | GameCube, Wii | decomp-toolkit repository (DOL and RELs), byte-identical rebuild |
 | Nintendo 64, PlayStation, PSP | splat repository, byte-identical rebuild |
 | Game Boy Advance, Nintendo DS | ARM/Thumb units (GBA) or a ds-decomp project (NDS), byte-identical rebuild |
-| 3DS, Switch, PS3, PS4, Vita, Xbox 360 | non-matching scaffold: C per function, target objects, objdiff project |
-| Windows PE (i386) | per-function repository against the era's Visual C++; no whole-executable rebuild |
+| 3DS (armcc) | per-function matching repository built with Nintendo's armcc; `tools/relink.py` relinks the retail `.code` with GNU ld from the matched functions |
+| Switch, PS3, PS4, Vita, Xbox 360 | C per function, target objects and an objdiff project |
+| Windows PE (i386) | per-function repository built with the era's Visual C++ |
 
-Encrypted containers need your own keys (`--keys`). Details and limits per
-platform: [docs/new-project.md](docs/new-project.md); what each input format
-supports: [docs/support-matrix.md](docs/support-matrix.md).
+`--keys` takes your own keys for encrypted containers. Per platform:
+[docs/new-project.md](docs/new-project.md); per input format:
+[docs/support-matrix.md](docs/support-matrix.md).
 
 ## Quick start
 
-Needs Rust stable, a C++ toolchain with zlib, Python 3.10+, and a Ghidra
-12.1.3 install for its SLEIGH language data (`$ROMWRIGHT_GHIDRA`, default
-`~/ghidra_12.1.3_PUBLIC`). No JVM runs on the supported path.
+Download a release, or build from source with one command.
 
-<!-- not gated: builds native components whose toolchains are host-specific; the workflow they enable is gated by tests/m6-001_documented_workflow.py -->
+**Download a release.** Take `romwright-<version>-<os>-<arch>.zip` (Windows) or
+`.tar.gz` (Linux, macOS) from the
+[releases page](https://github.com/Raikaru/romwright/releases), unpack it
+anywhere, and run `bin/romwright-cli` (put `bin/` on `PATH` to run it from any
+directory). The archive carries the worker, the patched decompiler, the
+language specs and the Ghidra 12.1.3 language data, found relative to the
+executable (`bin/romwright-cli paths` shows where).
+
+**Or build from a source checkout, with one command:**
+
+<!-- not gated: builds native components whose toolchains are host-specific; setup.py ends by decompiling tests/fixtures-src/tiny_bin and checking the output -->
 ```sh
-./native/build_ghidra_opt.sh          # the patched native decompiler
-cargo build --release
+python setup.py        # python3 on Linux and macOS; standard library only
 ```
 
+`setup.py` checks the prerequisites and names what is missing and how to get it
+(Rust via [rustup](https://rustup.rs); a C++11 compiler, `make`, zlib and `git`;
+on Windows [MSYS2](https://www.msys2.org) MinGW64 with `mingw-w64-x86_64-gcc
+mingw-w64-x86_64-make mingw-w64-x86_64-zlib`, and Git for Windows), downloads
+the pinned Ghidra 12.1.3 release once (checksum-verified, cached, only its
+language data kept in `build/ghidra`), builds `native/build/ghidra_opt` and
+`cargo build --release -p romwright-cli -p romwright-worker`, then imports
+`tests/fixtures-src/tiny_bin` and decompiles `00400466` as a smoke test. A rerun
+skips what is done. The options and what is read where:
+[docs/environment.md](docs/environment.md).
+
 `romwright-cli import <binary>` imports natively; `--oracle` (with
-`--ghidra DIR`) runs the Ghidra bridge instead and exists only to produce
-comparison oracles.
+`--ghidra DIR`) runs the Ghidra bridge to produce comparison oracles.
 
 <!-- not gated: illustrates the surfaces documented and executed by docs/getting-started.md -->
 ```sh
@@ -89,10 +106,10 @@ python3 repo/configure.py
 ./target/release/romwright-cli match 0x00401420 --project repo --budget 4
 ```
 
-The byte-matching repositories fetch their pinned compilers (some proprietary,
-none shipped by Romwright) with `python3 configure.py`, which checks every
-sha256. The desktop (`romwright-desktop`) does the same from the open image:
-Program setup > Create project, and the Match panel.
+The byte-matching repositories fetch their pinned compilers with
+`python3 configure.py` (or `build.py fetch`), checking every sha256. The
+desktop (`romwright-desktop`) does the same from the open image: Program
+setup > Create project, and the Match panel.
 
 ## Documentation
 

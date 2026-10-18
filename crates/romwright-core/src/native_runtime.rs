@@ -56,16 +56,15 @@ fn err<T>(msg: impl Into<String>) -> Result<T> {
     Err(NativeRuntimeError(msg.into()))
 }
 
-/// The pinned Ghidra install root (env override, then the default path).
+/// The pinned Ghidra install root: `ROMWRIGHT_GHIDRA`, then the language data
+/// shipped beside the executable (`<exe dir>/../share/romwright/ghidra`), the
+/// checkout's `build/ghidra` (where `setup.py` extracts it), and last
+/// `ghidra_12.1.3_PUBLIC` in the user's home directory (`$HOME`, or
+/// `%USERPROFILE%` on Windows); see `runtime_paths`.
 pub fn ghidra_dir() -> PathBuf {
     std::env::var("ROMWRIGHT_GHIDRA")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            PathBuf::from(format!(
-                "{}/ghidra_12.1.3_PUBLIC",
-                std::env::var("HOME").unwrap_or_default()
-            ))
-        })
+        .unwrap_or_else(|_| crate::runtime_paths::Layout::current().ghidra())
 }
 
 /// The register the spec bundle aliases as `ISAModeSwitch`, when the
@@ -174,11 +173,17 @@ fn worker_command(
     let cfg = &request.config;
     let (sla, specs, lang_dir, language_id) = language_decompile_config(cfg, &request.language)?;
     if !sla.is_file() {
-        return err(format!("configured SLA does not exist: {}", sla.display()));
+        return err(format!(
+            "configured SLA does not exist: {} — the Ghidra language data is missing; run \
+             `python setup.py` in the source checkout, use a release archive, or point \
+             ROMWRIGHT_GHIDRA at a Ghidra 12.1.3 install",
+            sla.display()
+        ));
     }
     if !cfg.decompiler_path.is_file() {
         return err(format!(
-            "native decompiler missing: {} — build native/build_ghidra_opt.sh",
+            "native decompiler missing: {} — run `python setup.py` in the source checkout \
+             (builds native/build/ghidra_opt) or use a release archive; ROMWRIGHT_GHIDRA_OPT pins another",
             cfg.decompiler_path.display()
         ));
     }
@@ -1834,6 +1839,9 @@ mod tests {
         // The width is the access's, not the pointer's, and an address that is
         // only computed proves none.
         let cfg = RuntimeConfig::from_env();
+        if !crate::architecture::language_installed(&cfg.ghidra_install, &cfg.language_id) {
+            return;
+        }
         for (bytes, expected) in [
             (vec![0x8b, 0x05, 0, 0, 0, 0, 0xc3], 4u32),
             (vec![0x48, 0x8b, 0x05, 0, 0, 0, 0, 0xc3], 8u32),

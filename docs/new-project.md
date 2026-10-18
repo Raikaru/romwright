@@ -502,30 +502,114 @@ ARM7 and ARM7 overlays are not rebuilt from objects. `match` serves ARM9 and aut
 
 ## 3DS, Switch, PS3, PS4, Vita and Xbox 360: the non-matching scaffold
 
-No public toolchain reproduces these platforms' retail compiler output, so there is no byte-identical
-build and no checksum gate. `new-project` writes what romwright knows and a way to look at it. The plugin
+No public toolchain reproduces most of these platforms' retail compiler output, so there is no byte-identical
+build and no checksum gate. `new-project` writes what romwright knows and a way to look at it. The 3DS is
+the exception per function: its retail compiler (armcc) is pinned, see "3DS with armcc" below. The plugin
 is `new_project/scaffold.rs` (+ `scaffold_obj.rs`), the CLI side `crates/romwright-cli/src/new_project_scaffold.rs`.
 The platform is read from the container's magic (`NCCH`/`NCSD`/CIA, `NSO0`, NCA/XCI, `XEX2`, a SELF, an
 ELF's machine and OS ABI, a PE with machine `0x1F2`) or given with `--platform 3ds|switch|ps3|ps4|vita|x360`.
 
 ```
 romwright-cli new-project <image> <outdir> [--platform ID] [--name NAME] [--keys FILE...] [--map FILE]
-              [--raw BASE --language ID] [--decompile all|first:N|ADDR,ADDR|none] [--budget-ms N]
+              [--raw BASE --language ID] [--decompile all|first:N|ADDR,ADDR|none] [--budget-ms N] [--jobs N]
               [--toolchain PROFILE.json] [--manifest FILE] [--fact-pack PACK] [--json]
+              [--compiler armcc-<version>-b<build> [--cflags FLAGS]] [--tus FILE] [--names FILE]
 ```
 
 `--keys` hands the container loaders the user's keys (`prod.keys`, a RAP/klic, a 3DS `aes_keys.txt`); they
 live in memory for the import and are never written. `--map` is a linker map or BINMAP naming symbols,
 `--raw 0x100000 --language ARM:LE:32:v6` imports a flat dump (a 3DS ExeFS `.code`).
-`--decompile` defaults to `all`; a whole-image decompile of a 30,000-function image is hours, so the smokes
-below use `first:40` (the first N functions of each module by address). A function the decompiler refuses is
-skipped and counted, never fatal; `all` falls back to function-by-function when its batch fails.
+`--decompile` defaults to `all`. The selected functions are decompiled in batches of 48, one worker per batch,
+on `--jobs N` threads at once (default: the host's cores, at most 16); `--budget-ms` bounds each function and a
+batch gets the sum. A batch the decompiler refuses is redone function by function, and a function it refuses is
+skipped and counted, never fatal. The smokes below use `first:40` (the first N functions of each module by
+address).
+
+`--tus FILE` (`{"units": [{"module": "_code", "address": "0x1b0cb0", "tu": "sdds4/program/battle/btlMain"}]}`)
+places functions in the original source files evidence assigns them to (assert paths, file-local data): each
+listed function's unit becomes `src/<module>/<file>/<function>.c` (and the same path below `build/obj/` and
+`orig/target/`), `config/project.json` records its `file`, and objdiff gets one progress category per file. Every
+other function stays in its address shard. A path must be relative, `/`-separated plain names; anything else is
+refused. Functions stay one per unit, so the build, objdiff and a relink are unchanged.
+
+`--names FILE` (`ADDR NAME` per line, `#` comments) renames the functions the import found at those addresses,
+before anything is decompiled, so callers' C, `config/symbols.txt` and the objects use the names. It seeds
+nothing: `--map` hands every row to the analysis as a function entry, which changes what it finds (an SMT IV
+import with 895 names of functions it already found came back with 60 more functions, 376 resized and 138 in
+the other instruction set), while `--names` leaves the function set exactly as an unnamed import's.
+
+**3DS with armcc.** Nintendo's 3DS SDK builds with ARM's armcc (RVCT 4.0/4.1, ARM Compiler 5). The
+decomp.me compilers project hosts fourteen builds (`armcc.zip`, compiler and headers only); the manifest pins
+each as `armcc-4.0-b771` ... `armcc-4.1-b713` ... `armcc-5.04-b82`, all from that one archive (sha256 of the
+bytes seen on 2026-10-17). `--compiler armcc-4.1-b713 --cflags "-O3 -Otime"` makes `build.py` compile every unit
+with that build (`--cpu=MPCore --fpmode=fast --apcs=/interwork --c99` plus `--cflags`, default `-O2 -Ospace`;
+`--arm`/`--thumb` per unit), natively on Windows and through wibo elsewhere, so objdiff compares armcc's
+object with the retail bytes and 100% means the function matches. The armcc bundle has no `armlink` and no C
+runtime libraries, so armcc does not build the whole image; `tools/relink.py` (below) relinks the retail `.code`
+with GNU ld from the per-function objects instead. Without `--compiler` the 3DS keeps the clang compile check.
+
+The 3DS target objects carry what an armcc object of the same function carries, so a match is reachable:
+direct `BL`/`BLX` calls are `R_ARM_CALL`, `B` tail calls and conditional calls `R_ARM_JUMP24` (found from the
+bytes, whether or not the analysis recorded the branch), literal pools are `$d` ranges (a pool after the
+function's last instruction, which the analysis leaves out of its size, is taken in when it ends before the next
+function), and a pool word holding a function address or an address in a non-executable segment is an
+`R_ARM_ABS32` to that function or to `DAT_<address>` (eight lowercase hex digits). Each object carries the
+`.ARM.attributes` armcc writes (MPCore, ARMv6K, VFPv2), so objdiff decodes both sides as ARMv6K. An NCCH's
+exheader code-set info maps `.code` as `.text` (r-x), `.rodata` (r--), `.data` (rw-) and the zero-filled
+`.bss`, so the decompiler treats pools as constants and names the global they hold. A large NCCH or NCSD
+(64 MiB and up) is read as its program view: headers, exheader and ExeFS, with the RomFS and code-less
+partitions left out (`threeds::program_view`). The import stores and maps that view (Shin Megami Tensei IV:
+a few MB of a 1.8 GB card), and `config/project.json` still records the whole file's sha256.
+
+**A 3DS project works without romwright.** `orig/` and `build/` are git-ignored (retail bytes), so a fresh clone
+has no target objects. Every 3DS project therefore carries stdlib-only Python tools (`tools/n3ds.py`,
+`tools/split.py`, `tools/relink.py`):
+
+```sh
+python3 build.py fetch      # pinned armcc, objdiff-cli, wibo where needed, arm-none-eabi binutils (for relink)
+# put the decrypted dump at orig/<image> (config/project.json says the name and sha256)
+python3 build.py split      # rewrite orig/target/**.o from the dump and config/
+python3 build.py            # compile src/ with armcc
+python3 build.py report     # objdiff-cli -> build/report.json
+python3 tools/relink.py --matched   # relink the whole .code with every 100% function from build/obj; prints MATCH
+```
+
+* `tools/n3ds.py` is the loader: NCCH (`.cxi`) and NCSD (`.3ds`/`.cci`, the executable partition, or
+  `partition<N>` as `config/modules.json` names it), ExeFS `.code`, backward-LZ ("BLZ") decompression, the
+  exheader's code-set segments and the same mapped regions romwright reads. It reads only the parts of the file it
+  needs. Encrypted content (secure NCCH keys, a fixed-key title, a CIA) is refused with a message: it does no
+  cryptography, so decrypt first (`romwright-cli new-project --keys` decrypts in memory, for the import only).
+* `tools/split.py` writes `orig/target/**.o` from `orig/<image>`, `config/project.json` (which object is which
+  function), `config/symbols.txt` (names, sizes, `mode:thumb`; a function renamed there is the name its callers'
+  relocations use after the next `split`) and `config/modules.json` (which sections are data, for `DAT_<address>`),
+  and nothing else: no romwright, no analysis store. It is a port of the writer above and produces the same bytes:
+  branches (calls, tail calls, conditional calls, recursion) and pool words are found from the bytes. romwright
+  also feeds the writer the transfers the analysis recorded; a recorded transfer that the bytes do not show as a
+  branch outside a literal pool is the only thing `split.py` cannot reproduce, and on Shin Megami Tensei IV no
+  object differs (9,331 of 9,331 byte-identical on v1.0, 9,337 of 9,337 on the v1.2.0 update).
+* `tools/relink.py` places every function at its retail address with a generated GNU ld script and compares the
+  linked `.code` with the dump's. By default functions without a compiled match are retail bytes; `--matched`
+  links each function objdiff scores 100% from `build/obj/` (the decompiled C, proven inside the whole image),
+  `--full` links every function from its target object (proves those objects relocate back to retail). A function
+  that scores 100% but does not reproduce its bytes in the image is printed with the `--exclude` list to rerun
+  with. The Windows binutils asset (298 MB zip) installs only `as`, `ld`, `nm`, `objcopy`, `objdump` and
+  `readelf` (standalone executables); other hosts extract Arm's whole 13.3.rel1 toolchain.
+
+`new-project` writes `src/` as well as everything above: regenerating into a directory whose `src/` you edited
+overwrites it, so from the first edit on use `split` to bring `orig/target/` back. Regeneration also rewrites
+`.gitignore`; keep personal ignore rules (the directory holding your dump, say) in `.git/info/exclude`.
+
+Finding the build and flags: compile a few hundred decompiled functions with every build and a few flag sets and
+rank them by objdiff score. On Shin Megami Tensei IV (USA, 9,350 functions, 240 sampled) every RVCT 4.1 build
+from b713 on at `-O3 -Otime` scored 55.2% fuzzy with 9 exact matches, 4.0 and 4.1 b561 49.8% with 3, 5.04 b82
+54.5% with 7; `-O3` and `-O2` scored lower on every build. The sample does not separate builds 713 to 1454.
 
 ```
 <outdir>/
   README.md              what was written, per-platform notes, how to read objdiff here
-  build.py               compile every unit with the pinned clang; `fetch`, `report`; stdlib only
+  build.py               compile every unit with the pinned compiler; `fetch`, `split` (3DS), `report`; stdlib only
   tools/download_tool.py sha256-verified fetch of config/toolchain.json's entries (same tool as PS2)
+  tools/n3ds.py split.py relink.py   (3DS only) the loader, target-object writer and GNU ld relink described above
   config/
     symbols.txt          one line per function/label/import: name = section:0xADDR; // type:function size:0xN [mode:thumb|arm] [orig:"name"]
                          (config/<module>/symbols.txt when the image has several modules)

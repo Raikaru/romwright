@@ -1,0 +1,133 @@
+name: Release
+
+# Builds the portable archives (docs/releasing.md, "Portable archives") on
+# Windows, Linux and macOS (Apple silicon and Intel) and attaches them to the
+# release of the pushed `v*` tag. workflow_dispatch builds and uploads them as
+# workflow artifacts only. Every script step below is a script in this
+# repository that was run locally: packaging/ghidra_data.py,
+# packaging/languages.py, packaging/stage_portable.py,
+# packaging/check_archive_arch.py and native/build_ghidra_opt.sh (and
+# native/build_sleigh.sh on macOS).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Least privilege: the package jobs only read the repository. Only `publish`
+# writes (it creates the release and uploads to it).
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    name: Package (${{ matrix.artifact }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each runner builds for its own architecture and names its archive by it
+        # (romwright-<version>-<os>-<arch>). macos-latest is Apple silicon (arm64);
+        # macos-15-intel is the Intel runner (macos-13, the previous one, is retired).
+        include:
+          - {os: windows-latest, artifact: windows-x86_64}
+          - {os: ubuntu-latest, artifact: linux-x86_64}
+          - {os: macos-latest, artifact: macos-aarch64}
+          - {os: macos-15-intel, artifact: macos-x86_64}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ghidra_opt on Windows is built with MinGW-w64 under MSYS2 (static, so
+      # the archive needs no MinGW DLLs); native/build_ghidra_opt.sh detects it.
+      - name: Install MSYS2 MinGW64 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            git
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-zlib
+
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential zlib1g-dev git
+
+      - name: Build ghidra_opt (Windows, MSYS2 MINGW64)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: bash native/build_ghidra_opt.sh --jobs 4
+
+      - name: Build ghidra_opt
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash native/build_ghidra_opt.sh --jobs 4
+
+      - name: Build romwright-cli and romwright-worker (dist profile)
+        shell: bash
+        run: cargo build --profile dist -p romwright-cli -p romwright-worker
+
+      - name: Fetch the pinned Ghidra 12.1.3 language data (SHA-256 verified)
+        shell: bash
+        run: python packaging/ghidra_data.py --dest build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
+
+      # PSX, r5900 (PS2), VU, RSP (N64), Xenon (Xbox 360) and Gekko (GameCube/Wii) come from
+      # this repository's sources, compiled with the sleigh compiler of the Ghidra release
+      # (Windows, Linux) or one built from third_party/ghidra/decompiler (macOS).
+      - name: Compile romwright's own SLEIGH languages
+        shell: bash
+        run: python packaging/languages.py --ghidra build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
+
+      - name: Stage, pack and smoke-test the archive
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then TAG_ARGS="--tag $GITHUB_REF_NAME"; else TAG_ARGS=""; fi
+          python packaging/stage_portable.py $TAG_ARGS --output dist-portable --smoke
+
+      # The archive is named after the runner's architecture, not after what was
+      # compiled: fail the job if any binary in it is for another one. The script
+      # reads the ELF (Linux), Mach-O (macOS, `lipo -archs` equivalent, so a
+      # universal binary must hold only that architecture) or PE (Windows) header.
+      - name: Check every binary has the archive's architecture
+        shell: bash
+        run: python packaging/check_archive_arch.py dist-portable
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: romwright-${{ matrix.artifact }}
+          path: dist-portable/*
+          if-no-files-found: error
+
+  publish:
+    name: Attach to the release
+    needs: package
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-portable
+          merge-multiple: true
+
+      - name: Create the release if the tag has none, then upload
+        run: |
+          ls -l dist-portable
+          gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          gh release upload "$TAG" dist-portable/* --clobber

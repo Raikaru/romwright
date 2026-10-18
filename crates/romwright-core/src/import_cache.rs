@@ -40,8 +40,8 @@ pub fn cache_root() -> Option<PathBuf> {
         let path = PathBuf::from(configured);
         return (!path.as_os_str().is_empty()).then_some(path);
     }
-    let home = std::env::var_os("HOME")?;
-    Some(PathBuf::from(home).join(".cache/romwright/imports"))
+    let home = std::env::home_dir()?;
+    Some(home.join(".cache/romwright/imports"))
 }
 
 /// SHA-256 of a file's bytes, or `None` when it cannot be read.
@@ -51,6 +51,16 @@ pub fn cache_root() -> Option<PathBuf> {
 pub fn digest(path: &Path) -> Option<String> {
     let file = std::fs::File::open(path).ok()?;
     crate::sha256::digest_reader(file).ok().map(crate::sha256::hex)
+}
+
+/// SHA-256 of the bytes an import reads from `path`: the program view of a
+/// large 3DS card (`native::read_input`), else the whole file (streamed). It
+/// is the digest of the input artifact the import stores.
+pub fn input_digest(path: &Path) -> Option<String> {
+    match crate::native::threeds::program_view(path).ok()? {
+        Some(view) => Some(digest_bytes(&view)),
+        None => digest(path),
+    }
 }
 
 /// SHA-256 of arbitrary bytes, hex-encoded.
@@ -120,7 +130,7 @@ pub(crate) fn languages_fingerprint(install: &Path) -> String {
 /// which signature databases were applied, since a matched signature renames
 /// functions in the store.
 pub fn key(binary: &Path, program: &str, config: &RuntimeConfig) -> Option<String> {
-    let image = digest(binary)?;
+    let image = input_digest(binary)?;
     // The analyser: this executable, plus the worker child that produces
     // facts. A missing child is named as missing rather than ignored.
     let mut analyser = String::new();

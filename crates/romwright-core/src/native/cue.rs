@@ -101,19 +101,44 @@ fn finish((file, mode, start): (String, String, Option<String>)) -> Result<DataT
     }
 }
 
+/// `path` spelled as its directory entry is: a case-insensitive file system
+/// (Windows, macOS) opens `disc.bin` for `Disc.BIN`, and the import should
+/// carry the file's own name wherever the sheet's spelling happens to differ.
+fn on_disk(path: PathBuf) -> PathBuf {
+    let (Some(dir), Some(leaf)) = (path.parent(), path.file_name().and_then(|leaf| leaf.to_str())) else {
+        return path;
+    };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return path;
+    };
+    let mut folded = None;
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name == leaf {
+            return path;
+        }
+        if folded.is_none() && name.eq_ignore_ascii_case(leaf) {
+            folded = Some(entry.path());
+        }
+    }
+    folded.unwrap_or(path)
+}
+
 /// The track file as it sits beside the sheet: the name as written, with
 /// either path separator, else the one directory entry that matches it
-/// ignoring case (sheets travel between file systems).
+/// ignoring case (sheets travel between file systems). The path returned
+/// carries the file's name as the directory spells it.
 fn locate(dir: &Path, name: &str) -> Result<PathBuf> {
     let relative = PathBuf::from(name.replace('\\', "/"));
     let exact = dir.join(&relative);
     if exact.is_file() {
-        return Ok(exact);
+        return Ok(on_disk(exact));
     }
     if let Some(leaf) = relative.file_name().and_then(|leaf| leaf.to_str()) {
         let flat = dir.join(leaf);
         if flat.is_file() {
-            return Ok(flat);
+            return Ok(on_disk(flat));
         }
         if let Ok(entries) = std::fs::read_dir(dir) {
             for entry in entries.flatten() {

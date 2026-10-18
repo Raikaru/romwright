@@ -771,9 +771,19 @@ pub(crate) fn parse_container_with(
     Ok(vec![(String::new(), parse_native(data)?)])
 }
 
+/// The bytes of `<binary>` the loaders read: for a large 3DS NCCH or NCSD,
+/// only its program view ([`threeds::program_view`]: headers, exheader and
+/// ExeFS, not the gigabytes of RomFS); for anything else, the whole file.
+pub fn read_input(binary: &Path) -> std::io::Result<Vec<u8>> {
+    match threeds::program_view(binary)? {
+        Some(view) => Ok(view),
+        None => std::fs::read(binary),
+    }
+}
+
 /// Loads `<binary>` mappings without running discovery or sweep passes.
 pub fn load_native_mappings(binary: &Path) -> Result<Vec<Mapping>> {
-    let data = std::fs::read(binary)
+    let data = read_input(binary)
         .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
     let imp = parse_native(&data)?;
     Ok(imp.mappings)
@@ -807,7 +817,7 @@ pub fn select_language(imp: &mut NativeImport, cfg: &crate::session::RuntimeConf
 }
 
 pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
-    let data = std::fs::read(binary).map_err(|error| ImportError::Bad(error.to_string()))?;
+    let data = read_input(binary).map_err(|error| ImportError::Bad(error.to_string()))?;
     load_container_with(
         binary,
         &data,
@@ -1993,7 +2003,7 @@ fn name_linkage_stubs(imp: &mut NativeImport) {
 
 /// Loads `<binary>` natively and closes its seeds through SLEIGH flow.
 pub fn load_native(binary: &Path) -> Result<NativeImport> {
-    let data = std::fs::read(binary)
+    let data = read_input(binary)
         .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
     let mut images = load_container_with(
         binary,

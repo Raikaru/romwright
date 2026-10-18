@@ -775,7 +775,7 @@
    "platform": "scaffold",
    "entry": "bin/clang",
    "license": "Apache-2.0 WITH LLVM-exception",
-   "provenance": "https://github.com/llvm/llvm-project release llvmorg-22.1.8 (2026-06-16), assets LLVM-22.1.8-Linux-X64 / Linux-ARM64 / macOS-ARM64 .tar.xz; sha256 as published by the GitHub release asset digests. One clang compiles for ARM, AArch64, x86-64 and PowerPC (`--target=`), so the non-matching scaffolds (3DS, Switch, PS3, PS4, Vita, Xbox 360) use it to check that their decompiled C compiles. The archive holds a single top-level directory; the compiler is `<that directory>/bin/clang`.",
+   "provenance": "https://github.com/llvm/llvm-project release llvmorg-22.1.8 (2026-06-16), assets LLVM-22.1.8-Linux-X64 / Linux-ARM64 / macOS-ARM64 .tar.xz and clang+llvm-22.1.8-x86_64-pc-windows-msvc.tar.xz; sha256 as published by the GitHub release asset digests. One clang compiles for ARM, AArch64, x86-64 and PowerPC (`--target=`), so the non-matching scaffolds (3DS, Switch, PS3, PS4, Vita, Xbox 360) use it to check that their decompiled C compiles. The archive holds a single top-level directory; the compiler is `<that directory>/bin/clang` (`bin/clang.exe` on Windows).",
    "assets": {
     "linux-x86_64": {
      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.8/LLVM-22.1.8-Linux-X64.tar.xz",
@@ -794,8 +794,98 @@
      "sha256": "f260f4f7c0d430828a81ae8a3826a1d63fc0963ec2459489308cc23b1f7eab4f",
      "size": 1479903744,
      "archive": "tar.xz"
+    },
+    "windows-x86_64": {
+     "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.8/clang%2Bllvm-22.1.8-x86_64-pc-windows-msvc.tar.xz",
+     "sha256": "d96c2cc1736f4eb7fa43cb9bbdf56d93551a9ae0a9aadb9c99c3c3b2b712a234",
+     "size": 862053924,
+     "archive": "tar.xz"
     }
    }
+  },
+  {
+   "id": "armcc-4.0-b771", "version": "4.0 [Build 771]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.0/b771/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_40_771`: directory `4.0/b771/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.0/b771/"]}}
+  },
+  {
+   "id": "armcc-4.0-b821", "version": "4.0 [Build 821]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.0/b821/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_40_821`: directory `4.0/b821/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.0/b821/"]}}
+  },
+  {
+   "id": "armcc-4.0-b865", "version": "4.0 [Build 865]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.0/b865/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_40_865`: directory `4.0/b865/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.0/b865/"]}}
+  },
+  {
+   "id": "armcc-4.0-b902", "version": "4.0 [Build 902]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.0/b902/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_40_902`: directory `4.0/b902/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.0/b902/"]}}
+  },
+  {
+   "id": "armcc-4.1-b561", "version": "4.1 [Build 561]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b561/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_561`: directory `4.1/b561/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b561/"]}}
+  },
+  {
+   "id": "armcc-4.1-b713", "version": "4.1 [Build 713]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b713/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_713`: directory `4.1/b713/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b713/"]}}
+  },
+  {
+   "id": "armcc-4.1-b791", "version": "4.1 [Build 791]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b791/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_791`: directory `4.1/b791/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b791/"]}}
+  },
+  {
+   "id": "armcc-4.1-b844", "version": "4.1 [Build 844]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b844/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_844`: directory `4.1/b844/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b844/"]}}
+  },
+  {
+   "id": "armcc-4.1-b894", "version": "4.1 [Build 894]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b894/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_894`: directory `4.1/b894/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b894/"]}}
+  },
+  {
+   "id": "armcc-4.1-b921", "version": "4.1 [Build 921]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b921/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_921`: directory `4.1/b921/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b921/"]}}
+  },
+  {
+   "id": "armcc-4.1-b1049", "version": "4.1 [Build 1049]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b1049/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_1049`: directory `4.1/b1049/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b1049/"]}}
+  },
+  {
+   "id": "armcc-4.1-b1440", "version": "4.1 [Build 1440]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b1440/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_1440`: directory `4.1/b1440/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b1440/"]}}
+  },
+  {
+   "id": "armcc-4.1-b1454", "version": "4.1 [Build 1454]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "4.1/b1454/bin/armcc.exe",
+   "license": "Proprietary (ARM RealView Compilation Tools, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_41_1454`: directory `4.1/b1454/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["4.1/b1454/"]}}
+  },
+  {
+   "id": "armcc-5.04-b82", "version": "5.04 [Build 82]", "role": "compiler", "family": "armcc", "platform": "3ds", "runtime": "wibo", "entry": "5.04/b82/bin/armcc.exe",
+   "license": "Proprietary (ARM Compiler 5, as shipped to Nintendo 3DS developers). romwright and this manifest grant no rights to it: use it only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset armcc.zip (decomp.me's n3ds `armcc_504_82`: directory `5.04/b82/`, bin/armcc.exe and include/, no linker or libraries); the release tag is mutable, so the sha256 below is GitHub's asset digest of the bytes seen on 2026-10-17 (asset updated 2026-03-04T08:52:15Z). Runs natively on Windows, through wibo elsewhere.",
+   "assets": {"any": {"url": "https://github.com/decompme/compilers/releases/download/compilers/armcc.zip", "sha256": "bda0cea5b13a9c3f08322fa76f9f9dcda59bda290f57f1a06e05cd80044fafdb", "size": 73315488, "archive": "zip", "include": ["5.04/b82/"]}}
   },
   {
    "id": "binutils-arm-none-eabi",
@@ -812,7 +902,7 @@
     "cpp": "*/bin/arm-none-eabi-cpp"
    },
    "license": "GPL-3.0-or-later (GNU Binutils 2.42 and GCC 13.3 as built and distributed by Arm; the archive also holds newlib under its own licenses)",
-   "provenance": "https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads release 13.3.rel1 (binrel); sha256 as published in the `.sha256asc` file next to each archive. The archive has one version-named top directory, so members are globs (`*/bin/arm-none-eabi-as`). The whole archive (about 150 MB) is extracted; the project runs as, ld, objcopy and cpp.",
+   "provenance": "https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads release 13.3.rel1 (binrel); sha256 as published in the `.sha256asc` file next to each archive. The archive has one version-named top directory, so members are globs (`*/bin/arm-none-eabi-as`). The whole archive (about 150 MB) is extracted; the project runs as, ld, objcopy and cpp. The Windows asset (mingw-w64 build, 298 MB zip) installs only the standalone as, ld, nm, objcopy, objdump and readelf executables (`include`), which is what a 3DS project's tools/relink.py runs (`*/bin/arm-none-eabi-<tool>.exe`).",
    "assets": {
     "linux-x86_64": {
      "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz",
@@ -837,6 +927,20 @@
      "sha256": "1ab00742d1ed0926e6f227df39d767f8efab46f5250505c29cb81f548222d794",
      "size": 138514276,
      "archive": "tar.xz"
+    },
+    "windows-x86_64": {
+     "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi.zip",
+     "sha256": "e46fda043c0ce83582bc8db4b3ef85f77f4beb7333344c2f4193c17e1167a095",
+     "size": 297871203,
+     "archive": "zip",
+     "include": [
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-as.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-ld.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-nm.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-objcopy.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-objdump.exe",
+      "arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-readelf.exe"
+     ]
     }
    }
   },

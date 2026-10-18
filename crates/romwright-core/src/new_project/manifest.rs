@@ -202,4 +202,20 @@ mod tests {
         assert_eq!(subset.tools.iter().map(|t| t.id.as_str()).collect::<Vec<_>>(), ["wibo", "binutils-mips-ps2-decompals"]);
         assert!(manifest.subset(&["nope"]).unwrap_err().contains("nope"));
     }
+
+    #[test]
+    fn arm_binutils_has_a_windows_asset_that_extracts_only_the_standalone_tools() {
+        let manifest = Manifest::builtin();
+        let binutils = manifest.tool("binutils-arm-none-eabi").unwrap();
+        let asset = &binutils.assets["windows-x86_64"];
+        assert_eq!(asset.archive, "zip");
+        assert_eq!(asset.sha256, "e46fda043c0ce83582bc8db4b3ef85f77f4beb7333344c2f4193c17e1167a095");
+        assert_eq!(asset.size, 297_871_203);
+        // One version-named top directory; the members are exact paths (download_tool.py matches prefixes).
+        let wanted: Vec<String> = ["as", "ld", "nm", "objcopy", "objdump", "readelf"]
+            .iter()
+            .map(|tool| format!("arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-{tool}.exe"))
+            .collect();
+        assert_eq!(asset.include, wanted);
+    }
 }

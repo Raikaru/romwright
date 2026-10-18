@@ -2623,11 +2623,10 @@ mod tests {
             flow: &'a [(&'a [u64], &'a [usize])],
         }
 
-        /// The table VSA recovers, or `None` without a Ghidra install.
+        /// The table VSA recovers, or `None` without the case's language installed.
         fn recover_case(case: &Case<'_>) -> Option<Option<SwitchTable>> {
             let mut cfg = RuntimeConfig::from_env();
-            if !cfg.ghidra_install.join("Ghidra").is_dir() {
-                eprintln!("SKIP: no Ghidra install");
+            if !crate::architecture::language_installed(&cfg.ghidra_install, case.language) {
                 return None;
             }
             cfg.adopt_language(case.language);
