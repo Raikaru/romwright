@@ -1877,11 +1877,10 @@ fn a_function_opening_in_alignment_fill_is_dropped_wherever_it_came_from() {
 /// jr ra; addiu sp,16`, one zero word, 0x100018 `addiu sp,-16; jr ra; addiu
 /// sp,16`, three zero words to the 16-byte boundary, 0x100030 `li v0,1; jr ra;
 /// nop`, one zero word, 0x100040 `li v0,2; jr ra; nop`, then zeros to `size`
-/// bytes. Returns `None` without a Ghidra install.
+/// bytes. Returns `None` without the r5900 language installed.
 fn ee_sweep(called: bool, size: usize) -> Option<NativeImport> {
     let mut cfg = crate::session::RuntimeConfig::from_env();
-    if !cfg.ghidra_install.join("Ghidra").is_dir() {
-        eprintln!("SKIP: no Ghidra install");
+    if !crate::architecture::language_installed(&cfg.ghidra_install, "r5900:LE:32:default") {
         return None;
     }
     cfg.adopt_language("r5900:LE:32:default");

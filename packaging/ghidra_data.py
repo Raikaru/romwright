@@ -74,6 +74,29 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
+# Zips already checked in this process, so that provisioning, extraction and the
+# sleigh lookup do not each read 569 MB again. Keyed by what identifies the file.
+_VERIFIED: set = set()
+
+
+def verify_zip(path: Path, sha256: str = SHA256) -> None:
+    """Raises SetupError unless `path` is a file whose SHA-256 is `sha256`.
+    Everything that opens a zip the user supplied calls this first: its members
+    are extracted, and one of them (`sleigh`) is executed."""
+    try:
+        stat = path.stat()
+    except OSError as error:
+        raise SetupError(f"cannot read {path}: {error}") from error
+    key = (str(path.resolve()), stat.st_size, stat.st_mtime_ns, sha256)
+    if key in _VERIFIED:
+        return
+    digest = sha256_of(path)
+    if digest != sha256:
+        raise SetupError(f"{path} has SHA-256 {digest}, expected {sha256} "
+                         f"({ZIP_NAME} from the Ghidra {VERSION} release)")
+    _VERIFIED.add(key)
+
+
 def _progress(done: int, total: int, started: float, state: dict) -> None:
     percent = done * 100 // total if total else 0
     if sys.stderr.isatty():
@@ -87,11 +110,10 @@ def _progress(done: int, total: int, started: float, state: dict) -> None:
 
 
 def _fetch(url: str, part: Path, size: int) -> None:
-    """Streams `url` into `part`, resuming from what `part` already holds."""
+    """Streams `url` into `part`, resuming from what `part` already holds. The
+    caller has dealt with a `part` already `size` bytes long or more: asking the
+    server for a range past the end of the file only draws HTTP 416."""
     have = part.stat().st_size if part.exists() else 0
-    if have > size:
-        part.unlink()
-        have = 0
     headers = {"User-Agent": "romwright-setup"}
     if have:
         headers["Range"] = f"bytes={have}-"
@@ -115,6 +137,22 @@ def _fetch(url: str, part: Path, size: int) -> None:
         sys.stderr.write("\n")
 
 
+def _settle_part(part: Path, target: Path, sha256: str) -> str | None:
+    """Checks a `.part` file that cannot be resumed (it already holds all the
+    bytes the server has). Promotes it to `target` when its SHA-256 is the pinned
+    one; otherwise deletes it so the next attempt downloads from the start.
+    Returns None on success, else the digest it had."""
+    digest = sha256_of(part)
+    if digest == sha256:
+        part.replace(target)
+        print(f"  verified SHA-256 {digest}")
+        return None
+    print(f"  {part.name} ({part.stat().st_size} bytes) fails its SHA-256; "
+          f"discarding it and downloading again", flush=True)
+    part.unlink()
+    return digest
+
+
 def download(cache_dir: Path, url: str = URL, sha256: str = SHA256, size: int = SIZE,
              name: str = ZIP_NAME, attempts: int = 4) -> Path:
     """Returns the verified zip in `cache_dir`, downloading it only when the
@@ -130,9 +168,32 @@ def download(cache_dir: Path, url: str = URL, sha256: str = SHA256, size: int = 
     part = target.with_name(name + ".part")
     last: Exception | None = None
     for attempt in range(1, attempts + 1):
+        if part.exists() and part.stat().st_size >= size:
+            # An interrupted run left a complete (or oversized) file: there is
+            # nothing to resume, so decide it locally instead of asking for a
+            # range the server must refuse.
+            digest = _settle_part(part, target, sha256)
+            if digest is None:
+                return target
+            last = SetupError(f"SHA-256 mismatch: got {digest}, expected {sha256}")
         print(f"  downloading {url} (attempt {attempt}/{attempts})", flush=True)
         try:
             _fetch(url, part, size)
+        except urllib.error.HTTPError as error:
+            last = error
+            if error.code == 416 and part.exists():
+                # The range starts at or past the end of the file: `part` holds
+                # everything the server has. Verify it rather than repeating
+                # the same request.
+                print("  server: range not satisfiable; checking the partial file", flush=True)
+                digest = _settle_part(part, target, sha256)
+                if digest is None:
+                    return target
+                last = SetupError(f"SHA-256 mismatch: got {digest}, expected {sha256}")
+                continue
+            print(f"  download interrupted: {error}", flush=True)
+            time.sleep(min(2 * attempt, 10))
+            continue
         except (urllib.error.URLError, OSError, TimeoutError) as error:
             last = error
             print(f"  download interrupted: {error}", flush=True)
@@ -194,7 +255,9 @@ def _move_directory(source: Path, dest: Path) -> None:
 
 
 def extract(zip_path: Path, dest: Path, sha256: str = SHA256) -> int:
-    """Extracts the subset into `dest` (replacing it); returns the file count."""
+    """Extracts the subset into `dest` (replacing it); returns the file count.
+    Refuses, before reading a member, a zip whose SHA-256 is not `sha256`."""
+    verify_zip(zip_path, sha256)
     dest = dest.resolve()
     staging = dest.with_name(dest.name + f".partial-{os.getpid()}")
     if staging.exists():
@@ -229,15 +292,14 @@ def extract(zip_path: Path, dest: Path, sha256: str = SHA256) -> int:
 
 def provision(dest: Path, cache_dir: Path, zip_path: Path | None = None,
               force: bool = False) -> str:
-    """Makes `dest` hold the Ghidra data; returns "kept" or "extracted"."""
+    """Makes `dest` hold the Ghidra data; returns "kept" or "extracted". A zip
+    the caller supplies is verified against the pinned digest first, whether or
+    not anything is extracted from it."""
+    if zip_path is not None:
+        verify_zip(zip_path)
     if not force and is_installed(dest):
         return "kept"
-    if zip_path is not None:
-        digest = sha256_of(zip_path)
-        if digest != SHA256:
-            raise SetupError(f"{zip_path} has SHA-256 {digest}, expected {SHA256} "
-                             f"({ZIP_NAME} from the Ghidra {VERSION} release)")
-    else:
+    if zip_path is None:
         zip_path = download(cache_dir)
     print(f"  extracting the language data to {dest}")
     count = extract(zip_path, dest)

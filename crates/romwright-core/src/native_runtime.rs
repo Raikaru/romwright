@@ -1839,6 +1839,9 @@ mod tests {
         // The width is the access's, not the pointer's, and an address that is
         // only computed proves none.
         let cfg = RuntimeConfig::from_env();
+        if !crate::architecture::language_installed(&cfg.ghidra_install, &cfg.language_id) {
+            return;
+        }
         for (bytes, expected) in [
             (vec![0x8b, 0x05, 0, 0, 0, 0, 0xc3], 4u32),
             (vec![0x48, 0x8b, 0x05, 0, 0, 0, 0, 0xc3], 8u32),

@@ -46,6 +46,13 @@ case "$(uname -s)" in
         MAKE_ARGS=(ADDITIONAL_FLAGS=-D_WINDOWS MAKE_STATIC=-static)
         EXE=".exe"
         ;;
+    Darwin)
+        # The vendored Makefile builds x86_64 only; build for the host instead.
+        # shellcheck source=native/darwin_arch.sh
+        . "$ROOT/native/darwin_arch.sh"
+        host_darwin_make_args
+        MAKE_ARGS=("${DARWIN_MAKE_ARGS[@]}")
+        ;;
 esac
 LOG="${TMPDIR:-/tmp}/sleigh-opt-build.log"
 if ! "$MAKE_BIN" sleigh_opt -j"$JOBS" ${MAKE_ARGS[@]+"${MAKE_ARGS[@]}"} > "$LOG" 2>&1; then

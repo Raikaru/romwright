@@ -229,6 +229,9 @@ def find_sleigh(ghidra: Path, cache_dir: Path, sleigh: Path | None, zip_path: Pa
         if cached.is_file() and usable(cached):
             return cached
         archive = zip_path or ghidra_data.download(cache_dir)
+        # An explicit zip is untrusted until it matches the pinned digest: its
+        # sleigh is about to be run. (download() returns only a verified file.)
+        ghidra_data.verify_zip(archive)
         member = f"{ghidra_data.ZIP_ROOT}/Ghidra/Features/Decompiler/os/{os_dir}/{name}"
         cached.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(archive) as bundle, bundle.open(member) as source, \
