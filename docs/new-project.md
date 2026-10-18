@@ -538,8 +538,9 @@ each as `armcc-4.0-b771` ... `armcc-4.1-b713` ... `armcc-5.04-b82`, all from tha
 bytes seen on 2026-10-17). `--compiler armcc-4.1-b713 --cflags "-O3 -Otime"` makes `build.py` compile every unit
 with that build (`--cpu=MPCore --fpmode=fast --apcs=/interwork --c99` plus `--cflags`, default `-O2 -Ospace`;
 `--arm`/`--thumb` per unit), natively on Windows and through wibo elsewhere, so objdiff compares armcc's
-object with the retail bytes and 100% means the function matches. There is still no whole-image build: the
-bundle has no `armlink` and no C runtime libraries. Without `--compiler` the 3DS keeps the clang compile check.
+object with the retail bytes and 100% means the function matches. The armcc bundle has no `armlink` and no C
+runtime libraries, so armcc does not build the whole image; `tools/relink.py` (below) relinks the retail `.code`
+with GNU ld from the per-function objects instead. Without `--compiler` the 3DS keeps the clang compile check.
 
 The 3DS target objects carry what an armcc object of the same function carries, so a match is reachable:
 direct `BL`/`BLX` calls are `R_ARM_CALL`, `B` tail calls and conditional calls `R_ARM_JUMP24` (found from the
@@ -554,6 +555,44 @@ exheader code-set info maps `.code` as `.text` (r-x), `.rodata` (r--), `.data` (
 partitions left out (`threeds::program_view`). The import stores and maps that view (Shin Megami Tensei IV:
 a few MB of a 1.8 GB card), and `config/project.json` still records the whole file's sha256.
 
+**A 3DS project works without romwright.** `orig/` and `build/` are git-ignored (retail bytes), so a fresh clone
+has no target objects. Every 3DS project therefore carries stdlib-only Python tools (`tools/n3ds.py`,
+`tools/split.py`, `tools/relink.py`):
+
+```sh
+python3 build.py fetch      # pinned armcc, objdiff-cli, wibo where needed, arm-none-eabi binutils (for relink)
+# put the decrypted dump at orig/<image> (config/project.json says the name and sha256)
+python3 build.py split      # rewrite orig/target/**.o from the dump and config/
+python3 build.py            # compile src/ with armcc
+python3 build.py report     # objdiff-cli -> build/report.json
+python3 tools/relink.py --matched   # relink the whole .code with every 100% function from build/obj; prints MATCH
+```
+
+* `tools/n3ds.py` is the loader: NCCH (`.cxi`) and NCSD (`.3ds`/`.cci`, the executable partition, or
+  `partition<N>` as `config/modules.json` names it), ExeFS `.code`, backward-LZ ("BLZ") decompression, the
+  exheader's code-set segments and the same mapped regions romwright reads. It reads only the parts of the file it
+  needs. Encrypted content (secure NCCH keys, a fixed-key title, a CIA) is refused with a message: it does no
+  cryptography, so decrypt first (`romwright-cli new-project --keys` decrypts in memory, for the import only).
+* `tools/split.py` writes `orig/target/**.o` from `orig/<image>`, `config/project.json` (which object is which
+  function), `config/symbols.txt` (names, sizes, `mode:thumb`; a function renamed there is the name its callers'
+  relocations use after the next `split`) and `config/modules.json` (which sections are data, for `DAT_<address>`),
+  and nothing else: no romwright, no analysis store. It is a port of the writer above and produces the same bytes:
+  branches (calls, tail calls, conditional calls, recursion) and pool words are found from the bytes. romwright
+  also feeds the writer the transfers the analysis recorded; a recorded transfer that the bytes do not show as a
+  branch outside a literal pool is the only thing `split.py` cannot reproduce, and on Shin Megami Tensei IV no
+  object differs (9,331 of 9,331 byte-identical on v1.0, 9,337 of 9,337 on the v1.2.0 update).
+* `tools/relink.py` places every function at its retail address with a generated GNU ld script and compares the
+  linked `.code` with the dump's. By default functions without a compiled match are retail bytes; `--matched`
+  links each function objdiff scores 100% from `build/obj/` (the decompiled C, proven inside the whole image),
+  `--full` links every function from its target object (proves those objects relocate back to retail). A function
+  that scores 100% but does not reproduce its bytes in the image is printed with the `--exclude` list to rerun
+  with. The Windows binutils asset (298 MB zip) installs only `as`, `ld`, `nm`, `objcopy`, `objdump` and
+  `readelf` (standalone executables); other hosts extract Arm's whole 13.3.rel1 toolchain.
+
+`new-project` writes `src/` as well as everything above: regenerating into a directory whose `src/` you edited
+overwrites it, so from the first edit on use `split` to bring `orig/target/` back. Regeneration also rewrites
+`.gitignore`; keep personal ignore rules (the directory holding your dump, say) in `.git/info/exclude`.
+
 Finding the build and flags: compile a few hundred decompiled functions with every build and a few flag sets and
 rank them by objdiff score. On Shin Megami Tensei IV (USA, 9,350 functions, 240 sampled) every RVCT 4.1 build
 from b713 on at `-O3 -Otime` scored 55.2% fuzzy with 9 exact matches, 4.0 and 4.1 b561 49.8% with 3, 5.04 b82
@@ -562,8 +601,9 @@ from b713 on at `-O3 -Otime` scored 55.2% fuzzy with 9 exact matches, 4.0 and 4.
 ```
 <outdir>/
   README.md              what was written, per-platform notes, how to read objdiff here
-  build.py               compile every unit with the pinned clang; `fetch`, `report`; stdlib only
+  build.py               compile every unit with the pinned compiler; `fetch`, `split` (3DS), `report`; stdlib only
   tools/download_tool.py sha256-verified fetch of config/toolchain.json's entries (same tool as PS2)
+  tools/n3ds.py split.py relink.py   (3DS only) the loader, target-object writer and GNU ld relink described above
   config/
     symbols.txt          one line per function/label/import: name = section:0xADDR; // type:function size:0xN [mode:thumb|arm] [orig:"name"]
                          (config/<module>/symbols.txt when the image has several modules)

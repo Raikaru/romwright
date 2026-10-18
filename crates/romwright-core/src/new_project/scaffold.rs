@@ -34,6 +34,8 @@ use crate::{Core, Result};
 pub const CLANG_ID: &str = "clang-22.1.8";
 const OBJDIFF_ID: &str = "objdiff-cli";
 const WIBO_ID: &str = "wibo";
+/// GNU as/ld/objcopy for `tools/relink.py` (3DS retail projects).
+const BINUTILS_ID: &str = "binutils-arm-none-eabi";
 const MAX_FUNCTION_BYTES: u64 = 1 << 20;
 /// Every armcc unit's flags: decomp.me's n3ds command line (ARM11 MPCore,
 /// fast VFP, ARM/Thumb interworking) and C99 for the decompiler's C.
@@ -87,7 +89,7 @@ pub const TARGETS: &[Target] = &[
         data_model: "ILP32 (ARM11 MPCore, ARMv6K, VFPv2)",
         objdiff: true,
         no_objdiff: "",
-        why_not_matching: "no linker or C runtime ships with the public armcc builds, so no build relinks the retail `.code`",
+        why_not_matching: "no linker or C runtime ships with the public armcc builds, so no armcc build produces the whole `.code`; `tools/relink.py` instead relinks it from the per-function objects with GNU ld",
         notes: "romwright reads NCCH, NCSD and CIA containers (cleartext, or a title whose NCCH uses the documented all-zero fixed key). \
 A flat ExeFS `.code` is imported with `--raw 0x100000 --language ARM:LE:32:v6`, which carries no section table: the scaffold then has one region. \
 Code mixes ARM and Thumb: every function carries `mode:arm` or `mode:thumb` in the symbol file (the mode the analysis decoded it in), its target object has the matching mapping symbol, and `build.py` compiles its unit in that mode (`--arm`/`--thumb` with armcc, `-marm`/`-mthumb` with clang). \
@@ -802,6 +804,9 @@ pub fn plan(
     if target.objdiff {
         ids.push(OBJDIFF_ID);
     }
+    if compiler.retail() && target.id == "3ds" {
+        ids.push(BINUTILS_ID);
+    }
     let subset = inputs.manifest.subset(&ids)?;
     let arm = target.arch == Arch::Arm32;
 
@@ -1124,6 +1129,27 @@ pub fn plan(
             "LLVM is Apache-2.0 with LLVM exceptions; objdiff is Apache-2.0. A toolchain profile (`--toolchain`, `config/toolchain.local.json` with `{\"clang\": \"/path/to/clang\"}`) overrides the download.".to_string(),
         )
     };
+    let fresh_clone = if target.id == "3ds" {
+        let image = inputs.image_name;
+        let mut steps = format!(
+            "\n## From a fresh clone\n\n`orig/` and `build/` hold retail bytes and are not in version control. With only Python 3 (romwright is not needed):\n\n```sh\npython3 build.py fetch      # pinned tools{}\n# put your decrypted dump at orig/{image} (sha256 {})\npython3 build.py split      # tools/split.py: rebuild orig/target/**.o from the dump and config/\npython3 build.py            # compile src/\npython3 build.py report     # objdiff-cli -> build/report.json\n",
+            if compiler.retail() { " (the compiler, objdiff-cli, wibo where needed, arm-none-eabi binutils)" } else { "" },
+            inputs.image_sha256,
+        );
+        if compiler.retail() {
+            steps.push_str("python3 tools/relink.py --matched   # relink the retail .code with every matched function from build/obj/: must print MATCH\n");
+        }
+        steps.push_str("```\n\n`tools/split.py` writes the target objects romwright wrote, byte for byte, from `orig/");
+        steps.push_str(image);
+        steps.push_str("`, `config/symbols.txt` (a function renamed there is the name its callers' relocations use), `config/modules.json` and `config/project.json`. `tools/n3ds.py` reads NCCH and NCSD dumps (a decrypted `.cxi`/`.3ds`/`.cci`; encrypted content is refused with a message). ");
+        if compiler.retail() {
+            steps.push_str("`tools/relink.py` links the whole `.code` with GNU ld from `orig/target` objects (retail bytes) and, with `--matched`, from the objects `build.py` compiled for the functions objdiff reports at 100%; `--full` links every function from its target object, which proves those objects relocate back to retail. A function objdiff scores 100% that does not reproduce its bytes in the image is listed with an `--exclude` line to rerun with.\n\n");
+        }
+        steps.push_str("`romwright new-project` writes `src/` too: do not regenerate into a directory whose `src/` you have edited. Personal ignore rules (your dump's directory, say) go in `.git/info/exclude`, because regenerating rewrites `.gitignore`.\n");
+        steps
+    } else {
+        String::new()
+    };
     let readme = render(
         include_str!("templates/scaffold/README.md.tmpl"),
         &[
@@ -1156,6 +1182,7 @@ pub fn plan(
             ("SYMBOLS", symbol_count.to_string()),
             ("MODULES", inputs.modules.len().to_string()),
             ("CHECK", check),
+            ("FRESH_CLONE", fresh_clone),
             ("PLATFORM_NOTES", target.notes.to_string()),
             ("TARGET_NOTE", target_note),
             ("TOOLS_NOTE", tools_note),
@@ -1165,6 +1192,12 @@ pub fn plan(
     files.push(template("README.md", &readme, false));
     files.push(template("build.py", include_str!("templates/scaffold/build.py"), true));
     files.push(template("tools/download_tool.py", include_str!("templates/ps2/tools/download_tool.py"), true));
+    if target.id == "3ds" {
+        // Everything needed to rebuild `orig/target/` and relink the `.code` from a fresh clone.
+        files.push(template("tools/n3ds.py", include_str!("templates/scaffold/tools/n3ds.py"), true));
+        files.push(template("tools/split.py", include_str!("templates/scaffold/tools/split.py"), true));
+        files.push(template("tools/relink.py", include_str!("templates/scaffold/tools/relink.py"), true));
+    }
     files.push(template(".gitignore", include_str!("templates/scaffold/gitignore"), false));
     if sources_written == 0 {
         files.push(template("src/.gitkeep", "", false));
@@ -1526,5 +1559,44 @@ mod tests {
         let f = file.symbols().find(|s| s.name() == Ok("f")).unwrap();
         assert_eq!(f.size(), 0xC);
         assert!(file.section_by_name(".ARM.attributes").is_some());
+
+        // A 3DS project carries the stdlib-only tools that rebuild orig/target and relink the .code.
+        for tool in ["tools/n3ds.py", "tools/split.py", "tools/relink.py", "tools/download_tool.py"] {
+            assert!(files.iter().any(|f| f.path == tool && !f.bytes.is_empty()), "{tool}");
+        }
+        let split = String::from_utf8(get("tools/split.py")).unwrap();
+        assert!(split.contains("import n3ds") && !split.contains(".romwright") && !split.contains("subprocess"), "split.py reads the dump, not romwright's store");
+        let relink = String::from_utf8(get("tools/relink.py")).unwrap();
+        assert!(relink.contains("import n3ds") && !relink.contains("smt4"), "relink.py takes the image from config/project.json");
+        // relink needs GNU ld: the retail subset pins binutils, with a Windows asset that extracts only the standalone tools.
+        let toolchain: Manifest = serde_json::from_str(&toolchain).unwrap();
+        let binutils = toolchain.tool("binutils-arm-none-eabi").expect("binutils pinned for relink");
+        assert_eq!(binutils.assets["windows-x86_64"].archive, "zip");
+        let build = String::from_utf8(get("build.py")).unwrap();
+        assert!(build.contains("\"split\"") && build.contains("binutils-arm-none-eabi"));
+        let readme = String::from_utf8(get("README.md")).unwrap();
+        for step in ["python3 build.py fetch", "python3 build.py split", "python3 build.py report", "python3 tools/relink.py --matched"] {
+            assert!(readme.contains(step), "{step}");
+        }
+        assert!(!readme.contains("no build relinks the retail"), "relink.py does relink it");
+
+        // The non-matching clang scaffold keeps the split tools but pins no binutils; another platform has none of them.
+        let clang = ScaffoldInputs {
+            target: n3ds,
+            image_name: "game.cxi",
+            project_name: "game",
+            image_sha256: sha256_hex(b"image"),
+            image_size: 5,
+            modules: vec![ModuleInput { id: "_code".into(), program: "game".into(), facts: &facts, code: &code, build_id: None, mapped_sha256: "0".repeat(64) }],
+            manifest: &manifest,
+            compiler: compiler_for(n3ds, None, None, &manifest).unwrap(),
+            profile: None,
+            files: &HashMap::new(),
+            romwright_version: "0.0.0",
+        };
+        let (clang_files, _) = plan(&clang, &layout(&clang), &HashMap::new()).unwrap();
+        assert!(clang_files.iter().any(|f| f.path == "tools/split.py"));
+        let clang_toolchain = clang_files.iter().find(|f| f.path == "config/toolchain.json").unwrap();
+        assert!(!String::from_utf8_lossy(&clang_toolchain.bytes).contains("binutils-arm-none-eabi"));
     }
 }
