@@ -215,17 +215,38 @@ def main():
     # An ARM `B`/`BL` cannot change the instruction set: its target is ARM code,
     # whatever mode the analysis decoded that function in. Such a function's
     # object says Thumb (and the linker would bridge to it with a veneer), so it
-    # links as its raw bytes under an ARM symbol instead.
-    entered_by_arm = set()
+    # links as its raw bytes under an ARM symbol instead. Likewise a Thumb `BL`
+    # (not `BLX`) enters Thumb code: a function decoded as ARM that one reaches
+    # starts in Thumb (armcc's `BX PC` interworking stub), so it links as its
+    # raw bytes under a Thumb symbol, or ld would rewrite the call into a `BLX`.
+    entered_by_arm, entered_by_thumb_bl = set(), set()
     arm = sorted((address, size) for address, (_name, size, is_thumb) in functions.items() if not is_thumb)
     for entry, size in arm:
         for at in range(entry, entry + size - 3, 4):
             word = struct.unpack_from("<I", code, at - base)[0]
             if word >> 28 != 0xF and word >> 25 & 7 == 5:
                 entered_by_arm.add((at + 8 + (((word & 0xFFFFFF) ^ 0x800000) - 0x800000) * 4) & 0xFFFFFFFF)
-    misread = thumb & entered_by_arm
+    for entry, (_name, size, is_thumb) in functions.items():
+        if not is_thumb:
+            continue
+        body = code[entry - base:entry - base + size]
+        pools = split.literal_pools(entry, body, True)[0]
+        at = 0
+        while at + 4 <= len(body):
+            first, second = struct.unpack_from("<HH", body, at)
+            if any(start <= at < end for start, end in pools):
+                at += 2
+            elif first & 0xF800 == 0xF000 and second & 0xF800 == 0xF800:  # BL (Thumb-1 pair), not BLX
+                offset = ((first & 0x7FF) << 12 | (second & 0x7FF) << 1)
+                entered_by_thumb_bl.add((entry + at + 4 + offset - (0x800000 if offset & 0x400000 else 0)) & 0xFFFFFFFF)
+                at += 4
+            else:
+                at += 2
+    arm_entries = {address for address, _ in arm}
+    thumb_entered_arm = arm_entries & entered_by_thumb_bl
+    misread = (thumb & entered_by_arm) | thumb_entered_arm
     for name, address in names.items():
-        if address in thumb and address not in misread:
+        if (address in thumb and address not in misread) or address in thumb_entered_arm:
             names[name] = address | 1
     matched = matched_functions() - set(filter(None, args.exclude.split(","))) if args.matched else set()
 
@@ -374,7 +395,8 @@ def main():
     finished = time.time()
 
     print(f"{len(placed)} function objects ({swapped} matched, from build/obj), {len(inputs) - len(placed)} raw blobs, "
-          f"{overlaps} overlapping objects skipped, {len(misread)} Thumb-decoded functions entered from ARM linked as bytes, "
+          f"{overlaps} overlapping objects skipped, {len(misread - thumb_entered_arm)} Thumb-decoded functions entered "
+          f"from ARM and {len(thumb_entered_arm)} ARM-decoded functions entered by a Thumb BL linked as bytes, "
           f"{len(dat)} address-named symbols")
     if oversized:
         print(f"{len(oversized)} functions at 100% in objdiff keep their retail bytes (compiled section size differs): "
