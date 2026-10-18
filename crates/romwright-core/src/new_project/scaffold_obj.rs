@@ -239,8 +239,35 @@ pub struct LiteralPools {
     pub end: u64,
 }
 
+/// True for the first halfword of a 32-bit Thumb-2 instruction: its top five
+/// bits are 0b11101, 0b11110 or 0b11111.
+fn thumb_is_wide(first: u16) -> bool {
+    first >> 11 >= 0x1D
+}
+
+/// The PC-relative literal load a Thumb-2 instruction is, as `(add, offset,
+/// size, is a word)`: `LDR.W` (`F85F`/`F8DF`), `LDRB`/`LDRSB`/`LDRH`/`LDRSH`
+/// literal, `LDRD` literal and `VLDR` literal. A byte or halfword load into
+/// PC (Rt = 15) is a `PLD`/`PLI`/hint, not a load.
+fn thumb2_literal_load(first: u16, second: u16) -> Option<(bool, u64, u64, bool)> {
+    let up = first >> 7 & 1 == 1;
+    let imm12 = second as u64 & 0xFFF;
+    let loads = second >> 12 != 0xF;
+    match first & 0xFF7F {
+        0xF85F => Some((up, imm12, 4, true)),
+        0xF81F | 0xF91F if loads => Some((up, imm12, 1, false)),
+        0xF83F | 0xF93F if loads => Some((up, imm12, 2, false)),
+        0xE95F => Some((up, (second as u64 & 0xFF) * 4, 8, false)),
+        _ if first & 0xFF3F == 0xED1F && second & 0x0E00 == 0x0A00 => {
+            Some((up, (second as u64 & 0xFF) * 4, if second >> 8 & 1 == 1 { 8 } else { 4 }, false))
+        }
+        _ => None,
+    }
+}
+
 /// Finds the literal pools of an ARM function from the PC-relative loads that
-/// read them: A32 `LDR`/`LDRD`/`VLDR` and Thumb `LDR` with PC as the base.
+/// read them: A32 `LDR`/`LDRD`/`VLDR` and Thumb `LDR` with PC as the base
+/// (16-bit, and the 32-bit loads of Thumb-2, which are consumed as one unit).
 /// One pass in address order: compilers place a pool after the code that
 /// reads it, so a pool word is already known to be data when the scan reaches
 /// it and is not decoded as an instruction (a pool constant that happens to
@@ -280,8 +307,23 @@ pub fn arm_literal_pools(entry: u64, bytes: &[u8], thumb: bool) -> LiteralPools 
             }
             if half & 0xF800 == 0x4800 {
                 read(&mut data, ((at + skew + 4) & !3) - skew + (half as u64 & 0xFF) * 4, 4, true);
-            } else if half & 0xF800 == 0xF000 {
-                // The first half of a BL/BLX pair: skip its second half.
+            } else if thumb_is_wide(half) {
+                // A 32-bit instruction is one 4-byte unit: its second half is never decoded alone.
+                if let Some((up, imm, size, is_word)) = read_u16(bytes, at as usize + 2).and_then(|second| thumb2_literal_load(half, second)) {
+                    let base = ((at + skew + 4) & !3) - skew;
+                    let target = if up { base.checked_add(imm) } else { base.checked_sub(imm) };
+                    if let Some(target) = target {
+                        if size < 4 {
+                            // A byte or halfword load marks the aligned words around it.
+                            let end = target + size;
+                            if let Some(low) = target.checked_sub((target + skew) % 4) {
+                                read(&mut data, low, end + (4 - (end + skew) % 4) % 4 - low, false);
+                            }
+                        } else {
+                            read(&mut data, target, size, is_word);
+                        }
+                    }
+                }
                 at += 2;
             }
             at += 2;
@@ -330,7 +372,7 @@ pub fn arm_literal_pools(entry: u64, bytes: &[u8], thumb: bool) -> LiteralPools 
 
 /// Direct branches and calls of an ARM function outside its literal pools,
 /// as `(instruction address, target address)`: A32 `B`/`BL`/`BLX imm` and
-/// Thumb `BL`/`BLX` pairs. Unlike an analysis transfer list this sees a tail
+/// Thumb `BL`/`BLX` pairs (32-bit instructions are stepped over whole). Unlike an analysis transfer list this sees a tail
 /// call (`B` to another function) wherever the decoder put it.
 pub fn arm_direct_branches(entry: u64, bytes: &[u8], thumb: bool, pools: &LiteralPools) -> Vec<(u64, u64)> {
     let in_pool = |at: u64| pools.ranges.iter().any(|&(start, end)| at >= start && at < end);
@@ -340,18 +382,21 @@ pub fn arm_direct_branches(entry: u64, bytes: &[u8], thumb: bool, pools: &Litera
         let mut at = 0u64;
         while at + 4 <= len {
             let (Some(first), Some(second)) = (read_u16(bytes, at as usize), read_u16(bytes, at as usize + 2)) else { break };
-            if in_pool(at) || first & 0xF800 != 0xF000 || (second & 0xD000 != 0xD000 && second & 0xD001 != 0xC000) {
+            if in_pool(at) || !thumb_is_wide(first) {
                 at += 2;
                 continue;
             }
-            let blx = second & 0x1000 == 0;
-            let s = (first >> 10 & 1) as u32;
-            let (j1, j2) = ((second >> 13 & 1) as u32, (second >> 11 & 1) as u32);
-            let (i1, i2) = (!(j1 ^ s) & 1, !(j2 ^ s) & 1);
-            let imm = (s << 24) | (i1 << 23) | (i2 << 22) | ((first as u32 & 0x3FF) << 12) | ((second as u32 & 0x7FF) << 1);
-            let from = entry + at;
-            let base = if blx { (from + 4) & !3 } else { from + 4 };
-            found.push((from, (base as i64 + sign_extend(imm, 25)) as u64 & 0xFFFF_FFFF));
+            // A 32-bit instruction is one 4-byte unit, a BL/BLX or not.
+            if first & 0xF800 == 0xF000 && (second & 0xD000 == 0xD000 || second & 0xD001 == 0xC000) {
+                let blx = second & 0x1000 == 0;
+                let s = (first >> 10 & 1) as u32;
+                let (j1, j2) = ((second >> 13 & 1) as u32, (second >> 11 & 1) as u32);
+                let (i1, i2) = (!(j1 ^ s) & 1, !(j2 ^ s) & 1);
+                let imm = (s << 24) | (i1 << 23) | (i2 << 22) | ((first as u32 & 0x3FF) << 12) | ((second as u32 & 0x7FF) << 1);
+                let from = entry + at;
+                let base = if blx { (from + 4) & !3 } else { from + 4 };
+                found.push((from, (base as i64 + sign_extend(imm, 25)) as u64 & 0xFFFF_FFFF));
+            }
             at += 4;
         }
     } else {
@@ -839,6 +884,73 @@ mod tests {
         let pools = arm_literal_pools(0x2c_68e2, &bytes, true);
         assert_eq!(pools.words, [0xa]);
         assert_eq!(pools.ranges, [(0xa, 0xe)]);
+    }
+
+    fn thumb_bytes(halves: &[u16]) -> Vec<u8> {
+        halves.iter().flat_map(|h| h.to_le_bytes()).collect()
+    }
+
+    #[test]
+    fn a_wide_ldr_is_a_pool_reader_and_the_bl_after_it_is_found() {
+        // ldr.w r4, [pc, #0x800] ; bl +0xffc: the load points past the bytes, so there is no
+        // pool here (the second half `0x4800` of the LDR.W is not a narrow `ldr r0, [pc, ..]`).
+        let bytes = thumb_bytes(&[0xF8DF, 0x4800, 0xF000, 0xFFFE]);
+        let pools = arm_literal_pools(0x1000, &bytes, true);
+        assert!(pools.ranges.is_empty() && pools.words.is_empty());
+        assert_eq!(pools.end, 0x808);
+        assert_eq!(arm_direct_branches(0x1000, &bytes, true, &pools), [(0x1004, 0x2004)]);
+        // The same load reaching a pool inside the function: ldr.w r4, [pc, #4] ; bl ; .word.
+        let bytes = thumb_bytes(&[0xF8DF, 0x4004, 0xF000, 0xFFFE, 0x0010, 0x0020]);
+        let pools = arm_literal_pools(0x1000, &bytes, true);
+        assert_eq!((pools.ranges.as_slice(), pools.words.as_slice()), ([(8, 12)].as_slice(), [8].as_slice()));
+        assert_eq!(arm_direct_branches(0x1000, &bytes, true, &pools), [(0x1004, 0x2004)]);
+        // A subtracted offset: the pool before the load. ldr.w r0, [pc, #-8] at +4.
+        let bytes = thumb_bytes(&[0x0010, 0x0020, 0xF85F, 0x0008, 0x4770, 0xBF00]);
+        let pools = arm_literal_pools(0x1000, &bytes, true);
+        assert_eq!((pools.ranges.as_slice(), pools.words.as_slice()), ([(0, 4)].as_slice(), [0].as_slice()));
+    }
+
+    #[test]
+    fn the_other_wide_literal_loads_mark_their_pools() {
+        let tail = [0x4770, 0xBF00, 0x0000, 0x0000, 0x0000, 0x0000];
+        let case = |head: [u16; 2], ranges: &[(u64, u64)], words: &[u64]| {
+            let bytes = thumb_bytes(&[head[0], head[1], tail[0], tail[1], tail[2], tail[3], tail[4], tail[5]]);
+            let pools = arm_literal_pools(0x1000, &bytes, true);
+            assert_eq!((pools.ranges.as_slice(), pools.words.as_slice()), (ranges, words), "{head:04x?}");
+        };
+        // LDRB/LDRSB/LDRH/LDRSH literal: the aligned words around the byte or halfword.
+        case([0xF89F, 0x3006], &[(8, 12)], &[]); // ldrb r3, [pc, #6] reads byte 10
+        case([0xF99F, 0x3006], &[(8, 12)], &[]); // ldrsb
+        case([0xF8BF, 0x3002], &[(4, 8)], &[]); // ldrh r3, [pc, #2] reads 6..8
+        case([0xF9BF, 0x3002], &[(4, 8)], &[]); // ldrsh
+        case([0xF8BF, 0x3003], &[(4, 12)], &[]); // an unaligned ldrh at 7..9 spans two words
+        // PLD/PLI literal (Rt = 15) read no pool.
+        case([0xF89F, 0xF006], &[], &[]);
+        case([0xF99F, 0xF006], &[], &[]);
+        // LDRD literal: ldrd r2, r3, [pc, #4]; VLDR double and single.
+        case([0xE9DF, 0x2301], &[(8, 16)], &[]);
+        case([0xED9F, 0x0B01], &[(8, 16)], &[]);
+        case([0xED9F, 0x0A01], &[(8, 12)], &[]);
+        // vldr with U = 0 reaches back: base 4, minus 4.
+        case([0xED1F, 0x0A01], &[(0, 4)], &[]);
+        // An unaligned LDR.W target is no pool word.
+        case([0xF8DF, 0x4002], &[], &[]);
+    }
+
+    #[test]
+    fn a_wide_instruction_is_one_unit_whose_second_half_is_not_decoded_alone() {
+        // push.w {r4-r11, lr}: its second half 0x4FF0 reads as `ldr r7, [pc, #0x3c0]`.
+        let bytes = thumb_bytes(&[0xE92D, 0x4FF0, 0x4770, 0xBF00]);
+        assert_eq!(arm_literal_pools(0x1000, &bytes, true).end, 8);
+        // A wide instruction whose second half (0xF04F) reads as the first half of a BL
+        // pair with the next instruction's first half: no branch, the pair is not aligned.
+        let bytes = thumb_bytes(&[0xE92D, 0xF04F, 0xF000, 0xBF00]);
+        let pools = arm_literal_pools(0x1000, &bytes, true);
+        assert!(arm_direct_branches(0x1000, &bytes, true, &pools).is_empty());
+        // A BL after a wide instruction at an odd halfword is still found.
+        let bytes = thumb_bytes(&[0xBF00, 0xE92D, 0x4FF0, 0xF000, 0xFFFE]);
+        let pools = arm_literal_pools(0x1000, &bytes, true);
+        assert_eq!(arm_direct_branches(0x1000, &bytes, true, &pools), [(0x1006, 0x2006)]);
     }
 
     #[test]
