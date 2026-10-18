@@ -1132,7 +1132,7 @@ pub fn plan(
     let fresh_clone = if target.id == "3ds" {
         let image = inputs.image_name;
         let mut steps = format!(
-            "\n## From a fresh clone\n\n`orig/` and `build/` hold retail bytes and are not in version control. With only Python 3 (romwright is not needed):\n\n```sh\npython3 build.py fetch      # pinned tools{}\n# put your decrypted dump at orig/{image} (sha256 {})\npython3 build.py split      # tools/split.py: rebuild orig/target/**.o from the dump and config/\npython3 build.py            # compile src/\npython3 build.py report     # objdiff-cli -> build/report.json\n",
+            "\n## From a fresh clone\n\n`orig/` and `build/` hold retail bytes and are not in version control. With only Python 3 (romwright is not needed):\n\n```sh\npython3 build.py fetch      # pinned tools{}\n# put your decrypted dump at orig/{image}: this file (sha256 {}), or any .cxi/.3ds/.cci/decrypted .cia of the same build\npython3 build.py split      # tools/split.py: checks the dump's program, rebuilds orig/target/**.o from it and config/\npython3 build.py            # compile src/\npython3 build.py report     # objdiff-cli -> build/report.json\n",
             if compiler.retail() { " (the compiler, objdiff-cli, wibo where needed, arm-none-eabi binutils)" } else { "" },
             inputs.image_sha256,
         );
@@ -1141,7 +1141,7 @@ pub fn plan(
         }
         steps.push_str("```\n\n`tools/split.py` writes the target objects romwright wrote, byte for byte, from `orig/");
         steps.push_str(image);
-        steps.push_str("`, `config/symbols.txt` (a function renamed there is the name its callers' relocations use), `config/modules.json` and `config/project.json`. `tools/n3ds.py` reads NCCH and NCSD dumps (a decrypted `.cxi`/`.3ds`/`.cci`; encrypted content is refused with a message). ");
+        steps.push_str("`, `config/symbols.txt` (a function renamed there is the name its callers' relocations use), `config/modules.json` and `config/project.json`, after checking the dump's decompressed `.code` against `mapped_sha256` in `config/modules.json` (another version of the game is refused). `tools/n3ds.py` reads NCCH, NCSD and decrypted CIA dumps (`.cxi`/`.3ds`/`.cci`/`.cia`; encrypted content is refused with a message). ");
         if compiler.retail() {
             steps.push_str("`tools/relink.py` links the whole `.code` with GNU ld from `orig/target` objects (retail bytes) and, with `--matched`, from the objects `build.py` compiled for the functions objdiff reports at 100%; `--full` links every function from its target object, which proves those objects relocate back to retail. A function objdiff scores 100% that does not reproduce its bytes in the image is listed with an `--exclude` line to rerun with.\n\n");
         }

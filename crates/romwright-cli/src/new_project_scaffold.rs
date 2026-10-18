@@ -12,13 +12,15 @@
 //! decompiles on N workers at once (default: the host's cores, at most 16).
 //! `--tus FILE` places functions in folders named after their original source
 //! files (`src/<module>/<file>/<function>.c`), one objdiff progress category each.
+//! `--names FILE` (`ADDR NAME` lines) renames functions the analysis found and
+//! seeds nothing, unlike `--map`.
 
 use super::{flag, has_flag};
 use romwright_core::native::linkmap::SplitExtent;
 use romwright_core::new_project::{self, manifest::Manifest, scaffold};
 use romwright_core::session::ProgramImage;
 use romwright_core::Core;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 /// Reads `size` bytes at a virtual address of one image.
@@ -76,6 +78,28 @@ fn source_files(path: &str) -> Result<HashMap<(String, u64), String>, String> {
         files.insert((module.to_string(), address), file.to_string());
     }
     Ok(files)
+}
+
+/// `--names FILE`: `ADDR NAME` per line (`#` comments). Unlike `--map`, which
+/// seeds the analysis with every row (and so changes which functions it finds),
+/// these only rename functions an unnamed import finds.
+fn names_file(path: &str) -> Result<Vec<(u64, String)>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let mut names = Vec::new();
+    for (number, line) in text.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut words = line.split_whitespace();
+        let (Some(address), Some(name), None) = (words.next(), words.next(), words.next()) else {
+            return Err(format!("{path}:{}: expected `ADDR NAME`", number + 1));
+        };
+        let address = u64::from_str_radix(address.trim_start_matches("0x"), 16)
+            .map_err(|e| format!("{path}:{}: address {address}: {e}", number + 1))?;
+        names.push((address, name.to_string()));
+    }
+    Ok(names)
 }
 
 /// Functions per decompile batch: one worker start serves this many, and a
@@ -226,6 +250,27 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
         eprintln!("fact pack: {}: {} matched, {} renamed, {} prototypes", report.program, report.matched, report.renamed, report.prototypes);
     }
     eprintln!("import: {:.1}s", started.elapsed().as_secs_f64());
+    if let Some(path) = flag(args, "--names") {
+        let wanted = names_file(&path)?;
+        for summary in &stored {
+            let entries: HashSet<u64> = core
+                .export_facts(&summary.program)
+                .map_err(|e| e.to_string())?
+                .functions
+                .iter()
+                .map(|f| f.entry.offset)
+                .collect();
+            let mut renamed = 0;
+            for (address, name) in &wanted {
+                if entries.contains(address) {
+                    core.rename_command(&summary.program, &romwright_model::Address::ram(*address), name)
+                        .map_err(|e| format!("{path}: {address:#x} {name}: {e}"))?;
+                    renamed += 1;
+                }
+            }
+            eprintln!("names: {}: {renamed} of {} renamed, {} name no function entry", summary.program, wanted.len(), wanted.len() - renamed);
+        }
+    }
 
     // Facts and the retail bytes of every program.
     let mut facts = Vec::new();
