@@ -100,6 +100,13 @@ VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
   romwright-desktop --screenshot shot.png --project DIR --program PROGRAM --theme dark
 ```
 
+The gate renders and waits on a frame between every poll of the app, so
+`ui.list.load_ms` and `ui.list.filter_ms` include about two frames each. On
+WARP a 1440x900 frame is CPU rasterising and takes 100 ms or more, so
+`tests/m6-003_desktop_package.py` holds a WARP run to 1500 ms for both and every
+other adapter to the 500 ms and 100 ms thresholds; its header has the
+measurements.
+
 ## The UI gate
 
 `--gate` drives the real shell and panels and prints one
