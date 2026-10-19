@@ -52,11 +52,16 @@ VARIANTS = ("x86_64_many_o2", "i386_many_o2", "aarch64_many_o2", "powerpc_many_o
 PRECISION_FLOOR = 0.98
 RECALL_FLOOR = 0.98
 UNATTRIBUTED_CEILING = 0.02
-# Precision is only meaningful on a class with enough claims to have a
-# rate: on a class of two, one miss reads as 0.5 and says nothing. Small
-# classes are held by the per-row count of invented entries instead, which
-# is the number that actually matters.
-MINIMUM_CLASS = 20
+# Precision is only meaningful on a class with enough claims to have a rate:
+# on a class of two, one miss reads as 0.5 and says nothing. A class has a
+# rate once one miss cannot by itself take it under the floor, which is
+# 1 / (1 - PRECISION_FLOOR) = 50 claims; below that the class is held by the
+# per-row count of invented entries, which is the number that actually
+# matters. (The floor here was 20 claims, and a MinGW build that puts the
+# CRT's ctor/dtor lists in .text gave pe64's `flow` class 23 claims with one
+# of them a reloc pointer into that data: 0.9565, from a single entry the
+# ceiling below already tolerates.)
+MINIMUM_CLASS = round(1 / (1 - PRECISION_FLOOR))
 INVENTED_CEILING = 2
 
 

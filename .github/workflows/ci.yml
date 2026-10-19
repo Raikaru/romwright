@@ -217,6 +217,11 @@ jobs:
       # in the gates below fails.
       - name: Build the native decompiler
         run: bash native/build_ghidra_opt.sh --jobs 4
+      # PSX, r5900, VU, RSP, Xenon and Gekko are not in the release zip: romwright
+      # compiles them from native/languages into the install (the `rust` job does
+      # the same). The PlayStation and Nintendo 64 gates import images in them.
+      - name: Install romwright's SLEIGH languages into the Ghidra install
+        run: python3 packaging/languages.py --ghidra "$ROMWRIGHT_GHIDRA" --cache-dir "$RUNNER_TEMP/ghidra-cache"
       - name: Generate and validate all 20 ELF oracles
         run: |
           python3 tests/m1-007_oracle_test.py
