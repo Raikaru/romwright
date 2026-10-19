@@ -771,6 +771,12 @@ mod tests {
     }
 
     #[test]
+    fn a_signed_hex_literal_ending_in_f_is_an_integer_not_a_float() {
+        let out = run("unsigned char f(int *p, unsigned int n)\n{\n  n = *(unsigned char *)(p + -0xf);\n  return (unsigned char *)(p + -0xff) != 0;\n}\n", "");
+        assert!(!out.contains("romwright_f2u"), "{out}");
+    }
+
+    #[test]
     fn nothing_is_conformed_for_a_compiler_that_is_not_strict() {
         let out = super::super::apply("int f(unsigned int *p, unsigned int n)\n{\n  return p < n;\n}\n", &Decls::new());
         assert!(out.contains("p < n") && !out.contains("(unsigned int)p"), "{out}");
