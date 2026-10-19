@@ -42,7 +42,7 @@ if [ -n "${VCToolsInstallDir:-}" ]; then
 fi
 
 # Build current sources, independent of the caller's working directory.
-cargo build --manifest-path "$ROOT/Cargo.toml" -p romwright-cli --quiet
+cargo build --release --manifest-path "$ROOT/Cargo.toml" -p romwright-cli --quiet
 if [ -f "$ROOT/target/release/romwright-cli.exe" ]; then
     CLI="$ROOT/target/release/romwright-cli.exe"
 fi

@@ -680,9 +680,9 @@ def main():
                         help="Path to authoritative corpus lock file.")
     parser.add_argument("--update-lock", action="store_true",
                         help="Refresh source digests only, preserving matrix and recipes; do not build.")
-    parser.add_argument("--architectures", type=str,
-                        default="x86_64,i386,aarch64,powerpc,mipsel,pe64,pe32,msvc",
-                        help="Comma-separated list of architectures to build (or 'msvc').")
+    parser.add_argument("--architectures", type=str, default=None,
+                        help="Comma-separated list of architectures to build (or 'msvc'). "
+                             "Defaults to the lock's expected_architectures, in lock order.")
     parser.add_argument("--msvc-only", action="store_true",
                         help="Shorthand for --architectures msvc.")
     parser.add_argument("--skip-sysroots", action="store_true",
@@ -701,7 +701,12 @@ def main():
         print(f"Updated source digests in authoritative lock: {args.lock}")
         return
 
-    selected_archs = ["msvc"] if args.msvc_only else [a.strip() for a in args.architectures.split(",") if a.strip()]
+    if args.msvc_only:
+        selected_archs = ["msvc"]
+    elif args.architectures is None:
+        selected_archs = list(lock_expectations["expected_architectures"])
+    else:
+        selected_archs = [a.strip() for a in args.architectures.split(",") if a.strip()]
 
     out_dir = args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
