@@ -462,6 +462,8 @@ pub(super) fn from_doc(
     let ir = doc.function_ir.as_ref().ok_or("C dependencies require a semantic graph")?;
     let requested: BTreeMap<_, _> = doc.tokens.iter()
         .filter(|token| matches!(token.kind, TokenKind::FuncName | TokenKind::Op) && is_c_ident(&token.text))
+        // the loop keywords carry the operation they close (`} while( 1 );` after a call): not that operation's name
+        .filter(|token| !matches!(token.text.as_str(), "while" | "do" | "for"))
         .filter_map(|token| token.operation.map(|operation| (operation, token.text.as_str())))
         .collect();
     let mut result = Dependencies::default();

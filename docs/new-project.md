@@ -561,6 +561,19 @@ exheader code-set info maps `.code` as `.text` (r-x), `.rodata` (r--), `.data` (
 partitions left out (`threeds::program_view`). The import stores and maps that view (Shin Megami Tensei IV:
 a few MB of a 1.8 GB card), and `config/project.json` still records the whole file's sha256.
 
+**The decompiled C is made to compile under armcc.** armcc's front end is stricter than clang's: a pointer compared with an
+integer, arithmetic on a function pointer or `void *`, a float cast to a pointer, Ghidra's three-byte pieces (`x._1_3_`)
+and its `NAN(x)` / `register0x00000054` are all errors to it, though the machine code means something definite by each.
+With `--compiler armcc-*`, `emit_m2c::conform::strict` (rules gated on `M2cOptions::strict_c`) spells each as what the
+instructions do, never as a cast that only silences the error: the pointer compared as the unsigned integer it is, a byte
+pointer for the byte-counted arithmetic, `romwright_f2u`/`romwright_u2f` where a register moves between the float and the
+integer file (the bits, not the value), a shift and a mask for a piece, `x != x` for the NaN test, `__current_sp()` for a
+read of the stack pointer. A write of `sp` has no C spelling: it is the call `romwright_set_sp(value)`, marked as an
+intrinsic whose declaration is required. Ghidra's primitive names (`uint`, `byte`, `undefined4`, ...) are spelled as C types
+first: to a parser that does not know the typedefs, `(uint)*p` is a product. `include/romwright_types.h` also defines
+`sbyte`/`sword`/`sdword`/`sqword` and `NAN`/`INFINITY` (armcc's own constants). On Shin Megami Tensei IV and Apocalypse
+this took the C that did not compile from 181 and 251 functions to 3 and 3 (see `docs/measurements.md`).
+
 **A 3DS project works without romwright.** `orig/` and `build/` are git-ignored (retail bytes), so a fresh clone
 has no target objects. Every 3DS project therefore carries stdlib-only Python tools (`tools/n3ds.py`,
 `tools/split.py`, `tools/relink.py`):

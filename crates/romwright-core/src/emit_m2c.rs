@@ -98,6 +98,10 @@ pub struct M2cOptions {
     pub worker_env: Vec<(String, String)>,
     /// The import-table slots (virtual addresses) of a 32-bit Windows image whose calls are `__stdcall` (`imports`).
     pub stdcall_imports: std::collections::BTreeSet<u64>,
+    /// The project's compiler is armcc, whose C front end rejects what the decompiler's output leaves to implicit
+    /// conversions (a pointer compared with an integer, arithmetic on a function pointer, a float cast to a pointer,
+    /// Ghidra's odd-width pieces): `conform` spells those so the text compiles without changing what it computes.
+    pub strict_c: bool,
 }
 
 impl Default for M2cOptions {
@@ -113,6 +117,7 @@ impl Default for M2cOptions {
             compiler: String::new(),
             worker_env: Vec::new(),
             stdcall_imports: std::collections::BTreeSet::new(),
+            strict_c: false,
         }
     }
 }
@@ -933,7 +938,7 @@ pub(crate) fn emit_doc_in_unit(
             globals.replacements.entry(index).or_insert(text);
         }
     }
-    for (index, text) in locals::edits(doc, namer.mapping()) {
+    for (index, text) in locals::edits(doc, namer.mapping(), opts.strict_c) {
         globals.replacements.entry(index).or_insert(text);
     }
     let body = render_transformed(doc, opts, namer.mapping(), &dependencies.names, &globals.replacements)?;
@@ -1008,7 +1013,7 @@ pub(crate) fn emit_doc_in_unit(
         warnings,
         opts,
     );
-    emitted.text.insert_str(0, prelude);
+    emitted.text.insert_str(0, &prelude);
     Ok(emitted)
 }
 
@@ -1020,7 +1025,8 @@ fn conform_text(
     globals: &mut [globals::GlobalRef],
     gp: Option<u64>,
     opts: &M2cOptions,
-) -> (String, &'static str) {
+) -> (String, String) {
+    let body = if opts.strict_c { conform::normalize_primitives(&body) } else { body };
     let (mut body, mut uses_code) = conform::spelled(&body);
     for global in globals.iter_mut() {
         let (text, code) = conform::spelled(&format!("extern {};", global.declaration));
@@ -1028,6 +1034,9 @@ fn conform_text(
         if let Some(declaration) = text.strip_prefix("extern ").and_then(|t| t.strip_suffix(';')) {
             global.declaration = declaration.to_string();
         }
+    }
+    if opts.strict_c && let Some(name) = conform::function_name(&body) {
+        *dependencies = conform::without_declarations_of(dependencies, &name);
     }
     let (text, code) = conform::spelled(dependencies);
     uses_code |= code;
@@ -1051,6 +1060,9 @@ fn conform_text(
     // The project's header last: where it and the printed declarations disagree
     // (the printed ones are the lines it makes the export leave out) it is right.
     let mut decls = conform::Decls::new();
+    if opts.strict_c {
+        decls.enable_strict();
+    }
     decls.add_source(&globals::render(globals));
     decls.add_source(dependencies);
     decls.remember_printed();
@@ -1062,7 +1074,9 @@ fn conform_text(
         &crate::compiler::rules::Ctx::new(&opts.compiler, "", ""),
     );
     let body = conform::apply(&body, &decls);
-    imports::stdcall_calls(body, globals, &opts.stdcall_imports, uses_code)
+    let (body, prelude) = imports::stdcall_calls(body, globals, &opts.stdcall_imports, uses_code);
+    let helpers = conform::helper_definitions(&body);
+    (body, format!("{prelude}{helpers}"))
 }
 
 /// Best-effort function name for the stack-struct title: the last
