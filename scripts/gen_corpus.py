@@ -117,17 +117,22 @@ ARCHITECTURES = {
     },
 }
 
+# Every ELF variant states its PIE-ness. clang >= 15 links PIE by default and
+# older clang does not, so an unstated variant changes its load addresses with
+# the host's clang: Ghidra rebases a PIE image (ET_DYN) to 0x100000, and every
+# gate that compares the store with the image's own addresses (m4-006, m4-007,
+# m4-017, ...) reads the unrebased ones. plain_pie is the one PIE row.
 VARIANTS = {
     "plain_o0": {
         "source": "plain.c",
         "is_cpp": False,
-        "flags": ["-O0", "-g"],
+        "flags": ["-O0", "-g", "-fno-pie", "-no-pie"],
         "ext": ".bin",
     },
     "plain_o2": {
         "source": "plain.c",
         "is_cpp": False,
-        "flags": ["-O2", "-g"],
+        "flags": ["-O2", "-g", "-fno-pie", "-no-pie"],
         "ext": ".bin",
     },
     "plain_pie": {
@@ -145,7 +150,7 @@ VARIANTS = {
     "many_o2": {
         "source": "many.c",
         "is_cpp": False,
-        "flags": ["-O1", "-fno-inline", "-g"],
+        "flags": ["-O1", "-fno-inline", "-g", "-fno-pie", "-no-pie"],
         "ext": ".bin",
     },
 }
@@ -808,7 +813,8 @@ def main():
             bin_path = out_dir / f"{base_name}{ext}"
             twin_path = out_dir / f"{base_name}.unstripped{ext}"
             src_file = CORPUS_SRC / var_cfg["source"]
-            flags = [f for f in var_cfg["flags"] if f not in ("-fPIE", "-pie")]
+            flags = [f for f in var_cfg["flags"]
+                     if f not in ("-fPIE", "-pie", "-fno-pie", "-no-pie")]
             if is_dll:
                 # ld randomises DLL image bases by default
                 # (--enable-auto-image-base); a locked corpus needs one.
