@@ -215,6 +215,7 @@ decompiler builds with MSYS2's MinGW-w64 toolchain (packages
 `mingw-w64-x86_64-gcc`, `mingw-w64-x86_64-make`, `mingw-w64-x86_64-zlib`) and
 Git for Windows on `PATH`, from an MSYS2 MINGW64 shell:
 
+<!-- not gated: builds the decompiler under MSYS2 on Windows; the m6 gates run on Linux, and the Desktop (windows-latest) job builds it with this script -->
 ```sh
 export PATH="$PATH:/c/Program Files/Git/cmd"
 native/build_ghidra_opt.sh --jobs 8
