@@ -483,7 +483,7 @@ impl crate::Core {
 
     /// The type names the program's language parser resolves; `None` when the
     /// language's specs are unavailable, and no prototype is applied.
-    fn parser_types(&self, language: &str) -> Option<HashSet<String>> {
+    pub(crate) fn parser_types(&self, language: &str) -> Option<HashSet<String>> {
         let mut config = self.runtime_config().clone();
         config.adopt_language(language);
         let (_, specs, _, _) = crate::native_runtime::language_decompile_config(&config, language).ok()?;
