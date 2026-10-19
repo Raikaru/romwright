@@ -648,8 +648,10 @@ supplements, no tool's source). A direct call or branch to another known functio
 relocation a compiler would emit (`R_ARM_CALL`, `R_ARM_THM_CALL`, `R_AARCH64_CALL26`/`JUMP26`, `R_X86_64_PLT32`,
 `R_PPC_REL24`) with the field zeroed the way an assembler leaves it, but only when the instruction decodes to
 exactly the target the analysis recorded; data operands (literal pools, RIP-relative loads) are left, so they
-show as differences. ARM functions are Thumb when the decode contexts say so or when their address or size
-cannot be A32's; a trailing partial instruction is cut. The PowerPC and Vita objects feed
+show as differences. ARM functions are Thumb when the decode contexts say so or when their address is not A32's;
+a size that is not whole words flags a function the analysis never decoded (a linker map's) as Thumb, but not one
+it decoded as ARM from a word-aligned entry (an odd size there is a body cut short, not a mode); a trailing partial
+instruction is cut. The PowerPC and Vita objects feed
 `romwright-cli export-scratch --target-object` and the matching workspaces instead of objdiff.
 
 **Smokes** (real images, `first:40`, nih-vps-u under load from other agents; wall times are not the import's

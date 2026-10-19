@@ -302,7 +302,7 @@ pub struct ScaffoldFacts {
     /// non-computed call and jump the analysis recorded.
     pub transfers: Vec<(u64, u64, bool)>,
     /// Function entries in the alternate ARM instruction set (Thumb): decode
-    /// contexts, plus the functions A32 cannot hold (unaligned address or size).
+    /// contexts, plus the functions A32 cannot hold (see `thumb_entries`).
     pub thumb: HashSet<u64>,
 }
 
@@ -324,26 +324,65 @@ impl Core {
             .filter(|x| !x.kind.contains("COMPUTED") && (x.kind.contains("CALL") || x.kind == "UNCONDITIONAL_JUMP"))
             .map(|x| (x.from.offset, x.to.offset, x.kind.contains("CALL")))
             .collect();
-        // The analysis records the alternate instruction set as a context row at
-        // each code address it decoded in it (`TMode` or `LowBitCodeMode` = 1).
-        let alternate: HashSet<u64> = self
+        // The analysis records the instruction set as a context row at each
+        // code address it decoded (`TMode` or `LowBitCodeMode`, 1 = Thumb).
+        let contexts: Vec<(u64, u64)> = self
             .db
             .decode_contexts(id)?
             .into_iter()
-            .filter(|(_, name, value)| (name == "TMode" || name == "LowBitCodeMode") && *value != 0)
-            .map(|(address, _, _)| address.offset)
+            .filter(|(_, name, _)| name == "TMode" || name == "LowBitCodeMode")
+            .map(|(address, _, value)| (address.offset, value))
             .collect();
-        // A32 instructions are whole aligned words: a function whose address or size
-        // is not one is Thumb whatever the context rows say (a linker map names
-        // functions the analysis never decoded).
         let arm = facts.language.starts_with("ARM:");
-        let thumb = facts
-            .functions
-            .iter()
-            .filter(|f| alternate.contains(&f.entry.offset) || (arm && (f.entry.offset % 4 != 0 || f.size % 4 != 0)))
-            .map(|f| f.entry.offset)
-            .collect();
+        let thumb = thumb_entries(arm, &contexts, facts.functions.iter().map(|f| (f.entry.offset, f.size)));
         Ok(ScaffoldFacts { facts, prototypes, transfers, thumb })
+    }
+}
+
+/// The functions that are Thumb: those entered under a Thumb context row, and
+/// on ARM those A32 cannot hold. A32 instructions are whole aligned words, so
+/// a function whose address is not word aligned is Thumb whatever the context
+/// rows say, and so is one whose size is not a whole number of words (a
+/// linker map names functions the analysis never decoded) -- unless the
+/// analysis decoded it as ARM: an aligned entry with an explicit ARM context
+/// row is ARM whatever its analysed size, which a body cut short at an
+/// unrelated function or a trailing literal word leaves odd.
+fn thumb_entries(
+    arm: bool,
+    contexts: &[(u64, u64)],
+    functions: impl IntoIterator<Item = (u64, u64)>,
+) -> HashSet<u64> {
+    let alternate: HashSet<u64> = contexts.iter().filter(|(_, value)| *value != 0).map(|&(address, _)| address).collect();
+    let decoded_arm: HashSet<u64> = contexts.iter().filter(|(_, value)| *value == 0).map(|&(address, _)| address).collect();
+    functions
+        .into_iter()
+        .filter(|&(entry, size)| {
+            alternate.contains(&entry)
+                || (arm && (entry % 4 != 0 || (size % 4 != 0 && !decoded_arm.contains(&entry))))
+        })
+        .map(|(entry, _)| entry)
+        .collect()
+}
+
+#[cfg(test)]
+mod thumb_entry_tests {
+    use super::thumb_entries;
+
+    #[test]
+    fn an_aligned_arm_entry_stays_arm_whatever_its_size() {
+        let contexts = [(0x1000, 0), (0x2000, 1), (0x3000, 0)];
+        let functions = [(0x1000, 0x4e), (0x2000, 0x40), (0x3000, 0x40), (0x4000, 0x42), (0x5002, 0x40)];
+        let thumb = thumb_entries(true, &contexts, functions);
+        // 0x1000: ARM context, odd size; 0x2000: Thumb context; 0x4000: no row, odd size; 0x5002: unaligned.
+        let mut thumb: Vec<u64> = thumb.into_iter().collect();
+        thumb.sort_unstable();
+        assert_eq!(thumb, [0x2000, 0x4000, 0x5002]);
+    }
+
+    #[test]
+    fn a_context_row_is_all_a_non_arm_language_has() {
+        let thumb = thumb_entries(false, &[(0x1000, 1)], [(0x1000, 0x4e), (0x1002, 0x4e)]);
+        assert_eq!(thumb.into_iter().collect::<Vec<_>>(), [0x1000]);
     }
 }
 
