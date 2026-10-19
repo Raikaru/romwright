@@ -13466,3 +13466,27 @@ One gate over everything the finish line produced, on one build of a frozen tree
 - Data directories: `~/ventris-corpus` and `~/ventris-scratch` are now `~/romwright-corpus` and `~/romwright-scratch` on the laptop and nih-vps-u, and every script, test, lane config and doc defaults to the new names. A `ventris-*` symlink stays beside each, so the absolute paths recorded in reports, in this file and in prepared work directories still resolve.
 - The fact-pack scripts' `--ghidra-opt` default is now the checkout's own `native/build/ghidra_opt`, not `~/ventris/native/build/ghidra_opt`.
 - Reports and the earlier sections of this file keep the paths they recorded. The binary fixture `tests/fixtures-src/exports32.dll` keeps its built-in string.
+
+## ARM functions marked Thumb: the console's painted modes (2026-10-19, FixThumbModes)
+
+SMT IV's `nn_math_ARMv6_MTX44MultAsm` (an ARM VFP function entered only by ARM `bl`) came out `mode:thumb size:0x4e`, so its C was compiled in the wrong mode and could never match. Roots, in the order they act:
+
+- **The mode is painted, not carried.** The console (`SleighFlow`, `set_variable`) holds a mode from its change point to the next change point. A `blx` immediate commits Thumb at its target, so every address above it with no change point of its own is Thumb from then on. An ARM function the walk entered earlier through an ARM `bl` into a region painted ARM named nothing (`flow_modes_into_targets` names only targets whose held value differs), so its next instruction decoded as Thumb, and the Thumb walk of ARM bytes named the targets of its junk branches as Thumb change points (`flowed_modes`), which every later round kept and read as evidence. All 295 Thumb contexts inside ARM functions on SMT IV came from this path (none from a pattern or a pointer); 23 started in round 1 and the other 272 were its cascade in rounds 2-4. The bogus `0x2b6786 -> 0x2b6eca` branch of the report is a Thumb read of `mov r1,#37` at `0x2b6784`: the target of a Thumb `b.n` at `0x2b6676`, which is the high half of the ARM word `e0853102` in `FUN_002b659c`, reached by another Thumb branch (`0x2b5f32`) of the cascade that began where the `blx` at `0x2ad850` painted `0x2b5a48` Thumb over the ARM code above it.
+- **Fix, `native/discovery.rs` `ModeFlow`.** An instruction hands its own mode to the address it falls into or branches to (a `blx` immediate hands the switched mode `target_modes` carries); an address that decoded in another mode under a painted region (no change point of its own: nothing asserted it) is read again in the mode that reached it, and that mode is recorded like any flowed one. A change point an address has (a pointer's low bit, a `blx` target, a pattern's context) is never overruled. What an ARM-state instruction hands on is believed only from a word-aligned address, and the pattern finder (`patterns.rs`) refuses an ARM-state match, and the aggressive finder an ARM-state guess, on a halfword that is no word start (the console decodes an ARM word at any halfword).
+- **Scaffold rule, `new_project/scaffold.rs` `thumb_entries`.** An aligned entry with an explicit ARM context row is ARM whatever size analysis proved (an odd size is a body cut short); the unaligned-entry rule and the odd-size rule for functions with no context row stay.
+- **3DS entry.** The ExeFS `.code` loader now declares the text base as the process entry. The store's call-only-chain retraction (`untrusted_call_chains`) trusts what an anchored function calls; a real function (`0x104f50`) it had kept only because the junk Thumb read made it a "thunk" would otherwise have been retracted once it decoded as the ARM function it is.
+
+Measured with `romwright-cli new-project --decompile none` (analysis only), same dump, base `0280ea15` vs fix:
+
+| | SMT IV v1.2.0 | SMT IV: Apocalypse |
+|---|---|---|
+| Thumb contexts inside ARM-flagged functions | 295 -> 0 | 0 -> 0 |
+| Thumb-flagged functions whose callers are all ARM `bl` | 37 -> 0 | 11 -> 0 |
+| 4-aligned Thumb-flagged functions opening with an ARM word | 49 -> 0 | 13 -> 0 |
+| Thumb-flagged functions | 150 -> 76 | 3,572 -> 3,552 |
+| functions | 9,293 -> 9,283 | 15,056 -> 15,054 |
+| `MTX44MultAsm` | thumb 0x4e -> arm 0x15c | |
+| `FUN_002b563c` | thumb 0x17e -> arm 0x1d0 | |
+
+On Apocalypse the 20 fewer Thumb functions are 14 ARM functions the odd-size rule had flagged, 8 junk fragments, less 2 real Thumb ones the old analysis had missed or flagged ARM (`0x3008f0`, `0x2f59f8`); 3,550 of its 3,572 Thumb functions are unchanged. Full `--decompile all` regenerations (armcc 4.1 b713, `--cflags "-O3 -Otime"`): IV 9,341 functions, objdiff exact 1,185 -> 1,193, fuzzy 41.95 -> 42.27 %, `relink.py --matched` 1,187 proven (was 1,179), both `--matched` and `--matched --full` print MATCH, 0 Thumb-decoded functions entered from ARM (was 42); Apocalypse 15,104 units, exact 2,342 -> 2,347, fuzzy 42.90 -> 42.92 %, 2,338 proven (was 2,333), both relinks MATCH. `cargo test --release -p romwright-core --lib`: 1,088 pass. The GBA and DS fixtures (`m5-001`, `m5-002`) import to the same functions, decode contexts and reference counts as before; the private-image gates (`m5-013`, `m20-*`, `m21-001`) were not run (no corpus on this machine).
+

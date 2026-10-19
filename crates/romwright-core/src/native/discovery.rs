@@ -44,6 +44,108 @@ fn flow_modes_into_targets(
     }
 }
 
+/// Keeps an instruction's instruction set along the flow that reaches the
+/// next one.
+///
+/// The console paints a mode from its change point to the next change point,
+/// so a Thumb function entered by a `blx` (whose commit is a change point at
+/// its entry) repaints every address above it that holds no change point of
+/// its own: the ARM function an earlier call walked from an entry the console
+/// never had to name (an ARM `bl` into a region painted ARM names nothing)
+/// then decodes its next instruction as Thumb, and the Thumb walk of ARM
+/// bytes names the targets of its junk branches, which later rounds keep.
+/// Ghidra never reads the next instruction that way: the context of the
+/// instruction that reaches it flows into it.
+///
+/// `expect` records, for every address a decoded instruction reaches, the
+/// mode that instruction hands on: its own, except where its encoding is a
+/// switch (a `blx` immediate, whose committed target mode `target_modes`
+/// carries). `reconcile` then reads each address that decoded in another
+/// mode again in the expected one when nothing but a region painted from
+/// elsewhere put it there. An address with a change point of its own is a
+/// mode somebody asserted (a pointer's low bit, a `blx` target, a pattern's
+/// context) and is left as it is.
+///
+/// What an instruction in the word-aligned mode (ARM, MIPS32) hands on is
+/// believed only from a word-aligned address: the console decodes an ARM word
+/// at any halfword, and the walk of a Thumb function's bytes read that way
+/// names branch targets inside real Thumb code.
+struct ModeFlow {
+    expected: HashMap<u64, u64>,
+    word_aligned: bool,
+}
+
+impl ModeFlow {
+    fn new(language: &str) -> Self {
+        Self { expected: HashMap::default(), word_aligned: super::low_bit_code_mode(language) }
+    }
+
+    fn believes(&self, address: u64, mode: u64) -> bool {
+        mode != 0 || !self.word_aligned || address % 4 == 0
+    }
+
+    fn expect(&mut self, flows: &[FlowResult], visited: &HashSet<u64>) {
+        for info in flows {
+            let Some(mode) = info.mode else { continue };
+            if matches!(info.kind, FlowKind::Bad | FlowKind::Unimpl) || !self.believes(info.address, mode) {
+                continue;
+            }
+            for &target in &info.targets {
+                if visited.contains(&target) {
+                    continue;
+                }
+                let handed = info
+                    .target_modes
+                    .iter()
+                    .find(|&&(address, _)| address == target)
+                    .map_or(mode, |&(_, switched)| switched);
+                if self.believes(target, handed) {
+                    self.expected.entry(target).or_insert(handed);
+                }
+            }
+            if let Some(fall) = info.fallthrough
+                && !visited.contains(&fall)
+                && self.believes(fall, mode)
+            {
+                self.expected.entry(fall).or_insert(mode);
+            }
+        }
+    }
+
+    /// Reads again, in the mode that flowed into it, each address of `chunk`
+    /// that decoded in another one under a painted region. `flows` answers
+    /// `chunk` one for one.
+    fn reconcile(
+        &mut self,
+        chunk: &[u64],
+        flows: &mut [FlowResult],
+        flowed: &mut HashMap<u64, u64>,
+        flow_provider: &mut dyn FlowProvider,
+    ) {
+        if self.expected.is_empty() || chunk.len() != flows.len() {
+            return;
+        }
+        for (&address, flow) in chunk.iter().zip(flows.iter_mut()) {
+            let Some(want) = self.expected.remove(&address) else { continue };
+            if flow.address != address {
+                continue;
+            }
+            let held = flow.mode.or_else(|| flow_provider.mode_at(address));
+            if held.is_none_or(|held| held == want)
+                || flowed.contains_key(&address)
+                || flow_provider.mode_starts_at(address) != Some(false)
+            {
+                continue;
+            }
+            flowed.insert(address, want);
+            flow_provider.set_context("LowBitCodeMode", address, want);
+            if let Some(again) = flow_provider.flow(&[address]).pop().filter(|again| again.address == address) {
+                *flow = again;
+            }
+        }
+    }
+}
+
 trait FlowProvider {
     fn flow(&mut self, addresses: &[u64]) -> Vec<FlowResult>;
     /// Applies a processor mode value at an address, before anything there is
@@ -52,6 +154,11 @@ trait FlowProvider {
     /// The instruction set held at an address, decodable or not; `None` for a
     /// provider with no decoder or a language without one.
     fn mode_at(&mut self, _address: u64) -> Option<u64> {
+        None
+    }
+    /// Whether a mode value starts at an address rather than reaching it
+    /// painted from an earlier one; `None` without a decoder or a mode field.
+    fn mode_starts_at(&mut self, _address: u64) -> Option<bool> {
         None
     }
     fn linkages(&mut self, addresses: &[u64]) -> Vec<LinkageResult>;
@@ -289,6 +396,10 @@ impl LaneProvider {
 
 impl FlowProvider for LaneProvider {
     fn set_context(&mut self, name: &str, address: u64, value: u64) {
+        // What was decoded here before the value came is not this value's.
+        if let Some(decoded) = self.decoded.as_mut() {
+            decoded.remove(&address);
+        }
         if let (Some(remodel), Some(decoded)) = (self.remodel.as_mut(), self.decoded.as_mut()) {
             let points = remodel.points.entry(name.to_string()).or_default();
             if !remodel.previous.contains(&(name.to_string(), address, value)) {
@@ -313,6 +424,10 @@ impl FlowProvider for LaneProvider {
 
     fn mode_at(&mut self, address: u64) -> Option<u64> {
         self.lanes.lanes[0].mode_at(address)
+    }
+
+    fn mode_starts_at(&mut self, address: u64) -> Option<bool> {
+        self.lanes.lanes[0].mode_starts_at(address)
     }
 
     fn flow(&mut self, addresses: &[u64]) -> Vec<FlowResult> {
@@ -2017,6 +2132,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     let mut refused_entries: Vec<u64> = Vec::new();
     let mut walked_entries: std::collections::HashSet<u64> = std::mem::take(&mut imp.walk_entries);
     let mut flowed_modes: HashMap<u64, u64> = HashMap::default();
+    let mut mode_flow = ModeFlow::new(&imp.language);
     // Entries a data pointer proposed, as opposed to a seed the loader
     // declared or a call reached: only these are retractable below.
     let mut data_derived: HashSet<u64> = HashSet::default();
@@ -2057,7 +2173,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             let (chunk, flows, runs) = repeats.admit(
                 imp,
                 chunk,
-                flow_provider.flow(chunk),
+                {
+                    let mut flows = flow_provider.flow(chunk);
+                    mode_flow.reconcile(chunk, &mut flows, &mut flowed_modes, flow_provider);
+                    flows
+                },
                 |address, flow| thumb_entries && refuses_entry(imp, &addr_origin, &entries_set, address, flow),
                 &mut refused_entries,
             );
@@ -2068,6 +2188,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 visited.remove(address);
             }
             flow_modes_into_targets(&flows, &visited, &mut flowed_modes, flow_provider);
+            mode_flow.expect(&flows, &visited);
             // Branch targets need an unconditional transfer to a proven import
             // stub; direct calls independently establish their target entries.
             if has_linkage_slots {
@@ -2561,7 +2682,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                         let (chunk, flows, runs) = repeats.admit(
                             imp,
                             chunk,
-                            flow_provider.flow(chunk),
+                            {
+                                let mut flows = flow_provider.flow(chunk);
+                                mode_flow.reconcile(chunk, &mut flows, &mut flowed_modes, flow_provider);
+                                flows
+                            },
                             |address, flow| thumb_entries && refuses_entry(imp, &addr_origin, &entries_set, address, flow),
                             &mut refused_entries,
                         );
@@ -2570,6 +2695,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                             visited.remove(address);
                         }
                         flow_modes_into_targets(&flows, &visited, &mut flowed_modes, flow_provider);
+                        mode_flow.expect(&flows, &visited);
                         for ((addr, info), run) in chunk.iter().copied().zip(flows).zip(runs) {
                             if let Some(mode) = info.mode {
                                 if addr_origin.get(&addr) == Some(&addr) {
