@@ -86,7 +86,7 @@ fn unnamed_field(text: &str) -> Option<(u64, u32)> {
 
 /// The replacements, by token index, for the document's local variables. `names` is the generated-name
 /// mapping the rendering applies to a variable token this does not replace.
-pub(super) fn edits(doc: &DecompDoc, names: &BTreeMap<String, String>) -> BTreeMap<usize, String> {
+pub(super) fn edits(doc: &DecompDoc, names: &BTreeMap<String, String>, odd_reads: bool) -> BTreeMap<usize, String> {
     let mut edits = BTreeMap::new();
     let Some(ir) = &doc.function_ir else { return edits };
     let odd = enabled(ODD_WIDTHS);
@@ -126,6 +126,17 @@ pub(super) fn edits(doc: &DecompDoc, names: &BTreeMap<String, String>) -> BTreeM
         if mismatch && name.strip_prefix('_') == Some(symbol.name.as_str()) && high.symbol_offset.unwrap_or(0) == 0 {
             if let Some(scalar) = scalar(ir, high, id, width) {
                 edits.insert(index, format!("(*({scalar} *)&{})", shown(&symbol.name)));
+            } else if odd_reads
+                && matches!(width, 3 | 5 | 6 | 7)
+                && next(doc, index).is_none_or(|after| !doc.tokens[after].text.starts_with('='))
+                && let Some(wider) = unsigned_of(width.next_power_of_two())
+            {
+                // the low bytes of the symbol, little-endian: the wider integer at its address, masked
+                let suffix = if width > 4 { "ULL" } else { "U" };
+                edits.insert(
+                    index,
+                    format!("((*({wider} *)&{}) & {:#x}{suffix})", shown(&symbol.name), (1u64 << (u64::from(width) * 8)) - 1),
+                );
             }
             continue;
         }

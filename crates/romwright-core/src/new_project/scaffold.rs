@@ -464,7 +464,8 @@ const C_KEYWORDS: &[&str] = &[
 const TYPE_NAMES: &[&str] = &[
     "s8", "u8", "s16", "u16", "s32", "u32", "s64", "u64", "f32", "f64", "undefined", "undefined1", "undefined2",
     "undefined3", "undefined4", "undefined5", "undefined6", "undefined7", "undefined8", "byte", "word", "dword",
-    "qword", "uchar", "ushort", "uint", "ulong", "longlong", "ulonglong", "code", "pointer", "size_t",
+    "qword", "uchar", "ushort", "uint", "ulong", "longlong", "ulonglong", "sbyte", "sword", "sdword", "sqword", "code", "pointer",
+    "size_t",
 ];
 
 /// A C identifier for a symbol name: anything else becomes `_` (a map file
@@ -767,6 +768,20 @@ typedef unsigned int uint;
 typedef unsigned long ulong;
 typedef long long longlong;
 typedef unsigned long long ulonglong;
+typedef signed char sbyte;
+typedef short sword;
+typedef int sdword;
+typedef long long sqword;
+/* The float constants the decompiler prints by name. */
+#ifndef NAN
+#if defined(__CC_ARM)
+#define NAN (__ESCAPE__(0f_7FC00000))
+#define INFINITY ((float)__INFINITY__)
+#else
+#define NAN (__builtin_nanf(\"\"))
+#define INFINITY (__builtin_inff())
+#endif
+#endif
 typedef void *pointer;
 typedef void code(void);
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 202311L

@@ -30,12 +30,18 @@
 //!   `$gp`-relative access can reach was not small data in the original; it is
 //!   declared as an array of unknown size (what `D_xxxxxxxx[0]` is in a
 //!   decompilation project) and every use indexes it.
+//! - **What a strict front end rejects** (armcc, `Decls::strict`): pointers against integers, arithmetic on function
+//!   pointers, floats and pointers cast to each other, pieces of a variable no C type has the width of; see [`strict`].
 //!
 //! The declarations come from the project's header, the printer's own
 //! global declarations and the asserted prototypes; an expression whose type
 //! the text does not determine is left alone.
 use std::collections::BTreeMap;
 use tree_sitter::{Node, Parser, Tree};
+
+mod strict;
+pub(super) use strict::{function_name, helper_definitions, normalize_primitives, without_declarations_of};
+use strict::{code_values, odd_array_locals, odd_casts, partial_members, strict_expressions, terminate_labels};
 
 /// A stage 4 rule is on unless its own switch is `off` or `ROMWRIGHT_NATIVE_TYPES=1` (every one of them off: the output
 /// of the build before stage 4).
@@ -233,6 +239,11 @@ pub(super) struct Decls {
     /// Visual C++ expands `memcpy`/`memset` of a known size or length into `rep movs`/`rep stos`, which the decompiler prints as
     /// the counted loops it is: those loops are printed as the calls they came from.
     pub(super) string_ops: bool,
+    /// armcc: the C front end rejects what the printed text leaves to implicit conversions ([`strict_expressions`]).
+    pub(super) strict: bool,
+    /// The members of the structures and unions the declarations define, by `struct tag` (or the anonymous name
+    /// `base_type` gives), for the type of `p->member`.
+    structs: BTreeMap<String, BTreeMap<String, Ty>>,
 }
 
 fn text_of<'a>(node: Node<'_>, source: &'a str) -> &'a str {
@@ -288,6 +299,46 @@ impl Decls {
             Ty::Func(Box::new(Ty::Int(Int::Int)), None),
         );
         decls
+    }
+
+    /// The compiler is strict about conversions ([`Decls::strict`]); the project header's primitive names
+    /// (`romwright_types.h`) are the types the decompiler prints, so they are known before any other declaration.
+    pub(super) fn enable_strict(&mut self) {
+        self.strict = true;
+        self.add_source(GHIDRA_PRIMITIVES);
+    }
+
+    /// The members a structure or union specifier with a body defines.
+    fn register_struct(&mut self, node: Node<'_>, source: &str) {
+        if !matches!(node.kind(), "struct_specifier" | "union_specifier") {
+            return;
+        }
+        let Some(body) = node.child_by_field_name("body") else { return };
+        let Ty::Agg(key) = self.base_type(node, source) else { return };
+        let mut members: BTreeMap<String, Ty> = BTreeMap::new();
+        for field in named_children(body) {
+            if field.kind() != "field_declaration" {
+                continue;
+            }
+            let Some(spec) = field.child_by_field_name("type") else { continue };
+            self.register_struct(spec, source);
+            let base = self.base_type(spec, source);
+            let mut cursor = field.walk();
+            let declarators: Vec<_> = field.children_by_field_name("declarator", &mut cursor).collect();
+            if declarators.is_empty() {
+                // an anonymous member structure or union: its members are this one's
+                if let Ty::Agg(inner) = &base && let Some(inner) = self.structs.get(inner) {
+                    members.extend(inner.clone());
+                }
+                continue;
+            }
+            for declarator in declarators {
+                if let Some((Some(name), ty)) = self.declarator(base.clone(), declarator, source) {
+                    members.insert(name, ty);
+                }
+            }
+        }
+        self.structs.insert(key, members);
     }
 
     /// Adds the declarations of one C text (a project header, the printer's
@@ -418,7 +469,11 @@ impl Decls {
 
     fn add_item(&mut self, node: Node<'_>, source: &str) {
         match node.kind() {
+            "struct_specifier" | "union_specifier" => self.register_struct(node, source),
             "type_definition" => {
+                if let Some(spec) = node.child_by_field_name("type") {
+                    self.register_struct(spec, source);
+                }
                 let base = node
                     .child_by_field_name("type")
                     .map_or(Ty::Unknown, |ty| self.base_type(ty, source));
@@ -431,6 +486,9 @@ impl Decls {
                 }
             }
             "declaration" => {
+                if let Some(spec) = node.child_by_field_name("type") {
+                    self.register_struct(spec, source);
+                }
                 let base = node
                     .child_by_field_name("type")
                     .map_or(Ty::Unknown, |ty| self.base_type(ty, source));
@@ -498,7 +556,21 @@ pub(super) const CODE_TYPE: &str = "romwright_code";
 /// What the output defines it as: a function type, which is what `code` is.
 pub(super) const CODE_TYPEDEF: &str = "typedef int romwright_code();\n";
 
-#[derive(Debug)]
+/// The primitive names of `romwright_types.h`, which the decompiler's output uses and tree-sitter cannot tell from
+/// variables: with their widths known the conversions between them can be told.
+const GHIDRA_PRIMITIVES: &str = "\
+typedef signed char s8; typedef unsigned char u8; typedef short s16; typedef unsigned short u16;\n\
+typedef int s32; typedef unsigned int u32; typedef long long s64; typedef unsigned long long u64;\n\
+typedef float f32; typedef double f64;\n\
+typedef unsigned char undefined; typedef unsigned char undefined1; typedef unsigned short undefined2;\n\
+typedef unsigned char undefined3[3]; typedef unsigned int undefined4; typedef unsigned char undefined5[5];\n\
+typedef unsigned char undefined6[6]; typedef unsigned char undefined7[7]; typedef unsigned long long undefined8;\n\
+typedef unsigned char byte; typedef unsigned short word; typedef unsigned int dword; typedef unsigned long long qword;\n\
+typedef unsigned char uchar; typedef unsigned short ushort; typedef unsigned int uint; typedef unsigned int ulong;\n\
+typedef long long longlong; typedef unsigned long long ulonglong;\n\
+typedef signed char sbyte; typedef short sword; typedef int sdword; typedef long long sqword;\n";
+
+#[derive(Clone, Debug)]
 struct Edit {
     start: usize,
     end: usize,
@@ -744,6 +816,8 @@ struct Typer<'a> {
     decls: &'a Decls,
     scope: &'a Scope,
     source: &'a str,
+    /// The function being conformed: its own calls (recursion) know its declaration.
+    own: Option<(&'a str, &'a Ty)>,
 }
 
 fn operator<'a>(node: Node<'_>, source: &'a str) -> Option<&'a str> {
@@ -818,6 +892,7 @@ impl Typer<'_> {
                 self.scope
                     .get(name)
                     .or_else(|| self.decls.objects.get(name))
+                    .or_else(|| self.own.filter(|(own, _)| self.decls.strict && *own == name).map(|(_, ty)| ty))
                     .or_else(|| self.decls.funcs.get(name))
                     .cloned()
             }
@@ -876,6 +951,14 @@ impl Typer<'_> {
                     }
                     "*" | "/" | "%" | "&" | "|" | "^" | "<<" | ">>" => {
                         let left = decayed(&self.of(node.child_by_field_name("left")?)?);
+                        if self.decls.strict && matches!(op, "*" | "/") {
+                            let right = decayed(&self.of(node.child_by_field_name("right")?)?);
+                            match (&left, &right) {
+                                (Ty::Float(a), Ty::Float(b)) => return Some(Ty::Float(if *a == 4 && *b == 4 { 4 } else { 8 })),
+                                (Ty::Float(_), Ty::Int(_)) | (Ty::Int(_), Ty::Float(_)) => return Some(Ty::Float(8)),
+                                _ => {}
+                            }
+                        }
                         match left {
                             Ty::Int(_) => Some(Ty::Int(Int::Int)),
                             Ty::Float(_) => Some(Ty::Float(8)),
@@ -892,6 +975,36 @@ impl Typer<'_> {
             }
             "assignment_expression" => self.of(node.child_by_field_name("left")?),
             "comma_expression" => self.of(node.child_by_field_name("right")?),
+            "field_expression" if self.decls.strict => {
+                let argument = node.child_by_field_name("argument")?;
+                let field = text_of(node.child_by_field_name("field")?, self.source);
+                let arrow = self.source[argument.end_byte()..node.child_by_field_name("field")?.start_byte()].contains("->");
+                let owner = self.of(argument)?;
+                let owner = if arrow {
+                    match decayed(&owner) {
+                        Ty::Ptr(target) => *target,
+                        _ => return None,
+                    }
+                } else {
+                    owner
+                };
+                let Ty::Agg(key) = resolve(&owner) else { return None };
+                self.decls.structs.get(key)?.get(field).cloned()
+            }
+            "unary_expression" if self.decls.strict => {
+                let argument = self.of(node.child_by_field_name("argument")?)?;
+                match operator(node, self.source)? {
+                    "!" => Some(Ty::Int(Int::Int)),
+                    "-" | "+" | "~" => match decayed(&argument) {
+                        float @ Ty::Float(_) => Some(float),
+                        Ty::Int(_) => Some(Ty::Int(Int::Int)),
+                        _ => None,
+                    },
+                    _ => None,
+                }
+            }
+            "update_expression" if self.decls.strict => self.of(node.child_by_field_name("argument")?),
+            "sizeof_expression" if self.decls.strict => Some(Ty::Int(Int::UInt)),
             _ => None,
         }
     }
@@ -1089,7 +1202,7 @@ fn reconcile_header(function: &Function<'_>, decls: &Decls, source: &str, edits:
 /// pointer.
 fn retype_locals(function: &Function<'_>, decls: &Decls, source: &str, edits: &mut Vec<Edit>) {
     let Some(body) = function.node.child_by_field_name("body") else { return };
-    let typer = Typer { decls, scope: &function.scope, source };
+    let typer = Typer { decls, scope: &function.scope, source, own: Some((&function.name, &function.ty)) };
     for item in named_children(body) {
         if item.kind() != "declaration" {
             continue;
@@ -1263,7 +1376,7 @@ fn integer_operands(node: Node<'_>, typer: &Typer<'_>, source: &str, edits: &mut
 /// not declare.
 fn conform_expressions(function: &Function<'_>, decls: &Decls, source: &str, edits: &mut Vec<Edit>) {
     let Some(body) = function.node.child_by_field_name("body") else { return };
-    let typer = Typer { decls, scope: &function.scope, source };
+    let typer = Typer { decls, scope: &function.scope, source, own: Some((&function.name, &function.ty)) };
     let returns = match &function.ty {
         Ty::Func(ret, _) => Some((**ret).clone()),
         _ => None,
@@ -1293,7 +1406,8 @@ fn conform_expressions(function: &Function<'_>, decls: &Decls, source: &str, edi
                 }
             }
             let Some(name) = callee_name(node, source) else { return };
-            let Some(Ty::Func(_, Some(params))) = decls.funcs.get(name) else { return };
+            let own = typer.own.filter(|(own, _)| decls.strict && *own == name).map(|(_, ty)| ty);
+            let Some(Ty::Func(_, Some(params))) = own.or_else(|| decls.funcs.get(name)) else { return };
             let variadic = params.iter().any(|p| matches!(p, Ty::Ellipsis));
             let fixed = params.iter().filter(|p| !matches!(p, Ty::Ellipsis)).count();
             if !variadic && args.len() > fixed {
@@ -1583,6 +1697,14 @@ fn mentions(text: &str, name: &str) -> usize {
     found
 }
 
+/// The strict rules spell byte pointers and integers where the printed text had other types: the casts between those
+/// types and the project's declarations are made again.
+fn conform_after_strict(function: &Function<'_>, decls: &Decls, source: &str, edits: &mut Vec<Edit>) {
+    if decls.strict {
+        conform_expressions(function, decls, source, edits);
+    }
+}
+
 /// `rep movs` / `rep stos` printed as counted loops are `memcpy` / `memset`: the pair of loops (`n >> 2` dwords, then `n & 3` bytes) of
 /// a copy of `n` bytes, and a loop of a constant count. The pointers and counters must be dead afterwards (the loops advanced them) and
 /// the pointers used nowhere else (`ROMWRIGHT_EXPORT_STRING_OPS=off` keeps the loops).
@@ -1591,7 +1713,7 @@ fn string_loops(function: &Function<'_>, decls: &Decls, source: &str, edits: &mu
         return;
     }
     let Some(body) = function.node.child_by_field_name("body") else { return };
-    let typer = Typer { decls, scope: &function.scope, source };
+    let typer = Typer { decls, scope: &function.scope, source, own: Some((&function.name, &function.ty)) };
     // every mention of a name in the body's statements (the declarations at its head are not uses)
     let uses = |name: &str| -> usize {
         named_children(body).iter().filter(|child| child.kind() != "declaration").map(|child| mentions(text_of(*child, source), name)).sum()
@@ -1681,18 +1803,47 @@ pub(super) fn apply(source: &str, decls: &Decls) -> String {
     if std::env::var("ROMWRIGHT_NO_CONFORM").is_ok() {
         return source.to_string();
     }
-    let mut text = source.to_string();
-    let rules: [Rule; 5] =
-        [reconcile_header, retype_locals, reread_declared, conform_expressions, string_loops];
+    let mut text = if decls.strict { terminate_labels(source) } else { source.to_string() };
+    let rules: [Rule; 11] = [
+        code_values,
+        partial_members,
+        odd_array_locals,
+        odd_casts,
+        reconcile_header,
+        retype_locals,
+        reread_declared,
+        conform_expressions,
+        strict_expressions,
+        conform_after_strict,
+        string_loops,
+    ];
     for rule in rules {
         let Some(tree) = reparse(&text) else { return text };
         let Some(function) = function(&tree, decls, &text) else { return text };
         let mut edits = Vec::new();
         rule(&function, decls, &text, &mut edits);
-        if let Some(next) = apply_edits(&text, edits)
-            && reparse(&next).is_some() {
+        if edits.is_empty() {
+            continue;
+        }
+        if let Some(next) = apply_edits(&text, edits.clone())
+            && reparse(&next).is_some()
+        {
+            text = next;
+        } else if decls.strict {
+            // one edit that breaks the text must not cost the others: keep those that leave it parseable
+            edits.sort_by_key(|edit| (edit.start, edit.rank, edit.order));
+            let mut kept: Vec<Edit> = Vec::new();
+            for edit in edits {
+                kept.push(edit);
+                let parses = apply_edits(&text, kept.clone()).is_some_and(|next| reparse(&next).is_some());
+                if !parses {
+                    kept.pop();
+                }
+            }
+            if let Some(next) = apply_edits(&text, kept) {
                 text = next;
             }
+        }
     }
     text
 }

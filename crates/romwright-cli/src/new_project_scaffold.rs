@@ -341,7 +341,8 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
     // Decompile into a scratch directory; plan() wraps each file into src/.
     let scratch = store.join("m2c");
     let _ = std::fs::remove_dir_all(&scratch);
-    let options = romwright_core::emit_m2c::M2cOptions::default();
+    // armcc rejects what clang accepts of the decompiler's text: `conform` spells it the way armcc takes
+    let options = romwright_core::emit_m2c::M2cOptions { strict_c: inputs.compiler.retail(), ..Default::default() };
     // `--budget-ms` bounds each function; a batch gets the sum of its functions'.
     let per_function = flag(args, "--budget-ms")
         .map(|v| v.parse::<u64>().map_err(|e| e.to_string()))
