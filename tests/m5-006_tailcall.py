@@ -38,14 +38,28 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JUMP = "UNCONDITIONAL_JUMP"
 
-# The fixture's discovered function set, from tests/m5-002_nds.py. Recording a
-# transfer is not the same as creating a function, so these must not move.
-EXPECTED_FUNCTIONS = {
-    "nds.arm9": {0x0200_0000, 0x0200_000C, 0x0200_001C, 0x0200_002C, 0x0200_0060},
-    "nds.arm7": {0x037F_8008, 0x037F_8010, 0x037F_8030},
-}
-# The tail call itself: `b mix` in the middle of the ARM7 image.
-TAIL_CALL = (0x037F_802C, 0x037F_8000)
+# The fixture's discovered function set is what the fixture's own ELF twin
+# says it defines, less the entries only a tail call reaches (m5-002's
+# KNOWN_DEFICITS: stock Ghidra misses them on the same stripped bytes).
+# Recording a transfer is not the same as creating a function, so the set
+# must not move. It is read from the twin rather than written down: where a
+# function lands depends on the host's clang. The addresses this gate once
+# carried (`arm7_main` at 0x037f8030, the tail call at 0x037f802c) are not
+# what clang 18 (ubuntu-latest) or clang 19 produce: both place `arm7_main`
+# at 0x037f8034.
+
+
+def function_symbols(elf: Path) -> set[int]:
+    """Entry addresses of the ELF twin's function symbols."""
+    output = subprocess.run(["readelf", "-sW", str(elf)], text=True,
+                            capture_output=True, check=True).stdout
+    entries = set()
+    for line in output.splitlines():
+        parts = line.split()
+        if len(parts) >= 8 and parts[3] == "FUNC":
+            entries.add(int(parts[1], 16))
+    return entries
+
 
 BRANCH = re.compile(r"^\s*([0-9a-f]+):\s+[0-9a-f ]+\s+b\s+0x([0-9a-f]+)")
 
@@ -211,6 +225,17 @@ def main() -> int:
         branches = {}
         for name, image in images.items():
             branches[f"nds.{name}"] = unconditional_branches(image["elf"])
+        deficits = {name: {int(address, 16) for address in missed}
+                    for name, missed in fixture.KNOWN_DEFICITS.items()}
+        expected_functions = {
+            f"nds.{name}": function_symbols(image["elf"]) - deficits.get(f"nds.{name}", set())
+            for name, image in images.items()}
+        # The tail call itself: the one branch into the entry only a tail call
+        # reaches, taken from inside another function.
+        tail_calls = [(source, target) for source, target in branches["nds.arm7"]
+                      if target in deficits["nds.arm7"]]
+        assert len(tail_calls) == 1, f"expected one tail call into mix, found {tail_calls}"
+        tail_call = tail_calls[0]
         assert any(branches.values()), "the fixture has no unconditional branches"
 
         store = sqlite3.connect(project / "project.sqlite")
@@ -220,7 +245,7 @@ def main() -> int:
         for program_id, program in store.execute("SELECT id, name FROM programs"):
             functions = {int(entry, 16): size for entry, size in store.execute(
                 "SELECT entry, size FROM functions WHERE program_id = ?", (program_id,))}
-            assert set(functions) == EXPECTED_FUNCTIONS[program], (
+            assert set(functions) == expected_functions[program], (
                 f"{program}: discovered functions changed to "
                 f"{sorted(hex(a) for a in functions)}; recording a transfer "
                 f"must not create a function"
@@ -268,9 +293,9 @@ def main() -> int:
         assert arm7, "the ARM7 program is missing"
         into_mix = store.execute(
             "SELECT src, kind FROM xrefs WHERE program_id = ? AND dst = ?",
-            (arm7[0], f"{TAIL_CALL[1]:08x}")).fetchall()
-        assert (f"{TAIL_CALL[0]:08x}", JUMP) in into_mix, (
-            f"the tail call into {TAIL_CALL[1]:#x} is still unrecorded; "
+            (arm7[0], f"{tail_call[1]:08x}")).fetchall()
+        assert (f"{tail_call[0]:08x}", JUMP) in into_mix, (
+            f"the tail call into {tail_call[1]:#x} is still unrecorded; "
             f"references to it are {into_mix}"
         )
 
