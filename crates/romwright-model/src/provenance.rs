@@ -321,6 +321,39 @@ pub const CLASSES: &[Class] = &[
         evidence: EvidenceKind::Inferred,
         derives_confidence: false,
     },
+    Class {
+        source: "native-analysis:cfg-cluster",
+        explanation: "A function start found by the shape of the control-flow graph: the \
+         decoded instructions between known functions form a cluster of blocks, and the \
+         cluster's entry is where the code begins.",
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-analysis:x86-convention",
+        explanation: "The calling convention of an i386 PE function, read off the `ret` that \
+         pops its arguments: the decompiler's own resolution cannot tell `__stdcall` from \
+         `__cdecl`, but the callee's stack purge can.",
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:rel-reloc",
+        explanation: "A data reference a relocation table adds: a `.rel` module's \
+         `R_PPC_ADDR32` entry says this word holds the address of its target once the \
+         module is placed.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:symbol-library-prototype",
+        explanation: "A declaration the pinned library table, or the compiler's run-time \
+         helper signatures, holds for a function the image's own symbol table names \
+         the same: weaker than a prototype the image states itself, because a program \
+         may define a function that shares a library's name.",
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
 ];
 
 /// The class, or `None` when nothing here describes that source.
