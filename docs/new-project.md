@@ -514,6 +514,7 @@ romwright-cli new-project <image> <outdir> [--platform ID] [--name NAME] [--keys
               [--raw BASE --language ID] [--decompile all|first:N|ADDR,ADDR|none] [--budget-ms N] [--jobs N]
               [--toolchain PROFILE.json] [--manifest FILE] [--fact-pack PACK] [--json]
               [--compiler armcc-<version>-b<build> [--cflags FLAGS]] [--tus FILE] [--names FILE]
+              [--prototypes FILE|none]
 ```
 
 `--keys` hands the container loaders the user's keys (`prod.keys`, a RAP/klic, a 3DS `aes_keys.txt`); they
@@ -537,6 +538,27 @@ before anything is decompiled, so callers' C, `config/symbols.txt` and the objec
 nothing: `--map` hands every row to the analysis as a function entry, which changes what it finds (an SMT IV
 import with 895 names of functions it already found came back with 60 more functions, 376 resized and 138 in
 the other instruction set), while `--names` leaves the function set exactly as an unnamed import's.
+
+`--prototypes FILE|none` types the functions whose names (as `--names` left them) a library table declares, before
+anything is decompiled, so a function's own signature and every caller's call of it use the declared types. `FILE`
+is a library table (the format of `oracle/library-prototypes-v1/generic_clib_64.json`: `functions` keyed by name,
+each `return_type` and `parameters[].type`, spelled in the language's own type names; a declaration naming a type
+the language lacks is skipped and counted). Without the flag a 3DS image takes
+`oracle/library-prototypes-v1/ctr_sdk.json`, the Nintendo CTR SDK (`nn::`, `nw::`) declarations that six 3DS games'
+DWARF state, keyed by scope and name joined with `_` (`nn::hid::CTR::TouchPanelReader::ReadLatest` is
+`nn_hid_CTR_TouchPanelReader_ReadLatest`, the spelling a `--names` file uses); `none` turns that off. The rows
+are inferred, with their own provenance (`library-prototypes:ctr-sdk`, `library-prototypes:file`): an assertion
+and a prototype the image's own symbols or debug stream gave are not replaced, and the decompiler's recovery does
+not refine them. The table keeps what the DWARF rows state and nothing else (`scripts/gen_ctr_sdk_prototypes.py`):
+a name two declarations disagree on (an overload set) and a function that takes or returns a by-value type
+whose size the rows do not give are left out; `nn::Result` and `nn::Handle` by value are one 32-bit word
+(`uint`), an `enum` is an `int`, a pointer to a scalar keeps its target and a pointer to anything else (the
+layouts are not in the rows) is an `undefined4` slot, which the decompiler types from the function's own use: the
+same table with `void *` there cast every access of a receiver back (`*(char *)param_1`): on SMT IV it gained four exact
+matches and lost four, `undefined4` gains three and loses none. The run prints `prototypes: <program>: N applied (...)`. Measured on SMT IV v1.2.0
+(172 functions typed) and SMT IV: Apocalypse (133), `armcc-4.1-b713 -O3 -Otime`, full regeneration, the flag off
+against on: objdiff exact 1,193 -> 1,196 and 2,347 -> 2,349, proven by `tools/relink.py` 1,187 -> 1,190 and
+2,338 -> 2,340, compile failures 181 -> 180 and 251 -> 251, fuzzy 42.2669 -> 42.3072 and 42.9162 -> 42.9203.
 
 **3DS with armcc.** Nintendo's 3DS SDK builds with ARM's armcc (RVCT 4.0/4.1, ARM Compiler 5). The
 decomp.me compilers project hosts fourteen builds (`armcc.zip`, compiler and headers only); the manifest pins

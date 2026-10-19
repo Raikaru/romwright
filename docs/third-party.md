@@ -790,6 +790,13 @@ no code; `benchmarks/dwarf1_diff.py` compares them. The Python reader and the
 PSP Puzzle Bobble DWARF 2 are benchmark truth only, never an import input (the
 research input is the llvm-strip'd twin).
 
+## Nintendo CTR SDK function declarations (`ctr_sdk.json`)
+
+`oracle/library-prototypes-v1/ctr_sdk.json` (written by `scripts/gen_ctr_sdk_prototypes.py`, applied by
+`named_prototypes.rs` to the functions a 3DS project names) holds function names, parameter counts and
+parameter/return types read from the DWARF debug info of six retail 3DS games that shipped it. Facts only: no
+code, no disassembly, no struct layout or header text; every type is reduced to a core type or `void *`.
+
 ## Compiler run-time helper signatures (symbol-name typing)
 
 `oracle/library-prototypes-v1/runtime_helpers.json` (written by

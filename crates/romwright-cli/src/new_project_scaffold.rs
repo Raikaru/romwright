@@ -13,7 +13,8 @@
 //! `--tus FILE` places functions in folders named after their original source
 //! files (`src/<module>/<file>/<function>.c`), one objdiff progress category each.
 //! `--names FILE` (`ADDR NAME` lines) renames functions the analysis found and
-//! seeds nothing, unlike `--map`.
+//! seeds nothing, unlike `--map`. `--prototypes FILE|none` types the functions whose
+//! (final) names a library table declares; the 3DS defaults to the CTR SDK's table.
 
 use super::{flag, has_flag};
 use romwright_core::native::linkmap::SplitExtent;
@@ -269,6 +270,25 @@ pub fn run(args: &[String], platform: &str, image_path: &Path, image_name: &str,
                 }
             }
             eprintln!("names: {}: {renamed} of {} renamed, {} name no function entry", summary.program, wanted.len(), wanted.len() - renamed);
+        }
+    }
+    // Declarations by name, now that the names are final: `--prototypes FILE` (a library table, the
+    // format of `oracle/library-prototypes-v1/`), else the platform's own table (the 3DS: the CTR SDK's),
+    // `--prototypes none` for neither.
+    let table = match flag(args, "--prototypes").as_deref() {
+        Some("none") => None,
+        Some(path) => Some((PathBuf::from(path), "library-prototypes:file")),
+        None => core.platform_prototype_table(target.id),
+    };
+    if let Some((path, source)) = table {
+        for summary in &stored {
+            let report = core
+                .apply_named_prototypes(&summary.program, &path, source)
+                .map_err(|e| format!("{}: {e}", path.display()))?;
+            eprintln!(
+                "prototypes: {}: {} applied ({} named by the table, {} already typed, {} with types the language lacks) from {}",
+                summary.program, report.applied, report.named, report.held, report.unrepresentable, path.display()
+            );
         }
     }
 
