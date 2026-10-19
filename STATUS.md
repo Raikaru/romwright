@@ -13490,3 +13490,32 @@ Measured with `romwright-cli new-project --decompile none` (analysis only), same
 
 On Apocalypse the 20 fewer Thumb functions are 14 ARM functions the odd-size rule had flagged, 8 junk fragments, less 2 real Thumb ones the old analysis had missed or flagged ARM (`0x3008f0`, `0x2f59f8`); 3,550 of its 3,572 Thumb functions are unchanged. Full `--decompile all` regenerations (armcc 4.1 b713, `--cflags "-O3 -Otime"`): IV 9,341 functions, objdiff exact 1,185 -> 1,193, fuzzy 41.95 -> 42.27 %, `relink.py --matched` 1,187 proven (was 1,179), both `--matched` and `--matched --full` print MATCH, 0 Thumb-decoded functions entered from ARM (was 42); Apocalypse 15,104 units, exact 2,342 -> 2,347, fuzzy 42.90 -> 42.92 %, 2,338 proven (was 2,333), both relinks MATCH. `cargo test --release -p romwright-core --lib`: 1,088 pass. The GBA and DS fixtures (`m5-001`, `m5-002`) import to the same functions, decode contexts and reference counts as before; the private-image gates (`m5-013`, `m20-*`, `m21-001`) were not run (no corpus on this machine).
 
+
+## armcc C that compiles: the decompiler's text made to agree with armcc's front end (2026-10-19, EmitFixes)
+
+On `origin/fix-thumb-modes` 181 functions of SMT IV v1.2.0 and 251 of Apocalypse did not compile under armcc 4.1 b713 (`-O3 -Otime`). Every one was the decompiler's text leaving to implicit conversions or to pieces of a variable what armcc's C front end rejects (clang, the older compile check, accepts most of it). `emit_m2c/conform/strict.rs` (rules gated on `M2cOptions::strict_c`, which `new-project` sets for armcc projects only; no other target's text changes) spells each construct as what the instructions do, never as a cast that only silences the error:
+
+| first error (both games) | functions | cause | spelled as |
+|---|---|---|---|
+| `#20` undefined identifier | 89 | `NAN`/`INFINITY` (59), `sbyte` (10), `register0x00000054` (7), `_local_40` (6), `unique0x…` (5), `ram0x….whole` (2) | `romwright_types.h` defines `NAN`/`INFINITY` (armcc's `__ESCAPE__`/`__INFINITY__`) and `sbyte`/`sword`/`sdword`/`sqword`; `__current_sp()`; the low bytes of the stack symbol, masked; a local for the temporary; an absolute-address read; a write of `sp` is the call `romwright_set_sp(v)`, marked an intrinsic whose declaration is required |
+| `#154` struct type required | 69 | Ghidra's `x._1_3_` pieces | the shift and mask of the integer (reads), `x = (x & keep) \| ((v & mask) << n)` (writes), `FUN_….whole` is the address |
+| `#42` operand types incompatible | 58 | a pointer compared with an integer or with another pointer type | the pointer as `(unsigned int)`; the right operand takes the left's type |
+| `#852` pointer to an incomplete type | 50 | arithmetic and indexing on `code *` (Ghidra counts it in bytes) | `(unsigned char *)p + n`, `((unsigned char *)p)[n]`; a `code` parameter is a byte |
+| `#75` `*` of a non-pointer (`#142` for `[]`) | 42 | `(uint)*(byte *)p` read as a product, because tree-sitter does not know `uint` | Ghidra's primitive names are spelled as C types before parsing; a dereferenced integer is its address, as wide as the store |
+| `#171` invalid conversion | 36 | a register used as float and as pointer | `romwright_f2u`/`romwright_u2f` (the bits move) |
+| `#513` value cannot be assigned | 34 | `undefined4` struct members given pointers | the type of `p->member` is known (member tables from the unit's struct definitions), so the existing cast rules apply |
+| `#31`/`#183` switch | 14 | a pointer or a float switched on, `case (int *)0x0:` | the unsigned integer (the float's bits), integer case labels |
+| `#167`/`#165`/`#140` call arguments | 28 | a recursion recovered with a different prototype; `} while( 1 )` renamed a callee `while`; a label before `}` hid the whole function from the parser | the function's own declaration is the one calls conform to; keyword tokens never name a callee; labels are terminated |
+| `#109`/`#119`/`#147`/`#40` | 12 | `(*field)()` of an integer, casts to `undefined3`/byte arrays, `extern` of the function being defined | the integer is the address; the unsigned integer of the width, masked |
+
+Measured on full scratch regenerations (`new-project … --decompile all`, the same command as the real projects) of the final commit; "before" is the real projects' reports on `origin/fix-thumb-modes` (not re-run):
+
+| | SMT IV before | SMT IV after | Apocalypse before | Apocalypse after |
+|---|---|---|---|---|
+| compile failures | 181 | 0 | 251 | 0 |
+| objdiff exact (`matched_functions`) | 1,193 | 1,196 | 2,347 | 2,349 |
+| proven by `relink.py --matched` | 1,187 | 1,190 | 2,338 | 2,340 |
+| fuzzy match % | 42.267 | 44.997 | 42.918 | 45.723 |
+| `relink.py --matched` / `--matched --full` | MATCH / MATCH | MATCH / MATCH | MATCH / MATCH | MATCH / MATCH |
+
+No function that was exact before is lost (0 of 1,193 and 0 of 2,347). Gained: `nw_snd_internal_driver_Channel_Stop`, `FUN_00348b7c`, `FUN_003970ac` (IV); `FUN_00175c68`, `FUN_004d9168` (Apocalypse). Fuzzy fell on 15 (IV) and 22 (Apocalypse) functions that compiled before, mostly by under 2 points: `NAN(x)` was an implicit call and is now `x != x`, and the existing float-store rule now sees the member types it was written for. Two refused decompilations on Apocalypse (`0x1008bc`, `0x24f4ac`) were refused before. Limits: the first run exposed that the Typer read `-0xf` as a float; found only by regenerating all 9,341 units, since the 181 failing ones alone cannot show a regression in the rest. `cargo test --release -p romwright-core --lib`: 1,103 pass.
