@@ -54,7 +54,23 @@ CLAIMS = {
 # stops holding.
 # `import_native` needs no excuse: it names a program with `name`, not
 # `program`, so the scan below does not claim it.
-EXCUSED: dict[str, str] = {}
+# The three below are the worker-job arms: they read `program` through
+# `job_request`, which `infer_nonreturning` and `infer_prototypes` share and
+# which the write sweep drives through those two.
+EXCUSED: dict[str, str] = {
+    "job_submit": "enqueues one of decompile_doc, infer_prototypes, "
+                  "infer_nonreturning, match_source or matching and answers a "
+                  "job id; the first three run through the same job_request "
+                  "resolution as the direct methods driven here, the last two "
+                  "are the two entries below",
+    "matching_run": "runs a trial, search or calibration, which needs a compiler "
+                    "recipe, objdiff and a matching workspace set up first; "
+                    "tests/matching_regressions.py drives it against a real "
+                    "compiler, and this job installs no objdiff to do the same",
+    "match_source": "compiles a source file with a recipe's compiler and diffs "
+                    "it against the program with objdiff; no objdiff is "
+                    "installed here and no other gate calls it",
+}
 
 
 class Api:
@@ -87,14 +103,21 @@ class Api:
 
 
 def program_taking_methods() -> list[str]:
-    """Every dispatch arm that reads `params.program`."""
+    """Every dispatch arm that reads `params.program`.
+
+    The dispatch is two matches: `dispatch` answers `decompile_doc` with raw
+    text and hands every other method to `dispatch_tree`. An arm reads the
+    program directly (`string_param(params, "program")`) or through
+    `self.job_request(params)`, which resolves it for the worker jobs.
+    """
     source = DISPATCH.read_text(encoding="utf-8")
-    body = source[source.index('"ping" =>'):source.index("\n            _ =>")]
+    body = source[source.index("    fn dispatch(&self"):
+                  source.index("DispatchError::UnknownMethod(method")]
     arms = re.split(r'\n(?=            "[a-z_0-9]+" =>)', "\n" + body)
     taking = []
     for arm in arms:
         head = re.match(r'\s*"([a-z_0-9]+)" =>', arm)
-        if head and 'params, "program"' in arm:
+        if head and ('params, "program"' in arm or "self.job_request(params)" in arm):
             taking.append(head.group(1))
     assert len(taking) > 20, f"the dispatch scan found only {taking}"
     return taking
