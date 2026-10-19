@@ -648,6 +648,9 @@ fn import_ncch_slice(ncch: &[u8], base: u64, keys: &super::keys::KeyStore) -> Re
     let (mappings, names) = code_set_mappings(&exheader_blob, entry, file_off, code_bytes);
     imp.mappings = mappings;
     imp.mapping_names = names;
+    // The kernel starts the process at the text base: the one entry point the
+    // image itself declares, as a cartridge header's branch is on a GBA.
+    imp.process_entry = Some(entry);
     imp.functions = vec![NativeFunction {
         entry,
         name: "entry".into(),

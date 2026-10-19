@@ -554,6 +554,22 @@ impl SleighFlow {
             .with_context_db_mut(|db| db.get_variable_value(b"LowBitCodeMode", &at).ok().map(u64::from))
     }
 
+    /// Whether a mode value starts at `address`: a context change point the
+    /// console was given or a `blx` committed, as against an address that only
+    /// sits in a region painted from some earlier point. `None` for a language
+    /// without a mode field.
+    pub fn mode_starts_at(&mut self, address: u64) -> Option<bool> {
+        if !self.mode_field {
+            return None;
+        }
+        let at = self.lifter.address(address);
+        let offset = at.get_offset();
+        self.lifter.sleigh.with_context_db_mut(|db| {
+            let (_, first, _) = db.get_context_bounds(&at);
+            Some(first == offset)
+        })
+    }
+
     /// The console's `flow` answer for each address, in order. Each decode
     /// commits its context changes before the next.
     pub fn flow(&mut self, addresses: &[u64]) -> Vec<FlowResult> {
