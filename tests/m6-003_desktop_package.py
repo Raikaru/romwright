@@ -49,8 +49,36 @@ PACKAGER = ROOT / "packaging" / "package_desktop.py"
 DOC = ROOT / "docs" / "desktop.md"
 FIXTURE = ROOT / "tests" / "fixtures-src" / "tiny_bin"
 EXECUTABLE = "romwright-desktop.exe" if os.name == "nt" else "romwright-desktop"
-# The same list thresholds the M0 UI gate uses; unchanged.
+# The same list thresholds the M0 UI gate uses; unchanged. They hold on a GPU,
+# on Mesa lavapipe (the CI Linux runner: load_ms ~42-48) and on Metal (~17-20).
 THRESHOLDS = {"ui.list.load_ms": 500.0, "ui.list.filter_ms": 100.0}
+# Windows' software adapter, WARP, is the one place they cannot hold, and the
+# cause is the harness's clock, not the list path. The gate drives the app one
+# frame at a time, each frame rendered offscreen and waited on
+# (`device.poll`), and `load_ms` / `filter_ms` run from the request to the end
+# of the frame in which its answer is seen: about two frames each. On WARP a
+# frame is the CPU rasterising 1440x900. Per-frame timers on a Windows machine
+# (same binary, same 1440x900 / ~5k-vertex frames), forcing WARP against its
+# RTX 4080:
+#
+#     adapter  logic+layout+tessellate  GPU wait/frame   load_ms    filter_ms
+#     RTX 4080       ~1.5 ms               0.2-0.3 ms     10-20      13-55
+#     WARP           0.5-30 ms             99-122 ms      219-305    185-278
+# On that same machine WARP passes the 500 ms load threshold and fails the
+# 100 ms filter threshold (185-215 ms in three runs of this gate), so CI's
+# failure at load_ms hides a second one at filter_ms.
+#
+# (idle WARP frames 99-140 ms.) On GitHub's `windows-latest`, which also
+# renders on "Microsoft Basic Render Driver", the same commit (0280ea154) gave
+# load_ms 70.2 / filter_ms 62.6 in run 39173842088 and load_ms 618.6 in run
+# 39174837965; four later runs gave 542.6, 565.8, 604.8 and 656.8. So the
+# runner's CPU speed moves a frame by 10x and the WARP numbers below are a
+# bound on a couple of software-rendered frames on a slow runner (about 2.3x
+# the worst observed load_ms; filter_ms is the same two frames), not a
+# measurement of the list. A Windows machine that renders on a GPU keeps the
+# thresholds above.
+WARP_ADAPTER = "Microsoft Basic Render Driver"
+WARP_THRESHOLDS = {"ui.list.load_ms": 1500.0, "ui.list.filter_ms": 1500.0}
 MEASURED = ("ui.install.prefix_ok", "ui.install.store_only_ok")
 ADAPTER_PREFIX = "ui gate: rendering offscreen on "
 
@@ -161,7 +189,11 @@ def main() -> int:
         for metric in MEASURED:
             assert store.get(metric) is True, (
                 f"{metric} is {store.get(metric)!r} on a packaged store-only run")
-        for metric, threshold in THRESHOLDS.items():
+        # WARP is named by the adapter the app reports, not by the OS, so a
+        # Windows machine with a GPU is held to the same thresholds as a Mac.
+        thresholds = WARP_THRESHOLDS if (adapter or "").startswith(WARP_ADAPTER) else THRESHOLDS
+        report["thresholds"] = thresholds
+        for metric, threshold in thresholds.items():
             value = store.get(metric)
             assert isinstance(value, (int, float)) and not isinstance(value, bool), (
                 f"{metric} is {value!r}")
@@ -175,7 +207,7 @@ def main() -> int:
     if arguments.report:
         report.update(status="pass", passed=True, summary=summary,
                       metrics={**{key: store[key] for key in MEASURED},
-                               **{key: store[key] for key in THRESHOLDS},
+                               **{key: store[key] for key in thresholds},
                                **{key: value for key, value in store.items()
                                   if key.startswith("ui.source.")}},
                       package=archive.name)
