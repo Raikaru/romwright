@@ -59,12 +59,14 @@ ALIGNMENT = 16
 # Expected failures, each tied to a diagnosed mechanism -- visible here so
 # the gate stays green only for everything else. An exemption that stops
 # firing fails loudly so it gets removed instead of going stale.
-# mipsel_cpp_o2: the stripped walk covers do_work to 64 bytes and stops at
-# the 0x20980 false entry (same walk-divergence the m12 twins miss,
-# m19-004 spurious, and m3 unattributed exemptions pin); the tail past it
-# belongs to the same function, so the body "stops short where the store
-# claims".
-EXPECTED_CLAIMED_TAILS = {"mipsel_cpp_o2": [("00020940", "00020980")]}
+# mipsel_cpp_o2 once carried one: its stripped walk covered do_work to 64
+# bytes and stopped at a false entry at 0x20980 (the walk-divergence the m12
+# twins miss and m19-004 spurious pin), so the tail past it "stopped short
+# where the store claims". That was one clang's output. Built with the corpus
+# toolchain CI uses (clang 18 on ubuntu-24.04) the image has no claimed tail,
+# so the exemption no longer fires and is removed: any claimed tail now fails
+# the gate.
+EXPECTED_CLAIMED_TAILS: dict[str, list[tuple[str, str]]] = {}
 TAG = re.compile(r"DW_TAG_\w+")
 LOW_PC = re.compile(r"DW_AT_low_pc\s*\((0x[0-9a-f]+)\)")
 HIGH_PC = re.compile(r"DW_AT_high_pc\s*\((0x[0-9a-f]+)\)")

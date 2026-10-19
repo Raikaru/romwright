@@ -9,6 +9,9 @@
 void *type_info_vftable[1] asm("??_7type_info@@6B@") = {nullptr};
 void operator delete(void *, decltype(sizeof(int))) noexcept {}
 void operator delete(void *) noexcept {}
+// clang 18 registers each global's destructor through atexit in the dynamic
+// initializer (clang 19 elides these empty ones); with no CRT linked, supply it.
+extern "C" int atexit(void (*)()) { return 0; }
 
 struct Base {
     virtual ~Base() {}

@@ -66,11 +66,34 @@ jobs:
         run: |
           python tests/support_matrix_test.py
           python tests/m5-005_platform_matrix.py
+      # Tools the gates below run: llvm-strip for the PE fixtures, clang and lld to
+      # cross-build the discovery corpus, mingw-w64 for its PE members and for the
+      # strip m9-003 uses on exports32.dll, a C++ compiler and zlib for ghidra_opt.
+      - name: Install LLVM tools
+        run: sudo apt-get update && sudo apt-get install -y llvm lld clang mingw-w64 build-essential zlib1g-dev
       - name: Score PE32+ recovery against DWARF truth
         run: |
           cargo build --release -p romwright-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      # From here the gates import images and decompile them: the importer reads the
+      # Ghidra language data, and every decompile runs through native/build/ghidra_opt
+      # (docs/environment.md). The corpus the provenance gates import is the one the
+      # oracle job generates.
+      - name: Cache the Ghidra zip
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ghidra-cache
+          key: ghidra-zip-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packaging/ghidra_data.py', 'native/build_sleigh.sh', 'native/darwin_arch.sh') }}
+      - name: Provision the Ghidra language data
+        run: python3 packaging/ghidra_data.py --dest build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
+      - name: Build the native decompiler
+        run: bash native/build_ghidra_opt.sh --jobs 4
+      - name: Generate the discovery corpus the provenance gates read
+        run: |
+          python3 scripts/gen_corpus.py \
+            --architectures x86_64,i386,aarch64,powerpc \
+            --out-dir "$RUNNER_TEMP/discovery/corpus"
       - name: Publish multi-image projects as one milestone
         run: |
           python3 tests/m10-004_multi_image_milestone.py \
@@ -132,7 +155,7 @@ jobs:
         run: python tests/m5-012_evidence_index.py
       - name: Run the documented workflow
         run: |
-          cargo build --release -p romwright-cli
+          cargo build --release -p romwright-cli -p romwright-worker
           python3 tests/m6-001_documented_workflow.py \
             --report "$RUNNER_TEMP/documented-workflow.json"
           cargo build --release -p romwright-api
@@ -150,7 +173,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Install LLVM tools
-        run: sudo apt-get update && sudo apt-get install -y llvm lld clang qemu-user
+        run: sudo apt-get update && sudo apt-get install -y llvm lld clang qemu-user mingw-w64
+      # The gate imports every corpus binary through the native importer, which reads the
+      # SLEIGH languages (MIPS, PowerPC, ...) from build/ghidra; a runner has none.
+      - name: Cache the Ghidra zip
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ghidra-cache
+          key: ghidra-zip-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packaging/ghidra_data.py', 'native/build_sleigh.sh', 'native/darwin_arch.sh') }}
+      - name: Provision the Ghidra language data
+        run: python3 packaging/ghidra_data.py --dest build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
       - name: Run Multi-Architecture Corpus Gate
         run: |
           bash tests/m1-006_corpus.sh
@@ -204,13 +236,22 @@ jobs:
           distribution: temurin
           java-version: '25'
       - name: Install corpus build tools
-        run: sudo apt-get update && sudo apt-get install -y llvm lld clang build-essential zlib1g-dev mesa-vulkan-drivers
+        run: sudo apt-get update && sudo apt-get install -y llvm lld clang build-essential zlib1g-dev mesa-vulkan-drivers mingw-w64
       - name: Install pinned Ghidra release
         run: |
           curl --fail --location --retry 3 https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.3_build/ghidra_12.1.3_PUBLIC_20260817.zip --output "$RUNNER_TEMP/ghidra.zip"
           echo "93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54  $RUNNER_TEMP/ghidra.zip" | sha256sum --check
           unzip -q "$RUNNER_TEMP/ghidra.zip" -d "$RUNNER_TEMP"
           echo "ROMWRIGHT_GHIDRA=$RUNNER_TEMP/ghidra_12.1.3_PUBLIC" >> "$GITHUB_ENV"
+      # `decompile` runs through native/build/ghidra_opt; without it every decompile
+      # in the gates below fails.
+      - name: Build the native decompiler
+        run: bash native/build_ghidra_opt.sh --jobs 4
+      # PSX, r5900, VU, RSP, Xenon and Gekko are not in the release zip: romwright
+      # compiles them from native/languages into the install (the `rust` job does
+      # the same). The PlayStation and Nintendo 64 gates import images in them.
+      - name: Install romwright's SLEIGH languages into the Ghidra install
+        run: python3 packaging/languages.py --ghidra "$ROMWRIGHT_GHIDRA" --cache-dir "$RUNNER_TEMP/ghidra-cache"
       - name: Generate and validate all 20 ELF oracles
         run: |
           python3 tests/m1-007_oracle_test.py
@@ -379,10 +420,17 @@ jobs:
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
+      # m17-002 scores a PE row and a MIPS row besides the four ELF rows of the
+      # 20-row matrix, so it reads a corpus built with them.
+      - name: Generate the corpus the producer gate scores
+        run: |
+          python3 scripts/gen_corpus.py \
+            --architectures x86_64,i386,aarch64,powerpc,mipsel,pe64 \
+            --out-dir "$RUNNER_TEMP/discovery/producer-corpus"
       - name: Score every function producer on its own
         run: |
           python3 tests/m17-002_producer_classes.py \
-            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --corpus-dir "$RUNNER_TEMP/discovery/producer-corpus" \
             --report "$RUNNER_TEMP/reports/m17-002.json"
       - name: Find functions by the shape of the graph
         run: |

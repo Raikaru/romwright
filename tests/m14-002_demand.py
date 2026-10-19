@@ -107,9 +107,20 @@ def store_xrefs(project: Path, start: str, end: str):
         }
 
 
+# Where the host's libc lives: Fedora keeps it under /usr/lib64, Debian and
+# Ubuntu under the multiarch directory.
+LIBC_CANDIDATES = ("/usr/lib64/libc.so.6", "/usr/lib/x86_64-linux-gnu/libc.so.6",
+                   "/lib/x86_64-linux-gnu/libc.so.6")
+
+
+def host_libc() -> Path:
+    return next((Path(path) for path in LIBC_CANDIDATES if Path(path).is_file()),
+                Path(LIBC_CANDIDATES[0]))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=Path("/usr/lib64/libc.so.6"))
+    parser.add_argument("--binary", type=Path, default=host_libc())
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     env = os.environ.copy()

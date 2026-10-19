@@ -342,6 +342,7 @@ def main() -> int:
                   and explained and navigable else "fail")
         document = report_document(root, binary, args.program, metrics, len(samples), status)
     except (GateError, OSError, subprocess.SubprocessError) as error:
+        print(f"ui gate: {error}", file=sys.stderr)
         try:
             binary = (args.binary or default_binary()).resolve()
             if not binary.is_file():

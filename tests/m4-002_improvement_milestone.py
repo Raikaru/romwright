@@ -76,17 +76,33 @@ DEFAULT_OFF = {
     "ROMWRIGHT_PROMOTE_TAILCALLS": {"entry": 0x037F8000},
 }
 # One arity both producers miss, per row, and the register that would carry it.
-# `dead` spellings are every name the SLEIGH disassembler can print for the
-# ABI's second integer argument; `live` is the first, so a scan that sees
-# nothing is caught rather than believed.
+# The function is many.c's `main(int c, char **v)`, whose `v` nothing reads;
+# its address is read from the row's unstripped twin, because where it lands
+# depends on the host's compiler and linker. `dead` spellings are every name
+# the SLEIGH disassembler can print for the ABI's second integer argument;
+# `live` is the first, so a scan that sees nothing is caught rather than
+# believed.
+RESIDUAL_SYMBOL = "main"
 RESIDUAL = {
-    "x86_64_many_o2": {"entry": 0x2041D0, "arity": 2,
+    "x86_64_many_o2": {"arity": 2,
                        "dead": r"\b(RSI|ESI|SI|SIL)\b", "live": r"\b(RDI|EDI|DI|DIL)\b"},
-    "aarch64_many_o2": {"entry": 0x213304, "arity": 2,
+    "aarch64_many_o2": {"arity": 2,
                         "dead": r"\b[wx]1\b", "live": r"\b[wx]0\b"},
-    "powerpc_many_o2": {"entry": 0x10013034, "arity": 2,
+    "powerpc_many_o2": {"arity": 2,
                         "dead": r"\br4\b", "live": r"\br3\b"},
 }
+
+
+def twin_function(twin: Path, symbol: str) -> int:
+    """Entry address of one named function in an ELF twin, from its symbols."""
+    output = subprocess.run(["readelf", "-sW", str(twin)], text=True,
+                            capture_output=True, check=True).stdout
+    found = [int(parts[1], 16) for parts in (line.split() for line in output.splitlines())
+             if len(parts) >= 8 and parts[3] == "FUNC" and parts[7] == symbol]
+    assert len(found) == 1, f"{twin.name} defines {len(found)} functions named {symbol}"
+    return found[0]
+
+
 COMPARE = {"ge": lambda a, b: a >= b - 1e-9,
            "le": lambda a, b: a <= b + 1e-9,
            "eq": lambda a, b: a == b}
@@ -270,7 +286,10 @@ def main() -> int:
         assert counts["native_arity_correct"] == counts["baseline_arity_correct"], (
             f"{name} and stock no longer miss the same count")
         binary = (arguments.corpus_dir / recipes[name]["binary"]).resolve()
-        rows, size = body(binary, spec["entry"], arguments.timeout)
+        entry_address = twin_function(
+            (arguments.corpus_dir / recipes[name]["unstripped_twin"]).resolve(),
+            RESIDUAL_SYMBOL)
+        rows, size = body(binary, entry_address, arguments.timeout)
         assert len(rows) > 100, f"{name}: only {len(rows)} instructions decoded"
         text = "\n".join(rows)
         live = len(re.findall(spec["live"], text))
@@ -281,7 +300,7 @@ def main() -> int:
         assert dead == 0, (
             f"{name}: the second-argument register appears {dead} times in the "
             f"function, so the missed parameter has evidence after all")
-        residual[name] = {"entry": f"{spec['entry']:08x}", "body_bytes": size,
+        residual[name] = {"entry": f"{entry_address:08x}", "body_bytes": size,
                           "instructions": len(rows),
                           "first_argument_reads": live, "second_argument_reads": dead,
                           "truth_arity": spec["arity"]}
