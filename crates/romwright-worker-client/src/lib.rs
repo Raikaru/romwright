@@ -282,6 +282,11 @@ pub struct WorkerPool {
     memory_cap_hits: u64,
     // Set only on a fresh inference pool: prior inferred flags are not evidence.
     asserted_returns_only: bool,
+    // Decompiler children this pool has launched, whether or not they ever
+    // answered. Tests read it: a child's own side effects cannot count
+    // launches, because a child killed before it runs leaves none.
+    #[cfg(test)]
+    launches: u64,
 }
 
 impl WorkerPool {
@@ -295,6 +300,8 @@ impl WorkerPool {
             restarts: 0,
             memory_cap_hits: 0,
             asserted_returns_only: false,
+            #[cfg(test)]
+            launches: 0,
         }
     }
 
@@ -370,7 +377,17 @@ impl WorkerPool {
                 on_launch(&session.worker);
                 session
             }
-            None => WorkerSession::spawn(&self.config, on_launch, self.asserted_returns_only)?,
+            None => WorkerSession::spawn(
+                &self.config,
+                |worker| {
+                    #[cfg(test)]
+                    {
+                        self.launches += 1;
+                    }
+                    on_launch(worker)
+                },
+                self.asserted_returns_only,
+            )?,
         };
         if let Err(error) = self.enforce_memory_cap(&mut session) {
             if matches!(error, PoolError::MemCap(_, _)) {
@@ -1842,11 +1859,11 @@ mod tests {
         ));
         std::fs::create_dir(&root).unwrap();
         let decompiler = root.join("hang");
-        std::fs::write(
-            &decompiler,
-            "#!/bin/sh\nprintf x >> \"$0.started\"\nsleep 2\n",
-        )
-        .unwrap();
+        // The child hangs for far longer than any bound below. It writes nothing
+        // itself: how many children were launched is counted by the pool (a child
+        // killed before the shell reaches its first command leaves no trace), and
+        // how long a child takes to start is not what this test measures.
+        std::fs::write(&decompiler, "#!/bin/sh\nsleep 30\n").unwrap();
         std::fs::set_permissions(&decompiler, std::fs::Permissions::from_mode(0o755)).unwrap();
         let binary = root.join("raw.bin");
         std::fs::write(&binary, [0x90, 0xc3]).unwrap();
@@ -1906,6 +1923,7 @@ mod tests {
             pool.decompile_doc(0, Instant::now() + Duration::from_millis(250), &never),
         ];
         let elapsed = started.elapsed();
+        assert_eq!(pool.launches, 2, "each attempt launches its own child");
         let deadline = Instant::now() + Duration::from_millis(250);
         let shared = [
             pool.recover_doc(0, deadline, &never),
@@ -1914,20 +1932,27 @@ mod tests {
         for result in results.into_iter().chain(shared) {
             assert!(matches!(result, Err(PoolError::Deadline(_))), "{result:?}");
         }
-        let starts = std::fs::read(root.join("hang.started")).unwrap();
-        // A protocol failure must remain an error, not wait for EOF until the
-        // deadline turns it into a timeout. This child deliberately ignores EOF.
-        std::fs::write(
-            root.join("hang"),
-            "#!/bin/sh\nprintf '\\000\\000\\001\\177'\nsleep 2\n",
-        )
-        .unwrap();
-        let rejected = pool.decompile_doc(0, Instant::now() + Duration::from_millis(250), &never);
+        // The first of the two shared calls runs the deadline out on its child;
+        // the second finds it expired and must not launch one.
         assert_eq!(
-            starts, b"xxx",
+            pool.launches, 3,
             "an expired shared deadline must not launch another child"
         );
-        assert!(elapsed < Duration::from_millis(1500), "{elapsed:?}");
+        // A kill ends each call at its deadline. A child left alone would hold
+        // the call for its full 30 s, so the bound separates the two without
+        // depending on how fast this machine schedules.
+        assert!(elapsed < Duration::from_secs(15), "{elapsed:?}");
+        // A protocol failure must remain an error, not wait for EOF until the
+        // deadline turns it into a timeout. This child deliberately ignores EOF,
+        // and the deadline is far beyond the time it needs to write its burst, so
+        // only a failure that waits for the deadline reports a timeout.
+        std::fs::write(
+            root.join("hang"),
+            "#!/bin/sh\nprintf '\\000\\000\\001\\177'\nsleep 30\n",
+        )
+        .unwrap();
+        let rejected = pool.decompile_doc(0, Instant::now() + Duration::from_secs(10), &never);
+        assert_eq!(pool.launches, 4);
         assert!(
             matches!(&rejected, Err(PoolError::Worker(_))),
             "{rejected:?}"
