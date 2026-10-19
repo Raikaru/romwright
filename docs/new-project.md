@@ -572,7 +572,7 @@ read of the stack pointer. A write of `sp` has no C spelling: it is the call `ro
 intrinsic whose declaration is required. Ghidra's primitive names (`uint`, `byte`, `undefined4`, ...) are spelled as C types
 first: to a parser that does not know the typedefs, `(uint)*p` is a product. `include/romwright_types.h` also defines
 `sbyte`/`sword`/`sdword`/`sqword` and `NAN`/`INFINITY` (armcc's own constants). On Shin Megami Tensei IV and Apocalypse
-this took the C that did not compile from 181 and 251 functions to 3 and 3 (see `docs/measurements.md`).
+this took the C that did not compile from 181 and 251 functions to none (STATUS.md, "armcc C that compiles").
 
 **A 3DS project works without romwright.** `orig/` and `build/` are git-ignored (retail bytes), so a fresh clone
 has no target objects. Every 3DS project therefore carries stdlib-only Python tools (`tools/n3ds.py`,
