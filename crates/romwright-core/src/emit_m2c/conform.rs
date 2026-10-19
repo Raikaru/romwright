@@ -898,7 +898,10 @@ impl Typer<'_> {
             }
             "number_literal" => {
                 let text = text_of(node, self.source);
-                if text.contains('.') || (!text.starts_with("0x") && text.ends_with(['f', 'F'])) {
+                // tree-sitter's number literal carries its sign (`-0xf`), whose last digit is not a float suffix
+                let digits = if self.decls.strict { text.trim_start_matches(['-', '+']) } else { text };
+                let hex = digits.starts_with("0x") || (self.decls.strict && digits.starts_with("0X"));
+                if text.contains('.') || (!hex && text.ends_with(['f', 'F'])) {
                     Some(Ty::Float(if text.ends_with(['f', 'F']) { 4 } else { 8 }))
                 } else {
                     Some(Ty::Int(Int::Int))
