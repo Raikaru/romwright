@@ -278,7 +278,11 @@ def main() -> int:
     # dispatches instead of 142 with no error (the analysis degraded
     # rather than failing). Refuse to run starved.
     for place in (arguments.work, Path(tempfile.gettempdir())):
-        anchor = place if place.exists() else place.parent
+        # The work directory's parents may not exist yet on a fresh machine;
+        # the filesystem to measure is the nearest one that does.
+        anchor = place
+        while not anchor.exists():
+            anchor = anchor.parent
         free = os.statvfs(anchor).f_bavail * os.statvfs(anchor).f_frsize
         if free < 2 << 30:
             raise SystemExit(
