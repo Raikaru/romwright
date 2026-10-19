@@ -66,13 +66,34 @@ jobs:
         run: |
           python tests/support_matrix_test.py
           python tests/m5-005_platform_matrix.py
+      # Tools the gates below run: llvm-strip for the PE fixtures, clang and lld to
+      # cross-build the discovery corpus, mingw-w64 for its PE members and for the
+      # strip m9-003 uses on exports32.dll, a C++ compiler and zlib for ghidra_opt.
       - name: Install LLVM tools
-        run: sudo apt-get update && sudo apt-get install -y llvm
+        run: sudo apt-get update && sudo apt-get install -y llvm lld clang mingw-w64 build-essential zlib1g-dev
       - name: Score PE32+ recovery against DWARF truth
         run: |
           cargo build --release -p romwright-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      # From here the gates import images and decompile them: the importer reads the
+      # Ghidra language data, and every decompile runs through native/build/ghidra_opt
+      # (docs/environment.md). The corpus the provenance gates import is the one the
+      # oracle job generates.
+      - name: Cache the Ghidra zip
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ghidra-cache
+          key: ghidra-zip-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packaging/ghidra_data.py', 'native/build_sleigh.sh', 'native/darwin_arch.sh') }}
+      - name: Provision the Ghidra language data
+        run: python3 packaging/ghidra_data.py --dest build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
+      - name: Build the native decompiler
+        run: bash native/build_ghidra_opt.sh --jobs 4
+      - name: Generate the discovery corpus the provenance gates read
+        run: |
+          python3 scripts/gen_corpus.py \
+            --architectures x86_64,i386,aarch64,powerpc \
+            --out-dir "$RUNNER_TEMP/discovery/corpus"
       - name: Publish multi-image projects as one milestone
         run: |
           python3 tests/m10-004_multi_image_milestone.py \
@@ -134,7 +155,7 @@ jobs:
         run: python tests/m5-012_evidence_index.py
       - name: Run the documented workflow
         run: |
-          cargo build --release -p romwright-cli
+          cargo build --release -p romwright-cli -p romwright-worker
           python3 tests/m6-001_documented_workflow.py \
             --report "$RUNNER_TEMP/documented-workflow.json"
           cargo build --release -p romwright-api
@@ -153,6 +174,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install LLVM tools
         run: sudo apt-get update && sudo apt-get install -y llvm lld clang qemu-user mingw-w64
+      # The gate imports every corpus binary through the native importer, which reads the
+      # SLEIGH languages (MIPS, PowerPC, ...) from build/ghidra; a runner has none.
+      - name: Cache the Ghidra zip
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ghidra-cache
+          key: ghidra-zip-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packaging/ghidra_data.py', 'native/build_sleigh.sh', 'native/darwin_arch.sh') }}
+      - name: Provision the Ghidra language data
+        run: python3 packaging/ghidra_data.py --dest build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
       - name: Run Multi-Architecture Corpus Gate
         run: |
           bash tests/m1-006_corpus.sh
