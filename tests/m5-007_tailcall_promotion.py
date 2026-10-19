@@ -41,7 +41,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmarks"))
 FLAG = "ROMWRIGHT_PROMOTE_TAILCALLS"
-TAIL_CALL = (0x037F_802C, 0x037F_8000)
 BASELINE = ROOT / "benchmarks" / "reports" / "m3-001.json"
 
 
@@ -159,6 +158,16 @@ def main() -> int:
                  for name, image in images.items()}
         symbols = {name: fixture.twin_symbols(image["elf"])
                    for name, image in images.items()}
+        # The tail call itself: the one branch into the entry only a tail call
+        # reaches (m5-002's KNOWN_DEFICITS). Read from the twin, as m5-006
+        # does: the address depends on how many instructions the host's clang
+        # emits for the fixture.
+        mix = {int(address, 16) for address in fixture.KNOWN_DEFICITS["nds.arm7"]}
+        tail_calls = [(source, target) for source, target in
+                      load_module("m5_006", ROOT / "tests" / "m5-006_tailcall.py")
+                      .unconditional_branches(images["arm7"]["elf"]) if target in mix]
+        assert len(tail_calls) == 1, f"expected one tail call into mix, found {tail_calls}"
+        TAIL_CALL = tail_calls[0]
 
         off = program_facts(import_container(cli, container, work, False,
                                             arguments.timeout), "nds.arm7")
