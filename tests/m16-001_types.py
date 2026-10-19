@@ -157,7 +157,8 @@ def main():
             unstripped = work / f"types.{level}"
             stripped = work / f"types.{level}.stripped"
             build = subprocess.run(
-                ["gcc", f"-{level}", "-g", "-fno-inline", "-o", str(unstripped), str(FIXTURE)],
+                ["gcc", f"-{level}", "-g", "-fno-inline", "-fno-pie", "-no-pie",
+                 "-o", str(unstripped), str(FIXTURE)],
                 capture_output=True, text=True, timeout=300)
             if build.returncode:
                 raise SystemExit(f"fixture build failed: {build.stderr[-500:]}")
