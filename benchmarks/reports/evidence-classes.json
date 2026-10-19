@@ -7,6 +7,10 @@
   "evidence": "inferred",
   "derives_confidence": false
  },
+ "native-analysis:cfg-cluster": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
  "native-analysis:constant-propagation": {
   "evidence": "inferred",
   "derives_confidence": false
@@ -23,8 +27,20 @@
   "evidence": "inferred",
   "derives_confidence": false
  },
+ "native-analysis:mwcc-demangle": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
+ "native-analysis:mwcc-prototype": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
  "native-analysis:shared-return": {
   "evidence": "decoded",
+  "derives_confidence": false
+ },
+ "native-analysis:x86-convention": {
+  "evidence": "inferred",
   "derives_confidence": false
  },
  "native-import": {
@@ -33,6 +49,10 @@
  },
  "native-import:branch": {
   "evidence": "decoded",
+  "derives_confidence": false
+ },
+ "native-import:debug-info": {
+  "evidence": "declared",
   "derives_confidence": false
  },
  "native-import:dynamic-tag": {
@@ -113,6 +133,18 @@
  },
  "native-import:plt-reserved": {
   "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:rel-reloc": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:switch": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
+ "native-import:symbol-library-prototype": {
+  "evidence": "inferred",
   "derives_confidence": false
  },
  "native-import:thunk": {
