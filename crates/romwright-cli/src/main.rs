@@ -90,7 +90,7 @@ const USAGE: &str = "usage:
   romwright-cli export-dtk <program> <outdir> [--splits FILE] [--project DIR]
   romwright-cli export-objdiff <program> <outdir> --splits <splits.txt> --target-root DIR [--base-root DIR] [--source-root DIR] [--complete all|UNIT,UNIT] [--dtk-config config.json] [--project DIR]
   romwright-cli export-splat <program> <outdir> [--binary FILE] [--project DIR]
-  romwright-cli new-project <image> <outdir> [--name NAME] [--platform ID] [--toolchain PROFILE.json] [--manifest FILE] [--compiler ID] [--cflags FLAGS] [--decompile all|first:N|ADDR,ADDR|none] [--fact-pack PACK] [--keys FILE...] [--map FILE] [--json]   (--list-platforms: what each platform needs; docs/new-project.md)
+  romwright-cli new-project <image> <outdir> [--name NAME] [--platform ID] [--toolchain PROFILE.json] [--manifest FILE] [--compiler ID] [--cflags FLAGS] [--decompile all|first:N|ADDR,ADDR|none] [--fact-pack PACK] [--keys FILE...] [--map FILE] [--names FILE] [--prototypes FILE|none] [--json]   (--list-platforms: what each platform needs; docs/new-project.md)
   romwright-cli detect-compiler <image> [--json]
   romwright-cli match <name|0xADDR> [--project REPO] [--budget N] [--time SECS] [--write] [--json]   (inside a new-project repository: near-miss search over printing variants, scored with the repo's compiler; docs/match.md)
   romwright-cli compiler-rules [--json]   (the embedded compiler rules and their switch state; ROMWRIGHT_NO_COMPILER_RULES=1, ROMWRIGHT_COMPILER_RULES_DISABLE=id,id, ROMWRIGHT_COMPILER_RULES_ENABLE=id,id)

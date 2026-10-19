@@ -27,7 +27,7 @@ test run on a `--release` build, the cheap profile is
 | `ROMWRIGHT_SPECS` | `<exe dir>/../share/romwright/specs`, then `native/specs` | Compiled language specs for the worker. |
 | `ROMWRIGHT_WORKER` | `romwright-worker` beside the running executable (so a `target/dist` build finds its own), then `target/release`, `target/debug` | The decompiler worker process. |
 | `ROMWRIGHT_CLI` | `romwright-cli` beside the desktop app, then `target/release`, `target/debug` | The CLI the desktop's Program setup runs for **Create project** (`new-project`). |
-| `ROMWRIGHT_LIBRARY_PROTOTYPES` | `<exe dir>/../share/romwright/library-prototypes-v1/generic_clib_64.json`, then `oracle/library-prototypes-v1/generic_clib_64.json` | Library prototypes applied to known imports; `runtime_helpers.json` is read from the same directory. |
+| `ROMWRIGHT_LIBRARY_PROTOTYPES` | `<exe dir>/../share/romwright/library-prototypes-v1/generic_clib_64.json`, then `oracle/library-prototypes-v1/generic_clib_64.json` | Library prototypes applied to known imports; `runtime_helpers.json` and `ctr_sdk.json` are read from the same directory. |
 | `ROMWRIGHT_OBJDIFF` | `objdiff-cli` on `PATH` | objdiff, for matching reports. |
 | `ROMWRIGHT_SERVICE_JAR` | next to the CLI's build | The Java bridge, used only to produce oracles. |
 | `ROMWRIGHT_IMPORT_CACHE` | `~/.cache/romwright/imports` | Where imports are cached for reuse. |
