@@ -174,6 +174,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install LLVM tools
         run: sudo apt-get update && sudo apt-get install -y llvm lld clang qemu-user mingw-w64
+      # The gate imports every corpus binary through the native importer, which reads the
+      # SLEIGH languages (MIPS, PowerPC, ...) from build/ghidra; a runner has none.
+      - name: Cache the Ghidra zip
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ghidra-cache
+          key: ghidra-zip-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packaging/ghidra_data.py', 'native/build_sleigh.sh', 'native/darwin_arch.sh') }}
+      - name: Provision the Ghidra language data
+        run: python3 packaging/ghidra_data.py --dest build/ghidra --cache-dir "$RUNNER_TEMP/ghidra-cache"
       - name: Run Multi-Architecture Corpus Gate
         run: |
           bash tests/m1-006_corpus.sh
