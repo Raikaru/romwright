@@ -18,6 +18,7 @@ pub mod func_ir;
 pub(crate) mod sha256;
 pub mod gte;
 pub mod library_types;
+pub mod named_prototypes;
 pub mod demangle;
 pub mod bridge;
 pub mod compiler;
