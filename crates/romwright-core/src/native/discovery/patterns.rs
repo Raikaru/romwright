@@ -439,6 +439,24 @@ pub(super) fn collect<P: FlowProvider>(
             }
         }
         let rule = &patterns.rules[hit.rule];
+        let arm_rule = import.language.starts_with("ARM:")
+            && rule.actions.iter().any(|action| {
+                action.kind == "setcontext"
+                    && action.attributes.get("value").is_some_and(|value| value == "0")
+                    && action
+                        .attributes
+                        .get("name")
+                        .is_some_and(|name| name == "TMode" || name == "LowBitCodeMode")
+            });
+        // An ARM-state instruction is a whole aligned word (ARM ARM, A2.1), so
+        // a match whose rule declares ARM state on a halfword that is no word
+        // start is bytes that only read as one. The pattern file carries one
+        // alignment for its Thumb rules and its ARM ones; taken, such a start
+        // walks Thumb code as ARM and names the branch targets that junk reads.
+        if arm_rule && address % 4 != 0 {
+            refuse("alignment", refused);
+            continue;
+        }
         // An ARM match on an address an odd data word names: the word is a
         // Thumb entry by its own low bit, and the bytes only happen to read
         // as ARM too (`mov r12, sp; push.w ...` is `push {.., lr}` to the ARM
@@ -447,15 +465,7 @@ pub(super) fn collect<P: FlowProvider>(
         // Thumb (`code_pointer_tables`). Vita NFS: 10 of the 11 functions
         // the interior rule used to lose (7 trampolines and 3 `DspPlugIn` methods).
         if !decoded_here
-            && import.language.starts_with("ARM:")
-            && rule.actions.iter().any(|action| {
-                action.kind == "setcontext"
-                    && action.attributes.get("value").is_some_and(|value| value == "0")
-                    && action
-                        .attributes
-                        .get("name")
-                        .is_some_and(|name| name == "TMode" || name == "LowBitCodeMode")
-            })
+            && arm_rule
             && thumb_declared
                 .get_or_insert_with(|| thumb_declared_targets(import))
                 .contains(&address)
@@ -737,8 +747,15 @@ pub(super) fn aggressive_body<P: FlowProvider>(
     // The mode the console currently holds at this address, if it has decoded
     // anything there before.
     let held = held_mode(provider, address);
+    // ARM state is whole aligned words: on a halfword that is no word start
+    // only Thumb can be what is there, whatever the console makes of the bytes
+    // read as an ARM word.
+    let arm_impossible = import.language.starts_with("ARM:") && address % 4 != 0;
+    let held_is_arm_impossible = arm_impossible && held.unwrap_or(0) == 0;
     // Held mode first.
-    if let Some(body) = valid_code(import, address, requirement, indexes, instructions, provider) {
+    if !held_is_arm_impossible
+        && let Some(body) = valid_code(import, address, requirement, indexes, instructions, provider)
+    {
         return Some((body, held.unwrap_or(0)));
     }
     // The opposite mode is tried only when the held one is not a subroutine
@@ -758,11 +775,16 @@ pub(super) fn aggressive_body<P: FlowProvider>(
         must_terminate: false,
         contiguous: false,
     };
-    if valid_code(import, address, &decodes, indexes, instructions, provider).is_some() {
+    if !held_is_arm_impossible
+        && valid_code(import, address, &decodes, indexes, instructions, provider).is_some()
+    {
         return None;
     }
     // Opposite mode.
     let flipped = held.map(|mode| mode ^ 1).unwrap_or(1);
+    if arm_impossible && flipped == 0 {
+        return None;
+    }
     provider.set_context("LowBitCodeMode", address, flipped);
     let body = valid_code(import, address, requirement, indexes, instructions, provider);
     match body {

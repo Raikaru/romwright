@@ -2361,3 +2361,139 @@ fn lanes_sharing_a_decoder_answer_as_lanes_with_one_each_do() {
     // The shared decoder is a flow decoder again after a lifter call.
     assert_eq!(shared.flow(&first).unwrap(), apart.flow(&first).unwrap());
 }
+
+/// A decoder with the console's painting: a mode holds from its change point
+/// to the next one, and each address answers with the instruction its held
+/// mode reads there (`arm`/`thumb`: address -> answer).
+struct PaintedProvider {
+    points: std::collections::BTreeMap<u64, u64>,
+    arm: std::collections::HashMap<u64, FlowResult>,
+    thumb: std::collections::HashMap<u64, FlowResult>,
+    set: Vec<(u64, u64)>,
+}
+
+impl PaintedProvider {
+    fn held(&self, address: u64) -> u64 {
+        self.points.range(..=address).next_back().map_or(0, |(_, &mode)| mode)
+    }
+}
+
+impl FlowProvider for PaintedProvider {
+    fn flow(&mut self, addresses: &[u64]) -> Vec<FlowResult> {
+        addresses
+            .iter()
+            .map(|&address| {
+                let mode = self.held(address);
+                let mut flow = if mode == 0 { &self.arm } else { &self.thumb }.get(&address).cloned().unwrap_or_else(|| {
+                    let mut bad = result(address, FlowKind::Bad, None, false);
+                    bad.length = 1;
+                    bad
+                });
+                if flow.kind != FlowKind::Bad {
+                    flow.mode = Some(mode);
+                }
+                flow
+            })
+            .collect()
+    }
+    fn set_context(&mut self, _name: &str, address: u64, value: u64) {
+        self.points.insert(address, value);
+        self.set.push((address, value));
+    }
+    fn mode_at(&mut self, address: u64) -> Option<u64> {
+        Some(self.held(address))
+    }
+    fn mode_starts_at(&mut self, address: u64) -> Option<bool> {
+        Some(self.points.contains_key(&address))
+    }
+    fn linkages(&mut self, _: &[u64]) -> Vec<LinkageResult> {
+        Vec::new()
+    }
+    fn plt_linkages(&mut self, _: &[u64]) -> Vec<LinkageResult> {
+        Vec::new()
+    }
+    fn context_linkages(&mut self, _: &[LinkageContext]) -> Vec<LinkageResult> {
+        Vec::new()
+    }
+}
+
+/// An ARM function at `0x1000` of word instructions, then a Thumb function at
+/// `0x1020` whose entry a `blx` named, so that its change point paints every
+/// address above it: the ARM function's next instruction, decoded after that,
+/// would be read as Thumb.
+fn painted_fixture() -> PaintedProvider {
+    let mut arm = std::collections::HashMap::new();
+    for address in (0x1000..0x1010).step_by(4) {
+        arm.insert(address, word_result(address, FlowKind::Fallthrough, None, false));
+    }
+    let mut thumb = std::collections::HashMap::new();
+    for address in (0x1000..0x1010).step_by(2) {
+        thumb.insert(address, result(address, FlowKind::Fallthrough, None, false));
+    }
+    PaintedProvider { points: [(0x0f00, 1)].into_iter().collect(), arm, thumb, set: Vec::new() }
+}
+
+fn first_decode(provider: &mut PaintedProvider, mode_flow: &mut ModeFlow, address: u64) -> Vec<FlowResult> {
+    let mut flows = provider.flow(&[address]);
+    let mut flowed = HashMap::default();
+    mode_flow.reconcile(&[address], &mut flows, &mut flowed, provider);
+    flows
+}
+
+#[test]
+fn an_address_painted_by_another_functions_mode_reads_in_the_mode_that_flowed_into_it() {
+    let mut provider = painted_fixture();
+    provider.points.insert(0x1000, 0);
+    let mut mode_flow = ModeFlow::new("ARM:LE:32:v6");
+    let entry = provider.flow(&[0x1000]);
+    assert_eq!(entry[0].mode, Some(0));
+    mode_flow.expect(&entry, &HashSet::default());
+    // A Thumb entry below painted Thumb up to here after the entry decoded.
+    provider.points.remove(&0x1000);
+    let next = first_decode(&mut provider, &mut mode_flow, 0x1004);
+    assert_eq!((next[0].mode, next[0].length), (Some(0), 4), "the word the ARM instruction above falls into");
+    assert_eq!(provider.set, vec![(0x1004, 0)]);
+}
+
+#[test]
+fn an_address_with_a_change_point_of_its_own_keeps_it() {
+    let mut provider = painted_fixture();
+    provider.points.insert(0x1004, 1);
+    let mut mode_flow = ModeFlow::new("ARM:LE:32:v6");
+    mode_flow.expect(&[{ let mut flow = word_result(0x1000, FlowKind::Fallthrough, None, false); flow.mode = Some(0); flow }], &HashSet::default());
+    let next = first_decode(&mut provider, &mut mode_flow, 0x1004);
+    assert_eq!((next[0].mode, next[0].length), (Some(1), 2), "a mode somebody asserted is not overruled by a neighbour");
+    assert!(provider.set.is_empty());
+}
+
+#[test]
+fn what_an_arm_instruction_off_the_word_grid_hands_on_is_not_believed() {
+    let mut provider = painted_fixture();
+    let mut mode_flow = ModeFlow::new("ARM:LE:32:v6");
+    // The console decodes an ARM word at any halfword; a Thumb function's bytes
+    // read that way name branch targets inside real Thumb code.
+    let mut junk = word_result(0x1002, FlowKind::Branch, Some(0x1008), true);
+    junk.mode = Some(0);
+    mode_flow.expect(&[junk], &HashSet::default());
+    let target = first_decode(&mut provider, &mut mode_flow, 0x1008);
+    assert_eq!(target[0].mode, Some(1));
+    assert!(provider.set.is_empty());
+    // Thumb has no such grid. (The first decode consumed the expectation.)
+    let mut thumb = result(0x1002, FlowKind::Branch, Some(0x1008), true);
+    thumb.mode = Some(1);
+    mode_flow.expect(&[thumb], &HashSet::default());
+    assert_eq!(mode_flow.expected.get(&0x1008), Some(&1));
+}
+
+#[test]
+fn a_blx_target_names_the_mode_it_switches_to_not_the_callers() {
+    let mut provider = painted_fixture();
+    provider.points.insert(0x1000, 1);
+    let mut mode_flow = ModeFlow::new("ARM:LE:32:v6");
+    let mut blx = word_result(0x0ff0, FlowKind::Call, Some(0x1000), false);
+    blx.mode = Some(0);
+    blx.target_modes = vec![(0x1000, 1)];
+    mode_flow.expect(&[blx], &HashSet::default());
+    assert_eq!(mode_flow.expected.get(&0x1000), Some(&1));
+    assert_eq!(mode_flow.expected.get(&0x0ff4), Some(&0), "the return address stays in the caller's mode");
+}
