@@ -565,6 +565,7 @@ a few MB of a 1.8 GB card), and `config/project.json` still records the whole fi
 has no target objects. Every 3DS project therefore carries stdlib-only Python tools (`tools/n3ds.py`,
 `tools/split.py`, `tools/relink.py`):
 
+<!-- not gated: runs the tools a generated 3DS project carries, which need a retail dump, the armcc compiler and objdiff, none of which the repository ships -->
 ```sh
 python3 build.py fetch      # pinned armcc, objdiff-cli, wibo where needed, arm-none-eabi binutils (for relink)
 # put the decrypted dump at orig/<image> (config/project.json says the name and sha256)

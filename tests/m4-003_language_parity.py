@@ -63,9 +63,12 @@ VARIANTS = ("plain_o0", "plain_o2", "cpp_o2", "many_o2")
 # import that image, and the row is compared like any corpus row. Ghidra's GBA
 # loader identifies a cartridge by the first eight logo bytes and the 0x96 at
 # 0xB2 (`GBALoader.findSupportedLoadSpecs`), which the fixture header carries.
+# That loader is the `gba-ghidra-loader` extension, not part of the stock
+# release: an install without `Ghidra/Extensions/<extension>` finds no load
+# spec for the image, so the row is reported blocked instead of measured.
 CONTAINERS = {
     "ARM:LE:32:v4t": {"module": "m5_001", "path": ROOT / "tests/m5-001_gba.py",
-                      "variant": "cartridge"},
+                      "variant": "cartridge", "extension": "gba-ghidra-loader"},
 }
 # A language both stores can load, whose token parity is not reached yet. The
 # row is still measured on every run, against floors the last run proved: the
@@ -118,6 +121,209 @@ BLOCKED = {
                                      "natively, and the corpus PowerPC ELF row "
                                      "is BE32 default too"},
 }
+# Every other language the install ships a spec bundle for. The bundles are
+# committed for every language the install ships (551182b6, ce80403b), so the repository
+# holds one for processors no locked corpus row, committed container fixture
+# or pinned retail image is built for. Tried for each: the languages of
+# the locked corpus (`expected_language` of every ELF row), `CONTAINERS` and
+# `UNREACHED` above -- none is this one, so there is no image both stores can
+# load to compare. Listing them by name is the point: a new bundle that is
+# neither measured nor named here fails the gate below until someone says why.
+NO_IMAGE = (
+    "6502:LE:16:default",
+    "65816:LE:16:default",
+    "65C02:LE:16:default",
+    "68000:BE:32:CPU32",
+    "68000:BE:32:Coldfire",
+    "68000:BE:32:MC68020",
+    "68000:BE:32:MC68030",
+    "68000:BE:32:default",
+    "6805:BE:16:default",
+    "6809:BE:16:default",
+    "80251:BE:24:default",
+    "80390:BE:24:default",
+    "8048:LE:16:default",
+    "8051:BE:16:default",
+    "8051:BE:24:cip-51",
+    "8051:BE:24:mx51",
+    "8085:LE:16:default",
+    "AARCH64:BE:32:ilp32",
+    "AARCH64:BE:64:v8A",
+    "AARCH64:LE:32:ilp32",
+    "AARCH64:LE:64:AppleSilicon",
+    "ARM:BE:32:Cortex",
+    "ARM:BE:32:v4",
+    "ARM:BE:32:v4t",
+    "ARM:BE:32:v5",
+    "ARM:BE:32:v5t",
+    "ARM:BE:32:v6",
+    "ARM:BE:32:v7",
+    "ARM:BE:32:v8",
+    "ARM:BE:32:v8-m",
+    "ARM:BE:32:v8T",
+    "ARM:LE:32:Cortex",
+    "ARM:LE:32:v4",
+    "ARM:LE:32:v5",
+    "ARM:LE:32:v6",
+    "ARM:LE:32:v7",
+    "ARM:LE:32:v8",
+    "ARM:LE:32:v8-m",
+    "ARM:LE:32:v8T",
+    "ARM:LEBE:32:v7LEInstruction",
+    "ARM:LEBE:32:v8LEInstruction",
+    "Allegrex:LE:32:default",
+    "BPF:LE:32:default",
+    "CP1600:BE:16:default",
+    "CR16C:LE:16:default",
+    "DATA:BE:64:default",
+    "DATA:LE:64:default",
+    "Dalvik:LE:32:DEX_Android10",
+    "Dalvik:LE:32:DEX_Android11",
+    "Dalvik:LE:32:DEX_Android12",
+    "Dalvik:LE:32:DEX_Android13",
+    "Dalvik:LE:32:DEX_Base",
+    "Dalvik:LE:32:DEX_KitKat",
+    "Dalvik:LE:32:DEX_Lollipop",
+    "Dalvik:LE:32:DEX_Nougat",
+    "Dalvik:LE:32:DEX_Oreo",
+    "Dalvik:LE:32:DEX_Pie",
+    "Dalvik:LE:32:Marshmallow",
+    "Dalvik:LE:32:ODEX_KitKat",
+    "Dalvik:LE:32:default",
+    "GameBoy:LE:16:default",
+    "H6309:BE:16:default",
+    "HC05:BE:16:M68HC05TB",
+    "HC05:BE:16:default",
+    "HC08:BE:16:MC68HC908QY4",
+    "HC08:BE:16:default",
+    "HC:12:BE:16-default",
+    "HCS08:BE:16:MC9S08GB60",
+    "HCS08:BE:16:default",
+    "HCS12:BE:24:default",
+    "HCS:12:BE:24-default",
+    "HCS:12X:BE:24-default",
+    "Hexagon:LE:32:default",
+    "JVM:BE:32:default",
+    "Loongarch:LE:32:ilp32d",
+    "Loongarch:LE:32:ilp32f",
+    "Loongarch:LE:64:lp64d",
+    "Loongarch:LE:64:lp64f",
+    "M16C",
+    "M8C:BE:16:default",
+    "MCS96:LE:16:default",
+    "MIPS:BE:32:16e",
+    "MIPS:BE:32:R6",
+    "MIPS:BE:32:default",
+    "MIPS:BE:32:micro",
+    "MIPS:BE:64:16e",
+    "MIPS:BE:64:64-32R6addr",
+    "MIPS:BE:64:R6",
+    "MIPS:BE:64:default",
+    "MIPS:BE:64:micro",
+    "MIPS:BE:64:micro64-32addr",
+    "MIPS:LE:32:16e",
+    "MIPS:LE:32:R6",
+    "MIPS:LE:32:micro",
+    "MIPS:LE:64:16e",
+    "MIPS:LE:64:64-32R6addr",
+    "MIPS:LE:64:64-32addr",
+    "MIPS:LE:64:R6",
+    "MIPS:LE:64:default",
+    "MIPS:LE:64:micro",
+    "MIPS:LE:64:micro64-32addr",
+    "NDS32:BE:32:default",
+    "NDS32:LE:32:default",
+    "PIC:12:LE:16-PIC-12C5xx",
+    "PIC:16:LE:16-PIC-16",
+    "PIC:16:LE:16-PIC-16C5x",
+    "PIC:16:LE:16-PIC-16F",
+    "PIC:17:LE:16-PIC-17C7xx",
+    "PIC:18:LE:24-PIC-18",
+    "PIC:24E:LE:24-default",
+    "PIC:24F:LE:24-default",
+    "PIC:24H:LE:24-default",
+    "PSX:LE:32:default",
+    "PowerPC:BE:32:4xx",
+    "PowerPC:BE:32:Gekko_Broadway",
+    "PowerPC:BE:32:MPC8270",
+    "PowerPC:BE:32:QUICC",
+    "PowerPC:BE:32:e500mc",
+    "PowerPC:BE:64:64-32addr",
+    "PowerPC:BE:64:A2-32addr",
+    "PowerPC:BE:64:A2ALT",
+    "PowerPC:BE:64:A2ALT-32addr",
+    "PowerPC:BE:64:VLE-32addr",
+    "PowerPC:BE:64:VLEALT-32addr",
+    "PowerPC:BE:64:Xenon-32addr",
+    "PowerPC:BE:64:default",
+    "PowerPC:LE:32:4xx",
+    "PowerPC:LE:32:QUICC",
+    "PowerPC:LE:32:default",
+    "PowerPC:LE:32:e500",
+    "PowerPC:LE:32:e500mc",
+    "PowerPC:LE:64:64-32addr",
+    "PowerPC:LE:64:A2-32addr",
+    "PowerPC:LE:64:A2ALT",
+    "PowerPC:LE:64:A2ALT-32addr",
+    "PowerPC:LE:64:default",
+    "RISCV:LE:32:AndeStar_v5",
+    "RISCV:LE:32:RV32G",
+    "RISCV:LE:32:RV32GC",
+    "RISCV:LE:32:RV32I",
+    "RISCV:LE:32:RV32IC",
+    "RISCV:LE:32:RV32IMC",
+    "RISCV:LE:32:default",
+    "RISCV:LE:64:RV64G",
+    "RISCV:LE:64:RV64GC",
+    "RISCV:LE:64:RV64I",
+    "RISCV:LE:64:RV64IC",
+    "RISCV:LE:64:default",
+    "RSP:BE:32:default",
+    "SPU:BE:128:default",
+    "SuperH4:BE:32:default",
+    "SuperH4:LE:32:default",
+    "SuperH:BE:32:SH-1",
+    "SuperH:BE:32:SH-2",
+    "SuperH:BE:32:SH-2A",
+    "TI_MSP430:LE:16:default",
+    "TI_MSP430X:LE:32:default",
+    "V850:LE:32:default",
+    "V850:LE:32:v850e3v5",
+    "VU:LE:64:micro",
+    "Xtensa:BE:32:default",
+    "Xtensa:LE:32:default",
+    "avr32:BE:32:default",
+    "avr8:LE:16:atmega256",
+    "avr8:LE:16:default",
+    "avr8:LE:16:extended",
+    "avr8:LE:24:xmega",
+    "dsPIC30F:LE:24:default",
+    "dsPIC33C:LE:24:default",
+    "dsPIC33E:LE:24:default",
+    "dsPIC33F:LE:24:default",
+    "eBPF:BE:64:default",
+    "eBPF:LE:64:default",
+    "pa:risc:BE:32-default",
+    "r5900:LE:32:default",
+    "sparc:BE:32:default",
+    "sparc:BE:64:default",
+    "tricore:LE:32:default",
+    "tricore:LE:32:tc172x",
+    "tricore:LE:32:tc176x",
+    "tricore:LE:32:tc29x",
+    "x86:LE:16:Protected Mode",
+    "x86:LE:16:Real Mode",
+    "x86:LE:32:System Management Mode",
+    "x86:LE:64:compat32",
+    "z180:LE:16:default",
+    "z182:LE:16:default",
+    "z80:LE:16:default",
+    "z8401x:LE:16:default",
+)
+NO_IMAGE_REASON = ("no locked corpus row, container fixture or pinned retail "
+                   "image is built for this language, so there is nothing both "
+                   "stores can load to compare")
+BLOCKED.update({language: {"reason": NO_IMAGE_REASON} for language in NO_IMAGE})
 # Ghidra's dynamic label prefixes, from the pinned tree
 # (`SymbolUtilities.DYNAMIC_PREFIX_ARRAY`, SymbolUtilities.java:84-86) plus the
 # built-in data-type prefixes it appends (`getDynamicDataTypePrefixes`, :105).
@@ -194,12 +400,18 @@ def cli(*arguments: str, timeout: int) -> subprocess.CompletedProcess:
 
 
 def bundled_languages() -> list[str]:
-    """Languages `native/specs` ships a bundle for, plus the root x86-64 one."""
+    """Languages `native/specs` ships a bundle for, plus the root x86-64 one.
+
+    Each language once: the install's x86-64 bundle is committed under its own
+    directory as well as served from the root, and a language listed twice was
+    measured twice into the same work directory."""
     languages = ["x86:LE:64:default"]
     for entry in sorted(SPECS.iterdir()):
         if entry.is_dir():
-            languages.append(entry.name.replace("-", ":", 1).replace(
-                "-", ":", 1).replace("-", ":", 1))
+            language = entry.name.replace("-", ":", 1).replace(
+                "-", ":", 1).replace("-", ":", 1)
+            if language not in languages:
+                languages.append(language)
     return languages
 
 
@@ -932,6 +1144,14 @@ def main() -> int:
                 continue
             if language in CONTAINERS:
                 entry = CONTAINERS[language]
+                extension = GHIDRA / "Ghidra" / "Extensions" / entry["extension"]
+                if not extension.is_dir():
+                    blocked[language] = {
+                        "reason": f"the install at {GHIDRA} has no {entry['extension']} "
+                                  f"extension, so stock Ghidra finds no load spec for "
+                                  f"the {entry['variant']} fixture and the oracle "
+                                  f"cannot import it"}
+                    continue
                 row_work = work / f"{language.replace(':', '-')}-{entry['variant']}"
                 image = container_image(entry, row_work / "image")
                 pending.append((language, entry["variant"], image, row_work))
